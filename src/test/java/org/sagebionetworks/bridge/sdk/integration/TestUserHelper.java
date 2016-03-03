@@ -23,6 +23,7 @@ public class TestUserHelper {
 
     public static final String PASSWORD = "P4ssword";
     
+    @SuppressWarnings("Convert2Diamond")
     public static class TestUser {
         private final AdminClient adminClient;
         private final Session userSession;
@@ -37,7 +38,7 @@ public class TestUserHelper {
             this.userSession = userSession;
             this.email = email;
             this.password = password;
-            this.roles = (roleList == null) ? new HashSet<>() : roleList;
+            this.roles = (roleList == null) ? new HashSet<Roles>() : roleList;
             roles.add(Roles.TEST_USERS);
         }
         public Session getSession() {
