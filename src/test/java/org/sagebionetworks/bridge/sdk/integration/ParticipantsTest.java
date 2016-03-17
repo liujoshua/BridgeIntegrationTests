@@ -46,12 +46,7 @@ public class ParticipantsTest {
         assertNotNull(summary.getEmail());
         assertNotNull(summary.getStatus());
         
-        for (AccountSummary sum : summaries.getItems()) {
-            System.out.println("Email: " + sum.getEmail());
-        }
-        
         // Filter to only the researcher
-        System.out.println("Researcher email: " + researcher.getEmail());
         summaries = client.getPagedAccountSummaries(0, 10, researcher.getEmail());
         assertEquals(1, summaries.getItems().size());
         assertEquals(researcher.getEmail(), summaries.getItems().get(0).getEmail());
