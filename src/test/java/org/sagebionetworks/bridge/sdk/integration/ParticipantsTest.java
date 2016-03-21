@@ -48,7 +48,7 @@ public class ParticipantsTest {
     public void canRetrieveAndPageThroughParticipants() {
         ResearcherClient client = researcher.getSession().getResearcherClient();
         
-        PagedResourceList<AccountSummary> summaries = client.getPagedAccountSummaries(0, 10);
+        PagedResourceList<AccountSummary> summaries = client.getPagedAccountSummaries(0, 10, null);
 
         // Well we know there's at least two accounts... the admin and the researcher.
         assertEquals(0, summaries.getOffsetBy());
@@ -61,18 +61,23 @@ public class ParticipantsTest {
         assertNotNull(summary.getLastName());
         assertNotNull(summary.getEmail());
         assertNotNull(summary.getStatus());
+        
+        // Filter to only the researcher
+        summaries = client.getPagedAccountSummaries(0, 10, researcher.getEmail());
+        assertEquals(1, summaries.getItems().size());
+        assertEquals(researcher.getEmail(), summaries.getItems().get(0).getEmail());
     }
     
     @Test(expected = IllegalArgumentException.class)
     public void cannotSetBadOffset() {
         ResearcherClient client = researcher.getSession().getResearcherClient();
-        client.getPagedAccountSummaries(-1, 10);
+        client.getPagedAccountSummaries(-1, 10, null);
     }
     
     @Test(expected = IllegalArgumentException.class)
     public void cannotSetBadPageSize() {
         ResearcherClient client = researcher.getSession().getResearcherClient();
-        client.getPagedAccountSummaries(0, 4);
+        client.getPagedAccountSummaries(0, 4, null);
     }
     
 }
