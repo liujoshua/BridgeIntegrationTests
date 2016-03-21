@@ -161,12 +161,6 @@ public class StudyTest {
         }
     }
 
-    @Test(expected = UnauthorizedException.class)
-    public void adminCannotRetrieveParticipants() {
-        ResearcherClient client = admin.getSession().getResearcherClient();
-        client.sendStudyParticipantsRoster();
-    }
-    
     @Test
     public void adminCanGetAllStudies() {
         AdminClient client = admin.getSession().getAdminClient();
