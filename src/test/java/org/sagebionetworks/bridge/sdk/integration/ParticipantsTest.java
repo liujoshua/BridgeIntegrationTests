@@ -5,6 +5,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.LinkedHashSet;
+import java.util.Map;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,6 +16,10 @@ import org.sagebionetworks.bridge.sdk.ResearcherClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
+import org.sagebionetworks.bridge.sdk.models.users.SharingScope;
+
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
 import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
@@ -80,4 +87,40 @@ public class ParticipantsTest {
         client.getPagedAccountSummaries(0, 4, null);
     }
     
+    @Test
+    public void getAndUpdateParticipant() throws Exception {
+        ResearcherClient client = researcher.getSession().getResearcherClient();
+        
+        Map<String,String> attributes = Maps.newHashMap();
+        attributes.put("phone", "123-456-7890");
+        
+        LinkedHashSet<String> languages = new LinkedHashSet<>();
+        languages.add("en");
+        languages.add("fr");
+        
+        // Let's update the researcher
+        //StudyParticipant participant = client.getStudyParticipant(researcher.getEmail());
+        StudyParticipant participant = new StudyParticipant.Builder()
+                .withFirstName("First name")
+                .withLastName("Last name")
+                .withExternalId("external ID")
+                .withSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS)
+                .withNotifyByEmail(true)
+                .withDataGroups(Sets.newHashSet("group1"))
+                .withLanguages(languages)
+                .withAttributes(attributes)
+                .build();
+        
+        client.updateStudyParticipant(researcher.getEmail(), participant);
+        
+        StudyParticipant updated = client.getStudyParticipant(researcher.getEmail());
+        assertEquals("First name", updated.getFirstName());
+        assertEquals("Last name", updated.getLastName());
+        assertEquals("external ID", updated.getExternalId());
+        assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, updated.getSharingScope());
+        assertEquals(true, updated.isNotifyByEmail());
+        assertEquals(Sets.newHashSet("group1"), updated.getDataGroups());
+        assertEquals(languages, updated.getLanguages());
+        assertEquals(attributes.get("phone"), updated.getAttributes().get("phone"));
+    }
 }
