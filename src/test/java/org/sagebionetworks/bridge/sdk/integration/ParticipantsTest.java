@@ -99,7 +99,6 @@ public class ParticipantsTest {
         languages.add("fr");
         
         // Let's update the researcher
-        //StudyParticipant participant = client.getStudyParticipant(researcher.getEmail());
         StudyParticipant participant = new StudyParticipant.Builder()
                 .withFirstName("First name")
                 .withLastName("Last name")
