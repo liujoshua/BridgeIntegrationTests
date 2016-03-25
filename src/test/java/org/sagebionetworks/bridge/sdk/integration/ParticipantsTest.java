@@ -66,6 +66,7 @@ public class ParticipantsTest {
         summaries = client.getPagedAccountSummaries(0, 10, researcher.getEmail());
         assertEquals(1, summaries.getItems().size());
         assertEquals(researcher.getEmail(), summaries.getItems().get(0).getEmail());
+        assertEquals(researcher.getEmail(), summaries.getEmailFilter());
     }
     
     @Test(expected = IllegalArgumentException.class)
