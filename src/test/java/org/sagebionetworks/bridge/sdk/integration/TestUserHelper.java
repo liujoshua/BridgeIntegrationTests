@@ -5,8 +5,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.lang3.RandomStringUtils;
-
 import org.sagebionetworks.bridge.sdk.AdminClient;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.Config;
@@ -88,7 +86,7 @@ public class TestUserHelper {
         // For email address, we don't want consent emails to bounce or SES will get mad at us. All test user email
         // addresses should be in the form bridge-testing+[semi-unique token]@sagebase.org. This directs all test
         // email to bridge-testing@sagebase.org.
-        String emailAddress = makeEmail(cls);
+        String emailAddress = Tests.makeEmail(cls);
 
         SignUpByAdmin signUp = new SignUpByAdmin(emailAddress, PASSWORD, rolesList, consent);
         adminClient.createUser(signUp);
@@ -112,13 +110,5 @@ public class TestUserHelper {
             adminClient.deleteUser(emailAddress);
             throw ex;
         }
-    }
-
-    public static String makeEmail(Class<?> cls) {
-        Config config = ClientProvider.getConfig();
-        String devName = config.getDevName();
-        String clsPart = cls.getSimpleName();
-        String rndPart = RandomStringUtils.randomAlphabetic(4);
-        return String.format("bridge-testing+%s-%s-%s@sagebase.org", devName, clsPart, rndPart);
     }
 }

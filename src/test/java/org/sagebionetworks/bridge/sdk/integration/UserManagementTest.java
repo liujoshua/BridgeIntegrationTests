@@ -40,7 +40,7 @@ public class UserManagementTest {
 
     @Test
     public void canCreateAndSignOutAndDeleteUser() {
-        String email = TestUserHelper.makeEmail(UserManagementTest.class);
+        String email = Tests.makeEmail(UserManagementTest.class);
         String password = "P4ssword";
 
         SignUpByAdmin signUp = new SignUpByAdmin(email, password, null, /*consent*/true);

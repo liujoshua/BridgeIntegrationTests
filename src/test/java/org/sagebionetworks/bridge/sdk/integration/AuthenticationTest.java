@@ -26,7 +26,7 @@ public class AuthenticationTest {
 
     @Test
     public void canResendEmailVerification() {
-        String email = TestUserHelper.makeEmail(AuthenticationTest.class);
+        String email = Tests.makeEmail(AuthenticationTest.class);
         String password = "P4ssword";
         
         try {
