@@ -95,26 +95,26 @@ public class ParticipantsTest {
     @Test
     public void crudParticipant() {
         String email = Tests.makeEmail(ParticipantsTest.class);
+        Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
+        LinkedHashSet<String> languages = Tests.newLinkedHashSet("en","fr");
+        Set<String> dataGroups = Sets.newHashSet("sdk-int-1", "sdk-int-2");
+        
+        StudyParticipant participant = new StudyParticipant.Builder()
+            .withFirstName("FirstName")
+            .withLastName("LastName")
+            .withPassword("P@ssword1!")
+            .withEmail(email)
+            .withExternalId("externalID")
+            .withSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS)
+            .withNotifyByEmail(true)
+            .withDataGroups(dataGroups)
+            .withLanguages(languages)
+            .withAttributes(attributes)
+            .build();
+        ResearcherClient client = researcher.getSession().getResearcherClient();
+        client.createStudyParticipant(participant);
+        
         try {
-            Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
-            LinkedHashSet<String> languages = Tests.newLinkedHashSet("en","fr");
-            Set<String> dataGroups = Sets.newHashSet("sdk-int-1", "sdk-int-2");
-            
-            StudyParticipant participant = new StudyParticipant.Builder()
-                .withFirstName("FirstName")
-                .withLastName("LastName")
-                .withPassword("P@ssword1!")
-                .withEmail(email)
-                .withExternalId("externalID")
-                .withSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS)
-                .withNotifyByEmail(true)
-                .withDataGroups(dataGroups)
-                .withLanguages(languages)
-                .withAttributes(attributes)
-                .build();
-            ResearcherClient client = researcher.getSession().getResearcherClient();
-            client.createStudyParticipant(participant);
-            
             // It has been persisted
             StudyParticipant retrieved = client.getStudyParticipant(email);
             assertEquals("FirstName", retrieved.getFirstName());

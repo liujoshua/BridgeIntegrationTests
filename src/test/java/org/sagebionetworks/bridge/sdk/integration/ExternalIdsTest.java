@@ -48,9 +48,8 @@ public class ExternalIdsTest {
             identifiers.add(prefix+RandomStringUtils.randomAlphabetic(10));
         }
         DeveloperClient client = developer.getSession().getDeveloperClient();
+        client.addExternalIds(identifiers);
         try {
-            client.addExternalIds(identifiers);
-            
             PagedResourceList<ExternalIdentifier> page1 = client.getExternalIds(null, PAGE_SIZE, prefix, null);
             assertEquals(PAGE_SIZE, page1.getItems().size());
             assertEquals(LIST_SIZE, page1.getTotal());
@@ -77,10 +76,9 @@ public class ExternalIdsTest {
             assertEquals(0, page1.getTotal());
         } finally {
             client.deleteExternalIds(identifiers);
-
-            PagedResourceList<ExternalIdentifier> page = client.getExternalIds(null, null, prefix, null);
-            assertEquals(0, page.getTotal());
         }
+        PagedResourceList<ExternalIdentifier> page = client.getExternalIds(null, null, prefix, null);
+        assertEquals(0, page.getTotal());
     }
     
 }
