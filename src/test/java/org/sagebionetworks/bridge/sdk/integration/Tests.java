@@ -2,12 +2,15 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.Period;
 
 import org.sagebionetworks.bridge.sdk.ClientInfo;
+import org.sagebionetworks.bridge.sdk.ClientProvider;
+import org.sagebionetworks.bridge.sdk.Config;
 import org.sagebionetworks.bridge.sdk.models.schedules.ABTestScheduleStrategy;
 import org.sagebionetworks.bridge.sdk.models.schedules.Activity;
 import org.sagebionetworks.bridge.sdk.models.schedules.Schedule;
@@ -35,6 +38,14 @@ public class Tests {
 
     public static String randomIdentifier(Class<?> cls) {
         return ("sdk-" + cls.getSimpleName().toLowerCase() + "-" + RandomStringUtils.randomAlphabetic(5)).toLowerCase();
+    }
+
+    public static String makeEmail(Class<?> cls) {
+        Config config = ClientProvider.getConfig();
+        String devName = config.getDevName();
+        String clsPart = cls.getSimpleName();
+        String rndPart = RandomStringUtils.randomAlphabetic(4);
+        return String.format("bridge-testing+%s-%s-%s@sagebase.org", devName, clsPart, rndPart);
     }
     
     // This seems like something that should be added to schedule.
@@ -136,4 +147,17 @@ public class Tests {
         }
         return study;
     }
+    
+    /**
+     * Guava does not have a version of this method that also lets you add items.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> LinkedHashSet<T> newLinkedHashSet(T... items) {
+        LinkedHashSet<T> set = new LinkedHashSet<T>();
+        for (T item : items) {
+            set.add(item);    
+        }
+        return set;
+    }
+    
 }
