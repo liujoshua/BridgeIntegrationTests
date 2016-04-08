@@ -33,7 +33,7 @@
         <repository>
             <id>sagebionetworks-releases-local</id>
             <name>sagebionetworks-releases-local</name>
-            <url>http://sagebionetworks.artifactoryonline.com/sagebionetworks/libs-snapshots-local</url>
+            <url>http://sagebionetworks.artifactoryonline.com/sagebionetworks/libs-releases-local</url>
         </repository>
     </repositories>
 
