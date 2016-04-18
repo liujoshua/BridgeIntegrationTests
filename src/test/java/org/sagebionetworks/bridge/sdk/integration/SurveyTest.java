@@ -34,6 +34,7 @@ import org.sagebionetworks.bridge.sdk.AdminClient;
 import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
+import org.sagebionetworks.bridge.sdk.WorkerClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.exceptions.PublishedSurveyException;
@@ -60,6 +61,7 @@ public class SurveyTest {
 
     private static TestUser developer;
     private static TestUser user;
+    private static TestUser worker;
 
     // We use SimpleGuidCreatedOnVersionHolder, because we need to use an immutable version holder, to ensure we're
     // deleting the correct surveys.
@@ -67,8 +69,9 @@ public class SurveyTest {
 
     @BeforeClass
     public static void beforeClass() {
-        developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Roles.DEVELOPER);
-        user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
+        developer = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Roles.DEVELOPER);
+        user = TestUserHelper.createAndSignInUser(SurveyTest.class, true);
+        worker = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Roles.WORKER);
     }
 
     @Before
@@ -103,6 +106,13 @@ public class SurveyTest {
     public static void deleteUser() {
         if (user != null) {
             user.signOutAndDeleteUser();
+        }
+    }
+
+    @AfterClass
+    public static void deleteWorker() {
+        if (worker != null) {
+            worker.signOutAndDeleteUser();
         }
     }
 
@@ -181,11 +191,15 @@ public class SurveyTest {
         key2 = versionSurvey(client, key2);
         key2 = versionSurvey(client, key2);
 
+        // Sleep to clear eventual consistency problems.
+        Thread.sleep(2000);
         ResourceList<Survey> recentSurveys = client.getAllSurveysMostRecent();
         containsAll(recentSurveys.getItems(), key, key1, key2);
 
         key = client.publishSurvey(key);
         key2 = client.publishSurvey(key2);
+
+        Thread.sleep(2000);
         ResourceList<Survey> publishedSurveys = client.getAllSurveysMostRecentlyPublished();
         containsAll(publishedSurveys.getItems(), key, key2);
     }
@@ -349,13 +363,54 @@ public class SurveyTest {
         assertEquals(UiHint.TEXTFIELD, newQuestion.getUIHint());
     }
 
+    @Test
+    public void workerCanGetSurveys() throws Exception {
+        // One of the key functionalities of worker accounts is that they can get surveys across studies.
+        // Unfortunately, integration tests are set up so it's difficult to test across studies. As such, we do all our
+        // testing in the API study to test basic functionality.
+
+        // Create two surveys with two published versions.
+        DeveloperClient devClient = developer.getSession().getDeveloperClient();
+
+        GuidCreatedOnVersionHolder survey1aKeys = createSurvey(devClient, TestSurvey.getSurvey(SurveyTest.class));
+        devClient.publishSurvey(survey1aKeys);
+        GuidCreatedOnVersionHolder survey1bKeys = versionSurvey(devClient, survey1aKeys);
+        devClient.publishSurvey(survey1bKeys);
+
+        GuidCreatedOnVersionHolder survey2aKeys = createSurvey(devClient, TestSurvey.getSurvey(SurveyTest.class));
+        devClient.publishSurvey(survey2aKeys);
+        GuidCreatedOnVersionHolder survey2bKeys = versionSurvey(devClient, survey2aKeys);
+        devClient.publishSurvey(survey2bKeys);
+
+        // Sleep to clear eventual consistency problems.
+        WorkerClient workerClient = worker.getSession().getWorkerClient();
+        Thread.sleep(2000);
+
+        // The surveys we created were just dummies. Just check that the surveys are not null and that the keys match.
+        Survey survey1a = workerClient.getSurvey(survey1aKeys);
+        Survey survey1b = workerClient.getSurvey(survey1bKeys);
+        Survey survey2a = workerClient.getSurvey(survey2aKeys);
+        Survey survey2b = workerClient.getSurvey(survey2bKeys);
+
+        assertKeysEqual(survey1aKeys, survey1a);
+        assertKeysEqual(survey1bKeys, survey1b);
+        assertKeysEqual(survey2aKeys, survey2a);
+        assertKeysEqual(survey2bKeys, survey2b);
+
+        // Get using the guid+createdOn API for completeness.
+        Survey survey1aAgain = workerClient.getSurvey(survey1aKeys.getGuid(), survey1aKeys.getCreatedOn());
+        assertKeysEqual(survey1aKeys, survey1aAgain);
+
+        // We only expect the most recently published versions, namely 1b and 2b.
+        ResourceList<Survey> surveyResourceList = workerClient.getAllSurveysMostRecentlyPublished(Tests.TEST_KEY);
+        containsAll(surveyResourceList.getItems(), survey1b, survey2b);
+    }
+
     private Constraints getConstraints(Survey survey, String id) {
         return ((SurveyQuestion)survey.getElementByIdentifier(id)).getConstraints();
     }
 
-    private void containsAll(List<Survey> surveys, GuidCreatedOnVersionHolder... keys) throws InterruptedException {
-            Thread.sleep(2000);
-
+    private void containsAll(List<Survey> surveys, GuidCreatedOnVersionHolder... keys) {
         // The server may have more surveys than the ones we created, if more than one person is running tests
         // (unit or integration), or if there are persistent tests unrelated to this test.
         assertTrue("Server returned enough items", surveys.size() >= keys.length);
@@ -384,5 +439,10 @@ public class SurveyTest {
         GuidCreatedOnVersionHolder versionHolder = devClient.versionSurvey(survey);
         surveysToDelete.add(new SimpleGuidCreatedOnVersionHolder(versionHolder));
         return versionHolder;
+    }
+
+    private static void assertKeysEqual(GuidCreatedOnVersionHolder keys, Survey survey) {
+        assertEquals(keys.getGuid(), survey.getGuid());
+        assertEquals(keys.getCreatedOn(), survey.getCreatedOn());
     }
 }
