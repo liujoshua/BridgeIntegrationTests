@@ -10,6 +10,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
+import org.sagebionetworks.bridge.sdk.models.accounts.AccountStatus;
 import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 
 public class ParticipantsTest {
@@ -99,6 +101,7 @@ public class ParticipantsTest {
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
         LinkedHashSet<String> languages = Tests.newLinkedHashSet("en","fr");
         Set<String> dataGroups = Sets.newHashSet("sdk-int-1", "sdk-int-2");
+        DateTime createdOn = null;
         
         StudyParticipant participant = new StudyParticipant.Builder()
             .withFirstName("FirstName")
@@ -110,6 +113,7 @@ public class ParticipantsTest {
             .withNotifyByEmail(true)
             .withDataGroups(dataGroups)
             .withLanguages(languages)
+            .withStatus(AccountStatus.DISABLED) // should be ignored
             .withAttributes(attributes)
             .build();
         ResearcherClient client = researcher.getSession().getResearcherClient();
@@ -124,10 +128,13 @@ public class ParticipantsTest {
             assertEquals("externalID", retrieved.getExternalId());
             assertNull(retrieved.getPassword());
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
-            assertTrue(participant.isNotifyByEmail());
-            assertEquals(dataGroups, participant.getDataGroups());
-            assertEquals(languages, participant.getLanguages());
-            assertEquals(attributes.get("phone"), participant.getAttributes().get("phone"));
+            assertTrue(retrieved.isNotifyByEmail());
+            assertEquals(dataGroups, retrieved.getDataGroups());
+            assertEquals(languages, retrieved.getLanguages());
+            assertEquals(attributes.get("phone"), retrieved.getAttributes().get("phone"));
+            assertEquals(AccountStatus.UNVERIFIED, retrieved.getStatus());
+            assertNotNull(retrieved.getCreatedOn());
+            createdOn = retrieved.getCreatedOn();
             
             // Update the user. Identified by the email address
             Map<String,String> newAttributes = new ImmutableMap.Builder<String,String>().put("phone","206-555-1212").build();
@@ -152,6 +159,7 @@ public class ParticipantsTest {
                     .withDataGroups(newDataGroups)
                     .withLanguages(newLanguages)
                     .withAttributes(newAttributes)
+                    .withStatus(AccountStatus.ENABLED)
                     .build();
             client.updateStudyParticipant(newParticipant);
             
@@ -167,7 +175,8 @@ public class ParticipantsTest {
             assertEquals(newDataGroups, retrieved.getDataGroups());
             assertEquals(newLanguages, retrieved.getLanguages());
             assertEquals(newAttributes.get("phone"), retrieved.getAttributes().get("phone"));
-            
+            assertEquals(AccountStatus.ENABLED, retrieved.getStatus()); // user was enabled
+            assertEquals(createdOn, retrieved.getCreatedOn()); // hasn't been changed, still exists
         } finally {
             admin.getSession().getAdminClient().deleteUser(email);
         }
