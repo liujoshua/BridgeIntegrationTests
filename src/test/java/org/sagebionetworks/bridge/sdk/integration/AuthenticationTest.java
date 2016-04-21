@@ -25,10 +25,9 @@ public class AuthenticationTest {
 
     @Test
     public void canResendEmailVerification() {
-        Config config = ClientProvider.getConfig();
-        
-        ClientProvider.resendEmailVerification(new EmailCredentials(Tests.TEST_KEY, 
-                config.getAdminCredentials().getEmail()));
+        // Just verify this doesn't throw an exception
+        ClientProvider.resendEmailVerification(
+                new EmailCredentials(Tests.TEST_KEY, "bridge-testing@sagebase.org"));
     }
     
     @Test
