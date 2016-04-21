@@ -10,6 +10,8 @@ import org.sagebionetworks.bridge.sdk.ResearcherClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
+import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 import org.sagebionetworks.bridge.sdk.models.users.SignUpByAdmin;
 
 import static org.junit.Assert.assertTrue;
@@ -28,7 +30,7 @@ public class UserManagementTest {
         adminSession = ClientProvider.signIn(config.getAdminCredentials());
         adminClient = adminSession.getAdminClient();
 
-        researcher = TestUserHelper.createAndSignInUser(StudyConsentTest.class, true, Roles.RESEARCHER);
+        researcher = TestUserHelper.createAndSignInUser(UserManagementTest.class, true, Roles.RESEARCHER);
         researcherClient = researcher.getSession().getResearcherClient();
     }
 
@@ -47,10 +49,13 @@ public class UserManagementTest {
 
         boolean result = adminClient.createUser(signUp);
         assertTrue(result);
+        
+        PagedResourceList<AccountSummary> page = researcherClient.getPagedAccountSummaries(0, 10, email);
+        String id = page.getItems().get(0).getId();
 
-        researcherClient.signOutUser(email);
+        researcherClient.signOutUser(id);
 
-        adminClient.deleteUser(email);
+        adminClient.deleteUser(id);
     }
 
 }
