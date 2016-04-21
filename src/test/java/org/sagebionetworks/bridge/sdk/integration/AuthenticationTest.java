@@ -13,7 +13,6 @@ import org.sagebionetworks.bridge.sdk.AdminClient;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.Config;
 import org.sagebionetworks.bridge.sdk.Config.Props;
-import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.sdk.models.studies.Study;
@@ -26,22 +25,10 @@ public class AuthenticationTest {
 
     @Test
     public void canResendEmailVerification() {
-        String email = Tests.makeEmail(AuthenticationTest.class);
-        String password = "P4ssword";
+        Config config = ClientProvider.getConfig();
         
-        try {
-            
-            SignUpCredentials signUp = new SignUpCredentials(Tests.TEST_KEY, email, password, null);
-            ClientProvider.signUp(signUp);
-            
-            // Beyond an exception being thrown, there's not a lot you can test here.
-            ClientProvider.resendEmailVerification(new EmailCredentials(Tests.TEST_KEY, email));
-            
-        } finally {
-            Config config = ClientProvider.getConfig();
-            Session session = ClientProvider.signIn(config.getAdminCredentials());
-            session.getAdminClient().deleteUser(email);
-        }
+        ClientProvider.resendEmailVerification(new EmailCredentials(Tests.TEST_KEY, 
+                config.getAdminCredentials().getEmail()));
     }
     
     @Test

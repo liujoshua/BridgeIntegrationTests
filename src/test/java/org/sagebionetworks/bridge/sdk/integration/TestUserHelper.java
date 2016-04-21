@@ -56,7 +56,7 @@ public class TestUserHelper {
         }
         public void signOutAndDeleteUser() {
             userSession.signOut();
-            adminClient.deleteUser(email);
+            adminClient.deleteUser(userSession.getId());
         }
         public SignInCredentials getSignInCredentials() {
             return new SignInCredentials(Tests.TEST_KEY, email, PASSWORD);
@@ -91,8 +91,8 @@ public class TestUserHelper {
         SignUpByAdmin signUp = new SignUpByAdmin(emailAddress, PASSWORD, rolesList, consent);
         adminClient.createUser(signUp);
 
+        Session userSession = null;
         try {
-            Session userSession;
             try {
                 SignInCredentials signIn = new SignInCredentials(Tests.TEST_KEY, emailAddress, PASSWORD);
                 userSession = ClientProvider.signIn(signIn);
@@ -107,7 +107,9 @@ public class TestUserHelper {
                     rolesList);
         } catch (RuntimeException ex) {
             // Clean up the account, so we don't end up with a bunch of leftover accounts.
-            adminClient.deleteUser(emailAddress);
+            if (userSession != null) {
+                adminClient.deleteUser(userSession.getId());    
+            }
             throw ex;
         }
     }
