@@ -19,6 +19,7 @@ import org.sagebionetworks.bridge.sdk.ResearcherClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
+import org.sagebionetworks.bridge.sdk.models.holders.IdentifierHolder;
 import org.sagebionetworks.bridge.sdk.models.users.SharingScope;
 
 import com.google.common.collect.ImmutableMap;
@@ -119,9 +120,9 @@ public class ParticipantsTest {
             .withAttributes(attributes)
             .build();
         ResearcherClient client = researcher.getSession().getResearcherClient();
-        client.createStudyParticipant(participant);
+        IdentifierHolder idHolder = client.createStudyParticipant(participant);
         
-        String id = null;
+        String id = idHolder.getIdentifier();
         try {
             // It has been persisted. Right now we don't get the ID back so we have to conduct a 
             // search by email to get this user.
@@ -133,8 +134,7 @@ public class ParticipantsTest {
             assertEquals("LastName", summary.getLastName());
             assertEquals(email, summary.getEmail());
             
-            id = summary.getId();
-            
+            // Can also get by the ID
             StudyParticipant retrieved = client.getStudyParticipant(id);
             assertEquals("FirstName", retrieved.getFirstName());
             assertEquals("LastName", retrieved.getLastName());
