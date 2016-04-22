@@ -37,8 +37,8 @@ public class ScheduledActivityTest {
 
     @Before
     public void before() {
-        developer = TestUserHelper.createAndSignInUser(SchedulePlanTest.class, true, Roles.DEVELOPER);
-        user = TestUserHelper.createAndSignInUser(SchedulePlanTest.class, true);
+        developer = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Roles.DEVELOPER);
+        user = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true);
 
         developerClient = developer.getSession().getDeveloperClient();
         userClient = user.getSession().getUserClient();
@@ -66,8 +66,12 @@ public class ScheduledActivityTest {
                 developerClient.deleteSchedulePlan(plan.getGuid());
             }
         } finally {
-            developer.signOutAndDeleteUser();
-            user.signOutAndDeleteUser();
+            if (developer != null) {
+                developer.signOutAndDeleteUser();
+            }
+            if (user != null) {
+                user.signOutAndDeleteUser();
+            }
         }
     }
     
