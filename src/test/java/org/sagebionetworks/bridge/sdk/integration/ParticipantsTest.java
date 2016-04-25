@@ -72,8 +72,6 @@ public class ParticipantsTest {
         assertTrue(summaries.getItems().size() > 2);
         
         AccountSummary summary = summaries.getItems().get(0);
-        assertNotNull(summary.getFirstName());
-        assertNotNull(summary.getLastName());
         assertNotNull(summary.getCreatedOn());
         assertNotNull(summary.getEmail());
         assertNotNull(summary.getStatus());
