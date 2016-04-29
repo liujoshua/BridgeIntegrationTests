@@ -19,6 +19,7 @@ import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.sdk.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.sdk.exceptions.InvalidEntityException;
+import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.subpopulations.ConsentStatus;
 import org.sagebionetworks.bridge.sdk.models.users.ConsentSignature;
 import org.sagebionetworks.bridge.sdk.models.users.SharingScope;
@@ -42,20 +43,22 @@ public class ConsentTest {
             assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
             
             // Change, verify in-memory session changed, verify after signing in again that server state has changed
-            client.changeSharingScope(SharingScope.SPONSORS_AND_PARTNERS);
-            assertEquals(SharingScope.SPONSORS_AND_PARTNERS, testUser.getSession().getSharingScope());
-            session.signOut();
-            session = ClientProvider.signIn(new SignInCredentials(Tests.TEST_KEY, testUser.getEmail(), testUser.getPassword()));
-            client = session.getUserClient();
+            StudyParticipant participant = new StudyParticipant.Builder().withSharingScope(SharingScope.SPONSORS_AND_PARTNERS).build();
+            client.saveStudyParticipant(participant);
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, session.getSharingScope());
             
+            participant = client.getStudyParticipant();
+            assertEquals(SharingScope.SPONSORS_AND_PARTNERS, participant.getSharingScope());
+            
             // Do the same thing in reverse, setting to no sharing
-            client.changeSharingScope(SharingScope.NO_SHARING);
-            session.signOut();
+            participant = new StudyParticipant.Builder().withSharingScope(SharingScope.NO_SHARING).build();
+            client.saveStudyParticipant(participant);
 
-            session = ClientProvider.signIn(new SignInCredentials(Tests.TEST_KEY, testUser.getEmail(), testUser.getPassword()));
             assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
 
+            participant = client.getStudyParticipant();
+            assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
+            
             session.signOut();
         } finally {
             testUser.signOutAndDeleteUser();

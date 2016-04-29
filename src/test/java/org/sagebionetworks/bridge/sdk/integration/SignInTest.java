@@ -2,6 +2,8 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Set;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,7 +14,7 @@ import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.UserClient;
-import org.sagebionetworks.bridge.sdk.models.users.DataGroups;
+import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 
 import com.google.common.collect.Sets;
 
@@ -40,17 +42,17 @@ public class SignInTest {
 
     @Test
     public void canGetDataGroups(){
+        Set<String> dataGroups = Sets.newHashSet("sdk-int-1");
         UserClient client = user.getSession().getUserClient();
         
-        DataGroups dataGroups = new DataGroups();
-        dataGroups.setDataGroups(Sets.newHashSet("sdk-int-1"));
-        client.updateDataGroups(dataGroups);
+        StudyParticipant participant = new StudyParticipant.Builder()
+                .withDataGroups(dataGroups).build();
+        client.saveStudyParticipant(participant);
         
         user.getSession().signOut();
         
         Session session = ClientProvider.signIn(user.getSignInCredentials());
-        DataGroups groups = session.getDataGroups();
-        assertEquals(Sets.newHashSet("sdk-int-1"), groups.getDataGroups());
+        assertEquals(dataGroups, session.getDataGroups());
     }
     
 }
