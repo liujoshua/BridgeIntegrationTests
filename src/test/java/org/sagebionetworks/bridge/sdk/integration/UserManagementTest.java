@@ -1,5 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertNotNull;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,9 +46,9 @@ public class UserManagementTest {
         SignUpByAdmin signUp = new SignUpByAdmin(email, password, null, /*consent*/true);
         
         String id = adminClient.createUser(signUp);
+        assertNotNull(id);
 
         researcherClient.signOutUser(id);
-        
         adminClient.deleteUser(id);
     }
 
