@@ -230,6 +230,67 @@ public class UploadSchemaTest {
         }
     }
 
+    @Test
+    public void testV4() {
+        // Set up some fields
+        UploadFieldDefinition fooField = new UploadFieldDefinition.Builder().withName("foo")
+                .withType(UploadFieldType.STRING).build();
+        UploadFieldDefinition fooMaxAppVersion = new UploadFieldDefinition.Builder().withName("foo")
+                .withType(UploadFieldType.STRING).withMaxAppVersion(42).build();
+        UploadFieldDefinition barField = new UploadFieldDefinition.Builder().withName("bar")
+                .withType(UploadFieldType.STRING).build();
+        UploadFieldDefinition barMaxAppVersion = new UploadFieldDefinition.Builder().withName("bar")
+                .withType(UploadFieldType.STRING).withMaxAppVersion(42).build();
+        UploadFieldDefinition bazField = new UploadFieldDefinition.Builder().withName("baz")
+                .withType(UploadFieldType.STRING).build();
+
+        // create schema - Start with rev2 to test new v4 semantics.
+        List<UploadFieldDefinition> fieldDefListV1 = ImmutableList.of(fooField, barField);
+        UploadSchema schemaV1 = new UploadSchema.Builder().withName("Schema").withRevision(2).withSchemaId(schemaId)
+                .withSchemaType(UploadSchemaType.IOS_DATA).withFieldDefinitions(fieldDefListV1).build();
+        UploadSchema createdSchema = developerClient.createSchemaRevisionV4(schemaV1);
+        assertEquals("Schema", createdSchema.getName());
+        assertEquals(2, createdSchema.getRevision().intValue());
+        assertEquals(schemaId, createdSchema.getSchemaId());
+        assertEquals(UploadSchemaType.IOS_DATA, createdSchema.getSchemaType());
+        assertEquals(fieldDefListV1, createdSchema.getFieldDefinitions());
+
+        // Get the schema back. Should match created schema.
+        UploadSchema fetchedSchemaV1 = developerClient.getMostRecentUploadSchemaRevision(schemaId);
+        assertEquals(createdSchema, fetchedSchemaV1);
+
+        // create it again, version conflict
+        try {
+            developerClient.createSchemaRevisionV4(schemaV1);
+            fail("expected exception");
+        } catch (ConcurrentModificationException ex) {
+            // expected exception
+        }
+
+        // update schema - add some fields, re-order some fields, add maxAppVersion to some fields
+        List<UploadFieldDefinition> fieldDefListV2 = ImmutableList.of(barMaxAppVersion, bazField, fooMaxAppVersion);
+        UploadSchema schemaV2 = new UploadSchema.Builder().copyOf(fetchedSchemaV1).withName("Updated Schema")
+                .withFieldDefinitions(fieldDefListV2).build();
+        UploadSchema updatedSchema = developerClient.updateSchemaRevisionV4(schemaId, 2, schemaV2);
+        assertEquals("Updated Schema", updatedSchema.getName());
+        assertEquals(2, updatedSchema.getRevision().intValue());
+        assertEquals(schemaId, updatedSchema.getSchemaId());
+        assertEquals(UploadSchemaType.IOS_DATA, updatedSchema.getSchemaType());
+        assertEquals(fieldDefListV2, updatedSchema.getFieldDefinitions());
+
+        // Get the schema back again. Should match updated schema.
+        UploadSchema fetchedSchemaV2 = developerClient.getMostRecentUploadSchemaRevision(schemaId);
+        assertEquals(updatedSchema, fetchedSchemaV2);
+
+        // update it again, version conflict
+        try {
+            developerClient.updateSchemaRevisionV4(schemaId, 2, schemaV2);
+            fail("expected exception");
+        } catch (ConcurrentModificationException ex) {
+            // expected exception
+        }
+    }
+
     // Helper to make an upload schema with the minimum of attributes. Takes in rev and version to facilitate testing
     // create vs update and handling version conflicts.
     private static UploadSchema makeSimpleSchema(String schemaId, Integer rev, Long version) {
