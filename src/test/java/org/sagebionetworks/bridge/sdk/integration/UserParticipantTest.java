@@ -8,7 +8,6 @@ import java.util.Set;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -38,11 +37,12 @@ public class UserParticipantTest {
 
     @After
     public void after() {
-        developer.signOutAndDeleteUser();
+        if (developer != null) {
+            developer.signOutAndDeleteUser();    
+        }
     }
 
     @Test
-    @Ignore
     public void canUpdateProfile() throws Exception {
         UserClient client = developer.getSession().getUserClient();
 
@@ -66,7 +66,6 @@ public class UserParticipantTest {
     }
     
     @Test
-    @Ignore
     public void canAddExternalIdentifier() throws Exception {
         final UserClient client = developer.getSession().getUserClient();
         
@@ -91,12 +90,21 @@ public class UserParticipantTest {
         
         client.saveStudyParticipant(participant);
         
+        // session updated
+        assertEquals(dataGroups, developer.getSession().getDataGroups());
+        
+        // server updated
         participant = client.getStudyParticipant();
         assertEquals(dataGroups, participant.getDataGroups());
         
+        // now clear the values, it should be possible to remove them.
         participant = new StudyParticipant.Builder().withDataGroups(Sets.<String>newHashSet()).build();
         client.saveStudyParticipant(participant);
         
+        // session updated
+        assertEquals(Sets.<String>newHashSet(), developer.getSession().getDataGroups());
+        
+        // server updated
         participant = client.getStudyParticipant();
         assertTrue(participant.getDataGroups().isEmpty());
     }

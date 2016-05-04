@@ -34,7 +34,9 @@ public class ExternalIdsTest {
     
     @After
     public void after() {
-        developer.signOutAndDeleteUser();
+        if (developer != null) {
+            developer.signOutAndDeleteUser();    
+        }
     }
     
     @Test

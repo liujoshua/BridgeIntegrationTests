@@ -34,7 +34,9 @@ public class UserManagementTest {
 
     @After
     public void after() {
-        researcher.signOutAndDeleteUser(); //must do before admin session signout
+        if (researcher != null) {
+            researcher.signOutAndDeleteUser(); //must do before admin session signout    
+        }
         adminSession.signOut();
     }
 
