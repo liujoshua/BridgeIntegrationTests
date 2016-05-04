@@ -10,9 +10,9 @@ import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.UserClient;
+import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.studies.Study;
 import org.sagebionetworks.bridge.sdk.models.users.SignInCredentials;
-import org.sagebionetworks.bridge.sdk.models.users.UserProfile;
 
 @Category(IntegrationSmokeTest.class)
 public class UTF8Test {
@@ -53,23 +53,22 @@ public class UTF8Test {
         try {
             UserClient client = testUser.getSession().getUserClient();
 
-            UserProfile profile = client.getProfile();
-            profile.setFirstName("☃");
-            // I understand from the source of this text that it is actually UTF-16.
-            // It should still work.
-            profile.setLastName("지구상의　３대　극지라　불리는");
-            client.saveProfile(profile); // should be update
+            StudyParticipant.Builder builder = new StudyParticipant.Builder();
+            builder.withFirstName("☃");
+            // I understand from the source of this text that it is actually UTF-16. It should still work.
+            builder.withLastName("지구상의　３대　극지라　불리는");
+            
+            client.saveStudyParticipant(builder.build());
 
             // Force a refresh of the Redis session cache.
             testUser.getSession().signOut();
             Session session = ClientProvider.signIn(new SignInCredentials(Tests.TEST_KEY, testUser.getEmail(), testUser.getPassword()));
 
-            profile = session.getUserClient().getProfile();
-            assertEquals("☃", profile.getFirstName());
-            assertEquals("지구상의　３대　극지라　불리는", profile.getLastName());
+            StudyParticipant participant = session.getUserClient().getStudyParticipant();
+            assertEquals("☃", participant.getFirstName());
+            assertEquals("지구상의　３대　극지라　불리는", participant.getLastName());
         } finally {
             testUser.signOutAndDeleteUser();
         }
     }
-    
 }

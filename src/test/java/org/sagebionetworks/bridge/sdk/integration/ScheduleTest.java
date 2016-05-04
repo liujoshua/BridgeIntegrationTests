@@ -38,8 +38,12 @@ public class ScheduleTest {
             DeveloperClient client = developer.getSession().getDeveloperClient();
             client.deleteSchedulePlan(planGuid);
         } finally {
-            user.signOutAndDeleteUser();
-            developer.signOutAndDeleteUser();
+            if (user != null) {
+                user.signOutAndDeleteUser();    
+            }
+            if (developer != null) {
+                developer.signOutAndDeleteUser();    
+            }
         }
     }
     

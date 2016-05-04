@@ -17,6 +17,7 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.ResearcherClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.holders.IdentifierHolder;
@@ -47,6 +48,33 @@ public class ParticipantsTest {
         }
     }
 
+    // Note: A very similar test exists in UserParticipantTest
+    @Test
+    public void canGetAndUpdateSelf() {
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
+        try {
+            UserClient client = user.getSession().getUserClient();
+            
+            StudyParticipant self = client.getStudyParticipant();
+            assertEquals(user.getEmail(), self.getEmail());
+
+            // Update and verify changes. Right now there's not a lot that can be changed
+            StudyParticipant updates = new StudyParticipant.Builder().copyOf(self)
+                    .withLanguages(Tests.newLinkedHashSet("nl","en"))
+                    .withDataGroups(Sets.newHashSet("group1"))
+                    .withNotifyByEmail(false)
+                    .withSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS)
+                    .build();
+            
+            client.saveStudyParticipant(updates);
+            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, user.getSession().getSharingScope());
+            assertEquals(Sets.newHashSet("group1"), user.getSession().getDataGroups());
+            // also language, but this hasn't been added to the session object yet.
+        } finally {
+            user.signOutAndDeleteUser();
+        }
+    }
+    
     @Test
     public void retrieveParticipant() {
         ResearcherClient client = researcher.getSession().getResearcherClient();

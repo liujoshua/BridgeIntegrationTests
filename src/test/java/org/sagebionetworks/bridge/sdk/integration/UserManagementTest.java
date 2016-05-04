@@ -1,5 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertNotNull;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -10,11 +12,7 @@ import org.sagebionetworks.bridge.sdk.ResearcherClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
-import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 import org.sagebionetworks.bridge.sdk.models.users.SignUpByAdmin;
-
-import static org.junit.Assert.assertTrue;
 
 public class UserManagementTest {
 
@@ -36,7 +34,9 @@ public class UserManagementTest {
 
     @After
     public void after() {
-        researcher.signOutAndDeleteUser(); //must do before admin session signout
+        if (researcher != null) {
+            researcher.signOutAndDeleteUser(); //must do before admin session signout    
+        }
         adminSession.signOut();
     }
 
@@ -46,15 +46,11 @@ public class UserManagementTest {
         String password = "P4ssword";
 
         SignUpByAdmin signUp = new SignUpByAdmin(email, password, null, /*consent*/true);
-
-        boolean result = adminClient.createUser(signUp);
-        assertTrue(result);
         
-        PagedResourceList<AccountSummary> page = researcherClient.getPagedAccountSummaries(0, 10, email);
-        String id = page.getItems().get(0).getId();
+        String id = adminClient.createUser(signUp);
+        assertNotNull(id);
 
         researcherClient.signOutUser(id);
-
         adminClient.deleteUser(id);
     }
 

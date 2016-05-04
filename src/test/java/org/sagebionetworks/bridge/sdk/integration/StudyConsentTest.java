@@ -35,7 +35,9 @@ public class StudyConsentTest {
         if (subpopGuid != null) {
             admin.getSession().getAdminClient().deleteSubpopulationPermanently(subpopGuid);    
         }
-        developer.signOutAndDeleteUser();
+        if (developer != null) {
+            developer.signOutAndDeleteUser();    
+        }
     }
 
     @Test(expected=BridgeSDKException.class)

@@ -89,6 +89,9 @@ public class TestUserHelper {
         String emailAddress = Tests.makeEmail(cls);
 
         SignUpByAdmin signUp = new SignUpByAdmin(emailAddress, PASSWORD, rolesList, consent);
+        
+        // We don't need the ID here, we get it because we always retrieve a session. The iOS integration tests
+        // use this however.
         adminClient.createUser(signUp);
 
         Session userSession = null;

@@ -64,8 +64,12 @@ public class SchedulePlanTest {
     @After
     public void after() {
         ClientProvider.setClientInfo(new ClientInfo.Builder().build());
-        developer.signOutAndDeleteUser();
-        user.signOutAndDeleteUser();
+        if (developer != null) {
+            developer.signOutAndDeleteUser();    
+        }
+        if (user != null) {
+            user.signOutAndDeleteUser();    
+        }
     }
 
     @Test
