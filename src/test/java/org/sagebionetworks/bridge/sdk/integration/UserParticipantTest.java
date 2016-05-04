@@ -7,7 +7,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -28,15 +30,15 @@ import com.google.common.collect.Sets;
 @Category(IntegrationSmokeTest.class)
 public class UserParticipantTest {
 
-    private TestUser developer;
+    private static TestUser developer;
 
-    @Before
-    public void before() {
+    @BeforeClass
+    public static void before() {
         developer = TestUserHelper.createAndSignInUser(UserParticipantTest.class, true, Roles.DEVELOPER);
     }
 
-    @After
-    public void after() {
+    @AfterClass
+    public static void after() {
         if (developer != null) {
             developer.signOutAndDeleteUser();    
         }
