@@ -11,9 +11,9 @@ import org.sagebionetworks.bridge.sdk.Config;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.subpopulations.SubpopulationGuid;
 import org.sagebionetworks.bridge.sdk.models.users.SignInCredentials;
-import org.sagebionetworks.bridge.sdk.models.users.SignUpByAdmin;
 
 import com.google.common.collect.Sets;
 
@@ -88,11 +88,12 @@ public class TestUserHelper {
         // email to bridge-testing@sagebase.org.
         String emailAddress = Tests.makeEmail(cls);
 
-        SignUpByAdmin signUp = new SignUpByAdmin(emailAddress, PASSWORD, rolesList, consent);
+        StudyParticipant participant = new StudyParticipant.Builder().withEmail(emailAddress)
+                .withPassword(PASSWORD).withRoles(rolesList).build();
         
         // We don't need the ID here, we get it because we always retrieve a session. The iOS integration tests
         // use this however.
-        adminClient.createUser(signUp);
+        adminClient.createUser(participant, consent);
 
         Session userSession = null;
         try {
@@ -106,7 +107,7 @@ public class TestUserHelper {
                     throw e;
                 }
             }
-            return new TestUserHelper.TestUser(adminClient, userSession, signUp.getEmail(), signUp.getPassword(),
+            return new TestUserHelper.TestUser(adminClient, userSession, participant.getEmail(), participant.getPassword(),
                     rolesList);
         } catch (RuntimeException ex) {
             // Clean up the account, so we don't end up with a bunch of leftover accounts.

@@ -15,10 +15,10 @@ import org.sagebionetworks.bridge.sdk.Config;
 import org.sagebionetworks.bridge.sdk.Config.Props;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.exceptions.BridgeSDKException;
+import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.studies.Study;
 import org.sagebionetworks.bridge.sdk.models.users.EmailCredentials;
 import org.sagebionetworks.bridge.sdk.models.users.SignInCredentials;
-import org.sagebionetworks.bridge.sdk.models.users.SignUpCredentials;
 
 @Category(IntegrationSmokeTest.class)
 public class AuthenticationTest {
@@ -97,9 +97,9 @@ public class AuthenticationTest {
             testUser.getSession().signOut();
             
             // Now create the same user.
-            SignUpCredentials signup = new SignUpCredentials(Tests.TEST_KEY, testUser.getEmail(), testUser.getPassword(), null);
-            ClientProvider.signUp(signup);
-            // This should not have thrown an error.
+            StudyParticipant participant = new StudyParticipant.Builder()
+                    .withEmail(testUser.getEmail()).withPassword(testUser.getPassword()).build();
+            ClientProvider.signUp(Tests.TEST_KEY, participant);
             
         } finally {
             testUser.signOutAndDeleteUser();
