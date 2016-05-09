@@ -12,6 +12,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.sdk.ClientProvider;
+import org.sagebionetworks.bridge.sdk.ResearcherClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
@@ -63,6 +64,7 @@ public class SignInTest {
     
     @Test
     public void createComplexUser() {
+        ResearcherClient researcherClient = researcher.getSession().getResearcherClient();
         Map<String,String> map = Maps.newHashMap();
         map.put("phone", "123-345-5768");
 
@@ -81,12 +83,12 @@ public class SignInTest {
                 
         ClientProvider.signUp(Tests.TEST_KEY, participant);
         
-        PagedResourceList<AccountSummary> summaries = researcher.getSession().getResearcherClient()
-                .getPagedAccountSummaries(0, 10, participant.getEmail());
+        PagedResourceList<AccountSummary> summaries = researcherClient.getPagedAccountSummaries(0, 10,
+                participant.getEmail());
         assertEquals(1, summaries.getItems().size());
         
         AccountSummary summary = summaries.getItems().get(0);
-        StudyParticipant retrieved = researcher.getSession().getResearcherClient().getStudyParticipant(summary.getId());
+        StudyParticipant retrieved = researcherClient.getStudyParticipant(summary.getId());
         assertEquals("First Name", retrieved.getFirstName());
         assertEquals("Last Name", retrieved.getLastName());
         assertEquals("external ID", retrieved.getExternalId());
