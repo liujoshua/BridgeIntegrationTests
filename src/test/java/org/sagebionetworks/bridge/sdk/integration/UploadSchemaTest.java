@@ -17,6 +17,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.WorkerClient;
 import org.sagebionetworks.bridge.sdk.exceptions.ConcurrentModificationException;
 import org.sagebionetworks.bridge.sdk.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.exceptions.UnauthorizedException;
@@ -32,6 +33,8 @@ public class UploadSchemaTest {
     private static TestUserHelper.TestUser developer;
     private static DeveloperClient developerClient;
     private static TestUserHelper.TestUser user;
+    private static TestUserHelper.TestUser worker;
+    private static WorkerClient workerClient;
 
     private String schemaId;
 
@@ -40,6 +43,8 @@ public class UploadSchemaTest {
         developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Roles.DEVELOPER);
         developerClient = developer.getSession().getDeveloperClient();
         user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
+        worker = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Roles.WORKER);
+        workerClient = worker.getSession().getWorkerClient();
     }
 
     @Before
@@ -70,6 +75,13 @@ public class UploadSchemaTest {
         }
     }
 
+    @AfterClass
+    public static void deleteWorker() {
+        if (worker != null) {
+            worker.signOutAndDeleteUser();
+        }
+    }
+
     @Test
     public void test() {
         // set up some field defs
@@ -95,6 +107,10 @@ public class UploadSchemaTest {
         UploadSchema schemaV3 = new UploadSchema.Builder().copyOf(updatedSchemaV2)
                 .withFieldDefinitions(fooFieldDef, barFieldDef, bazFieldDef).withName("Schema Test v3").build();
         createOrUpdateSchemaAndVerify(schemaV3);
+
+        // Step 3b: Worker client can also get schemas, and can get schemas by rev.
+        UploadSchema workerSchemaV2 = workerClient.getSchema(schemaId, 2);
+        assertEquals(updatedSchemaV2, workerSchemaV2);
 
         // Step 4: Delete v3 and verify the getter returns v2.
         developerClient.deleteUploadSchema(schemaId, 3);
