@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
@@ -68,7 +69,8 @@ public class ClientProviderTest {
                 .build();
         try {
             try {
-                ClientProvider.signUp(study.getIdentifier(), participant);    
+                ClientProvider.signUp(study.getIdentifier(), participant);
+                fail("Should have thrown exception");
             } catch(InvalidEntityException e) {
                 assertEquals("StudyParticipant is invalid: externalId cannot be null or blank", e.getMessage());
             }
@@ -77,7 +79,8 @@ public class ClientProviderTest {
             participant = new StudyParticipant.Builder()
                     .copyOf(participant).withExternalId("ABC").build();
             try {
-                ClientProvider.signUp(study.getIdentifier(), participant);    
+                ClientProvider.signUp(study.getIdentifier(), participant);
+                fail("Should have thrown exception");
             }catch(EntityNotFoundException e) {
                 assertEquals("ExternalIdentifier not found.", e.getMessage());
             }
