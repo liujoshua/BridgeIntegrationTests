@@ -72,6 +72,7 @@ public class StudyTest {
         assertEquals(study.getSponsorName(), newStudy.getSponsorName());
         assertEquals(study.getSupportEmail(), newStudy.getSupportEmail());
         assertEquals(study.getTechnicalEmail(), newStudy.getTechnicalEmail());
+        assertTrue(study.getUsesCustomExportSchedule());
         assertEquals(study.getConsentNotificationEmail(), newStudy.getConsentNotificationEmail());
         assertEquals(study.getUserProfileAttributes(), newStudy.getUserProfileAttributes());
         assertEquals(study.getTaskIdentifiers(), newStudy.getTaskIdentifiers());
