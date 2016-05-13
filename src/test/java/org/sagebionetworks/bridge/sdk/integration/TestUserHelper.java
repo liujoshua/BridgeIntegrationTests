@@ -2,7 +2,9 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Arrays;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.sagebionetworks.bridge.sdk.AdminClient;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
@@ -72,14 +74,13 @@ public class TestUserHelper {
         return new TestUserHelper.TestUser(adminClient, adminSession);
     }
     
-    public static TestUser createAndSignInUser(Class<?> cls, boolean consent) {
-        return createAndSignInUser(cls, consent, Roles.TEST_USERS);
-    }
-    
-    public static TestUser createAndSignInUser(Class<?> cls, boolean consent, Roles role) {
-        StudyParticipant participant = new StudyParticipant.Builder()
-                .withRoles(Sets.newHashSet(role)).build();
-        return createAndSignInUser(cls, consent, participant);
+    public static TestUser createAndSignInUser(Class<?> cls, boolean consent, Roles... roles) {
+        StudyParticipant.Builder builder = new StudyParticipant.Builder();
+        if (roles != null) {
+            Set<Roles> rolesList = Arrays.stream(roles).collect(Collectors.toSet());
+            builder.withRoles(rolesList);
+        }
+        return createAndSignInUser(cls, consent, builder.build());
     }
     
     public static TestUser createAndSignInUser(Class<?> cls, boolean consent, StudyParticipant participant) {
