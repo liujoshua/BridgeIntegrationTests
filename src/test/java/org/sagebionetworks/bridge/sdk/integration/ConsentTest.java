@@ -40,12 +40,12 @@ public class ConsentTest {
         Session session = testUser.getSession();
         try {
             // starts out with no sharing
-            assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
+            assertEquals(SharingScope.NO_SHARING, session.getStudyParticipant().getSharingScope());
             
             // Change, verify in-memory session changed, verify after signing in again that server state has changed
             StudyParticipant participant = new StudyParticipant.Builder().withSharingScope(SharingScope.SPONSORS_AND_PARTNERS).build();
             client.saveStudyParticipant(participant);
-            assertEquals(SharingScope.SPONSORS_AND_PARTNERS, session.getSharingScope());
+            assertEquals(SharingScope.SPONSORS_AND_PARTNERS, session.getStudyParticipant().getSharingScope());
             
             participant = client.getStudyParticipant();
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, participant.getSharingScope());
@@ -54,7 +54,7 @@ public class ConsentTest {
             participant = new StudyParticipant.Builder().withSharingScope(SharingScope.NO_SHARING).build();
             client.saveStudyParticipant(participant);
 
-            assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
+            assertEquals(SharingScope.NO_SHARING, session.getStudyParticipant().getSharingScope());
 
             participant = client.getStudyParticipant();
             assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
@@ -161,7 +161,7 @@ public class ConsentTest {
             client.consentToResearch(testUser.getDefaultSubpopulation(), sig, SharingScope.ALL_QUALIFIED_RESEARCHERS);
             
             // The local session should reflect consent status & sharing scope
-            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, testUser.getSession().getSharingScope());
+            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, testUser.getSession().getStudyParticipant().getSharingScope());
             assertTrue(ConsentStatus.isUserConsented(testUser.getSession().getConsentStatuses()));
             
             // get consent and validate that it's the same consent
@@ -184,7 +184,7 @@ public class ConsentTest {
             // The remote session should also reflect the sharing scope
             testUser.getSession().signOut();
             Session session = ClientProvider.signIn(new SignInCredentials("api", testUser.getEmail(), testUser.getPassword()));
-            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
+            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getStudyParticipant().getSharingScope());
             assertTrue(ConsentStatus.isUserConsented(session.getConsentStatuses()));
 
             // withdraw consent

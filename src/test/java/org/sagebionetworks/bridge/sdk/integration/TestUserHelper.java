@@ -23,70 +23,95 @@ public class TestUserHelper {
     @SuppressWarnings("Convert2Diamond")
     public static class TestUser {
         private final AdminClient adminClient;
-        private final Session userSession;
-        private final StudyParticipant participant;
+        private final String email;
+        private final String userId;
+        private Session userSession;
 
-        public TestUser(AdminClient client, StudyParticipant participant, Session userSession) {
-
+        public TestUser(AdminClient client, Session userSession) {
             this.adminClient = client;
-            this.participant = participant;
             this.userSession = userSession;
+            this.email = userSession.getStudyParticipant().getEmail();
+            this.userId = userSession.getStudyParticipant().getId();
         }
         public Session getSession() {
             return userSession;
         }
         public String getEmail() {
-            return participant.getEmail();
+            return email;
         }
         public String getPassword() {
-            return participant.getPassword();
+            return PASSWORD;
         }
         public Set<Roles> getRoles() {
-            return participant.getRoles();
+            return userSession.getStudyParticipant().getRoles();
         }
         public SubpopulationGuid getDefaultSubpopulation() {
             return new SubpopulationGuid(Tests.TEST_KEY);
         }
+        public void signInAgain() throws Exception {
+            try {
+                userSession = ClientProvider.signIn( getSignInCredentials() );
+            } catch (ConsentRequiredException e) {
+                userSession = e.getSession();
+            }
+        }
         public void signOutAndDeleteUser() {
             userSession.signOut();
-            adminClient.deleteUser(userSession.getId());
+            adminClient.deleteUser(userId);
         }
         public SignInCredentials getSignInCredentials() {
-            return new SignInCredentials(Tests.TEST_KEY, participant.getEmail(), PASSWORD);
+            return new SignInCredentials(Tests.TEST_KEY, email, PASSWORD);
         }
     }
 
     public static TestUser getSignedInAdmin() {
         Config config = ClientProvider.getConfig();
-        Session session = ClientProvider.signIn(config.getAdminCredentials());
-        AdminClient adminClient = session.getAdminClient();
+        Session adminSession = ClientProvider.signIn(config.getAdminCredentials());
+        AdminClient adminClient = adminSession.getAdminClient();
         
-        return new TestUserHelper.TestUser(adminClient, null, session);
+        return new TestUserHelper.TestUser(adminClient, adminSession);
     }
     
-    public static TestUser createAndSignInUser(Class<?> cls, boolean consent, Roles... roles) {
+    public static TestUser createAndSignInUser(Class<?> cls, boolean consent) {
+        return createAndSignInUser(cls, consent, Roles.TEST_USERS);
+    }
+    
+    public static TestUser createAndSignInUser(Class<?> cls, boolean consent, Roles role) {
+        StudyParticipant participant = new StudyParticipant.Builder()
+                .withRoles(Sets.newHashSet(role)).build();
+        return createAndSignInUser(cls, consent, participant);
+    }
+    
+    public static TestUser createAndSignInUser(Class<?> cls, boolean consent, StudyParticipant participant) {
         checkNotNull(cls);
 
         ClientProvider.setClientInfo(Tests.TEST_CLIENT_INFO);
 
         Config config = ClientProvider.getConfig();
-        Session session = ClientProvider.signIn(config.getAdminCredentials());
-        AdminClient adminClient = session.getAdminClient();
+        Session adminSession = ClientProvider.signIn(config.getAdminCredentials());
+        AdminClient adminClient = adminSession.getAdminClient();
 
-        Set<Roles> rolesList = (roles == null) ? Sets.<Roles>newHashSet() : Sets.newHashSet(roles);
-        rolesList.add(Roles.TEST_USERS);
+        Set<Roles> rolesList = Sets.newHashSet(Roles.TEST_USERS);
+        if (participant != null && participant.getRoles() != null) {
+            rolesList.addAll(participant.getRoles());
+        }
 
         // For email address, we don't want consent emails to bounce or SES will get mad at us. All test user email
         // addresses should be in the form bridge-testing+[semi-unique token]@sagebase.org. This directs all test
         // email to bridge-testing@sagebase.org.
         String emailAddress = Tests.makeEmail(cls);
 
-        StudyParticipant participant = new StudyParticipant.Builder().withEmail(emailAddress)
-                .withPassword(PASSWORD).withRoles(rolesList).build();
+        StudyParticipant.Builder builder = new StudyParticipant.Builder();
+        if (participant != null) {
+            builder.copyOf(participant);
+        }
+        builder.withRoles(rolesList);
+        builder.withEmail(emailAddress);
+        builder.withPassword(PASSWORD);
         
         // We don't need the ID here, we get it because we always retrieve a session. The iOS integration tests
         // use this however.
-        adminClient.createUser(participant, consent);
+        adminClient.createUser(builder.build(), consent);
 
         Session userSession = null;
         try {
@@ -100,11 +125,11 @@ public class TestUserHelper {
                     throw e;
                 }
             }
-            return new TestUserHelper.TestUser(adminClient, participant, userSession);
+            return new TestUserHelper.TestUser(adminClient, userSession);
         } catch (RuntimeException ex) {
             // Clean up the account, so we don't end up with a bunch of leftover accounts.
-            if (userSession != null) {
-                adminClient.deleteUser(userSession.getId());    
+            if (userSession != null && userSession.getStudyParticipant() != null) {
+                adminClient.deleteUser(userSession.getStudyParticipant().getId());    
             }
             throw ex;
         }
