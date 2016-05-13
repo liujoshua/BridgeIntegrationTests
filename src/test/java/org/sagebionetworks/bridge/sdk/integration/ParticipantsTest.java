@@ -67,8 +67,8 @@ public class ParticipantsTest {
                     .build();
             
             client.saveStudyParticipant(updates);
-            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, user.getSession().getSharingScope());
-            assertEquals(Sets.newHashSet("group1"), user.getSession().getDataGroups());
+            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, user.getSession().getStudyParticipant().getSharingScope());
+            assertEquals(Sets.newHashSet("group1"), user.getSession().getStudyParticipant().getDataGroups());
             // also language, but this hasn't been added to the session object yet.
         } finally {
             user.signOutAndDeleteUser();
@@ -79,10 +79,10 @@ public class ParticipantsTest {
     public void retrieveParticipant() {
         ResearcherClient client = researcher.getSession().getResearcherClient();
         
-        StudyParticipant participant = client.getStudyParticipant(researcher.getSession().getId());
+        StudyParticipant participant = client.getStudyParticipant(researcher.getSession().getStudyParticipant().getId());
         // Verify that what we know about this test user exists in the record
         assertEquals(researcher.getEmail(), participant.getEmail());
-        assertEquals(researcher.getSession().getId(), participant.getId());
+        assertEquals(researcher.getSession().getStudyParticipant().getId(), participant.getId());
         assertTrue(participant.getRoles().contains(Roles.RESEARCHER));
         assertFalse(participant.getConsentHistories().get("api").isEmpty());
     }
@@ -125,7 +125,7 @@ public class ParticipantsTest {
     }
     
     @Test
-    public void crudParticipant() {
+    public void crudParticipant() throws Exception {
         String email = Tests.makeEmail(ParticipantsTest.class);
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
         LinkedHashSet<String> languages = Tests.newLinkedHashSet("en","fr");
@@ -196,6 +196,9 @@ public class ParticipantsTest {
                     .withStatus(AccountStatus.ENABLED)
                     .build();
             client.updateStudyParticipant(newParticipant);
+            
+            // We think there are issues with customData consistency. For the moment, pause.
+            Thread.sleep(300);
             
             // Get it again, verify it has been updated
             retrieved = client.getStudyParticipant(id);

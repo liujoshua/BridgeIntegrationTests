@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 
 import com.google.common.base.Joiner;
+
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -51,8 +52,8 @@ public class UploadTest {
     @BeforeClass
     public static void beforeClass() {
         // developer is to ensure schemas exist. user is to do uploads
-        developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Roles.DEVELOPER);
-        user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
+        developer = TestUserHelper.createAndSignInUser(UploadTest.class, false, Roles.DEVELOPER);
+        user = TestUserHelper.createAndSignInUser(UploadTest.class, true);
 
         // ensure schemas exist, so we have something to upload against
         DeveloperClient developerClient = developer.getSession().getDeveloperClient();
