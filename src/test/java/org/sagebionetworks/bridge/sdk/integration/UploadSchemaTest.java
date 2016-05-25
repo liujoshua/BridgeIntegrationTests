@@ -108,8 +108,8 @@ public class UploadSchemaTest {
                 .withFieldDefinitions(fooFieldDef, barFieldDef, bazFieldDef).withName("Schema Test v3").build();
         createOrUpdateSchemaAndVerify(schemaV3);
 
-        // Step 3b: Worker client can also get schemas, and can get schemas by rev.
-        UploadSchema workerSchemaV2 = workerClient.getSchema(schemaId, 2);
+        // Step 3b: Worker client can also get schemas, and can get schemas by study, schema, and rev.
+        UploadSchema workerSchemaV2 = workerClient.getSchema(Tests.TEST_KEY, schemaId, 2);
         assertEquals(updatedSchemaV2, workerSchemaV2);
 
         // Step 4: Delete v3 and verify the getter returns v2.
