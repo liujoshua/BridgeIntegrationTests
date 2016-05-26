@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -109,8 +110,13 @@ public class UploadSchemaTest {
         createOrUpdateSchemaAndVerify(schemaV3);
 
         // Step 3b: Worker client can also get schemas, and can get schemas by study, schema, and rev.
+        // This schema should be identical to updatedSchemaV2, except it also has the study ID.
         UploadSchema workerSchemaV2 = workerClient.getSchema(Tests.TEST_KEY, schemaId, 2);
-        assertEquals(updatedSchemaV2, workerSchemaV2);
+        assertEquals(Tests.TEST_KEY, workerSchemaV2.getStudyId());
+
+        UploadSchema workerSchemaV2MinusStudyId = new UploadSchema.Builder().copyOf(workerSchemaV2).withStudyId(null)
+                .build();
+        assertEquals(updatedSchemaV2, workerSchemaV2MinusStudyId);
 
         // Step 4: Delete v3 and verify the getter returns v2.
         developerClient.deleteUploadSchema(schemaId, 3);
@@ -169,6 +175,9 @@ public class UploadSchemaTest {
         assertEquals(schema.getSchemaId(), returnedSchema.getSchemaId());
         assertEquals(schema.getSchemaType(), returnedSchema.getSchemaType());
 
+        // developer APIs never return study IDs
+        assertNull(schema.getStudyId());
+
         if (schema.getRevision() == null) {
             assertEquals(1, returnedSchema.getRevision().intValue());
         } else {
@@ -202,6 +211,7 @@ public class UploadSchemaTest {
         assertEquals(1, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
         assertEquals(UploadSchemaType.IOS_SURVEY, createdSchema.getSchemaType());
+        assertNull(createdSchema.getStudyId());
         assertEquals("survey", createdSchema.getSurveyGuid());
         assertEquals(surveyCreatedOnMillis, createdSchema.getSurveyCreatedOn().getMillis());
     }
@@ -269,6 +279,7 @@ public class UploadSchemaTest {
         assertEquals(2, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
         assertEquals(UploadSchemaType.IOS_DATA, createdSchema.getSchemaType());
+        assertNull(createdSchema.getStudyId());
         assertEquals(fieldDefListV1, createdSchema.getFieldDefinitions());
 
         // Get the schema back. Should match created schema.
@@ -292,6 +303,7 @@ public class UploadSchemaTest {
         assertEquals(2, updatedSchema.getRevision().intValue());
         assertEquals(schemaId, updatedSchema.getSchemaId());
         assertEquals(UploadSchemaType.IOS_DATA, updatedSchema.getSchemaType());
+        assertNull(updatedSchema.getStudyId());
         assertEquals(fieldDefListV2, updatedSchema.getFieldDefinitions());
 
         // Get the schema back again. Should match updated schema.
