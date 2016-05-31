@@ -2,7 +2,6 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import org.sagebionetworks.bridge.sdk.AdminClient;
@@ -24,78 +23,96 @@ public class TestUserHelper {
     @SuppressWarnings("Convert2Diamond")
     public static class TestUser {
         private final AdminClient adminClient;
-        private final Session userSession;
-        private final String email;
-        private final String password;
-        private final Set<Roles> roles;
+        private Session userSession;
         private final String userId;
 
-        public TestUser(AdminClient client, Session userSession, String email, String password,
-                Set<Roles> roleList) {
-
+        public TestUser(AdminClient client, Session userSession) {
             this.adminClient = client;
             this.userSession = userSession;
-            this.email = email;
-            this.password = password;
-            this.roles = (roleList == null) ? new HashSet<Roles>() : roleList;
             this.userId = userSession.getStudyParticipant().getId();
-            roles.add(Roles.TEST_USERS);
         }
         public Session getSession() {
             return userSession;
         }
         public String getEmail() {
-            return email;
+            return userSession.getStudyParticipant().getEmail();
         }
         public String getPassword() {
-            return password;
+            return userSession.getStudyParticipant().getPassword();
         }
         public Set<Roles> getRoles() {
-            return roles;
+            return userSession.getStudyParticipant().getRoles();
         }
         public SubpopulationGuid getDefaultSubpopulation() {
             return new SubpopulationGuid(Tests.TEST_KEY);
+        }
+        public void signInAgain() throws Exception {
+            try {
+                userSession = ClientProvider.signIn( getSignInCredentials() );
+            } catch (ConsentRequiredException e) {
+                userSession = e.getSession();
+            }
         }
         public void signOutAndDeleteUser() {
             userSession.signOut();
             adminClient.deleteUser(userId);
         }
         public SignInCredentials getSignInCredentials() {
-            return new SignInCredentials(Tests.TEST_KEY, email, PASSWORD);
+            return new SignInCredentials(Tests.TEST_KEY, 
+                userSession.getStudyParticipant().getEmail(), PASSWORD);
         }
     }
 
     public static TestUser getSignedInAdmin() {
         Config config = ClientProvider.getConfig();
-        Session session = ClientProvider.signIn(config.getAdminCredentials());
-        AdminClient adminClient = session.getAdminClient();
-
-        return new TestUserHelper.TestUser(adminClient, session, "", "", Sets.newHashSet(Roles.ADMIN));
+        Session adminSession = ClientProvider.signIn(config.getAdminCredentials());
+        AdminClient adminClient = adminSession.getAdminClient();
+        
+        return new TestUserHelper.TestUser(adminClient, adminSession);
     }
     
     public static TestUser createAndSignInUser(Class<?> cls, boolean consent, Roles... roles) {
+        StudyParticipant.Builder builder = new StudyParticipant.Builder();
+        if (roles != null) {
+            Set<Roles> rolesList = Sets.newHashSet();
+            for (Roles role : roles) {
+                rolesList.add(role);    
+            }
+            builder.withRoles(rolesList);
+        }
+        return createAndSignInUser(cls, consent, builder.build());
+    }
+    
+    public static TestUser createAndSignInUser(Class<?> cls, boolean consent, StudyParticipant participant) {
         checkNotNull(cls);
 
         ClientProvider.setClientInfo(Tests.TEST_CLIENT_INFO);
 
         Config config = ClientProvider.getConfig();
-        Session session = ClientProvider.signIn(config.getAdminCredentials());
-        AdminClient adminClient = session.getAdminClient();
+        Session adminSession = ClientProvider.signIn(config.getAdminCredentials());
+        AdminClient adminClient = adminSession.getAdminClient();
 
-        Set<Roles> rolesList = (roles == null) ? Sets.<Roles>newHashSet() : Sets.newHashSet(roles);
-        rolesList.add(Roles.TEST_USERS);
+        Set<Roles> rolesList = Sets.newHashSet(Roles.TEST_USERS);
+        if (participant != null && participant.getRoles() != null) {
+            rolesList.addAll(participant.getRoles());
+        }
 
         // For email address, we don't want consent emails to bounce or SES will get mad at us. All test user email
         // addresses should be in the form bridge-testing+[semi-unique token]@sagebase.org. This directs all test
         // email to bridge-testing@sagebase.org.
         String emailAddress = Tests.makeEmail(cls);
 
-        StudyParticipant participant = new StudyParticipant.Builder()
-                .withEmail(emailAddress).withPassword(PASSWORD).withRoles(rolesList).build();
+        StudyParticipant.Builder builder = new StudyParticipant.Builder();
+        if (participant != null) {
+            builder.copyOf(participant);
+        }
+        builder.withRoles(rolesList);
+        builder.withEmail(emailAddress);
+        builder.withPassword(PASSWORD);
         
         // We don't need the ID here, we get it because we always retrieve a session. The iOS integration tests
         // use this however.
-        adminClient.createUser(participant, consent);
+        adminClient.createUser(builder.build(), consent);
 
         Session userSession = null;
         try {
@@ -109,11 +126,10 @@ public class TestUserHelper {
                     throw e;
                 }
             }
-            return new TestUserHelper.TestUser(adminClient, userSession, participant.getEmail(), participant.getPassword(),
-                    rolesList);
+            return new TestUserHelper.TestUser(adminClient, userSession);
         } catch (RuntimeException ex) {
             // Clean up the account, so we don't end up with a bunch of leftover accounts.
-            if (userSession != null) {
+            if (userSession != null && userSession.getStudyParticipant() != null) {
                 adminClient.deleteUser(userSession.getStudyParticipant().getId());    
             }
             throw ex;

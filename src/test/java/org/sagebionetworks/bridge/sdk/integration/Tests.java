@@ -134,6 +134,7 @@ public class Tests {
         study.setSupportEmail("test@test.com");
         study.setConsentNotificationEmail("test2@test.com");
         study.setTechnicalEmail("test3@test.com");
+        study.setUsesCustomExportSchedule(true);
         study.getUserProfileAttributes().add("new_profile_attribute");
         study.setTaskIdentifiers(Sets.newHashSet("taskA")); // setting it differently just for the heck of it 
         study.setDataGroups(Sets.newHashSet("beta_users", "production_users"));

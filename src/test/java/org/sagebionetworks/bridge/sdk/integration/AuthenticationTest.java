@@ -100,7 +100,6 @@ public class AuthenticationTest {
             StudyParticipant participant = new StudyParticipant.Builder()
                     .withEmail(testUser.getEmail()).withPassword(testUser.getPassword()).build();
             ClientProvider.signUp(Tests.TEST_KEY, participant);
-            // This should not have thrown an error.
             
         } finally {
             testUser.signOutAndDeleteUser();

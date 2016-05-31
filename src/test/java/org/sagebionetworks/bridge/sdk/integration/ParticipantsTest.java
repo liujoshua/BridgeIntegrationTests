@@ -125,7 +125,7 @@ public class ParticipantsTest {
     }
     
     @Test
-    public void crudParticipant() {
+    public void crudParticipant() throws Exception {
         String email = Tests.makeEmail(ParticipantsTest.class);
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
         LinkedHashSet<String> languages = Tests.newLinkedHashSet("en","fr");
@@ -196,6 +196,9 @@ public class ParticipantsTest {
                     .withStatus(AccountStatus.ENABLED)
                     .build();
             client.updateStudyParticipant(newParticipant);
+            
+            // We think there are issues with customData consistency. For the moment, pause.
+            Thread.sleep(300);
             
             // Get it again, verify it has been updated
             retrieved = client.getStudyParticipant(id);

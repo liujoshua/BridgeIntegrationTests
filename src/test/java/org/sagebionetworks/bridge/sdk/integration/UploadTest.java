@@ -1,12 +1,16 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.util.List;
 import java.util.Locale;
+
+import com.google.common.base.Joiner;
 
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -48,8 +52,8 @@ public class UploadTest {
     @BeforeClass
     public static void beforeClass() {
         // developer is to ensure schemas exist. user is to do uploads
-        developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Roles.DEVELOPER);
-        user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
+        developer = TestUserHelper.createAndSignInUser(UploadTest.class, false, Roles.DEVELOPER);
+        user = TestUserHelper.createAndSignInUser(UploadTest.class, true);
 
         // ensure schemas exist, so we have something to upload against
         DeveloperClient developerClient = developer.getSession().getDeveloperClient();
@@ -126,6 +130,25 @@ public class UploadTest {
                     .build();
             developerClient.createOrUpdateUploadSchema(nonJsonSchema);
         }
+
+        UploadSchema maxAppVersionTestSchema = null;
+        try {
+            maxAppVersionTestSchema = developerClient.getMostRecentUploadSchemaRevision("max-app-version-test");
+        } catch (EntityNotFoundException ex) {
+            // no-op
+        }
+        if (maxAppVersionTestSchema == null) {
+            maxAppVersionTestSchema = new UploadSchema.Builder()
+                    .withSchemaId("max-app-version-test")
+                    .withRevision(1)
+                    .withName("maxAppVersion Test")
+                    .withSchemaType(UploadSchemaType.IOS_DATA)
+                    .withFieldDefinitions(
+                            new UploadFieldDefinition.Builder().withName("record.json.value").withRequired(true)
+                                    .withType(UploadFieldType.STRING).withMaxAppVersion(20).build())
+                    .build();
+            developerClient.createSchemaRevisionV4(maxAppVersionTestSchema);
+        }
     }
 
     @AfterClass
@@ -155,6 +178,48 @@ public class UploadTest {
     @Test
     public void nonJson() throws Exception {
         testUpload("non-json-encrypted");
+    }
+
+    @Test
+    public void appVersionAboveMax() throws Exception {
+        testUpload("max-app-version-test-v30-encrypted");
+    }
+
+    @Test
+    public void appVersionBelowMax() throws Exception {
+        // set up request
+        String filePath = resolveFilePath("max-app-version-test-v10-encrypted");
+        UploadRequest req = makeRequest(filePath);
+
+        // upload to server
+        UserClient userClient = user.getSession().getUserClient();
+        UploadSession session = userClient.requestUploadSession(req);
+        String uploadId = session.getId();
+        LOG.info("UploadId=" + uploadId);
+        userClient.upload(session, req, filePath);
+
+        // get validation status
+        UploadValidationStatus status = null;
+        for (int i = 0; i < UPLOAD_STATUS_DELAY_RETRIES; i++) {
+            Thread.sleep(UPLOAD_STATUS_DELAY_MILLISECONDS);
+
+            status = userClient.getUploadStatus(session.getId());
+            if (status.getStatus() == UploadStatus.SUCCEEDED) {
+                fail("Upload validation succeeded when it should have failed, UploadId=" + uploadId);
+            } else if (status.getStatus() == UploadStatus.VALIDATION_FAILED) {
+                break;
+            }
+        }
+
+        // validate
+        assertNotNull(status);
+        assertEquals(UploadStatus.VALIDATION_FAILED, status.getStatus());
+
+        // Concatenate messages together, make sure they reference the missing field.
+        List<String> messageList = status.getMessageList();
+        assertFalse(messageList.isEmpty());
+        String concatMessages = Joiner.on('\n').join(messageList);
+        assertTrue(concatMessages.contains("record.json.value"));
     }
 
     private static void testUpload(String fileLeafName) throws Exception {
