@@ -91,7 +91,7 @@ public class UserParticipantTest {
         client.saveStudyParticipant(participant);
         
         // session updated
-        assertEquals(dataGroups, developer.getSession().getDataGroups());
+        assertEquals(dataGroups, developer.getSession().getStudyParticipant().getDataGroups());
         
         // server updated
         participant = client.getStudyParticipant();
@@ -102,7 +102,7 @@ public class UserParticipantTest {
         client.saveStudyParticipant(participant);
         
         // session updated
-        assertEquals(Sets.<String>newHashSet(), developer.getSession().getDataGroups());
+        assertEquals(Sets.<String>newHashSet(), developer.getSession().getStudyParticipant().getDataGroups());
         
         // server updated
         participant = client.getStudyParticipant();

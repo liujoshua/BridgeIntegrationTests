@@ -52,7 +52,7 @@ public class SignInTest {
         user.getSession().signOut();
         
         Session session = ClientProvider.signIn(user.getSignInCredentials());
-        assertEquals(dataGroups, session.getDataGroups());
+        assertEquals(dataGroups, session.getStudyParticipant().getDataGroups());
     }
     
 }

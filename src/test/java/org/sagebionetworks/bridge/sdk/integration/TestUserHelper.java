@@ -28,6 +28,7 @@ public class TestUserHelper {
         private final String email;
         private final String password;
         private final Set<Roles> roles;
+        private final String userId;
 
         public TestUser(AdminClient client, Session userSession, String email, String password,
                 Set<Roles> roleList) {
@@ -37,6 +38,7 @@ public class TestUserHelper {
             this.email = email;
             this.password = password;
             this.roles = (roleList == null) ? new HashSet<Roles>() : roleList;
+            this.userId = userSession.getStudyParticipant().getId();
             roles.add(Roles.TEST_USERS);
         }
         public Session getSession() {
@@ -56,7 +58,7 @@ public class TestUserHelper {
         }
         public void signOutAndDeleteUser() {
             userSession.signOut();
-            adminClient.deleteUser(userSession.getId());
+            adminClient.deleteUser(userId);
         }
         public SignInCredentials getSignInCredentials() {
             return new SignInCredentials(Tests.TEST_KEY, email, PASSWORD);
@@ -112,7 +114,7 @@ public class TestUserHelper {
         } catch (RuntimeException ex) {
             // Clean up the account, so we don't end up with a bunch of leftover accounts.
             if (userSession != null) {
-                adminClient.deleteUser(userSession.getId());    
+                adminClient.deleteUser(userSession.getStudyParticipant().getId());    
             }
             throw ex;
         }
