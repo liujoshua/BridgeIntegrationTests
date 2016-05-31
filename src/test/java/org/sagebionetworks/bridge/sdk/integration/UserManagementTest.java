@@ -12,7 +12,7 @@ import org.sagebionetworks.bridge.sdk.ResearcherClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.models.users.SignUpByAdmin;
+import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 
 public class UserManagementTest {
 
@@ -45,9 +45,10 @@ public class UserManagementTest {
         String email = Tests.makeEmail(UserManagementTest.class);
         String password = "P4ssword";
 
-        SignUpByAdmin signUp = new SignUpByAdmin(email, password, null, /*consent*/true);
+        StudyParticipant participant = new StudyParticipant.Builder()
+                .withEmail(email).withPassword(password).build();
         
-        String id = adminClient.createUser(signUp);
+        String id = adminClient.createUser(participant, true);
         assertNotNull(id);
 
         researcherClient.signOutUser(id);

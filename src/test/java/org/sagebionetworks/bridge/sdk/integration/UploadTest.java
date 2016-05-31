@@ -183,6 +183,8 @@ public class UploadTest {
             }
         }
 
+        System.out.println(status.getMessageList());
+        
         assertNotNull("Upload status is not null, UploadId=" + uploadId, status);
         assertEquals("Upload succeeded, UploadId=" + uploadId, UploadStatus.SUCCEEDED, status.getStatus());
         assertTrue("Upload has no validation messages, UploadId=" + uploadId, status.getMessageList().isEmpty());
