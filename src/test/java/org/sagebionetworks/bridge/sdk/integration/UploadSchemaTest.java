@@ -29,7 +29,8 @@ import org.sagebionetworks.bridge.sdk.models.upload.UploadSchema;
 import org.sagebionetworks.bridge.sdk.models.upload.UploadSchemaType;
 
 public class UploadSchemaTest {
-    private static final String TEST_SCHEMA_ID_PREFIX = "integration-test-schema-";
+    // We put spaces in the schema ID to test URL encoding.
+    private static final String TEST_SCHEMA_ID_PREFIX = "integration test schema ";
 
     private static TestUserHelper.TestUser developer;
     private static DeveloperClient developerClient;
