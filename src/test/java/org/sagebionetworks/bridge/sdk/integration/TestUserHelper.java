@@ -64,8 +64,7 @@ public class TestUserHelper {
             adminClient.deleteUser(userId);
         }
         public SignInCredentials getSignInCredentials() {
-            return new SignInCredentials(Tests.TEST_KEY, 
-                userSession.getStudyParticipant().getEmail(), PASSWORD);
+            return new SignInCredentials(Tests.TEST_KEY, email, PASSWORD);
         }
     }
 
