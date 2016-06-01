@@ -45,7 +45,8 @@ public class UserManagementTest {
         String email = Tests.makeEmail(UserManagementTest.class);
         String password = "P4ssword";
 
-        StudyParticipant participant = new StudyParticipant.Builder().withEmail(email).withPassword(password).build();
+        StudyParticipant participant = new StudyParticipant.Builder()
+                .withEmail(email).withPassword(password).build();
         
         String id = adminClient.createUser(participant, true);
         assertNotNull(id);

@@ -23,24 +23,22 @@ public class TestUserHelper {
     @SuppressWarnings("Convert2Diamond")
     public static class TestUser {
         private final AdminClient adminClient;
-        private final String email;
-        private final String userId;
         private Session userSession;
+        private final String userId;
 
         public TestUser(AdminClient client, Session userSession) {
             this.adminClient = client;
             this.userSession = userSession;
-            this.email = userSession.getStudyParticipant().getEmail();
             this.userId = userSession.getStudyParticipant().getId();
         }
         public Session getSession() {
             return userSession;
         }
         public String getEmail() {
-            return email;
+            return userSession.getStudyParticipant().getEmail();
         }
         public String getPassword() {
-            return PASSWORD;
+            return userSession.getStudyParticipant().getPassword();
         }
         public Set<Roles> getRoles() {
             return userSession.getStudyParticipant().getRoles();
@@ -60,7 +58,8 @@ public class TestUserHelper {
             adminClient.deleteUser(userId);
         }
         public SignInCredentials getSignInCredentials() {
-            return new SignInCredentials(Tests.TEST_KEY, email, PASSWORD);
+            return new SignInCredentials(Tests.TEST_KEY, 
+                userSession.getStudyParticipant().getEmail(), PASSWORD);
         }
     }
 
