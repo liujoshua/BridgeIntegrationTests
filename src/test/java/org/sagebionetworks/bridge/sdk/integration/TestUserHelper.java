@@ -25,7 +25,6 @@ public class TestUserHelper {
         private final AdminClient adminClient;
         private Session userSession;
         private final String email;
-        private final String password;
         private final String userId;
         private final Set<Roles> roles;
 
@@ -33,7 +32,6 @@ public class TestUserHelper {
             this.adminClient = client;
             this.userSession = userSession;
             this.email = userSession.getStudyParticipant().getEmail();
-            this.password = userSession.getStudyParticipant().getPassword();
             this.roles = userSession.getStudyParticipant().getRoles();
             this.userId = userSession.getStudyParticipant().getId();
         }
@@ -44,7 +42,7 @@ public class TestUserHelper {
             return email;
         }
         public String getPassword() {
-            return password;
+            return PASSWORD;
         }
         public Set<Roles> getRoles() {
             return roles;
