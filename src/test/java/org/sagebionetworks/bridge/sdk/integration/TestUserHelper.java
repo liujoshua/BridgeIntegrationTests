@@ -24,24 +24,30 @@ public class TestUserHelper {
     public static class TestUser {
         private final AdminClient adminClient;
         private Session userSession;
+        private final String email;
+        private final String password;
         private final String userId;
+        private final Set<Roles> roles;
 
         public TestUser(AdminClient client, Session userSession) {
             this.adminClient = client;
             this.userSession = userSession;
+            this.email = userSession.getStudyParticipant().getEmail();
+            this.password = userSession.getStudyParticipant().getPassword();
+            this.roles = userSession.getStudyParticipant().getRoles();
             this.userId = userSession.getStudyParticipant().getId();
         }
         public Session getSession() {
             return userSession;
         }
         public String getEmail() {
-            return userSession.getStudyParticipant().getEmail();
+            return email;
         }
         public String getPassword() {
-            return userSession.getStudyParticipant().getPassword();
+            return password;
         }
         public Set<Roles> getRoles() {
-            return userSession.getStudyParticipant().getRoles();
+            return roles;
         }
         public SubpopulationGuid getDefaultSubpopulation() {
             return new SubpopulationGuid(Tests.TEST_KEY);
