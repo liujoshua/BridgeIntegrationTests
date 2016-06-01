@@ -221,4 +221,13 @@ public class ParticipantsTest {
             }
         }
     }
+    
+    @Test
+    public void canSendRequestResetPasswordEmail() {
+        ResearcherClient client = researcher.getSession().getResearcherClient();
+        
+        // This is sending an email, which is difficult to verify, but this at least should not throw an error.
+        String userId = researcher.getSession().getStudyParticipant().getId();
+        client.requestResetPassword(userId);
+    }
 }
