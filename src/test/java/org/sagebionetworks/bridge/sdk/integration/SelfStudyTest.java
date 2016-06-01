@@ -47,7 +47,7 @@ public class SelfStudyTest {
     }
     
     @Test(expected = UnauthorizedException.class)
-    public void researcherCannotUpdateStudt() {
+    public void researcherCannotUpdateStudy() {
         Study study = researcher.getSession().getResearcherClient().getStudy();
         study.setName("Test");
         researcher.getSession().getDeveloperClient().updateStudy(study);
