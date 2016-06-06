@@ -8,8 +8,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.StudyConsentClient;
+import org.sagebionetworks.bridge.sdk.SubpopulationClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.sdk.models.ResourceList;
@@ -33,7 +34,7 @@ public class StudyConsentTest {
     @After
     public void after() {
         if (subpopGuid != null) {
-            admin.getSession().getAdminClient().deleteSubpopulationPermanently(subpopGuid);    
+            admin.getSession().getSubpopulationClient().deleteSubpopulationPermanently(subpopGuid);    
         }
         if (developer != null) {
             developer.signOutAndDeleteUser();    
@@ -47,7 +48,8 @@ public class StudyConsentTest {
             StudyConsent consent = new StudyConsent();
             consent.setDocumentContent("<p>Test content.</p>");
 
-            user.getSession().getDeveloperClient().createStudyConsent(user.getDefaultSubpopulation(), consent);
+            user.getSession().getStudyConsentClient().createStudyConsent(
+                    user.getDefaultSubpopulation(), consent);
         } finally {
             user.signOutAndDeleteUser();
         }
@@ -60,7 +62,8 @@ public class StudyConsentTest {
             StudyConsent consent = new StudyConsent();
             consent.setDocumentContent("<p>Test content.</p>");
 
-            researcher.getSession().getDeveloperClient().createStudyConsent(researcher.getDefaultSubpopulation(), consent);
+            researcher.getSession().getStudyConsentClient().createStudyConsent(
+                    researcher.getDefaultSubpopulation(), consent);
         } finally {
             researcher.signOutAndDeleteUser();
         }
@@ -68,7 +71,8 @@ public class StudyConsentTest {
     
     @Test
     public void addAndActivateConsent() {
-        DeveloperClient client = developer.getSession().getDeveloperClient();
+        StudyConsentClient studyConsentClient = developer.getSession().getStudyConsentClient();
+        SubpopulationClient subpopClient = developer.getSession().getSubpopulationClient();
 
         // Create a subpopulation to test this so we can delete the subpopulation to clean up.
         // Because we create it from scratch, we know the exact number of consents that are in it.
@@ -76,33 +80,33 @@ public class StudyConsentTest {
         Subpopulation subpop = new Subpopulation();
         subpop.setName(Tests.randomIdentifier(StudyConsentTest.class));
         subpop.setRequired(false);
-        GuidVersionHolder holder = client.createSubpopulation(subpop);
+        GuidVersionHolder holder = subpopClient.createSubpopulation(subpop);
         subpop.setHolder(holder);
         subpopGuid = new SubpopulationGuid(holder.getGuid());
         
         StudyConsent consent = new StudyConsent();
         consent.setDocumentContent("<p>Test content</p>");
-        client.createStudyConsent(subpopGuid, consent);
+        studyConsentClient.createStudyConsent(subpopGuid, consent);
 
-        ResourceList<StudyConsent> studyConsents = client.getAllStudyConsents(subpopGuid);
+        ResourceList<StudyConsent> studyConsents = studyConsentClient.getAllStudyConsents(subpopGuid);
 
         assertEquals(2, studyConsents.getTotal());
 
-        StudyConsent current = client.getStudyConsent(subpopGuid, studyConsents.getItems().get(0).getCreatedOn());
+        StudyConsent current = studyConsentClient.getStudyConsent(subpopGuid, studyConsents.getItems().get(0).getCreatedOn());
         assertEquals(consent.getDocumentContent(), current.getDocumentContent());
         assertNotNull(current.getCreatedOn());
 
-        client.publishStudyConsent(subpopGuid, current.getCreatedOn());
+        studyConsentClient.publishStudyConsent(subpopGuid, current.getCreatedOn());
 
-        StudyConsent published = client.getPublishedStudyConsent(subpopGuid);
+        StudyConsent published = studyConsentClient.getPublishedStudyConsent(subpopGuid);
         assertTrue("Published consent is returned.", published.isActive());
         
-        client.createStudyConsent(subpopGuid, current);
+        studyConsentClient.createStudyConsent(subpopGuid, current);
         
-        StudyConsent newOne = client.getMostRecentStudyConsent(subpopGuid);
+        StudyConsent newOne = studyConsentClient.getMostRecentStudyConsent(subpopGuid);
         assertTrue(newOne.getCreatedOn().isAfter(published.getCreatedOn()));
         
-        ResourceList<StudyConsent> studyConsents2 = client.getAllStudyConsents(subpopGuid);
+        ResourceList<StudyConsent> studyConsents2 = studyConsentClient.getAllStudyConsents(subpopGuid);
         assertEquals(3, studyConsents2.getTotal());
     }
 

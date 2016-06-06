@@ -16,9 +16,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
-import org.sagebionetworks.bridge.sdk.WorkerClient;
+import org.sagebionetworks.bridge.sdk.UploadSchemaClient;
 import org.sagebionetworks.bridge.sdk.exceptions.ConcurrentModificationException;
 import org.sagebionetworks.bridge.sdk.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.exceptions.UnauthorizedException;
@@ -33,20 +32,20 @@ public class UploadSchemaTest {
     private static final String TEST_SCHEMA_ID_PREFIX = "integration test schema ";
 
     private static TestUserHelper.TestUser developer;
-    private static DeveloperClient developerClient;
     private static TestUserHelper.TestUser user;
     private static TestUserHelper.TestUser worker;
-    private static WorkerClient workerClient;
+    private static UploadSchemaClient devUploadSchemaClient;
+    private static UploadSchemaClient workerUploadSchemaClient;
 
     private String schemaId;
 
     @BeforeClass
     public static void beforeClass() {
         developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Roles.DEVELOPER);
-        developerClient = developer.getSession().getDeveloperClient();
         user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
         worker = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Roles.WORKER);
-        workerClient = worker.getSession().getWorkerClient();
+        devUploadSchemaClient = developer.getSession().getUploadSchemaClient();
+        workerUploadSchemaClient = worker.getSession().getUploadSchemaClient();
     }
 
     @Before
@@ -57,7 +56,7 @@ public class UploadSchemaTest {
     @After
     public void deleteSchemas() {
         try {
-            developerClient.deleteUploadSchemaAllRevisions(schemaId);
+            devUploadSchemaClient.deleteUploadSchemaAllRevisions(schemaId);
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
         }
@@ -112,7 +111,7 @@ public class UploadSchemaTest {
 
         // Step 3b: Worker client can also get schemas, and can get schemas by study, schema, and rev.
         // This schema should be identical to updatedSchemaV2, except it also has the study ID.
-        UploadSchema workerSchemaV2 = workerClient.getSchema(Tests.TEST_KEY, schemaId, 2);
+        UploadSchema workerSchemaV2 = workerUploadSchemaClient.getSchema(Tests.TEST_KEY, schemaId, 2);
         assertEquals(Tests.TEST_KEY, workerSchemaV2.getStudyId());
 
         UploadSchema workerSchemaV2MinusStudyId = new UploadSchema.Builder().copyOf(workerSchemaV2).withStudyId(null)
@@ -120,14 +119,14 @@ public class UploadSchemaTest {
         assertEquals(updatedSchemaV2, workerSchemaV2MinusStudyId);
 
         // Step 4: Delete v3 and verify the getter returns v2.
-        developerClient.deleteUploadSchema(schemaId, 3);
-        UploadSchema returnedAfterDelete = developerClient.getMostRecentUploadSchemaRevision(schemaId);
+        devUploadSchemaClient.deleteUploadSchema(schemaId, 3);
+        UploadSchema returnedAfterDelete = devUploadSchemaClient.getMostRecentUploadSchemaRevision(schemaId);
         assertEquals(updatedSchemaV2, returnedAfterDelete);
 
         // Step 4a: Use list API to verify v1 and v2 are both still present
         boolean v1Found = false;
         boolean v2Found = false;
-        ResourceList<UploadSchema> schemaList = developerClient.getUploadSchema(schemaId);
+        ResourceList<UploadSchema> schemaList = devUploadSchemaClient.getUploadSchema(schemaId);
         for (UploadSchema oneSchema : schemaList) {
             if (oneSchema.getSchemaId().equals(schemaId)) {
                 int rev = oneSchema.getRevision();
@@ -146,12 +145,12 @@ public class UploadSchemaTest {
         assertTrue(v2Found);
 
         // Step 5: Delete all schemas with the test schema ID
-        developerClient.deleteUploadSchemaAllRevisions(schemaId);
+        devUploadSchemaClient.deleteUploadSchemaAllRevisions(schemaId);
 
         // Step 5a: Get API should throw
         Exception thrownEx = null;
         try {
-            developerClient.getUploadSchema(schemaId);
+            devUploadSchemaClient.getUploadSchema(schemaId);
             fail("expected exception");
         } catch (EntityNotFoundException ex) {
             thrownEx = ex;
@@ -159,7 +158,7 @@ public class UploadSchemaTest {
         assertNotNull(thrownEx);
 
         // Step 5b: Use list API to verify no schemas with this ID
-        ResourceList<UploadSchema> schemaList2 = developerClient.getAllUploadSchemas();
+        ResourceList<UploadSchema> schemaList2 = devUploadSchemaClient.getAllUploadSchemas();
         for (UploadSchema oneSchema : schemaList2) {
             if (oneSchema.getSchemaId().equals(schemaId)) {
                 fail("Found schema with ID " + schemaId + " even though it should have been deleted");
@@ -168,7 +167,7 @@ public class UploadSchemaTest {
     }
 
     private static UploadSchema createOrUpdateSchemaAndVerify(UploadSchema schema) {
-        UploadSchema returnedSchema = developerClient.createOrUpdateUploadSchema(schema);
+        UploadSchema returnedSchema = devUploadSchemaClient.createOrUpdateUploadSchema(schema);
 
         // all fields should match, except revision which is incremented
         assertEquals(schema.getFieldDefinitions(), returnedSchema.getFieldDefinitions());
@@ -205,7 +204,7 @@ public class UploadSchemaTest {
         UploadSchema schema = new UploadSchema.Builder().withFieldDefinitions(fieldListList).withName("Schema")
                 .withSchemaId(schemaId).withSchemaType(UploadSchemaType.IOS_SURVEY).withSurveyGuid("survey")
                 .withSurveyCreatedOn(surveyCreatedOn).build();
-        UploadSchema createdSchema = developerClient.createOrUpdateUploadSchema(schema);
+        UploadSchema createdSchema = devUploadSchemaClient.createOrUpdateUploadSchema(schema);
 
         assertEquals(fieldListList, createdSchema.getFieldDefinitions());
         assertEquals("Schema", createdSchema.getName());
@@ -225,7 +224,7 @@ public class UploadSchemaTest {
     @Test
     public void createSchemaVersionConflict() {
         // Create the schema first.
-        developerClient.createOrUpdateUploadSchema(makeSimpleSchema(schemaId, null, null));
+        devUploadSchemaClient.createOrUpdateUploadSchema(makeSimpleSchema(schemaId, null, null));
 
         // Now that the schema is created, run the update test.
         testVersionConflict(1, null);
@@ -234,7 +233,7 @@ public class UploadSchemaTest {
     @Test
     public void createSchemaVersionConflictWithDdbVersion() {
         // Create the schema first.
-        developerClient.createOrUpdateUploadSchema(makeSimpleSchema(schemaId, null, null));
+        devUploadSchemaClient.createOrUpdateUploadSchema(makeSimpleSchema(schemaId, null, null));
 
         // This time, we add the DDB version parameter (since this now exists in DDB) to make sure we don't croak when
         // this is present.
@@ -245,12 +244,12 @@ public class UploadSchemaTest {
         UploadSchema schema = makeSimpleSchema(schemaId, rev, version);
 
         // Create/update the schema and verified it was created/updated.
-        UploadSchema createdSchema = developerClient.createOrUpdateUploadSchema(schema);
+        UploadSchema createdSchema = devUploadSchemaClient.createOrUpdateUploadSchema(schema);
         assertNotNull(createdSchema);
 
         // Create/update again. This one should throw.
         try {
-            developerClient.createOrUpdateUploadSchema(schema);
+            devUploadSchemaClient.createOrUpdateUploadSchema(schema);
             fail("expected exception");
         } catch (ConcurrentModificationException ex) {
             // expected exception
@@ -275,7 +274,7 @@ public class UploadSchemaTest {
         List<UploadFieldDefinition> fieldDefListV1 = ImmutableList.of(fooField, barField);
         UploadSchema schemaV1 = new UploadSchema.Builder().withName("Schema").withRevision(2).withSchemaId(schemaId)
                 .withSchemaType(UploadSchemaType.IOS_DATA).withFieldDefinitions(fieldDefListV1).build();
-        UploadSchema createdSchema = developerClient.createSchemaRevisionV4(schemaV1);
+        UploadSchema createdSchema = devUploadSchemaClient.createSchemaRevisionV4(schemaV1);
         assertEquals("Schema", createdSchema.getName());
         assertEquals(2, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
@@ -284,12 +283,12 @@ public class UploadSchemaTest {
         assertEquals(fieldDefListV1, createdSchema.getFieldDefinitions());
 
         // Get the schema back. Should match created schema.
-        UploadSchema fetchedSchemaV1 = developerClient.getMostRecentUploadSchemaRevision(schemaId);
+        UploadSchema fetchedSchemaV1 = devUploadSchemaClient.getMostRecentUploadSchemaRevision(schemaId);
         assertEquals(createdSchema, fetchedSchemaV1);
 
         // create it again, version conflict
         try {
-            developerClient.createSchemaRevisionV4(schemaV1);
+            devUploadSchemaClient.createSchemaRevisionV4(schemaV1);
             fail("expected exception");
         } catch (ConcurrentModificationException ex) {
             // expected exception
@@ -299,7 +298,7 @@ public class UploadSchemaTest {
         List<UploadFieldDefinition> fieldDefListV2 = ImmutableList.of(barMaxAppVersion, bazField, fooMaxAppVersion);
         UploadSchema schemaV2 = new UploadSchema.Builder().copyOf(fetchedSchemaV1).withName("Updated Schema")
                 .withFieldDefinitions(fieldDefListV2).build();
-        UploadSchema updatedSchema = developerClient.updateSchemaRevisionV4(schemaId, 2, schemaV2);
+        UploadSchema updatedSchema = devUploadSchemaClient.updateSchemaRevisionV4(schemaId, 2, schemaV2);
         assertEquals("Updated Schema", updatedSchema.getName());
         assertEquals(2, updatedSchema.getRevision().intValue());
         assertEquals(schemaId, updatedSchema.getSchemaId());
@@ -308,12 +307,12 @@ public class UploadSchemaTest {
         assertEquals(fieldDefListV2, updatedSchema.getFieldDefinitions());
 
         // Get the schema back again. Should match updated schema.
-        UploadSchema fetchedSchemaV2 = developerClient.getMostRecentUploadSchemaRevision(schemaId);
+        UploadSchema fetchedSchemaV2 = devUploadSchemaClient.getMostRecentUploadSchemaRevision(schemaId);
         assertEquals(updatedSchema, fetchedSchemaV2);
 
         // update it again, version conflict
         try {
-            developerClient.updateSchemaRevisionV4(schemaId, 2, schemaV2);
+            devUploadSchemaClient.updateSchemaRevisionV4(schemaId, 2, schemaV2);
             fail("expected exception");
         } catch (ConcurrentModificationException ex) {
             // expected exception
@@ -333,6 +332,6 @@ public class UploadSchemaTest {
 
     @Test(expected=UnauthorizedException.class)
     public void unauthorizedTest() {
-        user.getSession().getDeveloperClient().getAllUploadSchemas();
+        user.getSession().getUploadSchemaClient().getAllUploadSchemas();
     }
 }

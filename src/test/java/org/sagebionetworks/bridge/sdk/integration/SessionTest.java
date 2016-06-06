@@ -14,7 +14,7 @@ import java.util.Set;
 
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ResearcherClient;
+import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
@@ -86,10 +86,10 @@ public class SessionTest {
             languages.add("de");
             languages.add("fr");
             
-            ResearcherClient client = researcher.getSession().getResearcherClient();
+            ParticipantClient participantClient = researcher.getSession().getParticipantClient();
             Session session = researcher.getSession();
             
-            participant = client.getStudyParticipant(session.getStudyParticipant().getId());
+            participant = participantClient.getStudyParticipant(session.getStudyParticipant().getId());
             StudyParticipant updated = new StudyParticipant.Builder().copyOf(participant)
                     .withFirstName("TestFirstName")
                     .withLastName("TestLastName")
@@ -103,7 +103,7 @@ public class SessionTest {
             // don't test disabling the account because, you can disable the account, causing lots of confusion.
             assertNotNull(updated.getId());
             
-            client.updateStudyParticipant(updated);
+            participantClient.updateStudyParticipant(updated);
             
             // When you update your own record via this API, you are signed out.
             assertFalse(session.isSignedIn());

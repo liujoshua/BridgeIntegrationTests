@@ -12,7 +12,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.ResearcherClient;
+import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
@@ -50,11 +50,11 @@ public class SignInTest {
     @Test
     public void canGetDataGroups(){
         Set<String> dataGroups = Sets.newHashSet("sdk-int-1");
-        UserClient client = user.getSession().getUserClient();
+        UserClient userClient = user.getSession().getUserClient();
         
         StudyParticipant participant = new StudyParticipant.Builder()
                 .withDataGroups(dataGroups).build();
-        client.saveStudyParticipant(participant);
+        userClient.saveStudyParticipant(participant);
         
         user.getSession().signOut();
         
@@ -64,7 +64,7 @@ public class SignInTest {
     
     @Test
     public void createComplexUser() {
-        ResearcherClient researcherClient = researcher.getSession().getResearcherClient();
+        ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         Map<String,String> map = Maps.newHashMap();
         map.put("phone", "123-345-5768");
 
@@ -83,12 +83,12 @@ public class SignInTest {
                 
         ClientProvider.signUp(Tests.TEST_KEY, participant);
         
-        PagedResourceList<AccountSummary> summaries = researcherClient.getPagedAccountSummaries(0, 10,
+        PagedResourceList<AccountSummary> summaries = participantClient.getPagedAccountSummaries(0, 10,
                 participant.getEmail());
         assertEquals(1, summaries.getItems().size());
         
         AccountSummary summary = summaries.getItems().get(0);
-        StudyParticipant retrieved = researcherClient.getStudyParticipant(summary.getId());
+        StudyParticipant retrieved = participantClient.getStudyParticipant(summary.getId());
         assertEquals("First Name", retrieved.getFirstName());
         assertEquals("Last Name", retrieved.getLastName());
         assertEquals("external ID", retrieved.getExternalId());

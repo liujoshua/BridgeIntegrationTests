@@ -13,11 +13,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.AdminClient;
 import org.sagebionetworks.bridge.sdk.ClientInfo;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.StudyClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.exceptions.UnauthorizedException;
@@ -44,24 +43,24 @@ public class StudyTest {
     public void after() {
         ClientProvider.setClientInfo(new ClientInfo.Builder().build());
         if (createdStudy && study != null) {
-            admin.getSession().getAdminClient().deleteStudy(study.getIdentifier());
+            admin.getSession().getStudyClient().deleteStudy(study.getIdentifier());
         }
         admin.getSession().signOut();
     }
 
     @Test
     public void crudStudy() throws Exception {
-        AdminClient client = admin.getSession().getAdminClient();
+        StudyClient studyClient = admin.getSession().getStudyClient();
         
         String identifier = Tests.randomIdentifier(StudyTest.class);
         study = Tests.getStudy(identifier, null);
         assertNull(study.getVersion());
         
-        VersionHolder holder = client.createStudy(study);
+        VersionHolder holder = studyClient.createStudy(study);
         createdStudy = true;
         assertVersionHasUpdated(holder, study, null);
 
-        Study newStudy = client.getStudy(study.getIdentifier());
+        Study newStudy = studyClient.getStudy(study.getIdentifier());
         // Verify study has password/email templates
         assertNotNull(newStudy.getPasswordPolicy());
         assertNotNull(newStudy.getVerifyEmailTemplate());
@@ -90,18 +89,18 @@ public class StudyTest {
         
         Long oldVersion = newStudy.getVersion();
         alterStudy(newStudy);
-        holder = client.updateStudy(newStudy);
+        holder = studyClient.updateStudy(newStudy);
         assertVersionHasUpdated(holder, newStudy, oldVersion);
         
-        Study newerStudy = client.getStudy(newStudy.getIdentifier());
+        Study newerStudy = studyClient.getStudy(newStudy.getIdentifier());
         assertEquals("Altered Test Study [SDK]", newerStudy.getName());
         assertEquals(50, newerStudy.getMaxNumOfParticipants());
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals("test4@test.com", newerStudy.getConsentNotificationEmail());
 
-        client.deleteStudy(identifier);
+        studyClient.deleteStudy(identifier);
         try {
-            client.getStudy(identifier);
+            studyClient.getStudy(identifier);
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
             // expected exception
@@ -116,12 +115,12 @@ public class StudyTest {
             String identifier = Tests.randomIdentifier(StudyTest.class);
             study = Tests.getStudy(identifier, null);
 
-            AdminClient client = admin.getSession().getAdminClient();
-            client.createStudy(study);
+            StudyClient studyClient = admin.getSession().getStudyClient();
+            studyClient.createStudy(study);
             createdStudy = true;
 
             try {
-                researcher.getSession().getAdminClient().getStudy(identifier);
+                researcher.getSession().getStudyClient().getStudy(identifier);
                 fail("Should not have been able to get this other study");
             } catch(UnauthorizedException e) {
                 assertEquals("Unauthorized HTTP response code", 403, e.getStatusCode());
@@ -135,8 +134,8 @@ public class StudyTest {
     public void butNormalUserCannotAccessStudy() {
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, false);
         try {
-            DeveloperClient rclient = user.getSession().getDeveloperClient();
-            rclient.getStudy();
+            StudyClient rclient = user.getSession().getStudyClient();
+            rclient.getCurrentStudy();
         } finally {
             user.signOutAndDeleteUser();
         }
@@ -146,14 +145,14 @@ public class StudyTest {
     public void developerCannotSetHealthCodeToExportOrVerifyEmailWorkflow() {
         TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Roles.DEVELOPER);
         try {
-            DeveloperClient devClient = developer.getSession().getDeveloperClient();
+            StudyClient studyClient = developer.getSession().getStudyClient();
             
-            Study study = devClient.getStudy();
+            Study study = studyClient.getCurrentStudy();
             study.setHealthCodeExportEnabled(true);
             study.setEmailVerificationEnabled(false);
-            devClient.updateStudy(study);
+            studyClient.updateCurrentStudy(study);
             
-            study = devClient.getStudy();
+            study = studyClient.getCurrentStudy();
             assertFalse(study.isHealthCodeExportEnabled());
             assertTrue(study.isEmailVerificationEnabled());
         } finally {
@@ -163,20 +162,20 @@ public class StudyTest {
 
     @Test
     public void adminCanGetAllStudies() {
-        AdminClient client = admin.getSession().getAdminClient();
+        StudyClient studyClient = admin.getSession().getStudyClient();
         
-        ResourceList<Study> studies = client.getAllStudies();
+        ResourceList<Study> studies = studyClient.getAllStudies();
         assertTrue(studies.getTotal() > 0);
     }
     
     @Test
     public void userCannotAccessApisWithDeprecatedClient() {
-        AdminClient adminClient = admin.getSession().getAdminClient();
-        Study study = adminClient.getStudy(Tests.TEST_KEY);
+        StudyClient studyClient = admin.getSession().getStudyClient();
+        Study study = studyClient.getStudy(Tests.TEST_KEY);
         // Set a minimum value that should not any other tests
         if (study.getMinSupportedAppVersions().get(OperatingSystem.ANDROID) == null) {
             study.getMinSupportedAppVersions().put(OperatingSystem.ANDROID, 1);
-            adminClient.updateStudy(study);
+            studyClient.updateStudy(study);
         }
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
         try {

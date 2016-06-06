@@ -21,8 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.UploadSchemaClient;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.models.upload.UploadFieldDefinition;
@@ -56,11 +56,11 @@ public class UploadTest {
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true);
 
         // ensure schemas exist, so we have something to upload against
-        DeveloperClient developerClient = developer.getSession().getDeveloperClient();
+        UploadSchemaClient uploadSchemaClient = developer.getSession().getUploadSchemaClient();
 
         UploadSchema iosSurveySchema = null;
         try {
-            iosSurveySchema = developerClient.getMostRecentUploadSchemaRevision("ios-survey");
+            iosSurveySchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("ios-survey");
         } catch (EntityNotFoundException ex) {
             // no-op
         }
@@ -74,12 +74,12 @@ public class UploadTest {
                             new UploadFieldDefinition("item", UploadFieldType.STRING),
                             new UploadFieldDefinition("taskRunId", UploadFieldType.STRING))
                     .build();
-            developerClient.createOrUpdateUploadSchema(iosSurveySchema);
+            uploadSchemaClient.createOrUpdateUploadSchema(iosSurveySchema);
         }
 
         UploadSchema uploadTestSurveySchema = null;
         try {
-            uploadTestSurveySchema = developerClient.getMostRecentUploadSchemaRevision("upload-test-ios-survey");
+            uploadTestSurveySchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("upload-test-ios-survey");
         } catch (EntityNotFoundException ex) {
             // no-op
         }
@@ -92,12 +92,12 @@ public class UploadTest {
                             new UploadFieldDefinition("foo", UploadFieldType.STRING),
                             new UploadFieldDefinition("bar", UploadFieldType.INT))
                     .build();
-            developerClient.createOrUpdateUploadSchema(uploadTestSurveySchema);
+            uploadSchemaClient.createOrUpdateUploadSchema(uploadTestSurveySchema);
         }
 
         UploadSchema jsonDataSchema = null;
         try {
-            jsonDataSchema = developerClient.getMostRecentUploadSchemaRevision("upload-test-json-data");
+            jsonDataSchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("upload-test-json-data");
         } catch (EntityNotFoundException ex) {
             // no-op
         }
@@ -110,12 +110,12 @@ public class UploadTest {
                             new UploadFieldDefinition("string.json.string", UploadFieldType.STRING),
                             new UploadFieldDefinition("blob.json.blob", UploadFieldType.ATTACHMENT_JSON_BLOB))
                     .build();
-            developerClient.createOrUpdateUploadSchema(jsonDataSchema);
+            uploadSchemaClient.createOrUpdateUploadSchema(jsonDataSchema);
         }
 
         UploadSchema nonJsonSchema = null;
         try {
-            nonJsonSchema = developerClient.getMostRecentUploadSchemaRevision("upload-test-non-json");
+            nonJsonSchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("upload-test-non-json");
         } catch (EntityNotFoundException ex) {
             // no-op
         }
@@ -128,12 +128,12 @@ public class UploadTest {
                             new UploadFieldDefinition("nonJson.txt", UploadFieldType.ATTACHMENT_BLOB),
                             new UploadFieldDefinition("jsonFile.json", UploadFieldType.ATTACHMENT_JSON_BLOB))
                     .build();
-            developerClient.createOrUpdateUploadSchema(nonJsonSchema);
+            uploadSchemaClient.createOrUpdateUploadSchema(nonJsonSchema);
         }
 
         UploadSchema maxAppVersionTestSchema = null;
         try {
-            maxAppVersionTestSchema = developerClient.getMostRecentUploadSchemaRevision("max-app-version-test");
+            maxAppVersionTestSchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("max-app-version-test");
         } catch (EntityNotFoundException ex) {
             // no-op
         }
@@ -147,7 +147,7 @@ public class UploadTest {
                             new UploadFieldDefinition.Builder().withName("record.json.value").withRequired(true)
                                     .withType(UploadFieldType.STRING).withMaxAppVersion(20).build())
                     .build();
-            developerClient.createSchemaRevisionV4(maxAppVersionTestSchema);
+            uploadSchemaClient.createSchemaRevisionV4(maxAppVersionTestSchema);
         }
     }
 

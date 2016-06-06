@@ -35,11 +35,11 @@ public class SelfStudyTest {
     }
     
     @Test
-    public void getSelfStudy() {
-        Study study = researcher.getSession().getResearcherClient().getStudy();
+    public void getCurrentStudy() {
+        Study study = researcher.getSession().getStudyClient().getCurrentStudy();
         assertEquals("api", study.getIdentifier());
         
-        study = developer.getSession().getDeveloperClient().getStudy();
+        study = developer.getSession().getStudyClient().getCurrentStudy();
         assertEquals("api", study.getIdentifier());
         
         study = admin.getSession().getAdminClient().getStudy();
@@ -48,15 +48,15 @@ public class SelfStudyTest {
     
     @Test(expected = UnauthorizedException.class)
     public void researcherCannotUpdateStudy() {
-        Study study = researcher.getSession().getResearcherClient().getStudy();
+        Study study = researcher.getSession().getStudyClient().getCurrentStudy();
         study.setName("Test");
-        researcher.getSession().getDeveloperClient().updateStudy(study);
+        researcher.getSession().getStudyClient().updateStudy(study);
     }
     
     @Test(expected = UnauthorizedException.class)
     public void adminCannotUpdateStudyThroughResearcherAPI() {
-        Study study = admin.getSession().getResearcherClient().getStudy();
+        Study study = admin.getSession().getStudyClient().getCurrentStudy();
         study.setName("Test");
-        researcher.getSession().getDeveloperClient().updateStudy(study);
+        researcher.getSession().getStudyClient().updateStudy(study);
     }
 }

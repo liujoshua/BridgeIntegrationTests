@@ -13,8 +13,9 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.ClientInfo;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
+import org.sagebionetworks.bridge.sdk.SurveyClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.exceptions.EntityNotFoundException;
@@ -48,7 +49,8 @@ public class SchedulePlanTest {
     private TestUser admin;
     private TestUser user;
     private TestUser developer;
-    private DeveloperClient developerClient;
+    private SchedulePlanClient schedulePlanClient;
+    private SurveyClient surveyClient;
     private UserClient userClient;
 
     @Before
@@ -57,7 +59,8 @@ public class SchedulePlanTest {
         developer = TestUserHelper.createAndSignInUser(SchedulePlanTest.class, true, Roles.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(SchedulePlanTest.class, true);
 
-        developerClient = developer.getSession().getDeveloperClient();
+        schedulePlanClient = developer.getSession().getSchedulePlanClient();
+        surveyClient = developer.getSession().getSurveyClient();
         userClient = user.getSession().getUserClient();
     }
 
@@ -78,7 +81,7 @@ public class SchedulePlanTest {
         try {
             normalUser = TestUserHelper.createAndSignInUser(SchedulePlanTest.class, true);
             SchedulePlan plan = Tests.getABTestSchedulePlan();
-            normalUser.getSession().getDeveloperClient().createSchedulePlan(plan);
+            normalUser.getSession().getSchedulePlanClient().createSchedulePlan(plan);
             fail("Should have returned Forbidden status");
         } catch (UnauthorizedException e) {
             assertEquals("Non-researcher gets 403 forbidden", 403, e.getStatusCode());
@@ -98,11 +101,11 @@ public class SchedulePlanTest {
 
         // Create
         assertNull(plan.getVersion());
-        GuidVersionHolder keys = developerClient.createSchedulePlan(plan);
+        GuidVersionHolder keys = schedulePlanClient.createSchedulePlan(plan);
         assertEquals(keys.getGuid(), plan.getGuid());
         assertEquals(keys.getVersion(), plan.getVersion());
 
-        plan = developerClient.getSchedulePlan(keys.getGuid());
+        plan = schedulePlanClient.getSchedulePlan(keys.getGuid());
         // Verify some fields are correct
         assertNotNull(plan.getGuid());
         assertNotNull(plan.getModifiedOn());
@@ -115,12 +118,12 @@ public class SchedulePlanTest {
         SchedulePlan simplePlan = Tests.getSimpleSchedulePlan();
         plan.setStrategy(simplePlan.getStrategy());
 
-        GuidVersionHolder newKeys = developerClient.updateSchedulePlan(plan);
+        GuidVersionHolder newKeys = schedulePlanClient.updateSchedulePlan(plan);
         assertNotEquals("Version should be updated", keys.getVersion(), newKeys.getVersion());
         assertEquals(newKeys.getVersion(), plan.getVersion());
 
         // Get
-        plan = developerClient.getSchedulePlan(keys.getGuid());
+        plan = schedulePlanClient.getSchedulePlan(keys.getGuid());
         assertEquals("Strategy type has been changed", "SimpleScheduleStrategy",
                 plan.getStrategy().getClass().getSimpleName());
 
@@ -128,10 +131,10 @@ public class SchedulePlanTest {
         assertTrue("Schedules exist", !schedules.getItems().isEmpty());
 
         // Delete
-        developerClient.deleteSchedulePlan(keys.getGuid());
+        schedulePlanClient.deleteSchedulePlan(keys.getGuid());
 
         try {
-            developerClient.getSchedulePlan(keys.getGuid());
+            schedulePlanClient.getSchedulePlan(keys.getGuid());
             fail("Should have thrown an exception because plan was deleted");
         } catch (EntityNotFoundException e) {
             assertEquals("Returns 404 Not Found", 404, e.getStatusCode());
@@ -172,8 +175,8 @@ public class SchedulePlanTest {
             plan.setLabel("Criteria schedule plan");
             plan.setStrategy(strategy);
             
-            GuidVersionHolder keys = developerClient.createSchedulePlan(plan);
-            retrievedPlan = developerClient.getSchedulePlan(keys.getGuid());
+            GuidVersionHolder keys = schedulePlanClient.createSchedulePlan(plan);
+            retrievedPlan = schedulePlanClient.getSchedulePlan(keys.getGuid());
             
             assertTrue(retrievedPlan.getStrategy() instanceof CriteriaScheduleStrategy);
             
@@ -185,7 +188,7 @@ public class SchedulePlanTest {
             assertEquals(scheduleCriteria2, retrievedStrategy.getScheduleCriteria().get(1));
         } finally {
             if (retrievedPlan != null) {
-                developerClient.deleteSchedulePlan(retrievedPlan.getGuid());    
+                schedulePlanClient.deleteSchedulePlan(retrievedPlan.getGuid());    
             }
         }
     }
@@ -195,7 +198,7 @@ public class SchedulePlanTest {
         try {
             SchedulePlan plan = Tests.getABTestSchedulePlan();
             plan.setStrategy(null);
-            developerClient.createSchedulePlan(plan);
+            schedulePlanClient.createSchedulePlan(plan);
             fail("Plan was invalid and should have thrown an exception");
         } catch (InvalidEntityException e) {
             assertEquals("Error comes back as 400 Bad Request", 400, e.getStatusCode());
@@ -206,7 +209,7 @@ public class SchedulePlanTest {
     @Test
     public void noPlanReturns400() {
         try {
-            developerClient.createSchedulePlan(null);
+            schedulePlanClient.createSchedulePlan(null);
             fail("createSchedulePlan(null) should have thrown an exception");
         } catch (NullPointerException e) {
             assertEquals("Clear null-pointer message", "SchedulePlan cannot be null.", e.getMessage());
@@ -219,7 +222,7 @@ public class SchedulePlanTest {
         GuidVersionHolder keys = null;
         try {
             Survey survey = TestSurvey.getSurvey(SchedulePlanTest.class);
-            surveyKeys = developerClient.createSurvey(survey);
+            surveyKeys = surveyClient.createSurvey(survey);
 
             // Can we point to the most recently published survey, rather than a specific version?
             SchedulePlan plan = Tests.getSimpleSchedulePlan();
@@ -232,8 +235,8 @@ public class SchedulePlanTest {
             strategy.getSchedule().getActivities().clear();
             strategy.getSchedule().getActivities().add(activity);
 
-            keys = developerClient.createSchedulePlan(plan);
-            SchedulePlan newPlan = developerClient.getSchedulePlan(keys.getGuid());
+            keys = schedulePlanClient.createSchedulePlan(plan);
+            SchedulePlan newPlan = schedulePlanClient.getSchedulePlan(keys.getGuid());
 
             // values that are not updated passed over for simple equality comparison
             plan.setGuid(newPlan.getGuid());
@@ -243,10 +246,10 @@ public class SchedulePlanTest {
             assertEquals(plan, newPlan);
         } finally {
             if (keys != null) {
-                developerClient.deleteSchedulePlan(keys.getGuid());
+                schedulePlanClient.deleteSchedulePlan(keys.getGuid());
             }
             if (surveyKeys != null) {
-                admin.getSession().getAdminClient().deleteSurveyPermanently(surveyKeys);
+                admin.getSession().getSurveyClient().deleteSurveyPermanently(surveyKeys);
             }
         }
     }

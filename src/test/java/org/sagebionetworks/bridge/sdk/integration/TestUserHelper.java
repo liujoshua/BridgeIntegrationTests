@@ -28,8 +28,8 @@ public class TestUserHelper {
         private final String userId;
         private final Set<Roles> roles;
 
-        public TestUser(AdminClient client, Session userSession) {
-            this.adminClient = client;
+        public TestUser(AdminClient adminClient, Session userSession) {
+            this.adminClient = adminClient;
             this.userSession = userSession;
             this.email = userSession.getStudyParticipant().getEmail();
             this.roles = userSession.getStudyParticipant().getRoles();

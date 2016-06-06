@@ -13,7 +13,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.DeveloperClient;
+import org.sagebionetworks.bridge.sdk.ExternalIdentifiersClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
@@ -49,16 +49,16 @@ public class ExternalIdsTest {
         for (int i=0; i < LIST_SIZE; i++) {
             identifiers.add(prefix+RandomStringUtils.randomAlphabetic(10));
         }
-        DeveloperClient client = developer.getSession().getDeveloperClient();
-        client.addExternalIds(identifiers);
+        ExternalIdentifiersClient externalIdsClient = developer.getSession().getExternalIdentifiersClient();
+        externalIdsClient.addExternalIds(identifiers);
         try {
-            PagedResourceList<ExternalIdentifier> page1 = client.getExternalIds(null, PAGE_SIZE, prefix, null);
+            PagedResourceList<ExternalIdentifier> page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, prefix, null);
             assertEquals(PAGE_SIZE, page1.getItems().size());
             assertEquals(LIST_SIZE, page1.getTotal());
             assertNotNull(page1.getOffsetKey());
             
             String offsetKey = page1.getOffsetKey();    
-            PagedResourceList<ExternalIdentifier> page2 = client.getExternalIds(offsetKey, PAGE_SIZE, prefix, null);
+            PagedResourceList<ExternalIdentifier> page2 = externalIdsClient.getExternalIds(offsetKey, PAGE_SIZE, prefix, null);
             assertEquals(PAGE_SIZE, page2.getItems().size());
             assertEquals(LIST_SIZE, page2.getTotal());
             assertNull(page2.getOffsetKey()); // no more pages
@@ -67,19 +67,19 @@ public class ExternalIdsTest {
             assertTrue(Collections.disjoint(page1.getItems(), page2.getItems()));
 
             // assignment filter test
-            page1 = client.getExternalIds(null, null, prefix, Boolean.FALSE);
+            page1 = externalIdsClient.getExternalIds(null, null, prefix, Boolean.FALSE);
             assertEquals(LIST_SIZE, page1.getTotal());
             
-            page1 = client.getExternalIds(null, null, prefix, Boolean.TRUE);
+            page1 = externalIdsClient.getExternalIds(null, null, prefix, Boolean.TRUE);
             assertEquals(0, page1.getTotal());
             
             // different idFilter test (than the use of idFilter in all the tests. This time nothing should match.
-            page1 = client.getExternalIds(null, PAGE_SIZE, RandomStringUtils.randomAlphabetic(5), null);
+            page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, RandomStringUtils.randomAlphabetic(5), null);
             assertEquals(0, page1.getTotal());
         } finally {
-            client.deleteExternalIds(identifiers);
+            externalIdsClient.deleteExternalIds(identifiers);
         }
-        PagedResourceList<ExternalIdentifier> page = client.getExternalIds(null, null, prefix, null);
+        PagedResourceList<ExternalIdentifier> page = externalIdsClient.getExternalIds(null, null, prefix, null);
         assertEquals(0, page.getTotal());
     }
     

@@ -9,10 +9,10 @@ import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.sagebionetworks.bridge.sdk.AdminClient;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.Config;
 import org.sagebionetworks.bridge.sdk.Config.Props;
+import org.sagebionetworks.bridge.sdk.StudyClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.sdk.models.accounts.EmailCredentials;
@@ -44,7 +44,7 @@ public class AuthenticationTest {
     public void accountWithOneStudySeparateFromAccountWithSecondStudy() {
         TestUser testUser1 = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         Config config = ClientProvider.getConfig();
-        AdminClient client = ClientProvider.signIn(config.getAdminCredentials()).getAdminClient();
+        StudyClient studyClient = ClientProvider.signIn(config.getAdminCredentials()).getStudyClient();
         String studyId = Tests.randomIdentifier(AuthenticationTest.class);
 
         // Make a second study for this test:
@@ -57,7 +57,7 @@ public class AuthenticationTest {
         study.setTechnicalEmail("bridge-testing+technical@sagebase.org");
         study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
         study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
-        client.createStudy(study);
+        studyClient.createStudy(study);
 
         try {
             // Can we sign in to secondstudy? No.
@@ -70,7 +70,7 @@ public class AuthenticationTest {
             }
         } finally {
             config.set(Props.STUDY_IDENTIFIER, "api");
-            client.deleteStudy(studyId);
+            studyClient.deleteStudy(studyId);
             testUser1.signOutAndDeleteUser();
         }
     }

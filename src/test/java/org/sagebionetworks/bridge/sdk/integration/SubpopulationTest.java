@@ -10,8 +10,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.SubpopulationClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.sdk.models.Criteria;
@@ -35,7 +35,7 @@ public class SubpopulationTest {
     @After
     public void after() {
         if (guid != null) {
-            admin.getSession().getAdminClient().deleteSubpopulationPermanently(guid);    
+            admin.getSession().getSubpopulationClient().deleteSubpopulationPermanently(guid);    
         }
         if (developer != null) {
             developer.signOutAndDeleteUser();    
@@ -44,10 +44,10 @@ public class SubpopulationTest {
     
     @Test
     public void canCRUD() {
-        DeveloperClient client = developer.getSession().getDeveloperClient();
+        SubpopulationClient subpopulationClient = developer.getSession().getSubpopulationClient();
         
         // Study has a default subpopulation
-        ResourceList<Subpopulation> subpops = client.getAllSubpopulations();
+        ResourceList<Subpopulation> subpops = subpopulationClient.getAllSubpopulations();
         int initialCount = subpops.getTotal();
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));
         
@@ -58,36 +58,36 @@ public class SubpopulationTest {
         Subpopulation subpop = new Subpopulation();
         subpop.setName("Later Consent Group");
         subpop.setCriteria(criteria);
-        GuidVersionHolder keys = client.createSubpopulation(subpop);
+        GuidVersionHolder keys = subpopulationClient.createSubpopulation(subpop);
         subpop.setHolder(keys);
         
         guid = subpop.getGuid();
         
         // Read it back
-        Subpopulation retrieved = client.getSubpopulation(subpop.getGuid());
+        Subpopulation retrieved = subpopulationClient.getSubpopulation(subpop.getGuid());
         assertEquals(subpop, retrieved);
         
         // Update it
         retrieved.setDescription("Adding a description");
         retrieved.getCriteria().setMinAppVersion(8);
-        keys = client.updateSubpopulation(retrieved);
+        keys = subpopulationClient.updateSubpopulation(retrieved);
         retrieved.setHolder(keys);
         
         // Verify it is available in the list
-        subpops = client.getAllSubpopulations();
+        subpops = subpopulationClient.getAllSubpopulations();
         assertEquals(initialCount+1, subpops.getTotal());
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));
         assertNotNull(findByName(subpops.getItems(), "Later Consent Group"));
 
         // Delete it
-        client.deleteSubpopulation(retrieved.getGuid());
-        assertEquals(initialCount, client.getAllSubpopulations().getTotal());
+        subpopulationClient.deleteSubpopulation(retrieved.getGuid());
+        assertEquals(initialCount, subpopulationClient.getAllSubpopulations().getTotal());
         
         // Cannot delete the default, however:
         try {
             Subpopulation defaultSubpop = findByName(subpops.getItems(), "Default Consent Group");
             assertNotNull(defaultSubpop);
-            client.deleteSubpopulation(defaultSubpop.getGuid());
+            subpopulationClient.deleteSubpopulation(defaultSubpop.getGuid());
             fail("Should have thrown an exception.");
         } catch(BadRequestException e) {
             assertEquals("Cannot delete the default subpopulation for a study.", e.getMessage());
