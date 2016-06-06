@@ -15,10 +15,10 @@ import org.sagebionetworks.bridge.sdk.Config;
 import org.sagebionetworks.bridge.sdk.Config.Props;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.exceptions.BridgeSDKException;
+import org.sagebionetworks.bridge.sdk.models.accounts.EmailCredentials;
+import org.sagebionetworks.bridge.sdk.models.accounts.SignInCredentials;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.studies.Study;
-import org.sagebionetworks.bridge.sdk.models.users.EmailCredentials;
-import org.sagebionetworks.bridge.sdk.models.users.SignInCredentials;
 
 @Category(IntegrationSmokeTest.class)
 public class AuthenticationTest {

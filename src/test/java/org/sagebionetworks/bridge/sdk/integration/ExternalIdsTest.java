@@ -17,7 +17,7 @@ import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
-import org.sagebionetworks.bridge.sdk.models.users.ExternalIdentifier;
+import org.sagebionetworks.bridge.sdk.models.accounts.ExternalIdentifier;
 
 import com.google.common.collect.Lists;
 
