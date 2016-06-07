@@ -13,8 +13,8 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.sdk.ClientInfo;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.ResourceList;
@@ -32,7 +32,7 @@ public class ScheduledActivityTest {
     
     private TestUser user;
     private TestUser developer;
-    private DeveloperClient developerClient;
+    private SchedulePlanClient schedulePlanClient;
     private UserClient userClient;
 
     @Before
@@ -40,7 +40,7 @@ public class ScheduledActivityTest {
         developer = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Roles.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true);
 
-        developerClient = developer.getSession().getDeveloperClient();
+        schedulePlanClient = developer.getSession().getSchedulePlanClient();
         userClient = user.getSession().getUserClient();
         
         Schedule schedule = new Schedule();
@@ -55,15 +55,15 @@ public class ScheduledActivityTest {
         plan.setSchedule(schedule);
         plan.setMinAppVersion(2);
         plan.setMaxAppVersion(4);
-        developerClient.createSchedulePlan(plan);
+        schedulePlanClient.createSchedulePlan(plan);
     }
 
     @After
     public void after() {
         ClientProvider.setClientInfo(Tests.TEST_CLIENT_INFO);
         try {
-            for (SchedulePlan plan : developerClient.getSchedulePlans()) {
-                developerClient.deleteSchedulePlan(plan.getGuid());
+            for (SchedulePlan plan : schedulePlanClient.getSchedulePlans()) {
+                schedulePlanClient.deleteSchedulePlan(plan.getGuid());
             }
         } finally {
             if (developer != null) {

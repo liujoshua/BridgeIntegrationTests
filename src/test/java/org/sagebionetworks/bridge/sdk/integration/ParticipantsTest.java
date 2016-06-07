@@ -15,13 +15,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ResearcherClient;
+import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.sdk.models.accounts.SharingScope;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.holders.IdentifierHolder;
-import org.sagebionetworks.bridge.sdk.models.users.SharingScope;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -53,9 +53,9 @@ public class ParticipantsTest {
     public void canGetAndUpdateSelf() {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
-            UserClient client = user.getSession().getUserClient();
+            UserClient userClient = user.getSession().getUserClient();
             
-            StudyParticipant self = client.getStudyParticipant();
+            StudyParticipant self = userClient.getStudyParticipant();
             assertEquals(user.getEmail(), self.getEmail());
 
             // Update and verify changes. Right now there's not a lot that can be changed
@@ -66,7 +66,7 @@ public class ParticipantsTest {
                     .withSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS)
                     .build();
             
-            client.saveStudyParticipant(updates);
+            userClient.saveStudyParticipant(updates);
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, user.getSession().getStudyParticipant().getSharingScope());
             assertEquals(Sets.newHashSet("group1"), user.getSession().getStudyParticipant().getDataGroups());
             // also language, but this hasn't been added to the session object yet.
@@ -77,9 +77,9 @@ public class ParticipantsTest {
     
     @Test
     public void retrieveParticipant() {
-        ResearcherClient client = researcher.getSession().getResearcherClient();
+        ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
-        StudyParticipant participant = client.getStudyParticipant(researcher.getSession().getStudyParticipant().getId());
+        StudyParticipant participant = participantClient.getStudyParticipant(researcher.getSession().getStudyParticipant().getId());
         // Verify that what we know about this test user exists in the record
         assertEquals(researcher.getEmail(), participant.getEmail());
         assertEquals(researcher.getSession().getStudyParticipant().getId(), participant.getId());
@@ -89,9 +89,9 @@ public class ParticipantsTest {
     
     @Test
     public void canRetrieveAndPageThroughParticipants() {
-        ResearcherClient client = researcher.getSession().getResearcherClient();
+        ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
-        PagedResourceList<AccountSummary> summaries = client.getPagedAccountSummaries(0, 10, null);
+        PagedResourceList<AccountSummary> summaries = participantClient.getPagedAccountSummaries(0, 10, null);
 
         // Well we know there's at least two accounts... the admin and the researcher.
         assertEquals(new Integer(0), summaries.getOffsetBy());
@@ -106,7 +106,7 @@ public class ParticipantsTest {
         assertNotNull(summary.getId());
         
         // Filter to only the researcher
-        summaries = client.getPagedAccountSummaries(0, 10, researcher.getEmail());
+        summaries = participantClient.getPagedAccountSummaries(0, 10, researcher.getEmail());
         assertEquals(1, summaries.getItems().size());
         assertEquals(researcher.getEmail(), summaries.getItems().get(0).getEmail());
         assertEquals(researcher.getEmail(), summaries.getFilters().get("emailFilter"));
@@ -114,14 +114,14 @@ public class ParticipantsTest {
     
     @Test(expected = IllegalArgumentException.class)
     public void cannotSetBadOffset() {
-        ResearcherClient client = researcher.getSession().getResearcherClient();
-        client.getPagedAccountSummaries(-1, 10, null);
+        ParticipantClient participantClient = researcher.getSession().getParticipantClient();
+        participantClient.getPagedAccountSummaries(-1, 10, null);
     }
     
     @Test(expected = IllegalArgumentException.class)
     public void cannotSetBadPageSize() {
-        ResearcherClient client = researcher.getSession().getResearcherClient();
-        client.getPagedAccountSummaries(0, 4, null);
+        ParticipantClient participantClient = researcher.getSession().getParticipantClient();
+        participantClient.getPagedAccountSummaries(0, 4, null);
     }
     
     @Test
@@ -145,15 +145,15 @@ public class ParticipantsTest {
             .withStatus(AccountStatus.DISABLED) // should be ignored
             .withAttributes(attributes)
             .build();
-        ResearcherClient client = researcher.getSession().getResearcherClient();
-        IdentifierHolder idHolder = client.createStudyParticipant(participant);
+        ParticipantClient participantClient = researcher.getSession().getParticipantClient();
+        IdentifierHolder idHolder = participantClient.createStudyParticipant(participant);
         
         String id = idHolder.getIdentifier();
         try {
             // It has been persisted. Right now we don't get the ID back so we have to conduct a 
             // search by email to get this user.
             // Can be found through paged results
-            PagedResourceList<AccountSummary> search = client.getPagedAccountSummaries(0, 10, email);
+            PagedResourceList<AccountSummary> search = participantClient.getPagedAccountSummaries(0, 10, email);
             assertEquals(1, search.getTotal());
             AccountSummary summary = search.getItems().get(0);
             assertEquals("FirstName", summary.getFirstName());
@@ -161,7 +161,7 @@ public class ParticipantsTest {
             assertEquals(email, summary.getEmail());
             
             // Can also get by the ID
-            StudyParticipant retrieved = client.getStudyParticipant(id);
+            StudyParticipant retrieved = participantClient.getStudyParticipant(id);
             assertEquals("FirstName", retrieved.getFirstName());
             assertEquals("LastName", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail());
@@ -195,13 +195,13 @@ public class ParticipantsTest {
                     .withId(id)
                     .withStatus(AccountStatus.ENABLED)
                     .build();
-            client.updateStudyParticipant(newParticipant);
+            participantClient.updateStudyParticipant(newParticipant);
             
             // We think there are issues with customData consistency. For the moment, pause.
             Thread.sleep(300);
             
             // Get it again, verify it has been updated
-            retrieved = client.getStudyParticipant(id);
+            retrieved = participantClient.getStudyParticipant(id);
             assertEquals("FirstName2", retrieved.getFirstName());
             assertEquals("LastName2", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail());
@@ -224,10 +224,10 @@ public class ParticipantsTest {
     
     @Test
     public void canSendRequestResetPasswordEmail() {
-        ResearcherClient client = researcher.getSession().getResearcherClient();
+        ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
         // This is sending an email, which is difficult to verify, but this at least should not throw an error.
         String userId = researcher.getSession().getStudyParticipant().getId();
-        client.requestResetPassword(userId);
+        participantClient.requestResetPassword(userId);
     }
 }

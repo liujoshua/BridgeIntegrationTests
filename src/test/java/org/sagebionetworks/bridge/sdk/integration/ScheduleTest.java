@@ -10,8 +10,8 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.ClientInfo;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.models.schedules.Schedule;
@@ -35,8 +35,8 @@ public class ScheduleTest {
     public void after() {
         ClientProvider.setClientInfo(Tests.TEST_CLIENT_INFO);
         try {
-            DeveloperClient client = developer.getSession().getDeveloperClient();
-            client.deleteSchedulePlan(planGuid);
+            SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
+            schedulePlanClient.deleteSchedulePlan(planGuid);
         } finally {
             if (user != null) {
                 user.signOutAndDeleteUser();    
@@ -49,11 +49,11 @@ public class ScheduleTest {
     
     @Test
     public void schedulePlanIsCorrect() throws Exception {
-        DeveloperClient client = developer.getSession().getDeveloperClient();
-        planGuid = client.createSchedulePlan(Tests.getSimpleSchedulePlan()).getGuid();
+        SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
+        planGuid = schedulePlanClient.createSchedulePlan(Tests.getSimpleSchedulePlan()).getGuid();
         
         SchedulePlan originalPlan = Tests.getSimpleSchedulePlan();
-        SchedulePlan plan = developer.getSession().getDeveloperClient().getSchedulePlan(planGuid);
+        SchedulePlan plan = developer.getSession().getSchedulePlanClient().getSchedulePlan(planGuid);
         // Fields that are set on the server.
         originalPlan.setGuid(plan.getGuid());
         originalPlan.setModifiedOn(plan.getModifiedOn());
@@ -68,8 +68,8 @@ public class ScheduleTest {
 
     @Test
     public void canRetrieveSchedulesForAUser() throws Exception {
-        DeveloperClient client = developer.getSession().getDeveloperClient();
-        planGuid = client.createSchedulePlan(Tests.getABTestSchedulePlan()).getGuid();
+        SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
+        planGuid = schedulePlanClient.createSchedulePlan(Tests.getABTestSchedulePlan()).getGuid();
 
         final UserClient userClient = user.getSession().getUserClient();
         
@@ -80,11 +80,11 @@ public class ScheduleTest {
     @Test
     public void persistentSchedulePlanMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getPersistentSchedulePlan();
-        DeveloperClient client = developer.getSession().getDeveloperClient();
+        SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
         
-        planGuid = client.createSchedulePlan(plan).getGuid();
+        planGuid = schedulePlanClient.createSchedulePlan(plan).getGuid();
 
-        plan = client.getSchedulePlan(planGuid);
+        plan = schedulePlanClient.getSchedulePlan(planGuid);
         Schedule schedule = Tests.getSimpleSchedule(plan);
         
         assertEquals(true, schedule.getPersistent());
@@ -94,11 +94,11 @@ public class ScheduleTest {
     @Test
     public void simpleSchedulePlanNotMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getSimpleSchedulePlan();
-        DeveloperClient client = developer.getSession().getDeveloperClient();
+        SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
 
-        planGuid = client.createSchedulePlan(plan).getGuid();
+        planGuid = schedulePlanClient.createSchedulePlan(plan).getGuid();
 
-        plan = client.getSchedulePlan(planGuid);
+        plan = schedulePlanClient.getSchedulePlan(planGuid);
         Schedule schedule = Tests.getSimpleSchedule(plan);
         
         assertEquals(false, schedule.getPersistent());

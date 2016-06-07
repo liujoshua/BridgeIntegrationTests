@@ -44,7 +44,7 @@ public class UserParticipantTest {
 
     @Test
     public void canUpdateProfile() throws Exception {
-        UserClient client = developer.getSession().getUserClient();
+        UserClient userClient = developer.getSession().getUserClient();
 
         Map<String,String> attributes = Maps.newHashMap();
         attributes.put("can_be_recontacted", "true");
@@ -55,9 +55,9 @@ public class UserParticipantTest {
                 .withAttributes(attributes)
                 .build();
 
-        client.saveStudyParticipant(participant);
+        userClient.saveStudyParticipant(participant);
 
-        participant = client.getStudyParticipant();
+        participant = userClient.getStudyParticipant();
 
         assertEquals(developer.getEmail(), participant.getEmail());
         assertEquals("First name updated", "Davey", participant.getFirstName());
@@ -67,15 +67,15 @@ public class UserParticipantTest {
     
     @Test
     public void canAddExternalIdentifier() throws Exception {
-        final UserClient client = developer.getSession().getUserClient();
+        final UserClient userClient = developer.getSession().getUserClient();
         
-        StudyParticipant participant = client.getStudyParticipant();
+        StudyParticipant participant = userClient.getStudyParticipant();
         StudyParticipant updated = new StudyParticipant.Builder().copyOf(participant)
                 .withExternalId("ABC-123-XYZ").build();
         
-        client.saveStudyParticipant(updated);
+        userClient.saveStudyParticipant(updated);
         
-        participant = client.getStudyParticipant();
+        participant = userClient.getStudyParticipant();
         assertEquals(developer.getEmail(), participant.getEmail());
         assertEquals("ABC-123-XYZ", participant.getExternalId());
     }
@@ -84,28 +84,28 @@ public class UserParticipantTest {
     public void canUpdateDataGroups() throws Exception {
         Set<String> dataGroups = Sets.newHashSet("sdk-int-1", "sdk-int-2");
         
-        UserClient client = developer.getSession().getUserClient();
+        UserClient userClient = developer.getSession().getUserClient();
         
         StudyParticipant participant = new StudyParticipant.Builder().withDataGroups(dataGroups).build();
         
-        client.saveStudyParticipant(participant);
+        userClient.saveStudyParticipant(participant);
         
         // session updated
         assertEquals(dataGroups, developer.getSession().getStudyParticipant().getDataGroups());
         
         // server updated
-        participant = client.getStudyParticipant();
+        participant = userClient.getStudyParticipant();
         assertEquals(dataGroups, participant.getDataGroups());
         
         // now clear the values, it should be possible to remove them.
         participant = new StudyParticipant.Builder().withDataGroups(Sets.<String>newHashSet()).build();
-        client.saveStudyParticipant(participant);
+        userClient.saveStudyParticipant(participant);
         
         // session updated
         assertEquals(Sets.<String>newHashSet(), developer.getSession().getStudyParticipant().getDataGroups());
         
         // server updated
-        participant = client.getStudyParticipant();
+        participant = userClient.getStudyParticipant();
         assertTrue(participant.getDataGroups().isEmpty());
     }
 

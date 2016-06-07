@@ -17,8 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.DeveloperClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.UploadSchemaClient;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.models.upload.UploadFieldDefinition;
@@ -52,11 +52,11 @@ public class UploadTest {
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true);
 
         // ensure schemas exist, so we have something to upload against
-        DeveloperClient developerClient = developer.getSession().getDeveloperClient();
+        UploadSchemaClient uploadSchemaClient = developer.getSession().getUploadSchemaClient();
 
         UploadSchema legacySurveySchema = null;
         try {
-            legacySurveySchema = developerClient.getMostRecentUploadSchemaRevision("legacy-survey");
+            legacySurveySchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("legacy-survey");
         } catch (EntityNotFoundException ex) {
             // no-op
         }
@@ -69,12 +69,12 @@ public class UploadTest {
                             new UploadFieldDefinition.Builder().withName("BBB").withType(UploadFieldType.MULTI_CHOICE)
                                     .build())
                     .build();
-            developerClient.createSchemaRevisionV4(legacySurveySchema);
+            uploadSchemaClient.createSchemaRevisionV4(legacySurveySchema);
         }
 
         UploadSchema legacyNonSurveySchema = null;
         try {
-            legacyNonSurveySchema = developerClient.getMostRecentUploadSchemaRevision("legacy-non-survey");
+            legacyNonSurveySchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("legacy-non-survey");
         } catch (EntityNotFoundException ex) {
             // no-op
         }
@@ -96,7 +96,7 @@ public class UploadTest {
                             new UploadFieldDefinition.Builder().withName("record.json.QQQ")
                                     .withType(UploadFieldType.TIME_V2).build())
                     .build();
-            developerClient.createSchemaRevisionV4(legacyNonSurveySchema);
+            uploadSchemaClient.createSchemaRevisionV4(legacyNonSurveySchema);
         }
     }
 

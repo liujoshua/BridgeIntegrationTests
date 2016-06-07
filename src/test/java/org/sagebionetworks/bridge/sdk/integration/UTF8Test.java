@@ -5,14 +5,14 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.sagebionetworks.bridge.sdk.AdminClient;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.Session;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.sdk.StudyClient;
 import org.sagebionetworks.bridge.sdk.UserClient;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.sdk.models.accounts.SignInCredentials;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.studies.Study;
-import org.sagebionetworks.bridge.sdk.models.users.SignInCredentials;
 
 @Category(IntegrationSmokeTest.class)
 public class UTF8Test {
@@ -20,7 +20,7 @@ public class UTF8Test {
     public void canSaveAndRetrieveDataStoredInDynamo() {
         String studyId = Tests.randomIdentifier(UTF8Test.class);
         String studyName = "☃지구상의　３대　극지라　불리는";
-        AdminClient adminClient = TestUserHelper.getSignedInAdmin().getSession().getAdminClient();
+        StudyClient studyClient = TestUserHelper.getSignedInAdmin().getSession().getStudyClient();
 
         // make minimal study
         Study study = new Study();
@@ -34,16 +34,16 @@ public class UTF8Test {
         study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
 
         // create study
-        adminClient.createStudy(study);
+        studyClient.createStudy(study);
 
         try {
             // get study back and verify fields
-            Study returnedStudy = adminClient.getStudy(studyId);
+            Study returnedStudy = studyClient.getStudy(studyId);
             assertEquals(studyId, returnedStudy.getIdentifier());
             assertEquals(studyName, returnedStudy.getName());
         } finally {
             // clean-up: delete study
-            adminClient.deleteStudy(studyId);
+            studyClient.deleteStudy(studyId);
         }
     }
 
@@ -51,14 +51,14 @@ public class UTF8Test {
     public void canSaveAndRetrieveDataStoredInRedis() {
         TestUser testUser = TestUserHelper.createAndSignInUser(UTF8Test.class, true);
         try {
-            UserClient client = testUser.getSession().getUserClient();
+            UserClient userClient = testUser.getSession().getUserClient();
 
             StudyParticipant.Builder builder = new StudyParticipant.Builder();
             builder.withFirstName("☃");
             // I understand from the source of this text that it is actually UTF-16. It should still work.
             builder.withLastName("지구상의　３대　극지라　불리는");
             
-            client.saveStudyParticipant(builder.build());
+            userClient.saveStudyParticipant(builder.build());
 
             // Force a refresh of the Redis session cache.
             testUser.getSession().signOut();

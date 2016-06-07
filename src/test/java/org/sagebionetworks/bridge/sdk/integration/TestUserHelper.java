@@ -10,9 +10,9 @@ import org.sagebionetworks.bridge.sdk.Config;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.sdk.models.accounts.SignInCredentials;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.subpopulations.SubpopulationGuid;
-import org.sagebionetworks.bridge.sdk.models.users.SignInCredentials;
 
 import com.google.common.collect.Sets;
 
@@ -28,8 +28,8 @@ public class TestUserHelper {
         private final String userId;
         private final Set<Roles> roles;
 
-        public TestUser(AdminClient client, Session userSession) {
-            this.adminClient = client;
+        public TestUser(AdminClient adminClient, Session userSession) {
+            this.adminClient = adminClient;
             this.userSession = userSession;
             this.email = userSession.getStudyParticipant().getEmail();
             this.roles = userSession.getStudyParticipant().getRoles();
