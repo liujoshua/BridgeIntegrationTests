@@ -8,7 +8,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.sdk.AdminClient;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.Config;
-import org.sagebionetworks.bridge.sdk.ResearcherClient;
+import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
@@ -20,7 +20,7 @@ public class UserManagementTest {
     private AdminClient adminClient;
 
     private TestUser researcher;
-    private ResearcherClient researcherClient;
+    private ParticipantClient participantClient;
 
     @Before
     public void before() {
@@ -29,7 +29,7 @@ public class UserManagementTest {
         adminClient = adminSession.getAdminClient();
 
         researcher = TestUserHelper.createAndSignInUser(UserManagementTest.class, true, Roles.RESEARCHER);
-        researcherClient = researcher.getSession().getResearcherClient();
+        participantClient = researcher.getSession().getParticipantClient();
     }
 
     @After
@@ -51,7 +51,7 @@ public class UserManagementTest {
         String id = adminClient.createUser(participant, true);
         assertNotNull(id);
 
-        researcherClient.signOutUser(id);
+        participantClient.signOutUser(id);
         adminClient.deleteUser(id);
     }
 

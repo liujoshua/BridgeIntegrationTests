@@ -8,17 +8,17 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.AdminClient;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.Session;
+import org.sagebionetworks.bridge.sdk.StudyClient;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.sdk.models.accounts.EmailCredentials;
+import org.sagebionetworks.bridge.sdk.models.accounts.SignInCredentials;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.studies.Study;
-import org.sagebionetworks.bridge.sdk.models.users.EmailCredentials;
-import org.sagebionetworks.bridge.sdk.models.users.SignInCredentials;
 
 public class ClientProviderTest {
 
@@ -32,8 +32,8 @@ public class ClientProviderTest {
             Session session = ClientProvider.signIn(credentials);
             assertTrue(session.isSignedIn());
 
-            UserClient client = session.getUserClient();
-            assertNotNull(client);
+            UserClient userClient = session.getUserClient();
+            assertNotNull(userClient);
 
             session.signOut();
             assertFalse(session.isSignedIn());
@@ -59,8 +59,8 @@ public class ClientProviderTest {
         
         TestUser admin = TestUserHelper.getSignedInAdmin();
         
-        AdminClient adminClient = admin.getSession().getAdminClient();
-        adminClient.createStudy(study);
+        StudyClient studyClient = admin.getSession().getStudyClient();
+        studyClient.createStudy(study);
         
         StudyParticipant participant = new StudyParticipant.Builder()
                 .withEmail(Tests.makeEmail(ClientProviderTest.class))
@@ -85,7 +85,7 @@ public class ClientProviderTest {
             }
             
         } finally {
-            adminClient.deleteStudy(study.getIdentifier());
+            studyClient.deleteStudy(study.getIdentifier());
         }
     }
 }
