@@ -1,16 +1,12 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.util.List;
 import java.util.Locale;
-
-import com.google.common.base.Joiner;
 
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -58,96 +54,49 @@ public class UploadTest {
         // ensure schemas exist, so we have something to upload against
         UploadSchemaClient uploadSchemaClient = developer.getSession().getUploadSchemaClient();
 
-        UploadSchema iosSurveySchema = null;
+        UploadSchema legacySurveySchema = null;
         try {
-            iosSurveySchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("ios-survey");
+            legacySurveySchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("legacy-survey");
         } catch (EntityNotFoundException ex) {
             // no-op
         }
-        if (iosSurveySchema == null) {
-            iosSurveySchema = new UploadSchema.Builder()
-                    .withSchemaId("ios-survey")
-                    .withName("iOS Survey Response")
-                    .withSchemaType(UploadSchemaType.IOS_DATA)
+        if (legacySurveySchema == null) {
+            legacySurveySchema = new UploadSchema.Builder().withSchemaId("legacy-survey").withRevision(1)
+                    .withName("Legacy (RK/AC) Survey").withSchemaType(UploadSchemaType.IOS_SURVEY)
                     .withFieldDefinitions(
-                            new UploadFieldDefinition("answers", UploadFieldType.ATTACHMENT_JSON_TABLE),
-                            new UploadFieldDefinition("item", UploadFieldType.STRING),
-                            new UploadFieldDefinition("taskRunId", UploadFieldType.STRING))
+                            new UploadFieldDefinition.Builder().withName("AAA").withType(UploadFieldType.SINGLE_CHOICE)
+                                    .build(),
+                            new UploadFieldDefinition.Builder().withName("BBB").withType(UploadFieldType.MULTI_CHOICE)
+                                    .build())
                     .build();
-            uploadSchemaClient.createOrUpdateUploadSchema(iosSurveySchema);
+            uploadSchemaClient.createSchemaRevisionV4(legacySurveySchema);
         }
 
-        UploadSchema uploadTestSurveySchema = null;
+        UploadSchema legacyNonSurveySchema = null;
         try {
-            uploadTestSurveySchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("upload-test-ios-survey");
+            legacyNonSurveySchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("legacy-non-survey");
         } catch (EntityNotFoundException ex) {
             // no-op
         }
-        if (uploadTestSurveySchema == null) {
-            uploadTestSurveySchema = new UploadSchema.Builder()
-                    .withSchemaId("upload-test-ios-survey")
-                    .withName("Upload Test iOS Survey")
-                    .withSchemaType(UploadSchemaType.IOS_SURVEY)
+        if (legacyNonSurveySchema == null) {
+            // Field types are already tested in UploadHandlersEndToEndTest in BridgePF unit tests. Don't need to
+            // exhaustively test all field types, just a few representative ones: non-JSON attachment, JSON attachment,
+            // attachment in JSON record, v1 type (string), v2 type (time)
+            legacyNonSurveySchema = new UploadSchema.Builder().withSchemaId("legacy-non-survey").withRevision(1)
+                    .withName("Legacy (RK/AC) Non-Survey").withSchemaType(UploadSchemaType.IOS_DATA)
                     .withFieldDefinitions(
-                            new UploadFieldDefinition("foo", UploadFieldType.STRING),
-                            new UploadFieldDefinition("bar", UploadFieldType.INT))
+                            new UploadFieldDefinition.Builder().withName("CCC.txt")
+                                    .withType(UploadFieldType.ATTACHMENT_V2).build(),
+                            new UploadFieldDefinition.Builder().withName("FFF.json")
+                                    .withType(UploadFieldType.ATTACHMENT_V2).build(),
+                            new UploadFieldDefinition.Builder().withName("record.json.HHH")
+                                    .withType(UploadFieldType.ATTACHMENT_V2).build(),
+                            new UploadFieldDefinition.Builder().withName("record.json.PPP")
+                                    .withType(UploadFieldType.STRING).build(),
+                            new UploadFieldDefinition.Builder().withName("record.json.QQQ")
+                                    .withType(UploadFieldType.TIME_V2).build())
                     .build();
-            uploadSchemaClient.createOrUpdateUploadSchema(uploadTestSurveySchema);
-        }
-
-        UploadSchema jsonDataSchema = null;
-        try {
-            jsonDataSchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("upload-test-json-data");
-        } catch (EntityNotFoundException ex) {
-            // no-op
-        }
-        if (jsonDataSchema == null) {
-            jsonDataSchema = new UploadSchema.Builder()
-                    .withSchemaId("upload-test-json-data")
-                    .withName("Upload Test JSON Data")
-                    .withSchemaType(UploadSchemaType.IOS_DATA)
-                    .withFieldDefinitions(
-                            new UploadFieldDefinition("string.json.string", UploadFieldType.STRING),
-                            new UploadFieldDefinition("blob.json.blob", UploadFieldType.ATTACHMENT_JSON_BLOB))
-                    .build();
-            uploadSchemaClient.createOrUpdateUploadSchema(jsonDataSchema);
-        }
-
-        UploadSchema nonJsonSchema = null;
-        try {
-            nonJsonSchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("upload-test-non-json");
-        } catch (EntityNotFoundException ex) {
-            // no-op
-        }
-        if (nonJsonSchema == null) {
-            nonJsonSchema = new UploadSchema.Builder()
-                    .withSchemaId("upload-test-non-json")
-                    .withName("upload-test-non-json")
-                    .withSchemaType(UploadSchemaType.IOS_DATA)
-                    .withFieldDefinitions(
-                            new UploadFieldDefinition("nonJson.txt", UploadFieldType.ATTACHMENT_BLOB),
-                            new UploadFieldDefinition("jsonFile.json", UploadFieldType.ATTACHMENT_JSON_BLOB))
-                    .build();
-            uploadSchemaClient.createOrUpdateUploadSchema(nonJsonSchema);
-        }
-
-        UploadSchema maxAppVersionTestSchema = null;
-        try {
-            maxAppVersionTestSchema = uploadSchemaClient.getMostRecentUploadSchemaRevision("max-app-version-test");
-        } catch (EntityNotFoundException ex) {
-            // no-op
-        }
-        if (maxAppVersionTestSchema == null) {
-            maxAppVersionTestSchema = new UploadSchema.Builder()
-                    .withSchemaId("max-app-version-test")
-                    .withRevision(1)
-                    .withName("maxAppVersion Test")
-                    .withSchemaType(UploadSchemaType.IOS_DATA)
-                    .withFieldDefinitions(
-                            new UploadFieldDefinition.Builder().withName("record.json.value").withRequired(true)
-                                    .withType(UploadFieldType.STRING).withMaxAppVersion(20).build())
-                    .build();
-            uploadSchemaClient.createSchemaRevisionV4(maxAppVersionTestSchema);
+            uploadSchemaClient.createSchemaRevisionV4(legacyNonSurveySchema);
         }
     }
 
@@ -166,60 +115,13 @@ public class UploadTest {
     }
 
     @Test
-    public void iosSurvey() throws Exception {
-        testUpload("ios-survey-encrypted");
+    public void legacySurvey() throws Exception {
+        testUpload("legacy-survey-encrypted");
     }
 
     @Test
-    public void jsonData() throws Exception {
-        testUpload("json-data-encrypted");
-    }
-
-    @Test
-    public void nonJson() throws Exception {
-        testUpload("non-json-encrypted");
-    }
-
-    @Test
-    public void appVersionAboveMax() throws Exception {
-        testUpload("max-app-version-test-v30-encrypted");
-    }
-
-    @Test
-    public void appVersionBelowMax() throws Exception {
-        // set up request
-        String filePath = resolveFilePath("max-app-version-test-v10-encrypted");
-        UploadRequest req = makeRequest(filePath);
-
-        // upload to server
-        UserClient userClient = user.getSession().getUserClient();
-        UploadSession session = userClient.requestUploadSession(req);
-        String uploadId = session.getId();
-        LOG.info("UploadId=" + uploadId);
-        userClient.upload(session, req, filePath);
-
-        // get validation status
-        UploadValidationStatus status = null;
-        for (int i = 0; i < UPLOAD_STATUS_DELAY_RETRIES; i++) {
-            Thread.sleep(UPLOAD_STATUS_DELAY_MILLISECONDS);
-
-            status = userClient.getUploadStatus(session.getId());
-            if (status.getStatus() == UploadStatus.SUCCEEDED) {
-                fail("Upload validation succeeded when it should have failed, UploadId=" + uploadId);
-            } else if (status.getStatus() == UploadStatus.VALIDATION_FAILED) {
-                break;
-            }
-        }
-
-        // validate
-        assertNotNull(status);
-        assertEquals(UploadStatus.VALIDATION_FAILED, status.getStatus());
-
-        // Concatenate messages together, make sure they reference the missing field.
-        List<String> messageList = status.getMessageList();
-        assertFalse(messageList.isEmpty());
-        String concatMessages = Joiner.on('\n').join(messageList);
-        assertTrue(concatMessages.contains("record.json.value"));
+    public void legacyNonSurvey() throws Exception {
+        testUpload("legacy-non-survey-encrypted");
     }
 
     private static void testUpload(String fileLeafName) throws Exception {
@@ -256,7 +158,7 @@ public class UploadTest {
     @Test
     public void cannotUploadAfterExpirationDate() throws Exception {
         // Arbitrarily choose one of the test files. It doesn't matter which. It'll never make it to the server.
-        String filePath = resolveFilePath("non-json-encrypted");
+        String filePath = resolveFilePath("legacy-non-survey-encrypted");
         UploadRequest req = makeRequest(filePath);
 
         // request upload session
