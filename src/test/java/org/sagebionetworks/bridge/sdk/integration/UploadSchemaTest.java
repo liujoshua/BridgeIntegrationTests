@@ -199,7 +199,8 @@ public class UploadSchemaTest {
         // Create schema with all the fields.
         UploadFieldDefinition fieldDef = new UploadFieldDefinition.Builder().withFileExtension(".test")
                 .withMimeType("text/plain").withMinAppVersion(1).withMaxAppVersion(37).withMaxLength(24)
-                .withName("field").withRequired(false).withType(UploadFieldType.STRING).build();
+                .withMultiChoiceAnswerList("foo", "bar", "baz").withName("field").withRequired(false)
+                .withType(UploadFieldType.STRING).build();
         List<UploadFieldDefinition> fieldListList = ImmutableList.of(fieldDef);
         UploadSchema schema = new UploadSchema.Builder().withFieldDefinitions(fieldListList).withName("Schema")
                 .withSchemaId(schemaId).withSchemaType(UploadSchemaType.IOS_SURVEY).withSurveyGuid("survey")

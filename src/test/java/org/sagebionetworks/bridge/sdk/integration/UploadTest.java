@@ -67,6 +67,7 @@ public class UploadTest {
                             new UploadFieldDefinition.Builder().withName("AAA").withType(UploadFieldType.SINGLE_CHOICE)
                                     .build(),
                             new UploadFieldDefinition.Builder().withName("BBB").withType(UploadFieldType.MULTI_CHOICE)
+                                    .withMultiChoiceAnswerList("fencing", "football", "running", "swimming", "3")
                                     .build())
                     .build();
             uploadSchemaClient.createSchemaRevisionV4(legacySurveySchema);
