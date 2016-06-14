@@ -45,6 +45,8 @@ public class ReportTest {
     private static ReportData REPORT2 = new ReportData(TIME2, DATA2);
     private static ReportData REPORT3 = new ReportData(TIME3, DATA3);
     
+    private TestUser admin;
+    
     private TestUser user;
     
     private String reportId;
@@ -52,6 +54,8 @@ public class ReportTest {
     @Before
     public void before() {
         ClientProvider.addLanguage("en");
+        
+        this.admin = TestUserHelper.getSignedInAdmin();
         this.user = TestUserHelper.createAndSignInUser(ReportTest.class, true);
         this.reportId = Tests.randomIdentifier(ReportTest.class);
     }
@@ -103,6 +107,7 @@ public class ReportTest {
             assertFalse(containsThisIdentifier(indices, reportId));
         } finally {
             developer.signOutAndDeleteUser();
+            admin.getSession().getReportClient().forceDeleteOfParticipantReportIndex(reportId);
         }
     }
 
@@ -156,6 +161,7 @@ public class ReportTest {
 
             worker.signOutAndDeleteUser();
             developer.signOutAndDeleteUser();
+            admin.getSession().getReportClient().forceDeleteOfParticipantReportIndex(reportId);
         }
     }
 
