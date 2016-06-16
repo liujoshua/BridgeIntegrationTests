@@ -13,7 +13,6 @@ import java.util.Set;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
@@ -53,7 +52,6 @@ public class ParticipantsTest {
 
     // Note: A very similar test exists in UserParticipantTest
     @Test
-    @Ignore
     public void canGetAndUpdateSelf() {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
@@ -80,7 +78,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void retrieveParticipant() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -93,7 +90,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canRetrieveAndPageThroughParticipants() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -119,21 +115,18 @@ public class ParticipantsTest {
     }
     
     @Test(expected = IllegalArgumentException.class)
-    @Ignore
     public void cannotSetBadOffset() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         participantClient.getPagedAccountSummaries(-1, 10, null);
     }
     
     @Test(expected = IllegalArgumentException.class)
-    @Ignore
     public void cannotSetBadPageSize() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         participantClient.getPagedAccountSummaries(0, 4, null);
     }
     
     @Test
-    @Ignore
     public void crudParticipant() throws Exception {
         String email = Tests.makeEmail(ParticipantsTest.class);
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
@@ -232,7 +225,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canSendRequestResetPasswordEmail() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
