@@ -156,32 +156,6 @@ public class UploadTest {
         assertTrue("Upload has no validation messages, UploadId=" + uploadId, status.getMessageList().isEmpty());
     }
 
-    @Test
-    public void cannotUploadAfterExpirationDate() throws Exception {
-        // Arbitrarily choose one of the test files. It doesn't matter which. It'll never make it to the server.
-        String filePath = resolveFilePath("legacy-non-survey-encrypted");
-        UploadRequest req = makeRequest(filePath);
-
-        // request upload session
-        UserClient userClient = user.getSession().getUserClient();
-        UploadSession session = userClient.requestUploadSession(req);
-
-        // Get number of milliseconds between now and expiration time, plus one second.
-        long millis = session.getExpires()
-                .minus(DateTime.now().getMillis())
-                .plusSeconds(1)
-                .getMillis();
-        Thread.sleep(millis);
-
-        try {
-            userClient.upload(session, req, filePath);
-            fail("userClient upload should have failed.");
-        } catch (Exception e) {
-            assertEquals("Exception thrown should be an illegal argument exception.",
-                    e.getClass(), IllegalArgumentException.class);
-        }
-    }
-
     private static UploadRequest makeRequest(String filePath) throws Exception {
         File file = new File(filePath);
         return new UploadRequest.Builder().withFile(file).withContentType("application/zip").build();
