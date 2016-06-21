@@ -14,7 +14,6 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
@@ -59,7 +58,6 @@ public class ParticipantsTest {
 
     // Note: A very similar test exists in UserParticipantTest
     @Test
-    @Ignore
     public void canGetAndUpdateSelf() {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
@@ -86,7 +84,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void retrieveParticipant() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -99,7 +96,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canRetrieveAndPageThroughParticipants() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -125,21 +121,18 @@ public class ParticipantsTest {
     }
     
     @Test(expected = IllegalArgumentException.class)
-    @Ignore
     public void cannotSetBadOffset() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         participantClient.getPagedAccountSummaries(-1, 10, null);
     }
     
     @Test(expected = IllegalArgumentException.class)
-    @Ignore
     public void cannotSetBadPageSize() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         participantClient.getPagedAccountSummaries(0, 4, null);
     }
     
     @Test
-    @Ignore
     public void crudParticipant() throws Exception {
         String email = Tests.makeEmail(ParticipantsTest.class);
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
@@ -238,7 +231,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canSendRequestResetPasswordEmail() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -248,7 +240,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canResendEmailVerification() {
         String userId =  researcher.getSession().getStudyParticipant().getId();
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
@@ -257,7 +248,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canResendConsentAgreement() {
         String userId =  researcher.getSession().getStudyParticipant().getId();
         ConsentStatus status = researcher.getSession().getConsentStatuses().values().iterator().next();
@@ -281,9 +271,11 @@ public class ParticipantsTest {
             // Now ask for something, so activities are generated
             ResourceList<ScheduledActivity> activities = userClient.getScheduledActivities(4, DateTimeZone.UTC);
             
+            // Verify there is more than one activity
             int count = activities.getItems().size();
             assertTrue(count > 1);
             
+            // Finish one of them so there is one less in the user's API
             ScheduledActivity finishMe = activities.getItems().get(0);
             finishMe.setStartedOn(DateTime.now());
             finishMe.setFinishedOn(DateTime.now());
@@ -293,12 +285,12 @@ public class ParticipantsTest {
             activities = userClient.getScheduledActivities(4, DateTimeZone.UTC);
             assertTrue(activities.getItems().size() < count);
             
-            // But the researcher will see both
+            // But the researcher will still see the full list
             ParticipantClient participantClient = researcher.getSession().getParticipantClient();
-            
             PagedResourceList<ScheduledActivity> resActivities = participantClient.getActivityHistory(userId, null, null);
             assertEquals(count, resActivities.getItems().size());
             
+            // Researcher can delete all the activities as well.
             participantClient.deleteParticipantActivities(userId);
             
             resActivities = participantClient.getActivityHistory(userId, null, null);
