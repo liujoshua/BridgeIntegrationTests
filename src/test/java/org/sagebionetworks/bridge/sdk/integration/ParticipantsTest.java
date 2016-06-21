@@ -22,6 +22,8 @@ import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.accounts.SharingScope;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.holders.IdentifierHolder;
+import org.sagebionetworks.bridge.sdk.models.subpopulations.ConsentStatus;
+import org.sagebionetworks.bridge.sdk.models.subpopulations.SubpopulationGuid;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -229,5 +231,22 @@ public class ParticipantsTest {
         // This is sending an email, which is difficult to verify, but this at least should not throw an error.
         String userId = researcher.getSession().getStudyParticipant().getId();
         participantClient.requestResetPassword(userId);
+    }
+    
+    @Test
+    public void canResendEmailVerification() {
+        String userId =  researcher.getSession().getStudyParticipant().getId();
+        ParticipantClient participantClient = researcher.getSession().getParticipantClient();
+        
+        participantClient.resendEmailVerification(userId);
+    }
+    
+    @Test
+    public void canResendConsentAgreement() {
+        String userId =  researcher.getSession().getStudyParticipant().getId();
+        ConsentStatus status = researcher.getSession().getConsentStatuses().values().iterator().next();
+        ParticipantClient participantClient = researcher.getSession().getParticipantClient();
+        
+        participantClient.resendConsentAgreement(userId, new SubpopulationGuid(status.getSubpopulationGuid()));
     }
 }
