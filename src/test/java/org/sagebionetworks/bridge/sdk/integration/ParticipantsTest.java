@@ -11,17 +11,22 @@ import java.util.Map;
 import java.util.Set;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
+import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.accounts.SharingScope;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
+import org.sagebionetworks.bridge.sdk.models.holders.GuidVersionHolder;
 import org.sagebionetworks.bridge.sdk.models.holders.IdentifierHolder;
+import org.sagebionetworks.bridge.sdk.models.schedules.SchedulePlan;
+import org.sagebionetworks.bridge.sdk.models.schedules.ScheduledActivity;
 import org.sagebionetworks.bridge.sdk.models.subpopulations.ConsentStatus;
 import org.sagebionetworks.bridge.sdk.models.subpopulations.SubpopulationGuid;
 
@@ -29,6 +34,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
+import org.sagebionetworks.bridge.sdk.models.ResourceList;
 import org.sagebionetworks.bridge.sdk.models.accounts.AccountStatus;
 import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 
@@ -248,5 +254,53 @@ public class ParticipantsTest {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
         participantClient.resendConsentAgreement(userId, new SubpopulationGuid(status.getSubpopulationGuid()));
+    }
+    
+    @Test
+    public void getActivityHistory() {
+        // Make the user a developer so with one account, we can generate some tasks
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Roles.DEVELOPER);
+        UserClient userClient = user.getSession().getUserClient();
+        
+        SchedulePlanClient spClient = user.getSession().getSchedulePlanClient();
+        SchedulePlan plan = Tests.getSimpleSchedulePlan();
+        GuidVersionHolder planKeys = spClient.createSchedulePlan(plan);
+        try {
+            String userId = user.getSession().getStudyParticipant().getId();
+            
+            // Now ask for something, so activities are generated
+            ResourceList<ScheduledActivity> activities = userClient.getScheduledActivities(4, DateTimeZone.UTC);
+            
+            // Verify there is more than one activity
+            int count = activities.getItems().size();
+            assertTrue(count > 1);
+            
+            // Finish one of them so there is one less in the user's API
+            ScheduledActivity finishMe = activities.getItems().get(0);
+            finishMe.setStartedOn(DateTime.now());
+            finishMe.setFinishedOn(DateTime.now());
+            userClient.updateScheduledActivities(activities.getItems());
+            
+            // Finished task is now no longer in the list the user sees
+            activities = userClient.getScheduledActivities(4, DateTimeZone.UTC);
+            assertTrue(activities.getItems().size() < count);
+            
+            // But the researcher will still see the full list
+            ParticipantClient participantClient = researcher.getSession().getParticipantClient();
+            PagedResourceList<ScheduledActivity> resActivities = participantClient.getActivityHistory(userId, null, null);
+            assertEquals(count, resActivities.getItems().size());
+            
+            // Researcher can delete all the activities as well.
+            participantClient.deleteParticipantActivities(userId);
+            
+            resActivities = participantClient.getActivityHistory(userId, null, null);
+            assertEquals(0, resActivities.getItems().size());
+            
+        } finally {
+            if (user != null) {
+                spClient.deleteSchedulePlan(planKeys.getGuid());
+                user.signOutAndDeleteUser();
+            }
+        }
     }
 }
