@@ -5,12 +5,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,6 +20,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.UserClient;
+import org.sagebionetworks.bridge.sdk.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.accounts.SharingScope;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
@@ -248,5 +251,33 @@ public class ParticipantsTest {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
         participantClient.resendConsentAgreement(userId, new SubpopulationGuid(status.getSubpopulationGuid()));
+    }
+    
+    @Test
+    public void canWithdrawUserFromStudy() {
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
+        String userId = user.getSession().getStudyParticipant().getId();
+        try {
+            // Can get activities without an error... user is indeed consented.
+            user.getSession().getUserClient().getScheduledActivities(1, DateTimeZone.UTC);
+            for (ConsentStatus status : user.getSession().getConsentStatuses().values()) {
+                assertTrue(status.isConsented());
+            }
+            user.signOut();
+            
+            researcher.getSession().getParticipantClient().withdrawAllConsentsToResearch(userId,
+                    "Testing withdrawal API.");
+            
+            try {
+                user.signInAgain();
+                fail("Should have thrown consent exception");
+            } catch(ConsentRequiredException e) {
+                for (ConsentStatus status : e.getSession().getConsentStatuses().values()) {
+                    assertFalse(status.isConsented());
+                }
+            }
+        } finally {
+            user.signOutAndDeleteUser();
+        }
     }
 }
