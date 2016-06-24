@@ -128,7 +128,6 @@ public class Tests {
         Study study = new Study();
         study.setIdentifier(identifier);
         study.setMinAgeOfConsent(18);
-        study.setMaxNumOfParticipants(100);
         study.setName("Test Study [SDK]");
         study.setSponsorName("The Test Study Folks [SDK]");
         study.setSupportEmail("test@test.com");

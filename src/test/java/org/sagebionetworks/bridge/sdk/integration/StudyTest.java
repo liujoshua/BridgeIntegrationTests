@@ -67,7 +67,6 @@ public class StudyTest {
         assertNotNull(newStudy.getResetPasswordTemplate());
         assertEquals(study.getName(), newStudy.getName());
         assertEquals(study.getMinAgeOfConsent(), newStudy.getMinAgeOfConsent());
-        assertEquals(study.getMaxNumOfParticipants(), newStudy.getMaxNumOfParticipants());
         assertEquals(study.getSponsorName(), newStudy.getSponsorName());
         assertEquals(study.getSupportEmail(), newStudy.getSupportEmail());
         assertEquals(study.getTechnicalEmail(), newStudy.getTechnicalEmail());
@@ -94,7 +93,6 @@ public class StudyTest {
         
         Study newerStudy = studyClient.getStudy(newStudy.getIdentifier());
         assertEquals("Altered Test Study [SDK]", newerStudy.getName());
-        assertEquals(50, newerStudy.getMaxNumOfParticipants());
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals("test4@test.com", newerStudy.getConsentNotificationEmail());
 
@@ -204,7 +202,6 @@ public class StudyTest {
     
     private void alterStudy(Study study) {
         study.setName("Altered Test Study [SDK]");
-        study.setMaxNumOfParticipants(50);
         study.setSupportEmail("test3@test.com");
         study.setConsentNotificationEmail("test4@test.com");
     }
