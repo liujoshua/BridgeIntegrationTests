@@ -218,13 +218,20 @@ public class ConsentTest {
     public void canWithdrawFromAllConsentsInStudy() {
         TestUser user = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
+            Session session = user.getSession();
+            
             // Can get activities without an error... user is indeed consented.
-            user.getSession().getUserClient().getScheduledActivities(1, DateTimeZone.UTC);
-            for (ConsentStatus status : user.getSession().getConsentStatuses().values()) {
+            session.getUserClient().getScheduledActivities(1, DateTimeZone.UTC);
+            for (ConsentStatus status : session.getConsentStatuses().values()) {
                 assertTrue(status.isConsented());
             }
             
-            user.getSession().getUserClient().withdrawAllConsentsToResearch("I'm just a test user.");
+            session.getUserClient().withdrawAllConsentsToResearch("I'm just a test user.");
+            
+            // session has been updated appropriately.
+            assertEquals(SharingScope.NO_SHARING, session.getStudyParticipant().getSharingScope());
+            assertFalse(ConsentStatus.isUserConsented(session.getConsentStatuses()));
+
             user.signOut();
             
             try {
