@@ -24,7 +24,7 @@
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
             <artifactId>java-sdk</artifactId>
-            <version>0.8.19</version>
+            <version>0.8.20</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
