@@ -7,6 +7,7 @@ import static org.junit.Assert.fail;
 
 import java.util.Map;
 
+import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Test;
@@ -210,6 +211,39 @@ public class ConsentTest {
             userClient.emailConsentSignature(testUser.getDefaultSubpopulation()); // just verify it throws no errors
         } finally {
             testUser.signOutAndDeleteUser();
+        }
+    }
+    
+    @Test
+    public void canWithdrawFromAllConsentsInStudy() {
+        TestUser user = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
+        try {
+            Session session = user.getSession();
+            
+            // Can get activities without an error... user is indeed consented.
+            session.getUserClient().getScheduledActivities(1, DateTimeZone.UTC);
+            for (ConsentStatus status : session.getConsentStatuses().values()) {
+                assertTrue(status.isConsented());
+            }
+            
+            session.getUserClient().withdrawAllConsentsToResearch("I'm just a test user.");
+            
+            // session has been updated appropriately.
+            assertEquals(SharingScope.NO_SHARING, session.getStudyParticipant().getSharingScope());
+            assertFalse(ConsentStatus.isUserConsented(session.getConsentStatuses()));
+
+            user.signOut();
+            
+            try {
+                user.signInAgain();
+                fail("Should have thrown consent exception");
+            } catch(ConsentRequiredException e) {
+                for (ConsentStatus status : e.getSession().getConsentStatuses().values()) {
+                    assertFalse(status.isConsented());
+                }
+            }
+        } finally {
+            user.signOutAndDeleteUser();
         }
     }
 }

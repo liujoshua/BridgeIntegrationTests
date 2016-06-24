@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -20,6 +21,7 @@ import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
 import org.sagebionetworks.bridge.sdk.UserClient;
+import org.sagebionetworks.bridge.sdk.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.accounts.SharingScope;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
@@ -250,6 +252,7 @@ public class ParticipantsTest {
     @Test
     public void canResendConsentAgreement() {
         String userId =  researcher.getSession().getStudyParticipant().getId();
+
         ConsentStatus status = researcher.getSession().getConsentStatuses().values().iterator().next();
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -257,6 +260,33 @@ public class ParticipantsTest {
     }
     
     @Test
+    public void canWithdrawUserFromStudy() {
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
+        String userId = user.getSession().getStudyParticipant().getId();
+        try {
+            // Can get activities without an error... user is indeed consented.
+            user.getSession().getUserClient().getScheduledActivities(1, DateTimeZone.UTC);
+            for (ConsentStatus status : user.getSession().getConsentStatuses().values()) {
+                assertTrue(status.isConsented());
+            }
+            user.signOut();
+            
+            researcher.getSession().getParticipantClient().withdrawAllConsentsToResearch(userId,
+                    "Testing withdrawal API.");
+            
+            try {
+                user.signInAgain();
+                fail("Should have thrown consent exception");
+            } catch(ConsentRequiredException e) {
+                for (ConsentStatus status : e.getSession().getConsentStatuses().values()) {
+                    assertFalse(status.isConsented());
+                }
+            }
+        } finally {
+            user.signOutAndDeleteUser();
+        }
+    }
+    
     public void getActivityHistory() {
         // Make the user a developer so with one account, we can generate some tasks
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Roles.DEVELOPER);
