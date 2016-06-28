@@ -234,18 +234,15 @@ public class ConsentTest {
             assertFalse(ConsentStatus.isUserConsented(session.getConsentStatuses()));
 
             testUser.signOut();
-            
-            // Although test is about to fail, there is no user in Stormpath, and that makes no sense. Log the user's ID
-            // so we can verify it's not being created somewhere we don't expect.
-            
-            // No, this doesn't throw an exception
-            testUser.signInAgain();
-            session = testUser.getSession();
-            for (ConsentStatus status : session.getConsentStatuses().values()) {
-                assertFalse(status.isConsented());
+            try {
+                testUser.signInAgain();
+            } catch(ConsentRequiredException e) {
+                for (ConsentStatus status : e.getSession().getConsentStatuses().values()) {
+                    assertFalse(status.isConsented());
+                }
             }
         } finally {
-            //user.signOutAndDeleteUser();
+            testUser.signOutAndDeleteUser();
         }
     }
 }
