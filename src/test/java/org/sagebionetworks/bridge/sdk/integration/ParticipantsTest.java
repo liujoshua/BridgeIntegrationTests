@@ -260,7 +260,7 @@ public class ParticipantsTest {
     }
     
     @Test
-    public void canWithdrawUserFromStudy() {
+    public void canWithdrawUserFromStudy() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getStudyParticipant().getId();
         try {
@@ -275,6 +275,9 @@ public class ParticipantsTest {
             researcher.getSession().getParticipantClient().withdrawAllConsentsToResearch(userId,
                     "Testing withdrawal API.");
             
+            // Is it a timing issue? Sure seems like it.
+            Thread.sleep(3000);
+
             try {
                 user.signInAgain();
                 fail("Should have thrown consent exception");
