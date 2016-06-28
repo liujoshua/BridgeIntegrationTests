@@ -266,11 +266,12 @@ public class ParticipantsTest {
         try {
             // Can get activities without an error... user is indeed consented.
             user.getSession().getUserClient().getScheduledActivities(1, DateTimeZone.UTC);
+            // Session reflects this
             for (ConsentStatus status : user.getSession().getConsentStatuses().values()) {
                 assertTrue(status.isConsented());
             }
             user.signOut();
-            
+
             researcher.getSession().getParticipantClient().withdrawAllConsentsToResearch(userId,
                     "Testing withdrawal API.");
             

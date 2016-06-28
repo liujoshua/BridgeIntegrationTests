@@ -54,7 +54,7 @@ public class StudyTest {
         
         String identifier = Tests.randomIdentifier(StudyTest.class);
         study = Tests.getStudy(identifier, null);
-        assertNull(study.getVersion());
+        assertNull("study version should be null", study.getVersion());
         
         VersionHolder holder = studyClient.createStudy(study);
         createdStudy = true;
@@ -62,29 +62,29 @@ public class StudyTest {
 
         Study newStudy = studyClient.getStudy(study.getIdentifier());
         // Verify study has password/email templates
-        assertNotNull(newStudy.getPasswordPolicy());
-        assertNotNull(newStudy.getVerifyEmailTemplate());
-        assertNotNull(newStudy.getResetPasswordTemplate());
-        assertEquals(study.getName(), newStudy.getName());
-        assertEquals(study.getMinAgeOfConsent(), newStudy.getMinAgeOfConsent());
-        assertEquals(study.getSponsorName(), newStudy.getSponsorName());
-        assertEquals(study.getSupportEmail(), newStudy.getSupportEmail());
-        assertEquals(study.getTechnicalEmail(), newStudy.getTechnicalEmail());
-        assertTrue(study.getUsesCustomExportSchedule());
-        assertEquals(study.getConsentNotificationEmail(), newStudy.getConsentNotificationEmail());
-        assertEquals(study.getUserProfileAttributes(), newStudy.getUserProfileAttributes());
-        assertEquals(study.getTaskIdentifiers(), newStudy.getTaskIdentifiers());
-        assertEquals(study.getDataGroups(), newStudy.getDataGroups());
-        assertEquals(study.getMinSupportedAppVersions().get(OperatingSystem.ANDROID),
+        assertNotNull("password policy should not be null", newStudy.getPasswordPolicy());
+        assertNotNull("verify email template should not be null", newStudy.getVerifyEmailTemplate());
+        assertNotNull("password reset template should not be null", newStudy.getResetPasswordTemplate());
+        assertEquals("name should be equal", study.getName(), newStudy.getName());
+        assertEquals("minAgeOfConsent should be equal", study.getMinAgeOfConsent(), newStudy.getMinAgeOfConsent());
+        assertEquals("sponsorName should be equal", study.getSponsorName(), newStudy.getSponsorName());
+        assertEquals("supportEmail should be equal", study.getSupportEmail(), newStudy.getSupportEmail());
+        assertEquals("technicalEmail should be equal", study.getTechnicalEmail(), newStudy.getTechnicalEmail());
+        assertTrue("usesCustomExportSchedule should be true", study.getUsesCustomExportSchedule());
+        assertEquals("consentNotificationEmail should be equal", study.getConsentNotificationEmail(), newStudy.getConsentNotificationEmail());
+        assertEquals("userProfileAttributes should be equal", study.getUserProfileAttributes(), newStudy.getUserProfileAttributes());
+        assertEquals("taskIdentifiers should be equal", study.getTaskIdentifiers(), newStudy.getTaskIdentifiers());
+        assertEquals("dataGroups should be equal", study.getDataGroups(), newStudy.getDataGroups());
+        assertEquals("android minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get(OperatingSystem.ANDROID),
                 newStudy.getMinSupportedAppVersions().get(OperatingSystem.ANDROID));
-        assertEquals(study.getMinSupportedAppVersions().get(OperatingSystem.IOS),
+        assertEquals("iOS minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get(OperatingSystem.IOS),
                 newStudy.getMinSupportedAppVersions().get(OperatingSystem.IOS));
         // This was set to true even though we didn't set it.
-        assertTrue(newStudy.isStrictUploadValidationEnabled());
+        assertTrue("strictUploadValidationEnabled should be true", newStudy.isStrictUploadValidationEnabled());
         // And this is true because admins can set it to true. 
-        assertTrue(newStudy.isHealthCodeExportEnabled());
+        assertTrue("healthCodeExportEnabled should be true", newStudy.isHealthCodeExportEnabled());
         // And this is also true
-        assertTrue(newStudy.isEmailVerificationEnabled());
+        assertTrue("emailVerificationEnabled should be true", newStudy.isEmailVerificationEnabled());
         
         Long oldVersion = newStudy.getVersion();
         alterStudy(newStudy);
@@ -151,8 +151,8 @@ public class StudyTest {
             studyClient.updateCurrentStudy(study);
             
             study = studyClient.getCurrentStudy();
-            assertFalse(study.isHealthCodeExportEnabled());
-            assertTrue(study.isEmailVerificationEnabled());
+            assertFalse("healthCodeExportEnabled should be true", study.isHealthCodeExportEnabled());
+            assertTrue("emailVersificationEnabled should be true", study.isEmailVerificationEnabled());
         } finally {
             developer.signOutAndDeleteUser();
         }
@@ -163,7 +163,7 @@ public class StudyTest {
         StudyClient studyClient = admin.getSession().getStudyClient();
         
         ResourceList<Study> studies = studyClient.getAllStudies();
-        assertTrue(studies.getTotal() > 0);
+        assertTrue("Should be more than zero studies", studies.getTotal() > 0);
     }
     
     @Test
@@ -192,11 +192,11 @@ public class StudyTest {
     }
     
     private void assertVersionHasUpdated(VersionHolder holder, Study study, Long oldVersion) {
-        assertNotNull(holder.getVersion());
-        assertNotNull(study.getVersion());
-        assertEquals(holder.getVersion(), study.getVersion());
+        assertNotNull("versionHolder should not have null version", holder.getVersion());
+        assertNotNull("study should not have null versin", study.getVersion());
+        assertEquals("holder version and study version should be equal", holder.getVersion(), study.getVersion());
         if (oldVersion != null) {
-            assertNotEquals(oldVersion, study.getVersion());
+            assertNotEquals("old version should not equal study's current version", oldVersion, study.getVersion());
         }
     }
     
