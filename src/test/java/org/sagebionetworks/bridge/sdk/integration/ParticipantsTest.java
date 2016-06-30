@@ -16,6 +16,8 @@ import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
@@ -42,6 +44,8 @@ import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 
 public class ParticipantsTest {
 
+    private static Logger LOG = LoggerFactory.getLogger(ParticipantsTest.class); 
+    
     private TestUser admin;
     private TestUser researcher;
     
@@ -275,11 +279,16 @@ public class ParticipantsTest {
             researcher.getSession().getParticipantClient().withdrawAllConsentsToResearch(userId,
                     "Testing withdrawal API.");
             
-            // Is it a timing issue? Sure seems like it.
-            Thread.sleep(3000);
-
+            // Going to retry and see if it eventually succeeds. Then it is absolutely a timing issue.
+            // This should eventually break out because of an exception, pure and simple.
             try {
-                user.signInAgain();
+                // 20*500 = 10 second delay by the last loop, it has to be enough.
+                for (int i=0; i < 20; i++) { 
+                    user.signInAgain();
+                    LOG.info("Did not throw expected consent exception, sleeping " + i*500 + "ms");
+                    user.signOut();
+                    Thread.sleep(i*500);
+                }
                 fail("Should have thrown consent exception");
             } catch(ConsentRequiredException e) {
                 for (ConsentStatus status : e.getSession().getConsentStatuses().values()) {
