@@ -282,14 +282,16 @@ public class ParticipantsTest {
             // Going to retry and see if it eventually succeeds. Then it is absolutely a timing issue.
             // This should eventually break out because of an exception, pure and simple.
             try {
+                int i=0;
                 // 20*500 = 10 second delay by the last loop, it has to be enough.
-                for (int i=0; i < 20; i++) { 
+                for (; i < 20; i++) { 
                     user.signInAgain();
+                    // except that you don't see logging statements in the test output.
                     LOG.info("Did not throw expected consent exception, sleeping " + i*500 + "ms");
                     user.signOut();
                     Thread.sleep(i*500);
                 }
-                fail("Should have thrown consent exception");
+                fail("Should have thrown consent exception, tried " + i + " times to trigger");
             } catch(ConsentRequiredException e) {
                 for (ConsentStatus status : e.getSession().getConsentStatuses().values()) {
                     assertFalse(status.isConsented());
