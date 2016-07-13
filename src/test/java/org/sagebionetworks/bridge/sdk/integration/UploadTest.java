@@ -41,12 +41,14 @@ public class UploadTest {
     // Retry up to 6 times, so we don't spend more than 30 seconds per test.
     private static final int UPLOAD_STATUS_DELAY_RETRIES = 6;
 
+    private static TestUserHelper.TestUser worker;
     private static TestUserHelper.TestUser developer;
     private static TestUserHelper.TestUser user;
 
     @BeforeClass
     public static void beforeClass() {
         // developer is to ensure schemas exist. user is to do uploads
+        worker = TestUserHelper.createAndSignInUser(UploadTest.class, false, Roles.WORKER);
         developer = TestUserHelper.createAndSignInUser(UploadTest.class, false, Roles.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true);
 
@@ -101,6 +103,13 @@ public class UploadTest {
     }
 
     @AfterClass
+    public static void deleteWorker() {
+        if (worker != null) {
+            worker.signOutAndDeleteUser();
+        }
+    }
+
+    @AfterClass
     public static void deleteResearcher() {
         if (developer != null) {
             developer.signOutAndDeleteUser();
@@ -149,6 +158,9 @@ public class UploadTest {
                 break;
             }
         }
+        // userClient.upload marks the download complete
+        // marking an already completed download as complete again should succeed (and be a no-op)
+        worker.getSession().getWorkerClient().completeUpload(session.getId());
 
         assertNotNull("Upload status is not null, UploadId=" + uploadId, status);
         assertEquals("Upload succeeded, UploadId=" + uploadId, UploadStatus.SUCCEEDED, status.getStatus());
