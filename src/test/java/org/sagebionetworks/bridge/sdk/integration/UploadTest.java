@@ -145,17 +145,10 @@ public class UploadTest {
         LOG.info("UploadId=" + uploadId);
         userClient.upload(session, req, filePath);
 
-        // userClient.upload marks the download complete
-        // marking an already completed download as complete again should succeed (and be a no-op)
-        worker.getSession().getWorkerClient().completeUpload(session.getId());
-
         // get validation status
         UploadValidationStatus status = null;
         for (int i = 0; i < UPLOAD_STATUS_DELAY_RETRIES; i++) {
             Thread.sleep(UPLOAD_STATUS_DELAY_MILLISECONDS);
-
-            // should be a no-op
-            worker.getSession().getWorkerClient().completeUpload(session.getId());
 
             status = userClient.getUploadStatus(session.getId());
             if (status.getStatus() == UploadStatus.VALIDATION_FAILED) {
@@ -165,6 +158,9 @@ public class UploadTest {
                 break;
             }
         }
+        // userClient.upload marks the download complete
+        // marking an already completed download as complete again should succeed (and be a no-op)
+        worker.getSession().getWorkerClient().completeUpload(session.getId());
 
         assertNotNull("Upload status is not null, UploadId=" + uploadId, status);
         assertEquals("Upload succeeded, UploadId=" + uploadId, UploadStatus.SUCCEEDED, status.getStatus());
