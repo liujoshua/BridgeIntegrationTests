@@ -16,8 +16,6 @@ import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
@@ -43,8 +41,6 @@ import org.sagebionetworks.bridge.sdk.models.accounts.AccountStatus;
 import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 
 public class ParticipantsTest {
-
-    private static Logger LOG = LoggerFactory.getLogger(ParticipantsTest.class); 
     
     private TestUser admin;
     private TestUser researcher;
@@ -281,7 +277,10 @@ public class ParticipantsTest {
             
             user.signInAgain();
             fail("Should have thrown consent exception");
-            
+        } catch(ConsentRequiredException e) {
+            for (ConsentStatus status : e.getSession().getConsentStatuses().values()) {
+                assertFalse(status.isConsented());
+            }            
         } finally {
             user.signOutAndDeleteUser();
         }
