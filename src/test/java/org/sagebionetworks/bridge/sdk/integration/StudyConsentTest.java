@@ -99,7 +99,8 @@ public class StudyConsentTest {
         studyConsentClient.publishStudyConsent(subpopGuid, current.getCreatedOn());
 
         StudyConsent published = studyConsentClient.getPublishedStudyConsent(subpopGuid);
-        assertTrue("Published consent is returned.", published.isActive());
+        subpop = subpopClient.getSubpopulation(subpopGuid);
+        assertEquals(published.getCreatedOn(), subpop.getPublishedConsentCreatedOn());
         
         studyConsentClient.createStudyConsent(subpopGuid, current);
         

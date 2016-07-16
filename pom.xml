@@ -5,7 +5,7 @@
 
     <groupId>org.sagebionetworks</groupId>
     <artifactId>BridgeIntegrationTests</artifactId>
-    <version>1.0</version>
+    <version>0.8.22</version>
 
     <properties>
     	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -24,7 +24,7 @@
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
             <artifactId>java-sdk</artifactId>
-            <version>0.8.21</version>
+            <version>0.8.22</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
