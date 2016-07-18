@@ -65,7 +65,10 @@ public class SubpopulationTest {
         
         // Read it back
         Subpopulation retrieved = subpopulationClient.getSubpopulation(subpop.getGuid());
-        assertEquals(subpop, retrieved);
+        assertEquals("Later Consent Group", retrieved.getName());
+        assertEquals(criteria, retrieved.getCriteria());
+        assertEquals(keys.getGuid(), retrieved.getGuid().getGuid());
+        assertEquals(keys.getVersion(), retrieved.getVersion());
         
         // Update it
         retrieved.setDescription("Adding a description");
