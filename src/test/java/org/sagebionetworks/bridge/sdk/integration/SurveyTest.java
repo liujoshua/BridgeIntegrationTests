@@ -429,12 +429,12 @@ public class SurveyTest {
         GuidCreatedOnVersionHolder keys = createSurvey(surveyClient, survey);
         
         Survey retrieved = surveyClient.getSurvey(keys);
-        SurveyRule rule = getConstraints(retrieved, "bar").getRules().get(0);
+        SurveyRule retrievedRule = getConstraints(retrieved, "bar").getRules().get(0);
         
-        assertEquals(Boolean.TRUE, rule.getEndSurvey());
-        assertEquals("true", rule.getValue());
-        assertEquals(SurveyRule.Operator.EQ, rule.getOperator());
-        assertNull(rule.getSkipToTarget());
+        assertEquals(Boolean.TRUE, retrievedRule.getEndSurvey());
+        assertEquals("true", retrievedRule.getValue());
+        assertEquals(SurveyRule.Operator.EQ, retrievedRule.getOperator());
+        assertNull(retrievedRule.getSkipToTarget());
     }
     
     private Constraints getConstraints(Survey survey, String id) {
