@@ -205,7 +205,7 @@ public class SurveyTest {
     @Test
     public void canUpdateASurveyAndTypesAreCorrect() {
         SurveyClient surveyClient = developer.getSession().getSurveyClient();
-
+        
         GuidCreatedOnVersionHolder key = createSurvey(surveyClient, TestSurvey.getSurvey(SurveyTest.class));
         Survey survey = surveyClient.getSurvey(key.getGuid(), key.getCreatedOn());
         assertEquals("Type is Survey.", survey.getClass(), Survey.class);
@@ -404,6 +404,36 @@ public class SurveyTest {
         containsAll(surveyResourceList.getItems(), survey1b, survey2b);
     }
 
+    @Test
+    public void verifyEndSurveyRule() {
+        SurveyClient surveyClient = developer.getSession().getSurveyClient();
+        
+        Survey survey = new Survey();
+        survey.setIdentifier("test-survey");
+        survey.setName("Test study");
+
+        StringConstraints constraints = new StringConstraints();
+        constraints.getRules().add(new SurveyRule(SurveyRule.Operator.EQ, "true")); // end survey
+        
+        SurveyQuestion question = new SurveyQuestion();
+        question.setIdentifier("bar");
+        question.setPrompt("Prompt");
+        question.setFireEvent(true);
+        question.setUiHint(UiHint.TEXTFIELD);
+        question.setConstraints(constraints);
+        survey.getElements().add(question);
+        
+        GuidCreatedOnVersionHolder keys = createSurvey(surveyClient, survey);
+        
+        Survey retrieved = surveyClient.getSurvey(keys);
+        SurveyRule rule = getConstraints(retrieved, "bar").getRules().get(0);
+        
+        assertEquals(Boolean.TRUE, rule.getEndSurvey());
+        assertEquals("true", rule.getValue());
+        assertEquals(SurveyRule.Operator.EQ, rule.getOperator());
+        assertNull(rule.getSkipToTarget());
+    }
+    
     private Constraints getConstraints(Survey survey, String id) {
         return ((SurveyQuestion)survey.getElementByIdentifier(id)).getConstraints();
     }
