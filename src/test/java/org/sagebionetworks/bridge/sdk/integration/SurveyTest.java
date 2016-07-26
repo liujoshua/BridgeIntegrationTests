@@ -53,6 +53,8 @@ import org.sagebionetworks.bridge.sdk.models.surveys.SurveyQuestionOption;
 import org.sagebionetworks.bridge.sdk.models.surveys.SurveyRule;
 import org.sagebionetworks.bridge.sdk.models.surveys.UiHint;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @SuppressWarnings("Convert2streamapi")
 public class SurveyTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
@@ -405,7 +407,7 @@ public class SurveyTest {
     }
 
     @Test
-    public void verifyEndSurveyRule() {
+    public void verifyEndSurveyRule() throws Exception {
         SurveyClient surveyClient = developer.getSession().getSurveyClient();
         
         Survey survey = new Survey();
@@ -415,9 +417,11 @@ public class SurveyTest {
         SurveyRule rule = new SurveyRule.Builder().withOperator(SurveyRule.Operator.EQ).withValue("true")
                 .withEndSurvey(Boolean.TRUE).build();
         
+        System.out.println(new ObjectMapper().writeValueAsString(rule));
+        
         StringConstraints constraints = new StringConstraints();
         constraints.getRules().add(rule); // end survey
-        
+
         SurveyQuestion question = new SurveyQuestion();
         question.setIdentifier("bar");
         question.setPrompt("Prompt");
