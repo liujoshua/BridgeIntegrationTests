@@ -413,7 +413,9 @@ public class SurveyTest {
         survey.setName("Test study");
 
         StringConstraints constraints = new StringConstraints();
-        constraints.getRules().add(new SurveyRule(SurveyRule.Operator.EQ, "true")); // end survey
+        constraints.getRules()
+                .add(new SurveyRule.Builder().withOperator(SurveyRule.Operator.EQ).withValue("true").build()); // end
+                                                                                                               // survey
         
         SurveyQuestion question = new SurveyQuestion();
         question.setIdentifier("bar");
