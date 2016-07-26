@@ -122,9 +122,9 @@ public class TestSurvey {
         durationQuestion.setUiHint(UiHint.SLIDER);
         
         SurveyRule rule1 = new SurveyRule.Builder().withOperator(Operator.LE)
-                .withValue(2).withSkipToTarget("phone number").build();
+                .withValue(2).withSkipToTarget("phone_number").build();
         SurveyRule rule2 = new SurveyRule.Builder().withOperator(Operator.DE)
-                .withSkipToTarget("phone number").build();
+                .withSkipToTarget("phone_number").build();
         
         SurveyQuestion integerQuestion = new SurveyQuestion();
         IntegerConstraints c6 = new IntegerConstraints();
