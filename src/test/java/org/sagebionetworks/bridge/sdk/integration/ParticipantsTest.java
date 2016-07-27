@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -17,6 +18,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
@@ -31,10 +33,14 @@ import org.sagebionetworks.bridge.sdk.models.schedules.SchedulePlan;
 import org.sagebionetworks.bridge.sdk.models.schedules.ScheduledActivity;
 import org.sagebionetworks.bridge.sdk.models.subpopulations.ConsentStatus;
 import org.sagebionetworks.bridge.sdk.models.subpopulations.SubpopulationGuid;
+import org.sagebionetworks.bridge.sdk.models.upload.Upload;
+import org.sagebionetworks.bridge.sdk.models.upload.UploadRequest;
+import org.sagebionetworks.bridge.sdk.models.upload.UploadSession;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
+import org.sagebionetworks.bridge.sdk.models.DateTimeRangeResourceList;
 import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
 import org.sagebionetworks.bridge.sdk.models.ResourceList;
 import org.sagebionetworks.bridge.sdk.models.accounts.AccountStatus;
@@ -286,24 +292,25 @@ public class ParticipantsTest {
         }
     }
     
+    @Test
     public void getActivityHistory() {
         // Make the user a developer so with one account, we can generate some tasks
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Roles.DEVELOPER);
         UserClient userClient = user.getSession().getUserClient();
         
         SchedulePlanClient spClient = user.getSession().getSchedulePlanClient();
-        SchedulePlan plan = Tests.getSimpleSchedulePlan();
+        SchedulePlan plan = Tests.getDailyRepeatingSchedulePlan();
         GuidVersionHolder planKeys = spClient.createSchedulePlan(plan);
         try {
             String userId = user.getSession().getStudyParticipant().getId();
-            
+
             // Now ask for something, so activities are generated
             ResourceList<ScheduledActivity> activities = userClient.getScheduledActivities(4, DateTimeZone.UTC);
             
             // Verify there is more than one activity
             int count = activities.getItems().size();
             assertTrue(count > 1);
-            
+
             // Finish one of them so there is one less in the user's API
             ScheduledActivity finishMe = activities.getItems().get(0);
             finishMe.setStartedOn(DateTime.now());
@@ -331,5 +338,46 @@ public class ParticipantsTest {
                 user.signOutAndDeleteUser();
             }
         }
+    }
+    
+    @Test
+    public void getParticipantUploads() throws Exception {
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
+        try {
+            // This isn't going to get much because the client isn't doing uploads... we can trigger a request though.
+            UploadRequest request = new UploadRequest.Builder()
+                    .withContentLength(1485)
+                    .withContentMd5("ABC")
+                    .withContentType("application/json")
+                    .withFile(new File(fileName()))
+                    .withName("test-upload-reports").build();
+            
+            UserClient userClient = user.getSession().getUserClient();
+            UploadSession uploadSession = userClient.requestUploadSession(request);
+            
+            ParticipantClient participantClient = researcher.getSession().getParticipantClient();
+            
+            DateTime endTime = DateTime.now(DateTimeZone.UTC);
+            DateTime startTime = endTime.minusDays(1).minusHours(23);
+            
+            DateTimeRangeResourceList<Upload> results = participantClient
+                    .getUploads(user.getSession().getStudyParticipant().getId(), startTime, endTime);
+            
+            assertEquals(uploadSession.getId(), results.getItems().get(0).getUploadId());
+            assertEquals(1485, results.getItems().get(0).getContentLength());
+            assertEquals(startTime, results.getStartTime());
+            assertEquals(endTime, results.getEndTime());
+            
+        } finally {
+            if (user != null) {
+                user.signOutAndDeleteUser();
+            }
+        }
+    }
+    
+    private String fileName() {
+        // We don't care much about this file as we'll never attempt to upload it, but the SDK enforces its existence
+        String envName = ClientProvider.getConfig().getEnvironment().name().toLowerCase();
+        return "src/test/resources/upload-test/" + envName + "/legacy-non-survey-encrypted";
     }
 }

@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.joda.time.LocalTime;
 import org.joda.time.Period;
 
 import org.sagebionetworks.bridge.sdk.ClientInfo;
@@ -15,6 +16,7 @@ import org.sagebionetworks.bridge.sdk.models.schedules.ABTestScheduleStrategy;
 import org.sagebionetworks.bridge.sdk.models.schedules.Activity;
 import org.sagebionetworks.bridge.sdk.models.schedules.Schedule;
 import org.sagebionetworks.bridge.sdk.models.schedules.SchedulePlan;
+import org.sagebionetworks.bridge.sdk.models.schedules.ScheduleType;
 import org.sagebionetworks.bridge.sdk.models.schedules.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.sdk.models.schedules.TaskReference;
 import org.sagebionetworks.bridge.sdk.models.studies.EmailTemplate;
@@ -96,6 +98,20 @@ public class Tests {
         schedule.setExpires(Period.parse("PT1H"));
         schedule.setLabel("Test label for the user");
 
+        plan.setSchedule(schedule);
+        return plan;
+    }
+    
+    public static SchedulePlan getDailyRepeatingSchedulePlan() {
+        SchedulePlan plan = new SchedulePlan();
+        plan.setLabel("Daily repeating schedule plan");
+        Schedule schedule = new Schedule();
+        schedule.setScheduleType(ScheduleType.RECURRING);
+        schedule.setInterval(Period.parse("P1D"));
+        schedule.setExpires(Period.parse("P1D"));
+        schedule.addTimes(LocalTime.parse("12:00"));
+        setTaskActivity(schedule, "task:CCC");
+        schedule.setLabel("Test label for the user");
         plan.setSchedule(schedule);
         return plan;
     }
