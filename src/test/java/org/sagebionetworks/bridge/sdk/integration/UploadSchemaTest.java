@@ -197,10 +197,10 @@ public class UploadSchemaTest {
         final long surveyCreatedOnMillis = surveyCreatedOn.getMillis();
 
         // Create schema with all the fields.
-        UploadFieldDefinition fieldDef = new UploadFieldDefinition.Builder().withFileExtension(".test")
-                .withMimeType("text/plain").withMinAppVersion(1).withMaxAppVersion(37).withMaxLength(24)
-                .withMultiChoiceAnswerList("foo", "bar", "baz").withName("field").withRequired(false)
-                .withType(UploadFieldType.STRING).build();
+        UploadFieldDefinition fieldDef = new UploadFieldDefinition.Builder().withAllowOtherChoices(true)
+                .withFileExtension(".test").withMimeType("text/plain").withMinAppVersion(1).withMaxAppVersion(37)
+                .withMaxLength(24).withMultiChoiceAnswerList("foo", "bar", "baz").withName("field").withRequired(false)
+                .withType(UploadFieldType.STRING).withUnboundedText(true).build();
         List<UploadFieldDefinition> fieldListList = ImmutableList.of(fieldDef);
         UploadSchema schema = new UploadSchema.Builder().withFieldDefinitions(fieldListList).withName("Schema")
                 .withSchemaId(schemaId).withSchemaType(UploadSchemaType.IOS_SURVEY).withSurveyGuid("survey")

@@ -121,12 +121,17 @@ public class TestSurvey {
         durationQuestion.setConstraints(c5);
         durationQuestion.setUiHint(UiHint.SLIDER);
         
+        SurveyRule rule1 = new SurveyRule.Builder().withOperator(Operator.LE)
+                .withValue(2).withSkipToTarget("phone_number").build();
+        SurveyRule rule2 = new SurveyRule.Builder().withOperator(Operator.DE)
+                .withSkipToTarget("phone_number").build();
+        
         SurveyQuestion integerQuestion = new SurveyQuestion();
         IntegerConstraints c6 = new IntegerConstraints();
         c6.setMinValue(0d);
         c6.setMaxValue(8d);
-        c6.getRules().add(new SurveyRule(Operator.LE, 2, "phone_number"));
-        c6.getRules().add(new SurveyRule(Operator.DE, null, "phone_number"));
+        c6.getRules().add(rule1);
+        c6.getRules().add(rule2);
         integerQuestion.setPrompt("How many times a day do you take your blood pressure?");
         integerQuestion.setIdentifier(INTEGER_ID);
         integerQuestion.setConstraints(c6);

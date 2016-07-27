@@ -53,6 +53,8 @@ import org.sagebionetworks.bridge.sdk.models.surveys.SurveyQuestionOption;
 import org.sagebionetworks.bridge.sdk.models.surveys.SurveyRule;
 import org.sagebionetworks.bridge.sdk.models.surveys.UiHint;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @SuppressWarnings("Convert2streamapi")
 public class SurveyTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
@@ -205,7 +207,7 @@ public class SurveyTest {
     @Test
     public void canUpdateASurveyAndTypesAreCorrect() {
         SurveyClient surveyClient = developer.getSession().getSurveyClient();
-
+        
         GuidCreatedOnVersionHolder key = createSurvey(surveyClient, TestSurvey.getSurvey(SurveyTest.class));
         Survey survey = surveyClient.getSurvey(key.getGuid(), key.getCreatedOn());
         assertEquals("Type is Survey.", survey.getClass(), Survey.class);
@@ -404,6 +406,41 @@ public class SurveyTest {
         containsAll(surveyResourceList.getItems(), survey1b, survey2b);
     }
 
+    @Test
+    public void verifyEndSurveyRule() throws Exception {
+        SurveyClient surveyClient = developer.getSession().getSurveyClient();
+        
+        Survey survey = new Survey();
+        survey.setIdentifier("test-survey");
+        survey.setName("Test study");
+
+        SurveyRule rule = new SurveyRule.Builder().withOperator(SurveyRule.Operator.EQ).withValue("true")
+                .withEndSurvey(Boolean.TRUE).build();
+        
+        System.out.println(new ObjectMapper().writeValueAsString(rule));
+        
+        StringConstraints constraints = new StringConstraints();
+        constraints.getRules().add(rule); // end survey
+
+        SurveyQuestion question = new SurveyQuestion();
+        question.setIdentifier("bar");
+        question.setPrompt("Prompt");
+        question.setFireEvent(true);
+        question.setUiHint(UiHint.TEXTFIELD);
+        question.setConstraints(constraints);
+        survey.getElements().add(question);
+        
+        GuidCreatedOnVersionHolder keys = createSurvey(surveyClient, survey);
+        
+        Survey retrieved = surveyClient.getSurvey(keys);
+        SurveyRule retrievedRule = getConstraints(retrieved, "bar").getRules().get(0);
+        
+        assertEquals(Boolean.TRUE, retrievedRule.getEndSurvey());
+        assertEquals("true", retrievedRule.getValue());
+        assertEquals(SurveyRule.Operator.EQ, retrievedRule.getOperator());
+        assertNull(retrievedRule.getSkipToTarget());
+    }
+    
     private Constraints getConstraints(Survey survey, String id) {
         return ((SurveyQuestion)survey.getElementByIdentifier(id)).getConstraints();
     }

@@ -50,12 +50,16 @@ public class TestUserHelper {
         public SubpopulationGuid getDefaultSubpopulation() {
             return new SubpopulationGuid(Tests.TEST_KEY);
         }
-        public void signInAgain() throws Exception {
+        public void signInAgain() {
             try {
                 userSession = ClientProvider.signIn( getSignInCredentials() );
             } catch (ConsentRequiredException e) {
                 userSession = e.getSession();
+                throw e;
             }
+        }
+        public void signOut() {
+            userSession.signOut();
         }
         public void signOutAndDeleteUser() {
             userSession.signOut();
