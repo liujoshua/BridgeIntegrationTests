@@ -22,8 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.Config;
-import org.sagebionetworks.bridge.sdk.Environment;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
@@ -371,10 +369,8 @@ public class ParticipantsTest {
             UploadSession uploadSession = userClient.requestUploadSession(request);
             LOG.info(uploadSession.toString());
             
-            user.signOut();
-            // I think, but I'm not 100% sure, that we have an eventual consistency issue that's failing this test.
-            Thread.sleep(30000);
-            researcher.signInAgain();
+            // Does not seem to be the issue, however.
+            Thread.sleep(5000);
             
             ParticipantClient participantClient = researcher.getSession().getParticipantClient();
             
@@ -390,8 +386,10 @@ public class ParticipantsTest {
             assertEquals(endTime, results.getEndTime());
             
         } finally {
+            LOG.info("Test user's healthCode: " + user.getSession().getStudyParticipant().getHealthCode());
+            // Do not delete the user.
             if (user != null) {
-                user.signOutAndDeleteUser();
+                //user.signOutAndDeleteUser();
             }
         }
     }
