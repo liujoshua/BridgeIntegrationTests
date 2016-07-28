@@ -344,15 +344,7 @@ public class ParticipantsTest {
         }
     }
 
-    /**
-     * This test is disabled because although it succeeds locally, and succeeds if we run the tests as they 
-     * are run on Jenkins in development (no SDK properties file, using the same command line arguments against 
-     * the development environment), this test fails because the getUploads() call returns no records. There are 
-     * no server errors, and the upload can be seen in the database. The GSI necessary for the query is present
-     * because we use it when running the tests locally. 
-     */
     @Test
-    @Ignore
     public void getParticipantUploads() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getStudyParticipant().getId();
@@ -364,18 +356,19 @@ public class ParticipantsTest {
             
             UserClient userClient = user.getSession().getUserClient();
             UploadSession uploadSession = userClient.requestUploadSession(request);
-            LOG.info(uploadSession.toString());
             
-            // Does not seem to be the issue, however.
-            Thread.sleep(2000);
+            // This does depend on a GSI, so pause for a bit. In practice is seems to index extremely
+            // quickly.
+            Thread.sleep(500);
             
             ParticipantClient participantClient = researcher.getSession().getParticipantClient();
             
-            DateTime endTime = DateTime.now(DateTimeZone.UTC);
-            DateTime startTime = endTime.minusDays(1).minusHours(23);
+            // Jenkins has gotten minutes off from the current time, causing this query to fail. Adjust the range
+            // to ensure if the clock drifts, within reason, the query will still succeed.
+            DateTime endTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
+            DateTime startTime = endTime.minusDays(1).minusHours(21);
 
             DateTimeRangeResourceList<Upload> results = participantClient.getUploads(userId, startTime, endTime);
-            LOG.info(results.toString());
 
             assertEquals(uploadSession.getId(), results.getItems().get(0).getUploadId());
             assertTrue(results.getItems().get(0).getContentLength() > 0);
