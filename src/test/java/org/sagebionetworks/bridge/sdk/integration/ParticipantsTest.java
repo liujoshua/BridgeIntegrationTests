@@ -70,7 +70,6 @@ public class ParticipantsTest {
 
     // Note: A very similar test exists in UserParticipantTest
     @Test
-    @Ignore
     public void canGetAndUpdateSelf() {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
@@ -97,7 +96,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void retrieveParticipant() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -110,7 +108,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canRetrieveAndPageThroughParticipants() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -136,21 +133,18 @@ public class ParticipantsTest {
     }
     
     @Test(expected = IllegalArgumentException.class)
-    @Ignore
     public void cannotSetBadOffset() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         participantClient.getPagedAccountSummaries(-1, 10, null);
     }
     
     @Test(expected = IllegalArgumentException.class)
-    @Ignore
     public void cannotSetBadPageSize() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         participantClient.getPagedAccountSummaries(0, 4, null);
     }
     
     @Test
-    @Ignore
     public void crudParticipant() throws Exception {
         String email = Tests.makeEmail(ParticipantsTest.class);
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
@@ -249,7 +243,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canSendRequestResetPasswordEmail() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -259,7 +252,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canResendEmailVerification() {
         String userId =  researcher.getSession().getStudyParticipant().getId();
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
@@ -268,7 +260,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canResendConsentAgreement() {
         String userId =  researcher.getSession().getStudyParticipant().getId();
 
@@ -279,7 +270,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canWithdrawUserFromStudy() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getStudyParticipant().getId();
@@ -307,7 +297,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void getActivityHistory() {
         // Make the user a developer so with one account, we can generate some tasks
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Roles.DEVELOPER);
@@ -356,6 +345,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void getParticipantUploads() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getStudyParticipant().getId();
@@ -370,7 +360,7 @@ public class ParticipantsTest {
             LOG.info(uploadSession.toString());
             
             // Does not seem to be the issue, however.
-            Thread.sleep(5000);
+            Thread.sleep(2000);
             
             ParticipantClient participantClient = researcher.getSession().getParticipantClient();
             
@@ -386,10 +376,8 @@ public class ParticipantsTest {
             assertEquals(endTime, results.getEndTime());
             
         } finally {
-            LOG.info("Test user's healthCode: " + user.getSession().getStudyParticipant().getHealthCode());
-            // Do not delete the user.
             if (user != null) {
-                //user.signOutAndDeleteUser();
+                user.signOutAndDeleteUser();
             }
         }
     }
