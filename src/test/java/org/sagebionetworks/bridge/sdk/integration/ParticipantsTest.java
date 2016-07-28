@@ -343,7 +343,14 @@ public class ParticipantsTest {
             }
         }
     }
-    
+
+    /**
+     * This test is disabled because although it succeeds locally, and succeeds if we run the tests as they 
+     * are run on Jenkins in development (no SDK properties file, using the same command line arguments against 
+     * the development environment), this test fails because the getUploads() call returns no records. There are 
+     * no server errors, and the upload can be seen in the database. The GSI necessary for the query is present
+     * because we use it when running the tests locally. 
+     */
     @Test
     @Ignore
     public void getParticipantUploads() throws Exception {
