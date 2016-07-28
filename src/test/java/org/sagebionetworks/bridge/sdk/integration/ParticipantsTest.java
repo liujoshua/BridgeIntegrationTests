@@ -343,9 +343,8 @@ public class ParticipantsTest {
             }
         }
     }
-    
+
     @Test
-    @Ignore
     public void getParticipantUploads() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getStudyParticipant().getId();
@@ -357,18 +356,18 @@ public class ParticipantsTest {
             
             UserClient userClient = user.getSession().getUserClient();
             UploadSession uploadSession = userClient.requestUploadSession(request);
-            LOG.info(uploadSession.toString());
             
-            // Does not seem to be the issue, however.
-            Thread.sleep(2000);
+            // This does depend on a GSI, so pause for a bit.
+            Thread.sleep(500);
             
             ParticipantClient participantClient = researcher.getSession().getParticipantClient();
             
-            DateTime endTime = DateTime.now(DateTimeZone.UTC);
-            DateTime startTime = endTime.minusDays(1).minusHours(23);
+            // Jenkins has gotten minutes off from the current time, causing this query to fail. Adjust the range
+            // to ensure if the clock drifts, within reason, the query will still succeed.
+            DateTime endTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
+            DateTime startTime = endTime.minusDays(1).minusHours(21);
 
             DateTimeRangeResourceList<Upload> results = participantClient.getUploads(userId, startTime, endTime);
-            LOG.info(results.toString());
 
             assertEquals(uploadSession.getId(), results.getItems().get(0).getUploadId());
             assertTrue(results.getItems().get(0).getContentLength() > 0);
