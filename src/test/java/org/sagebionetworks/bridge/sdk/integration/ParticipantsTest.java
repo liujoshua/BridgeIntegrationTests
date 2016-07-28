@@ -16,7 +16,10 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
@@ -47,6 +50,7 @@ import org.sagebionetworks.bridge.sdk.models.accounts.AccountStatus;
 import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 
 public class ParticipantsTest {
+    private static final Logger LOG = LoggerFactory.getLogger(UploadTest.class);
     
     private TestUser admin;
     private TestUser researcher;
@@ -66,6 +70,7 @@ public class ParticipantsTest {
 
     // Note: A very similar test exists in UserParticipantTest
     @Test
+    @Ignore
     public void canGetAndUpdateSelf() {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
@@ -92,6 +97,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void retrieveParticipant() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -104,6 +110,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void canRetrieveAndPageThroughParticipants() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -129,18 +136,21 @@ public class ParticipantsTest {
     }
     
     @Test(expected = IllegalArgumentException.class)
+    @Ignore
     public void cannotSetBadOffset() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         participantClient.getPagedAccountSummaries(-1, 10, null);
     }
     
     @Test(expected = IllegalArgumentException.class)
+    @Ignore
     public void cannotSetBadPageSize() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         participantClient.getPagedAccountSummaries(0, 4, null);
     }
     
     @Test
+    @Ignore
     public void crudParticipant() throws Exception {
         String email = Tests.makeEmail(ParticipantsTest.class);
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
@@ -239,6 +249,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void canSendRequestResetPasswordEmail() {
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
         
@@ -248,6 +259,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void canResendEmailVerification() {
         String userId =  researcher.getSession().getStudyParticipant().getId();
         ParticipantClient participantClient = researcher.getSession().getParticipantClient();
@@ -256,6 +268,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void canResendConsentAgreement() {
         String userId =  researcher.getSession().getStudyParticipant().getId();
 
@@ -266,6 +279,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void canWithdrawUserFromStudy() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getStudyParticipant().getId();
@@ -293,6 +307,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void getActivityHistory() {
         // Make the user a developer so with one account, we can generate some tasks
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Roles.DEVELOPER);
@@ -343,17 +358,16 @@ public class ParticipantsTest {
     @Test
     public void getParticipantUploads() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
+        String userId = user.getSession().getStudyParticipant().getId();
         try {
-            // This isn't going to get much because the client isn't doing uploads... we can trigger a request though.
+            // Create a REQUESTED record that we can retrieve through the reporting API.
             UploadRequest request = new UploadRequest.Builder()
-                    .withContentLength(1485)
-                    .withContentMd5("ABC")
-                    .withContentType("application/json")
-                    .withFile(new File(fileName()))
-                    .withName("test-upload-reports").build();
+                    .withContentType("application/zip")
+                    .withFile(new File(fileName())).build();
             
             UserClient userClient = user.getSession().getUserClient();
             UploadSession uploadSession = userClient.requestUploadSession(request);
+            LOG.info(uploadSession.toString());
             
             // I think, but I'm not 100% sure, that we have an eventual consistency issue that's failing this test.
             Thread.sleep(30000);
@@ -362,9 +376,8 @@ public class ParticipantsTest {
             
             DateTime endTime = DateTime.now(DateTimeZone.UTC);
             DateTime startTime = endTime.minusDays(1).minusHours(23);
-            
-            DateTimeRangeResourceList<Upload> results = participantClient
-                    .getUploads(user.getSession().getStudyParticipant().getId(), startTime, endTime);
+
+            DateTimeRangeResourceList<Upload> results = participantClient.getUploads(userId, startTime, endTime);
             
             assertEquals(uploadSession.getId(), results.getItems().get(0).getUploadId());
             assertEquals(1485, results.getItems().get(0).getContentLength());
