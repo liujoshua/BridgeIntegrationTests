@@ -369,10 +369,8 @@ public class ParticipantsTest {
             UploadSession uploadSession = userClient.requestUploadSession(request);
             LOG.info(uploadSession.toString());
             
-            user.signOut();
-            // I think, but I'm not 100% sure, that we have an eventual consistency issue that's failing this test.
-            Thread.sleep(30000);
-            researcher.signInAgain();
+            // Does not seem to be the issue, however.
+            Thread.sleep(5000);
             
             ParticipantClient participantClient = researcher.getSession().getParticipantClient();
             
