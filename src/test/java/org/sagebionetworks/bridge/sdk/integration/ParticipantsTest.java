@@ -22,8 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.Config;
-import org.sagebionetworks.bridge.sdk.Environment;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
@@ -390,8 +388,10 @@ public class ParticipantsTest {
             assertEquals(endTime, results.getEndTime());
             
         } finally {
+            LOG.info("Test user's healthCode: " + user.getSession().getStudyParticipant().getHealthCode());
+            // Do not delete the user.
             if (user != null) {
-                user.signOutAndDeleteUser();
+                //user.signOutAndDeleteUser();
             }
         }
     }
