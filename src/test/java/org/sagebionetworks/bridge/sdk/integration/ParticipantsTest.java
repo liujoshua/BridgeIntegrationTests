@@ -357,8 +357,7 @@ public class ParticipantsTest {
             UserClient userClient = user.getSession().getUserClient();
             UploadSession uploadSession = userClient.requestUploadSession(request);
             
-            // This does depend on a GSI, so pause for a bit. In practice is seems to index extremely
-            // quickly.
+            // This does depend on a GSI, so pause for a bit.
             Thread.sleep(500);
             
             ParticipantClient participantClient = researcher.getSession().getParticipantClient();
