@@ -356,7 +356,7 @@ public class ParticipantsTest {
             UploadSession uploadSession = userClient.requestUploadSession(request);
             
             // I think, but I'm not 100% sure, that we have an eventual consistency issue that's failing this test.
-            Thread.sleep(3000);
+            Thread.sleep(30000);
             
             ParticipantClient participantClient = researcher.getSession().getParticipantClient();
             
