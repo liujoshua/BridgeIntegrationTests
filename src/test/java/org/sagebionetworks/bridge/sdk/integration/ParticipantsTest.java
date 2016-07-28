@@ -355,6 +355,9 @@ public class ParticipantsTest {
             UserClient userClient = user.getSession().getUserClient();
             UploadSession uploadSession = userClient.requestUploadSession(request);
             
+            // I think, but I'm not 100% sure, that we have an eventual consistency issue that's failing this test.
+            Thread.sleep(3000);
+            
             ParticipantClient participantClient = researcher.getSession().getParticipantClient();
             
             DateTime endTime = DateTime.now(DateTimeZone.UTC);
