@@ -16,10 +16,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
@@ -50,8 +47,6 @@ import org.sagebionetworks.bridge.sdk.models.accounts.AccountStatus;
 import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 
 public class ParticipantsTest {
-    private static final Logger LOG = LoggerFactory.getLogger(UploadTest.class);
-    
     private TestUser admin;
     private TestUser researcher;
     

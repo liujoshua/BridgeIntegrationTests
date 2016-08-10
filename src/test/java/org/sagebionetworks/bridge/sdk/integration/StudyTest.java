@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -8,6 +9,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.File;
+import java.util.Set;
+
+import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
@@ -17,14 +22,21 @@ import org.sagebionetworks.bridge.sdk.ClientInfo;
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.StudyClient;
+import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.sdk.exceptions.UnsupportedVersionException;
+import org.sagebionetworks.bridge.sdk.models.DateTimeRangeResourceList;
 import org.sagebionetworks.bridge.sdk.models.ResourceList;
 import org.sagebionetworks.bridge.sdk.models.holders.VersionHolder;
 import org.sagebionetworks.bridge.sdk.models.studies.OperatingSystem;
 import org.sagebionetworks.bridge.sdk.models.studies.Study;
+import org.sagebionetworks.bridge.sdk.models.upload.Upload;
+import org.sagebionetworks.bridge.sdk.models.upload.UploadRequest;
+import org.sagebionetworks.bridge.sdk.models.upload.UploadSession;
+
+import com.google.common.collect.Sets;
 
 public class StudyTest {
     
@@ -189,6 +201,66 @@ public class StudyTest {
         } finally {
             user.signOutAndDeleteUser();
         }
+    }
+    
+    @Test
+    public void getStudyUploads() throws Exception {
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Roles.DEVELOPER);
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
+        TestUser user2 = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
+        try {
+            StudyClient studyClient = developer.getSession().getStudyClient();
+            DateTime endTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
+            DateTime startTime = endTime.minusHours(2);
+            int count = studyClient.getUploads(startTime, endTime).getItems().size();
+
+            // Create a REQUESTED record that we can retrieve through the reporting API.
+            UploadRequest request = new UploadRequest.Builder()
+                    .withContentType("application/zip")
+                    .withFile(new File(fileName())).build();
+            
+            UserClient userClient = user.getSession().getUserClient();
+            UploadSession uploadSession = userClient.requestUploadSession(request);
+            Thread.sleep(500); // This does depend on a GSI, so pause for a bit.
+            
+            UserClient userClient2 = user2.getSession().getUserClient();
+            UploadSession uploadSession2 = userClient2.requestUploadSession(request);
+            Thread.sleep(500); // This does depend on a GSI, so pause for a bit.
+            
+            // This should retrieve both of the user's uploads.
+            DateTimeRangeResourceList<Upload> results = studyClient.getUploads(startTime, endTime);
+            assertEquals(startTime, results.getStartTime());
+            assertEquals(endTime, results.getEndTime());
+
+            assertEquals(count+2, results.getItems().size());
+            assertNotNull(getUpload(results, uploadSession.getId()));
+            assertNotNull(getUpload(results, uploadSession2.getId()));
+        } finally {
+            if (user != null) {
+                user.signOutAndDeleteUser();
+            }
+            if (user2 != null) {
+                user2.signOutAndDeleteUser();
+            }
+            if (developer != null) {
+                developer.signOutAndDeleteUser();
+            }
+        }
+    }
+    
+    private Upload getUpload(DateTimeRangeResourceList<Upload> results, String guid) {
+        for (Upload upload : results.getItems()) {
+            if (upload.getUploadId().equals(guid)) {
+                return upload;
+            }
+        }
+        return null;
+    }
+    
+    private String fileName() {
+        // We don't care much about this file as we'll never attempt to upload it, but the SDK enforces its existence
+        String envName = ClientProvider.getConfig().getEnvironment().name().toLowerCase();
+        return "src/test/resources/upload-test/" + envName + "/legacy-non-survey-encrypted";
     }
     
     private void assertVersionHasUpdated(VersionHolder holder, Study study, Long oldVersion) {
