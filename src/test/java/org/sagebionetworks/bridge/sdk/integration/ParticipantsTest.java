@@ -364,8 +364,8 @@ public class ParticipantsTest {
 
             assertEquals(uploadSession.getId(), results.getItems().get(0).getUploadId());
             assertTrue(results.getItems().get(0).getContentLength() > 0);
-            assertTrue(startTime.equals(results.getStartTime()));
-            assertTrue(endTime.equals(results.getEndTime()));
+            assertEquals(startTime, results.getStartTime());
+            assertEquals(endTime, results.getEndTime());
             
         } finally {
             if (user != null) {

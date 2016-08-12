@@ -223,8 +223,8 @@ public class StudyTest {
             
             // This should retrieve both of the user's uploads.
             DateTimeRangeResourceList<Upload> results = studyClient.getUploads(startTime, endTime);
-            assertTrue(startTime.equals(results.getStartTime()));
-            assertTrue(endTime.equals(results.getEndTime()));
+            assertEquals(startTime, results.getStartTime());
+            assertEquals(endTime, results.getEndTime());
 
             assertEquals(count+2, results.getItems().size());
             assertNotNull(getUpload(results, uploadSession.getId()));
