@@ -204,7 +204,7 @@ public class StudyTest {
         TestUser user2 = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
             StudyClient studyClient = developer.getSession().getStudyClient();
-            DateTime startTime = DateTime.now().minusHours(2);
+            DateTime startTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
             DateTime endTime = startTime.plusHours(4);
             int count = studyClient.getUploads(startTime, endTime).getItems().size();
 
