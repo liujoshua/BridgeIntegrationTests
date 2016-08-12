@@ -217,10 +217,10 @@ public class StudyTest {
             
             UserClient userClient = user.getSession().getUserClient();
             UploadSession uploadSession = userClient.requestUploadSession(request);
-            Thread.sleep(500); // This does depend on a GSI, so pause for a bit.
             
             UserClient userClient2 = user2.getSession().getUserClient();
             UploadSession uploadSession2 = userClient2.requestUploadSession(request);
+            
             Thread.sleep(500); // This does depend on a GSI, so pause for a bit.
             
             // This should retrieve both of the user's uploads.
