@@ -346,8 +346,8 @@ public class ParticipantsTest {
         try {
             // Create a REQUESTED record that we can retrieve through the reporting API.
             UploadRequest request = new UploadRequest.Builder()
-                    .withContentType("application/zip")
-                    .withFile(new File(fileName())).build();
+                    .withContentType("application/zip").withContentLength(100).withContentMd5("ABC")
+                    .withName("upload.zip").build();
             
             UserClient userClient = user.getSession().getUserClient();
             UploadSession uploadSession = userClient.requestUploadSession(request);
@@ -374,11 +374,5 @@ public class ParticipantsTest {
                 user.signOutAndDeleteUser();
             }
         }
-    }
-    
-    private String fileName() {
-        // We don't care much about this file as we'll never attempt to upload it, but the SDK enforces its existence
-        String envName = ClientProvider.getConfig().getEnvironment().name().toLowerCase();
-        return "src/test/resources/upload-test/" + envName + "/legacy-non-survey-encrypted";
     }
 }
