@@ -8,8 +8,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.File;
-
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
@@ -221,12 +219,12 @@ public class StudyTest {
             UserClient userClient2 = user2.getSession().getUserClient();
             UploadSession uploadSession2 = userClient2.requestUploadSession(request);
             
-            Thread.sleep(500); // This does depend on a GSI, so pause for a bit.
+            Thread.sleep(1000); // This does depend on a GSI, so pause for a bit.
             
             // This should retrieve both of the user's uploads.
             DateTimeRangeResourceList<Upload> results = studyClient.getUploads(startTime, endTime);
-            assertEquals(startTime, results.getStartTime());
-            assertEquals(endTime, results.getEndTime());
+            assertTrue(startTime.equals(results.getStartTime()));
+            assertTrue(endTime.equals(results.getEndTime()));
 
             assertEquals(count+2, results.getItems().size());
             assertNotNull(getUpload(results, uploadSession.getId()));

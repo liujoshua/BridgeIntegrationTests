@@ -7,7 +7,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.File;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +17,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
@@ -366,8 +364,8 @@ public class ParticipantsTest {
 
             assertEquals(uploadSession.getId(), results.getItems().get(0).getUploadId());
             assertTrue(results.getItems().get(0).getContentLength() > 0);
-            assertEquals(startTime, results.getStartTime());
-            assertEquals(endTime, results.getEndTime());
+            assertTrue(startTime.equals(results.getStartTime()));
+            assertTrue(endTime.equals(results.getEndTime()));
             
         } finally {
             if (user != null) {
