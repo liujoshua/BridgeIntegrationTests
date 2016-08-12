@@ -16,10 +16,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
@@ -50,8 +47,6 @@ import org.sagebionetworks.bridge.sdk.models.accounts.AccountStatus;
 import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 
 public class ParticipantsTest {
-    private static final Logger LOG = LoggerFactory.getLogger(UploadTest.class);
-    
     private TestUser admin;
     private TestUser researcher;
     
@@ -351,8 +346,8 @@ public class ParticipantsTest {
         try {
             // Create a REQUESTED record that we can retrieve through the reporting API.
             UploadRequest request = new UploadRequest.Builder()
-                    .withContentType("application/zip")
-                    .withFile(new File(fileName())).build();
+                    .withContentType("application/zip").withContentLength(100).withContentMd5("ABC")
+                    .withName("upload.zip").build();
             
             UserClient userClient = user.getSession().getUserClient();
             UploadSession uploadSession = userClient.requestUploadSession(request);
@@ -364,7 +359,7 @@ public class ParticipantsTest {
             
             // Jenkins has gotten minutes off from the current time, causing this query to fail. Adjust the range
             // to ensure if the clock drifts, within reason, the query will still succeed.
-            DateTime endTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
+            DateTime endTime = DateTime.now().plusHours(2);
             DateTime startTime = endTime.minusDays(1).minusHours(21);
 
             DateTimeRangeResourceList<Upload> results = participantClient.getUploads(userId, startTime, endTime);
@@ -379,11 +374,5 @@ public class ParticipantsTest {
                 user.signOutAndDeleteUser();
             }
         }
-    }
-    
-    private String fileName() {
-        // We don't care much about this file as we'll never attempt to upload it, but the SDK enforces its existence
-        String envName = ClientProvider.getConfig().getEnvironment().name().toLowerCase();
-        return "src/test/resources/upload-test/" + envName + "/legacy-non-survey-encrypted";
     }
 }
