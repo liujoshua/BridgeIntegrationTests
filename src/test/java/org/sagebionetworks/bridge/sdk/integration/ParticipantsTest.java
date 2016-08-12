@@ -7,7 +7,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.File;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +17,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
@@ -359,7 +357,7 @@ public class ParticipantsTest {
             
             // Jenkins has gotten minutes off from the current time, causing this query to fail. Adjust the range
             // to ensure if the clock drifts, within reason, the query will still succeed.
-            DateTime endTime = DateTime.now().plusHours(2);
+            DateTime endTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
             DateTime startTime = endTime.minusDays(1).minusHours(21);
 
             DateTimeRangeResourceList<Upload> results = participantClient.getUploads(userId, startTime, endTime);
