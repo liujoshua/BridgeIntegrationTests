@@ -7,9 +7,9 @@
     </encoder>
   </appender>
 
-  <logger name="org.sagebionetworks.bridge.sdk.BaseApiCaller" level="debug" />
+  <logger name="org.sagebionetworks.bridge.sdk.BaseApiCaller" level="warn" />
 
-  <root level="debug">
+  <root level="info">
     <appender-ref ref="STDOUT" />
   </root>
 </configuration>
