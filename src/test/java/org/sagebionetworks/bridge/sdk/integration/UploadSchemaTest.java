@@ -196,18 +196,25 @@ public class UploadSchemaTest {
         final DateTime surveyCreatedOn = DateTime.parse("2016-04-29T16:00:00.002-0700");
         final long surveyCreatedOnMillis = surveyCreatedOn.getMillis();
 
-        // Create schema with all the fields.
-        UploadFieldDefinition fieldDef = new UploadFieldDefinition.Builder().withAllowOtherChoices(true)
-                .withFileExtension(".test").withMimeType("text/plain").withMinAppVersion(1).withMaxAppVersion(37)
-                .withMaxLength(24).withMultiChoiceAnswerList("foo", "bar", "baz").withName("field").withRequired(false)
-                .withType(UploadFieldType.STRING).withUnboundedText(true).build();
-        List<UploadFieldDefinition> fieldListList = ImmutableList.of(fieldDef);
-        UploadSchema schema = new UploadSchema.Builder().withFieldDefinitions(fieldListList).withName("Schema")
+        // Create schema with all the fields. Note that no single field can logically have all the fields (some of
+        // which are enforced server-side).
+        List<UploadFieldDefinition> fieldDefList = ImmutableList.of(
+                new UploadFieldDefinition.Builder().withName("multi-choice-test-field")
+                        .withType(UploadFieldType.MULTI_CHOICE).withRequired(false).withAllowOtherChoices(true)
+                        .withMultiChoiceAnswerList("foo", "bar", "baz").build(),
+                new UploadFieldDefinition.Builder().withName("attachment-test-field")
+                        .withType(UploadFieldType.ATTACHMENT_V2).withFileExtension(".test").withMimeType("text/plain")
+                        .withMinAppVersion(1).withMaxAppVersion(37).build(),
+                new UploadFieldDefinition.Builder().withName("short-string-test-field")
+                        .withType(UploadFieldType.STRING).withMaxLength(24).build(),
+                new UploadFieldDefinition.Builder().withName("unbounded-string-test-field")
+                        .withType(UploadFieldType.STRING).withUnboundedText(true).build());
+        UploadSchema schema = new UploadSchema.Builder().withFieldDefinitions(fieldDefList).withName("Schema")
                 .withSchemaId(schemaId).withSchemaType(UploadSchemaType.IOS_SURVEY).withSurveyGuid("survey")
                 .withSurveyCreatedOn(surveyCreatedOn).build();
         UploadSchema createdSchema = devUploadSchemaClient.createOrUpdateUploadSchema(schema);
 
-        assertEquals(fieldListList, createdSchema.getFieldDefinitions());
+        assertEquals(fieldDefList, createdSchema.getFieldDefinitions());
         assertEquals("Schema", createdSchema.getName());
         assertEquals(1, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
@@ -259,7 +266,7 @@ public class UploadSchemaTest {
 
     @Test
     public void testV4() {
-        // Set up some fields
+        // Set up some fields - foo and bar fields, and their respective updated versions.
         UploadFieldDefinition fooField = new UploadFieldDefinition.Builder().withName("foo")
                 .withType(UploadFieldType.STRING).build();
         UploadFieldDefinition fooMaxAppVersion = new UploadFieldDefinition.Builder().withName("foo")
@@ -268,8 +275,10 @@ public class UploadSchemaTest {
                 .withType(UploadFieldType.STRING).build();
         UploadFieldDefinition barMaxAppVersion = new UploadFieldDefinition.Builder().withName("bar")
                 .withType(UploadFieldType.STRING).withMaxAppVersion(42).build();
+
+        // This field will be added later. Needs minAppVersion field.
         UploadFieldDefinition bazField = new UploadFieldDefinition.Builder().withName("baz")
-                .withType(UploadFieldType.STRING).build();
+                .withType(UploadFieldType.STRING).withMinAppVersion(39).build();
 
         // create schema - Start with rev2 to test new v4 semantics.
         List<UploadFieldDefinition> fieldDefListV1 = ImmutableList.of(fooField, barField);
