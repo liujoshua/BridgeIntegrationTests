@@ -276,9 +276,9 @@ public class UploadSchemaTest {
         UploadFieldDefinition barMaxAppVersion = new UploadFieldDefinition.Builder().withName("bar")
                 .withType(UploadFieldType.STRING).withMaxAppVersion(42).build();
 
-        // This field will be added later. Needs minAppVersion field.
+        // This field will be added later. Needs to be optional.
         UploadFieldDefinition bazField = new UploadFieldDefinition.Builder().withName("baz")
-                .withType(UploadFieldType.STRING).withMinAppVersion(39).build();
+                .withType(UploadFieldType.STRING).withRequired(false).build();
 
         // create schema - Start with rev2 to test new v4 semantics.
         List<UploadFieldDefinition> fieldDefListV1 = ImmutableList.of(fooField, barField);
