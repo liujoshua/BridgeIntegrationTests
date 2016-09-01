@@ -111,8 +111,6 @@ public class SchedulePlanTest {
         assertNotNull(plan.getModifiedOn());
         assertNotNull(plan.getVersion());
         assertEquals("A/B Test Schedule Plan", plan.getLabel());
-        assertEquals(new Integer(2), plan.getMinAppVersion());
-        assertEquals(new Integer(8), plan.getMaxAppVersion());
 
         // Update
         SchedulePlan simplePlan = Tests.getSimpleSchedulePlan();
