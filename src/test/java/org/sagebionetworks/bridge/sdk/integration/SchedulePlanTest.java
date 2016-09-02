@@ -35,6 +35,7 @@ import org.sagebionetworks.bridge.sdk.models.schedules.ScheduleType;
 import org.sagebionetworks.bridge.sdk.models.schedules.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.sdk.models.schedules.SurveyReference;
 import org.sagebionetworks.bridge.sdk.models.schedules.TaskReference;
+import org.sagebionetworks.bridge.sdk.models.studies.OperatingSystem;
 import org.sagebionetworks.bridge.sdk.models.surveys.Survey;
 import org.sagebionetworks.bridge.sdk.utils.Utilities;
 
@@ -157,12 +158,12 @@ public class SchedulePlanTest {
             schedule2.addActivity(new Activity("Do task",null,new TaskReference("task:BBB")));
             
             Criteria criteria1 = new Criteria();
-            criteria1.setMinAppVersion(2);
-            criteria1.setMaxAppVersion(5);
+            criteria1.getMinAppVersions().put(OperatingSystem.ANDROID, 2);
+            criteria1.getMaxAppVersions().put(OperatingSystem.ANDROID, 5);
             
             Criteria criteria2 = new Criteria();
-            criteria2.setMinAppVersion(6);
-            criteria2.setMaxAppVersion(10);
+            criteria2.getMinAppVersions().put(OperatingSystem.ANDROID, 6);
+            criteria2.getMaxAppVersions().put(OperatingSystem.ANDROID, 10);
             
             ScheduleCriteria scheduleCriteria1 = new ScheduleCriteria(schedule1, criteria1);
             ScheduleCriteria scheduleCriteria2 = new ScheduleCriteria(schedule2, criteria2);
