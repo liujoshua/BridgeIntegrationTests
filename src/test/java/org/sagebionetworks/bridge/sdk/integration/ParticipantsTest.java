@@ -268,7 +268,7 @@ public class ParticipantsTest {
         String userId = user.getSession().getStudyParticipant().getId();
         try {
             // Can get activities without an error... user is indeed consented.
-            user.getSession().getUserClient().getScheduledActivities(1, DateTimeZone.UTC);
+            user.getSession().getUserClient().getScheduledActivities(1, DateTimeZone.UTC, null);
             // Session reflects this
             for (ConsentStatus status : user.getSession().getConsentStatuses().values()) {
                 assertTrue(status.isConsented());
@@ -302,7 +302,7 @@ public class ParticipantsTest {
             String userId = user.getSession().getStudyParticipant().getId();
 
             // Now ask for something, so activities are generated
-            ResourceList<ScheduledActivity> activities = userClient.getScheduledActivities(4, DateTimeZone.UTC);
+            ResourceList<ScheduledActivity> activities = userClient.getScheduledActivities(4, DateTimeZone.UTC, null);
             
             // Verify there is more than one activity
             int count = activities.getItems().size();
@@ -315,7 +315,7 @@ public class ParticipantsTest {
             userClient.updateScheduledActivities(activities.getItems());
             
             // Finished task is now no longer in the list the user sees
-            activities = userClient.getScheduledActivities(4, DateTimeZone.UTC);
+            activities = userClient.getScheduledActivities(4, DateTimeZone.UTC, null);
             assertTrue(activities.getItems().size() < count);
             
             // But the researcher will still see the full list

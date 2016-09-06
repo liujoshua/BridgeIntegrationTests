@@ -187,7 +187,7 @@ public class StudyTest {
             // This is a version zero client, it should not be accepted
             ClientProvider.setClientInfo(new ClientInfo.Builder().withDevice("Unknown").withOsName("Android")
                     .withOsVersion("1").withAppName(Tests.APP_NAME).withAppVersion(0).build());
-            user.getSession().getUserClient().getScheduledActivities(3, DateTimeZone.UTC);
+            user.getSession().getUserClient().getScheduledActivities(3, DateTimeZone.UTC, null);
             fail("Should have thrown exception");
             
         } catch(UnsupportedVersionException e) {
