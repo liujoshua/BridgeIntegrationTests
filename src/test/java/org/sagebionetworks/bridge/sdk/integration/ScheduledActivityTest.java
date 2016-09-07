@@ -59,8 +59,6 @@ public class ScheduledActivityTest {
         SchedulePlan plan = new SchedulePlan();
         plan.setLabel("Schedule plan 1");
         plan.setSchedule(schedule);
-        plan.setMinAppVersion(2);
-        plan.setMaxAppVersion(4);
         schedulePlanClient.createSchedulePlan(plan);
         
         // Add a schedule plan in the future... this should not effect any tests, *until* we request
@@ -99,26 +97,7 @@ public class ScheduledActivityTest {
     
     @Test
     public void createSchedulePlanGetScheduledActivities() {
-        // At first, we are an application way outside the bounds of the target, nothing should be returned
-        ClientProvider.setClientInfo(new ClientInfo.Builder().withAppName(Tests.APP_NAME).withAppVersion(10).build());
         ResourceList<ScheduledActivity> scheduledActivities = userClient.getScheduledActivities(4, DateTimeZone.getDefault(), null);
-        assertEquals("no activities returned, app version too high", 0, scheduledActivities.getTotal());
-        
-        // Two however... that's fine
-        ClientProvider.setClientInfo(new ClientInfo.Builder().withAppName(Tests.APP_NAME).withAppVersion(2).build());
-        scheduledActivities = userClient.getScheduledActivities(4, DateTimeZone.getDefault(), null);
-        assertEquals("one activity returned", 1, scheduledActivities.getTotal());
-        
-        // Check again... with a higher app version, the activity won't be returned.
-        // This verifies that even after an activity is created, we will still filter it
-        // when retrieved from the server (not just when creating activities).
-        ClientProvider.setClientInfo(new ClientInfo.Builder().withAppName(Tests.APP_NAME).withAppVersion(10).build());
-        scheduledActivities = userClient.getScheduledActivities(4, DateTimeZone.getDefault(), null);
-        assertEquals("no activities returned, app version too high", 0, scheduledActivities.getTotal());
-        
-        // Get that activity again for the rest of the test
-        ClientProvider.setClientInfo(new ClientInfo.Builder().withAppName(Tests.APP_NAME).withAppVersion(2).build());
-        scheduledActivities = userClient.getScheduledActivities(4, DateTimeZone.getDefault(), null);
         
         ScheduledActivity schActivity = scheduledActivities.get(0);
         assertEquals(ScheduledActivityStatus.SCHEDULED, schActivity.getStatus());
@@ -145,7 +124,6 @@ public class ScheduledActivityTest {
     
     @Test
     public void getScheduledActivitiesWithMinimumActivityValue() {
-        ClientProvider.setClientInfo(new ClientInfo.Builder().withAppName(Tests.APP_NAME).withAppVersion(2).build());
         ResourceList<ScheduledActivity> scheduledActivities = userClient.getScheduledActivities(4, DateTimeZone.getDefault(), 2);
         
         Multiset<String> idCounts = getMultiset(scheduledActivities);
