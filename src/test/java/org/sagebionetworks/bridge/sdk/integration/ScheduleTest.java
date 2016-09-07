@@ -167,11 +167,7 @@ public class ScheduleTest {
     }
 
     private void activitiesShouldContainTask(String activityLabel) {
-        ResourceList<ScheduledActivity> activities = user.getSession().getUserClient().getScheduledActivities(1, DateTimeZone.UTC);
-        System.out.println("----------------------------------------------------");
-        for (ScheduledActivity act : activities.getItems()) {
-            System.out.println(act);
-        }
+        ResourceList<ScheduledActivity> activities = user.getSession().getUserClient().getScheduledActivities(1, DateTimeZone.UTC, null);
         assertEquals(1, activities.getTotal());
         assertEquals(activityLabel, activities.getItems().get(0).getActivity().getLabel());
     }

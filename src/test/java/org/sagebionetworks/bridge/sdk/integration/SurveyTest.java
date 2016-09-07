@@ -417,8 +417,6 @@ public class SurveyTest {
         SurveyRule rule = new SurveyRule.Builder().withOperator(SurveyRule.Operator.EQ).withValue("true")
                 .withEndSurvey(Boolean.TRUE).build();
         
-        System.out.println(new ObjectMapper().writeValueAsString(rule));
-        
         StringConstraints constraints = new StringConstraints();
         constraints.getRules().add(rule); // end survey
 

@@ -221,7 +221,7 @@ public class ConsentTest {
             Session session = testUser.getSession();
 
             // Can get activities without an error... user is indeed consented.
-            session.getUserClient().getScheduledActivities(1, DateTimeZone.UTC);
+            session.getUserClient().getScheduledActivities(1, DateTimeZone.UTC, null);
             for (ConsentStatus status : session.getConsentStatuses().values()) {
                 assertTrue(status.isConsented());
             }
