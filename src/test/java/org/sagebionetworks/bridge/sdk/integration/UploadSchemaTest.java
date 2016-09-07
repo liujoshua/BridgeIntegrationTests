@@ -204,7 +204,7 @@ public class UploadSchemaTest {
                         .withMultiChoiceAnswerList("foo", "bar", "baz").build(),
                 new UploadFieldDefinition.Builder().withName("attachment-test-field")
                         .withType(UploadFieldType.ATTACHMENT_V2).withFileExtension(".test").withMimeType("text/plain")
-                        .withMinAppVersion(1).withMaxAppVersion(37).build(),
+                        .build(),
                 new UploadFieldDefinition.Builder().withName("short-string-test-field")
                         .withType(UploadFieldType.STRING).withMaxLength(24).build(),
                 new UploadFieldDefinition.Builder().withName("unbounded-string-test-field")
@@ -270,11 +270,11 @@ public class UploadSchemaTest {
         UploadFieldDefinition fooField = new UploadFieldDefinition.Builder().withName("foo")
                 .withType(UploadFieldType.STRING).build();
         UploadFieldDefinition fooMaxAppVersion = new UploadFieldDefinition.Builder().withName("foo")
-                .withType(UploadFieldType.STRING).withMaxAppVersion(42).build();
+                .withType(UploadFieldType.STRING).build();
         UploadFieldDefinition barField = new UploadFieldDefinition.Builder().withName("bar")
                 .withType(UploadFieldType.STRING).build();
         UploadFieldDefinition barMaxAppVersion = new UploadFieldDefinition.Builder().withName("bar")
-                .withType(UploadFieldType.STRING).withMaxAppVersion(42).build();
+                .withType(UploadFieldType.STRING).build();
 
         // This field will be added later. Needs to be optional.
         UploadFieldDefinition bazField = new UploadFieldDefinition.Builder().withName("baz")
