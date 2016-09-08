@@ -92,7 +92,7 @@ public class SurveySchemaTest {
     }
 
     @AfterClass
-    public static void deleteResearcher() {
+    public static void deleteDeveloper() {
         if (developer != null) {
             developer.signOutAndDeleteUser();
         }
