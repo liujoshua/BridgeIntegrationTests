@@ -264,24 +264,26 @@ public class UploadSchemaTest {
         }
     }
 
+    // Helper to make an upload schema with the minimum of attributes. Takes in rev and version to facilitate testing
+    // create vs update and handling version conflicts.
+    private static UploadSchema makeSimpleSchema(String schemaId, Integer rev, Long version) {
+        UploadFieldDefinition fieldDef = new UploadFieldDefinition.Builder().withName("field")
+                .withType(UploadFieldType.STRING).build();
+        UploadSchema schema = new UploadSchema.Builder().withFieldDefinitions(fieldDef).withName("Schema")
+                .withRevision(rev).withSchemaId(schemaId).withSchemaType(UploadSchemaType.IOS_DATA)
+                .withVersion(version).build();
+        return schema;
+    }
+
     @Test
     public void testV4() {
-        // Set up some fields - foo and bar fields, and their respective updated versions.
-        UploadFieldDefinition fooField = new UploadFieldDefinition.Builder().withName("foo")
-                .withType(UploadFieldType.STRING).build();
-        UploadFieldDefinition fooMaxAppVersion = new UploadFieldDefinition.Builder().withName("foo")
-                .withType(UploadFieldType.STRING).build();
-        UploadFieldDefinition barField = new UploadFieldDefinition.Builder().withName("bar")
-                .withType(UploadFieldType.STRING).build();
-        UploadFieldDefinition barMaxAppVersion = new UploadFieldDefinition.Builder().withName("bar")
-                .withType(UploadFieldType.STRING).build();
-
-        // This field will be added later. Needs to be optional.
-        UploadFieldDefinition bazField = new UploadFieldDefinition.Builder().withName("baz")
-                .withType(UploadFieldType.STRING).withRequired(false).build();
-
         // create schema - Start with rev2 to test new v4 semantics.
-        List<UploadFieldDefinition> fieldDefListV1 = ImmutableList.of(fooField, barField);
+        List<UploadFieldDefinition> fieldDefListV1 = ImmutableList.of(
+                new UploadFieldDefinition.Builder().withName("q1").withType(UploadFieldType.MULTI_CHOICE)
+                        .withMultiChoiceAnswerList("foo", "bar").build(),
+                new UploadFieldDefinition.Builder().withName("q2").withType(UploadFieldType.ATTACHMENT_V2)
+                        .withFileExtension(".txt").withMimeType("text/plain").build());
+
         UploadSchema schemaV1 = new UploadSchema.Builder().withName("Schema").withRevision(2).withSchemaId(schemaId)
                 .withSchemaType(UploadSchemaType.IOS_DATA).withFieldDefinitions(fieldDefListV1).build();
         UploadSchema createdSchema = devUploadSchemaClient.createSchemaRevisionV4(schemaV1);
@@ -304,8 +306,16 @@ public class UploadSchemaTest {
             // expected exception
         }
 
-        // update schema - add some fields, re-order some fields, add maxAppVersion to some fields
-        List<UploadFieldDefinition> fieldDefListV2 = ImmutableList.of(barMaxAppVersion, bazField, fooMaxAppVersion);
+        // update schema - you can add optional fields, reorder fields, add or reorder choices, and make non-breaking
+        // changes to existing fields
+        List<UploadFieldDefinition> fieldDefListV2 = ImmutableList.of(
+                new UploadFieldDefinition.Builder().withName("q2").withType(UploadFieldType.ATTACHMENT_V2)
+                        .withFileExtension(".json").withMimeType("text/json").build(),
+                new UploadFieldDefinition.Builder().withName("q-added").withType(UploadFieldType.BOOLEAN)
+                        .withRequired(false).build(),
+                new UploadFieldDefinition.Builder().withName("q1").withType(UploadFieldType.MULTI_CHOICE)
+                        .withMultiChoiceAnswerList("bar", "baz", "foo").withAllowOtherChoices(true).build());
+
         UploadSchema schemaV2 = new UploadSchema.Builder().copyOf(fetchedSchemaV1).withName("Updated Schema")
                 .withFieldDefinitions(fieldDefListV2).build();
         UploadSchema updatedSchema = devUploadSchemaClient.updateSchemaRevisionV4(schemaId, 2, schemaV2);
@@ -327,17 +337,6 @@ public class UploadSchemaTest {
         } catch (ConcurrentModificationException ex) {
             // expected exception
         }
-    }
-
-    // Helper to make an upload schema with the minimum of attributes. Takes in rev and version to facilitate testing
-    // create vs update and handling version conflicts.
-    private static UploadSchema makeSimpleSchema(String schemaId, Integer rev, Long version) {
-        UploadFieldDefinition fieldDef = new UploadFieldDefinition.Builder().withName("field")
-                .withType(UploadFieldType.STRING).build();
-        UploadSchema schema = new UploadSchema.Builder().withFieldDefinitions(fieldDef).withName("Schema")
-                .withRevision(rev).withSchemaId(schemaId).withSchemaType(UploadSchemaType.IOS_DATA)
-                .withVersion(version).build();
-        return schema;
     }
 
     @Test(expected=UnauthorizedException.class)
