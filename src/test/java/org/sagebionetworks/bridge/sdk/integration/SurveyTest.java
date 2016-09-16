@@ -53,8 +53,6 @@ import org.sagebionetworks.bridge.sdk.models.surveys.SurveyQuestionOption;
 import org.sagebionetworks.bridge.sdk.models.surveys.SurveyRule;
 import org.sagebionetworks.bridge.sdk.models.surveys.UiHint;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 @SuppressWarnings("Convert2streamapi")
 public class SurveyTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
