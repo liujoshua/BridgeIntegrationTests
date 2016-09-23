@@ -5,7 +5,7 @@
 
     <groupId>org.sagebionetworks</groupId>
     <artifactId>BridgeIntegrationTests</artifactId>
-    <version>0.8.22</version>
+    <version>0.8.23</version>
 
     <properties>
     	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
