@@ -44,14 +44,16 @@ public class ScheduleTest {
     @After
     public void after() {
         ClientProvider.setClientInfo(Tests.TEST_CLIENT_INFO);
-        try {
-            SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
-            schedulePlanClient.deleteSchedulePlan(planGuid);
-        } finally {
-            if (user != null) {
-                user.signOutAndDeleteUser();    
-            }
-            if (developer != null) {
+        if (user != null) {
+            user.signOutAndDeleteUser();    
+        }
+        if (developer != null) {
+            try {
+                if (planGuid != null) {
+                    SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
+                    schedulePlanClient.deleteSchedulePlan(planGuid);
+                }
+            } finally {
                 developer.signOutAndDeleteUser();    
             }
         }
