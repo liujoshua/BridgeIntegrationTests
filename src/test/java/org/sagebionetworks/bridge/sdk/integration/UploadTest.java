@@ -6,19 +6,19 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Locale;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.sagebionetworks.bridge.sdk.*;
+import org.sagebionetworks.bridge.sdk.models.healthData.HealthDataRecord;
+import org.sagebionetworks.bridge.sdk.models.healthData.RecordExportStatusRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.Roles;
-import org.sagebionetworks.bridge.sdk.UploadSchemaClient;
-import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.models.upload.UploadFieldDefinition;
 import org.sagebionetworks.bridge.sdk.models.upload.UploadFieldType;
@@ -40,6 +40,8 @@ public class UploadTest {
 
     // Retry up to 6 times, so we don't spend more than 30 seconds per test.
     private static final int UPLOAD_STATUS_DELAY_RETRIES = 6;
+
+    private static final String TEST_RECORD_ID = "test record id";
 
     private static TestUserHelper.TestUser worker;
     private static TestUserHelper.TestUser developer;
@@ -165,6 +167,17 @@ public class UploadTest {
         assertNotNull("Upload status is not null, UploadId=" + uploadId, status);
         assertEquals("Upload succeeded, UploadId=" + uploadId, UploadStatus.SUCCEEDED, status.getStatus());
         assertTrue("Upload has no validation messages, UploadId=" + uploadId, status.getMessageList().isEmpty());
+
+        HealthDataRecord record = status.getRecord();
+
+        assertNotNull(record);
+
+        // check for update record export status, no need to activate exporter in testing
+        RecordExportStatusRequest mockRequest = new RecordExportStatusRequest(Arrays.asList(record.getId()), RecordExportStatusRequest.ExporterStatus.NOT_EXPORTED);
+        worker.getSession().getWorkerClient().updateRecordExporterStatus(mockRequest);
+
+        status = userClient.getUploadStatus(session.getId());
+        assertEquals(status.getRecord().getSynapseExporterStatus(), RecordExportStatusRequest.ExporterStatus.NOT_EXPORTED);
     }
 
     private static UploadRequest makeRequest(String filePath) throws Exception {
