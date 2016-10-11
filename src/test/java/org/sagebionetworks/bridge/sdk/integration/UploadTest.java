@@ -173,11 +173,11 @@ public class UploadTest {
         assertNotNull(record);
 
         // check for update record export status, no need to activate exporter in testing
-        RecordExportStatusRequest mockRequest = new RecordExportStatusRequest(Arrays.asList(record.getId()), Config.ExporterStatus.NOT_EXPORTED);
+        RecordExportStatusRequest mockRequest = new RecordExportStatusRequest(Arrays.asList(record.getId()), RecordExportStatusRequest.ExporterStatus.NOT_EXPORTED);
         worker.getSession().getWorkerClient().updateRecordExporterStatus(mockRequest);
 
         status = userClient.getUploadStatus(session.getId());
-        assertEquals(status.getRecord().getSynapseExporterStatus(), Config.ExporterStatus.NOT_EXPORTED);
+        assertEquals(status.getRecord().getSynapseExporterStatus(), RecordExportStatusRequest.ExporterStatus.NOT_EXPORTED);
     }
 
     private static UploadRequest makeRequest(String filePath) throws Exception {
