@@ -24,16 +24,16 @@
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
             <artifactId>java-sdk</artifactId>
-            <version>0.10.4</version>
+            <version>0.10.7</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
     <repositories>
         <repository>
-            <id>sagebionetworks-releases-local</id>
-            <name>sagebionetworks-releases-local</name>
-            <url>http://sagebionetworks.artifactoryonline.com/sagebionetworks/libs-releases-local</url>
+            <id>org-sagebridge-repo-maven-releases</id>
+            <name>org-sagebridge-repo-maven-releases</name>
+            <url>https://repo-maven.sagebridge.org/</url>
         </repository>
     </repositories>
 
