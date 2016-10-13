@@ -33,7 +33,7 @@
         <repository>
             <id>org-sagebridge-repo-maven-releases</id>
             <name>org-sagebridge-repo-maven-releases</name>
-            <url>https://repo-maven.sagebridge.org/</url>
+            <url>http://repo-maven.sagebridge.org/</url>
         </repository>
     </repositories>
 
