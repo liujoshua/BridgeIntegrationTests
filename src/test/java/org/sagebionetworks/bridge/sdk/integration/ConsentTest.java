@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -30,11 +31,11 @@ import org.sagebionetworks.bridge.sdk.utils.Utilities;
 
 import java.util.Map;
 
+
 @Category(IntegrationSmokeTest.class)
 @SuppressWarnings("unchecked")
 public class ConsentTest {
     private static final String FAKE_IMAGE_DATA = "VGVzdCBzdHJpbmc=";
-    private static final String FAKE_IMAGE_DATA_DECODE = "Test string";
 
     @Test
     public void canToggleDataSharing() {
@@ -177,7 +178,11 @@ public class ConsentTest {
             assertEquals("name matches", name, sigFromServer.getName());
             assertEquals("birthdate matches", birthdate, sigFromServer.getBirthdate());
 
-            assertEquals("imageData matches", FAKE_IMAGE_DATA_DECODE, new String(sigFromServer.getImageData()));
+            assertArrayEquals(
+                    "imageData matches",
+                    imageData == null ? null : java.util.Base64.getDecoder().decode(imageData),
+                    sigFromServer.getImageData()
+            );
             assertEquals("imageMimeType matches", imageMimeType, sigFromServer.getImageMimeType());
             
             // giving consent again will throw
