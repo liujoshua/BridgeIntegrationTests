@@ -133,6 +133,7 @@ public class TestUserHelper {
                     throw e;
                 }
             }
+
             return new TestUserHelper.TestUser(adminClient, userSession);
         } catch (RuntimeException ex) {
             // Clean up the account, so we don't end up with a bunch of leftover accounts.
