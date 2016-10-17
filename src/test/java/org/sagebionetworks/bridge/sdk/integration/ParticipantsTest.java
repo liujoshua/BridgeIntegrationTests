@@ -7,22 +7,27 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.sdk.models.DateTimeRangeResourceList;
+import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
+import org.sagebionetworks.bridge.sdk.models.ResourceList;
+import org.sagebionetworks.bridge.sdk.models.accounts.AccountStatus;
+import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 import org.sagebionetworks.bridge.sdk.models.accounts.SharingScope;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.holders.GuidVersionHolder;
@@ -34,15 +39,12 @@ import org.sagebionetworks.bridge.sdk.models.subpopulations.SubpopulationGuid;
 import org.sagebionetworks.bridge.sdk.models.upload.Upload;
 import org.sagebionetworks.bridge.sdk.models.upload.UploadRequest;
 import org.sagebionetworks.bridge.sdk.models.upload.UploadSession;
+import org.sagebionetworks.bridge.sdk.rest.model.AbstractStudyParticipant;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
-
-import org.sagebionetworks.bridge.sdk.models.DateTimeRangeResourceList;
-import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
-import org.sagebionetworks.bridge.sdk.models.ResourceList;
-import org.sagebionetworks.bridge.sdk.models.accounts.AccountStatus;
-import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class ParticipantsTest {
     private TestUser admin;
@@ -68,17 +70,19 @@ public class ParticipantsTest {
         try {
             UserClient userClient = user.getSession().getUserClient();
             
-            StudyParticipant self = userClient.getStudyParticipant();
+            org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant self = userClient.getStudyParticipant();
             assertEquals(user.getEmail(), self.getEmail());
 
             // Update and verify changes. Right now there's not a lot that can be changed
-            StudyParticipant updates = new StudyParticipant.Builder().copyOf(self)
-                    .withLanguages(Tests.newLinkedHashSet("nl","en"))
-                    .withDataGroups(Sets.newHashSet("group1"))
-                    .withNotifyByEmail(false)
-                    .withSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS)
-                    .build();
-            
+
+            org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant updates = new org
+                    .sagebionetworks.bridge.sdk.rest.model.StudyParticipant();
+            updates
+                    .languages(Arrays.asList("nl", "en"))
+                    .dataGroups(Arrays.asList("group1")).notifyByEmail(false).sharingScope(
+                            AbstractStudyParticipant.SharingScopeEnum.ALL_QUALIFIED_RESEARCHERS);
+
+
             userClient.saveStudyParticipant(updates);
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, user.getSession().getStudyParticipant().getSharingScope());
             assertEquals(Sets.newHashSet("group1"), user.getSession().getStudyParticipant().getDataGroups());
