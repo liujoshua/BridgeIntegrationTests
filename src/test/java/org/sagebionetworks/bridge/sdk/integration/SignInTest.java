@@ -3,8 +3,9 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Map;
-import java.util.Set;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import org.junit.After;
 import org.junit.Before;
@@ -15,15 +16,15 @@ import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.ParticipantClient;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.Session;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.UserClient;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
 import org.sagebionetworks.bridge.sdk.models.accounts.AccountSummary;
 import org.sagebionetworks.bridge.sdk.models.accounts.SharingScope;
 import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import java.util.Map;
+import java.util.Set;
 
 @Category(IntegrationSmokeTest.class)
 public class SignInTest {
@@ -51,9 +52,10 @@ public class SignInTest {
     public void canGetDataGroups(){
         Set<String> dataGroups = Sets.newHashSet("sdk-int-1");
         UserClient userClient = user.getSession().getUserClient();
-        
-        StudyParticipant participant = new StudyParticipant.Builder()
-                .withDataGroups(dataGroups).build();
+
+        org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant participant = new org
+                .sagebionetworks.bridge.sdk.rest.model.StudyParticipant();
+        participant.dataGroups(Lists.newArrayList(dataGroups));
         userClient.saveStudyParticipant(participant);
         
         user.getSession().signOut();

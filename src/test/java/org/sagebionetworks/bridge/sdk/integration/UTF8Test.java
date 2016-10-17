@@ -11,8 +11,8 @@ import org.sagebionetworks.bridge.sdk.StudyClient;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.accounts.SignInCredentials;
-import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.studies.Study;
+import org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant;
 
 @Category(IntegrationSmokeTest.class)
 public class UTF8Test {
@@ -53,20 +53,20 @@ public class UTF8Test {
         try {
             UserClient userClient = testUser.getSession().getUserClient();
 
-            StudyParticipant.Builder builder = new StudyParticipant.Builder();
-            builder.withFirstName("☃");
+           StudyParticipant participant = new StudyParticipant();
+            participant.firstName("☃");
             // I understand from the source of this text that it is actually UTF-16. It should still work.
-            builder.withLastName("지구상의　３대　극지라　불리는");
-            
-            userClient.saveStudyParticipant(builder.build());
+            participant.lastName("지구상의　３대　극지라　불리는");
+
+            userClient.saveStudyParticipant(participant);
 
             // Force a refresh of the Redis session cache.
             testUser.getSession().signOut();
             Session session = ClientProvider.signIn(new SignInCredentials(Tests.TEST_KEY, testUser.getEmail(), testUser.getPassword()));
 
-            StudyParticipant participant = session.getUserClient().getStudyParticipant();
-            assertEquals("☃", participant.getFirstName());
-            assertEquals("지구상의　３대　극지라　불리는", participant.getLastName());
+            StudyParticipant sessionParticipant = session.getUserClient().getStudyParticipant();
+            assertEquals("☃", sessionParticipant.getFirstName());
+            assertEquals("지구상의　３대　극지라　불리는", sessionParticipant.getLastName());
         } finally {
             testUser.signOutAndDeleteUser();
         }

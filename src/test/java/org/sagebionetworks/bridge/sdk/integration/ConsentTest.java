@@ -1,18 +1,19 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 import org.joda.time.format.ISODateTimeFormat;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
 import org.sagebionetworks.bridge.sdk.ClientProvider;
 import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.UserClient;
@@ -23,16 +24,18 @@ import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.models.accounts.ConsentSignature;
 import org.sagebionetworks.bridge.sdk.models.accounts.SharingScope;
 import org.sagebionetworks.bridge.sdk.models.accounts.SignInCredentials;
-import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.models.subpopulations.ConsentStatus;
+import org.sagebionetworks.bridge.sdk.rest.model.AbstractStudyParticipant;
+import org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.utils.Utilities;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
+
 
 @Category(IntegrationSmokeTest.class)
 @SuppressWarnings("unchecked")
 public class ConsentTest {
-    private static final String FAKE_IMAGE_DATA = "VGhpcyBpc24ndCBhIHJlYWwgaW1hZ2Uu";
+    private static final String FAKE_IMAGE_DATA = "VGVzdCBzdHJpbmc=";
 
     @Test
     public void canToggleDataSharing() {
@@ -42,24 +45,28 @@ public class ConsentTest {
         try {
             // starts out with no sharing
             assertEquals(SharingScope.NO_SHARING, session.getStudyParticipant().getSharingScope());
-            
+
             // Change, verify in-memory session changed, verify after signing in again that server state has changed
-            StudyParticipant participant = new StudyParticipant.Builder().withSharingScope(SharingScope.SPONSORS_AND_PARTNERS).build();
+            StudyParticipant participant = new StudyParticipant();
+
+            participant.sharingScope(AbstractStudyParticipant.SharingScopeEnum
+                                             .SPONSORS_AND_PARTNERS);
             userClient.saveStudyParticipant(participant);
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, session.getStudyParticipant().getSharingScope());
-            
+
             participant = userClient.getStudyParticipant();
-            assertEquals(SharingScope.SPONSORS_AND_PARTNERS, participant.getSharingScope());
-            
+            assertEquals(AbstractStudyParticipant.SharingScopeEnum.SPONSORS_AND_PARTNERS, participant.getSharingScope());
+
             // Do the same thing in reverse, setting to no sharing
-            participant = new StudyParticipant.Builder().withSharingScope(SharingScope.NO_SHARING).build();
+            participant = new StudyParticipant();
+            participant.sharingScope(AbstractStudyParticipant.SharingScopeEnum.NO_SHARING);
             userClient.saveStudyParticipant(participant);
 
             assertEquals(SharingScope.NO_SHARING, session.getStudyParticipant().getSharingScope());
 
             participant = userClient.getStudyParticipant();
-            assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
-            
+            assertEquals(AbstractStudyParticipant.SharingScopeEnum.NO_SHARING, participant.getSharingScope());
+
             session.signOut();
         } finally {
             testUser.signOutAndDeleteUser();
@@ -166,11 +173,16 @@ public class ConsentTest {
             assertTrue(ConsentStatus.isUserConsented(testUser.getSession().getConsentStatuses()));
             
             // get consent and validate that it's the same consent
-            ConsentSignature sigFromServer = userClient.getConsentSignature(testUser.getDefaultSubpopulation());
+            org.sagebionetworks.bridge.sdk.rest.model.ConsentSignature sigFromServer = userClient.getConsentSignature(testUser.getDefaultSubpopulation());
             
             assertEquals("name matches", name, sigFromServer.getName());
             assertEquals("birthdate matches", birthdate, sigFromServer.getBirthdate());
-            assertEquals("imageData matches", imageData, sigFromServer.getImageData());
+
+            assertArrayEquals(
+                    "imageData matches",
+                    imageData == null ? null : java.util.Base64.getDecoder().decode(imageData),
+                    sigFromServer.getImageData()
+            );
             assertEquals("imageMimeType matches", imageMimeType, sigFromServer.getImageMimeType());
             
             // giving consent again will throw
