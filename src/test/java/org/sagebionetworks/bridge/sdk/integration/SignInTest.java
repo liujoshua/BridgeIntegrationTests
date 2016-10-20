@@ -3,7 +3,6 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -53,9 +52,8 @@ public class SignInTest {
         Set<String> dataGroups = Sets.newHashSet("sdk-int-1");
         UserClient userClient = user.getSession().getUserClient();
 
-        org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant participant = new org
-                .sagebionetworks.bridge.sdk.rest.model.StudyParticipant();
-        participant.dataGroups(Lists.newArrayList(dataGroups));
+        StudyParticipant participant = new StudyParticipant.Builder()
+                .withDataGroups(Sets.newHashSet(dataGroups)).build();
         userClient.saveStudyParticipant(participant);
         
         user.getSession().signOut();

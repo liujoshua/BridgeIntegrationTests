@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -13,11 +14,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ExternalIdentifiersClient;
-import org.sagebionetworks.bridge.sdk.Roles;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.models.PagedResourceList;
-import org.sagebionetworks.bridge.sdk.models.accounts.ExternalIdentifier;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper2.TestUser;
+import org.sagebionetworks.bridge.sdk.rest.api.ExternalIdentifiersApi;
+import org.sagebionetworks.bridge.sdk.rest.model.PagedResourceListExternalIdentifier;
+import org.sagebionetworks.bridge.sdk.rest.model.Role;
 
 import com.google.common.collect.Lists;
 
@@ -28,8 +28,8 @@ public class ExternalIdsTest {
     private static TestUser developer;
     
     @Before
-    public void before() {
-        developer = TestUserHelper.createAndSignInUser(ExternalIdsTest.class, false, Roles.DEVELOPER);
+    public void before() throws IOException {
+        developer = TestUserHelper2.createAndSignInUser(ExternalIdsTest.class, false, Role.DEVELOPER);
     }
     
     @After
@@ -40,7 +40,7 @@ public class ExternalIdsTest {
     }
     
     @Test
-    public void canCRUDExternalIds() {
+    public void canCRUDExternalIds() throws IOException {
         // In order to prevent this test conflicting with other tests, each identifier is "namespaced" 
         // with a random prefix that we'll use in all the queries.
         String prefix = RandomStringUtils.randomAlphabetic(4);
@@ -49,38 +49,41 @@ public class ExternalIdsTest {
         for (int i=0; i < LIST_SIZE; i++) {
             identifiers.add(prefix+RandomStringUtils.randomAlphabetic(10));
         }
-        ExternalIdentifiersClient externalIdsClient = developer.getSession().getExternalIdentifiersClient();
-        externalIdsClient.addExternalIds(identifiers);
+        ExternalIdentifiersApi externalIdsClient = developer.getAuthenticatedClient(ExternalIdentifiersApi.class);
+        externalIdsClient.addExternalIds(identifiers).execute();
         try {
-            PagedResourceList<ExternalIdentifier> page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, prefix, null);
+            PagedResourceListExternalIdentifier page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, prefix, null)
+                    .execute().body();
             assertEquals(PAGE_SIZE, page1.getItems().size());
-            assertEquals(LIST_SIZE, page1.getTotal());
+            assertEquals(LIST_SIZE, page1.getTotal().intValue());
             assertNotNull(page1.getOffsetKey());
             
             String offsetKey = page1.getOffsetKey();    
-            PagedResourceList<ExternalIdentifier> page2 = externalIdsClient.getExternalIds(offsetKey, PAGE_SIZE, prefix, null);
+            PagedResourceListExternalIdentifier page2 = externalIdsClient
+                    .getExternalIds(offsetKey, PAGE_SIZE, prefix, null).execute().body();
             assertEquals(PAGE_SIZE, page2.getItems().size());
-            assertEquals(LIST_SIZE, page2.getTotal());
+            assertEquals(LIST_SIZE, page2.getTotal().intValue());
             assertNull(page2.getOffsetKey()); // no more pages
             
             // pageKey test. two pages should have no members in common;
             assertTrue(Collections.disjoint(page1.getItems(), page2.getItems()));
-
-            // assignment filter test
-            page1 = externalIdsClient.getExternalIds(null, null, prefix, Boolean.FALSE);
-            assertEquals(LIST_SIZE, page1.getTotal());
             
-            page1 = externalIdsClient.getExternalIds(null, null, prefix, Boolean.TRUE);
-            assertEquals(0, page1.getTotal());
+            // assignment filter test
+            page1 = externalIdsClient.getExternalIds(null, null, prefix, Boolean.FALSE).execute().body();
+            assertEquals(LIST_SIZE, page1.getTotal().intValue());
+            
+            page1 = externalIdsClient.getExternalIds(null, null, prefix, Boolean.TRUE).execute().body();
+            assertEquals(0, page1.getTotal().intValue());
             
             // different idFilter test (than the use of idFilter in all the tests. This time nothing should match.
-            page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, RandomStringUtils.randomAlphabetic(5), null);
-            assertEquals(0, page1.getTotal());
+            page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, RandomStringUtils.randomAlphabetic(5), null)
+                    .execute().body();
+            assertEquals(0, page1.getTotal().intValue());
         } finally {
-            externalIdsClient.deleteExternalIds(identifiers);
+            externalIdsClient.deleteExternalIds(identifiers).execute();
         }
-        PagedResourceList<ExternalIdentifier> page = externalIdsClient.getExternalIds(null, null, prefix, null);
-        assertEquals(0, page.getTotal());
+        PagedResourceListExternalIdentifier page = externalIdsClient.getExternalIds(null, null, prefix, null).execute().body();
+        assertEquals(0, page.getTotal().intValue());
     }
     
 }

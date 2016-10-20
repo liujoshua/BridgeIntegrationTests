@@ -90,6 +90,7 @@ public class ScheduleTest {
     }
     
     @Test
+    @SuppressWarnings("deprecation")
     public void persistentSchedulePlanMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getPersistentSchedulePlan();
         SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
@@ -104,6 +105,7 @@ public class ScheduleTest {
     }
     
     @Test
+    @SuppressWarnings("deprecation")
     public void simpleSchedulePlanNotMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getSimpleSchedulePlan();
         SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
