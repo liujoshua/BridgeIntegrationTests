@@ -229,8 +229,6 @@ public class ConsentTest {
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
             assertTrue(Utilities.isUserConsented(session));
 
-            testUser = new TestUserHelper2.TestUser(session);
-
             // withdraw consent
             Withdrawal withdrawal = new Withdrawal().reason("Withdrawing test user from study");
             userApi = testUser.getAuthenticatedClient(ForConsentedUsersApi.class);

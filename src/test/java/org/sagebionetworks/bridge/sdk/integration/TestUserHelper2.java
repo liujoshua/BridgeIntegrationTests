@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.sagebionetworks.bridge.sdk.ClientManager;
+import org.sagebionetworks.bridge.sdk.Config;
 import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.sdk.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.BridgeSDKException;
@@ -23,36 +24,39 @@ import com.google.common.collect.Sets;
 
 public class TestUserHelper2 {
 
-    private static final ClientManager MANAGER = new ClientManager();
+    private static final SignIn ADMIN_SIGN_IN = new Config().getAdminSignIn();
     private static final EmptyPayload EMPTY_PAYLOAD = new EmptyPayload();
     private static final String PASSWORD = "P4ssword";
     
     public static class TestUser {
+        private SignIn signIn;
+        private ClientManager manager;
         private UserSessionInfo userSession;
 
-        public TestUser(UserSessionInfo session) {
-            this.userSession = session;
+        public TestUser(SignIn signIn) {
+            this.signIn = signIn;
+            this.manager = new ClientManager.Builder().withSignIn(signIn).build();
         }
         public UserSessionInfo getSession() {
             return userSession;
         }
         public String getEmail() {
-            return userSession.getEmail();
+            return signIn.getEmail();
         }
         public String getPassword() {
-            return PASSWORD;
+            return signIn.getPassword();
         }
         public List<Role> getRoles() {
             return userSession.getRoles();
         }
         public String getDefaultSubpopulation() {
-            return Tests.TEST_KEY;
+            return signIn.getStudy();
         }
         public final <T> T getAuthenticatedClient(Class<T> service) {
-            return MANAGER.getAuthenticatedClient(service, getSignIn());
+            return manager.getAuthenticatedClient(service);
         }
         public UserSessionInfo signInAgain() {
-            AuthenticationApi authApi = MANAGER.getUnauthenticatedClient(AuthenticationApi.class);
+            AuthenticationApi authApi = manager.getUnauthenticatedClient(AuthenticationApi.class);
             try {
                 userSession = authApi.signIn(getSignIn()).execute().body();
             } catch (ConsentRequiredException e) {
@@ -64,30 +68,25 @@ public class TestUserHelper2 {
             return userSession;
         }
         public void signOut() {
-            AuthenticationApi authApi = MANAGER.getAuthenticatedClient(AuthenticationApi.class, getSignIn());
+            AuthenticationApi authApi = manager.getAuthenticatedClient(AuthenticationApi.class);
             authApi.signOut(EMPTY_PAYLOAD);
             userSession.setAuthenticated(false);
         }
         public void signOutAndDeleteUser() {
             this.signOut();
 
-            ForAdminsApi adminsApi = MANAGER.getAuthenticatedClient(ForAdminsApi.class,
-                    MANAGER.getConfig().getAdminSignIn());
+            ClientManager adminManager = new ClientManager.Builder().withSignIn(ADMIN_SIGN_IN).build();
+            ForAdminsApi adminsApi = adminManager.getAuthenticatedClient(ForAdminsApi.class);
             adminsApi.deleteUser(userSession.getId());
         }
         public SignIn getSignIn() {
-            return new SignIn().study(Tests.TEST_KEY).email(userSession.getEmail()).password(PASSWORD);
+            return signIn;
         }
     }
     public static TestUser getSignedInAdmin() {
-        SignIn authSignIn = MANAGER.getConfig().getAdminSignIn();
-        AuthenticationApi authApi = MANAGER.getUnauthenticatedClient(AuthenticationApi.class);
-        try {
-            UserSessionInfo session = authApi.signIn(authSignIn).execute().body();
-            return new TestUser(session);
-        } catch(IOException ioe) {
-            throw new BridgeSDKException(ioe.getMessage(), ioe);
-        }
+        TestUser adminUser = new TestUser(ADMIN_SIGN_IN);
+        adminUser.signInAgain();
+        return adminUser;
     }
     public static TestUser createAndSignInUser(Class<?> cls, boolean consentUser, Role... roles) throws IOException {
         SignUp signUp = new SignUp();
@@ -104,8 +103,8 @@ public class TestUserHelper2 {
     public static TestUser createAndSignInUser(Class<?> cls, boolean consentUser, SignUp signUp) throws IOException {
         checkNotNull(cls);
         
-        ForAdminsApi adminsApi = MANAGER.getAuthenticatedClient(ForAdminsApi.class,
-                MANAGER.getConfig().getAdminSignIn());
+        ClientManager adminManager = new ClientManager.Builder().withSignIn(ADMIN_SIGN_IN).build();
+        ForAdminsApi adminsApi = adminManager.getAuthenticatedClient(ForAdminsApi.class);
 
         Set<Role> rolesList = Sets.newHashSet();
         if (signUp != null && signUp.getRoles() != null) {
@@ -121,21 +120,20 @@ public class TestUserHelper2 {
             signUp = new SignUp();
         }
         if (signUp.getEmail() == null) {
-            signUp.email(emailAddress);    
+            signUp.email(emailAddress);
         }
         signUp.setRoles(new ArrayList<>(rolesList));
         signUp.setPassword(PASSWORD);
         signUp.setConsent(consentUser);
         adminsApi.createUser(signUp).execute().body();
 
-        SignIn signIn = new SignIn().study(Tests.TEST_KEY).email(emailAddress).password(PASSWORD);
+        SignIn signIn = new SignIn().study(signUp.getStudy()).email(signUp.getEmail()).password(signUp.getPassword());
+        TestUser testUser = new TestUser(signIn);
+        
         UserSessionInfo userSession = null;
         try {
             try {
-                AuthenticationApi authApi = MANAGER.getAuthenticatedClient(AuthenticationApi.class, signIn);
-                userSession = authApi.signIn(signIn).execute().body();
-                //AuthenticationApi authApi = MANAGER.getUnauthenticatedClient(AuthenticationApi.class);
-                //userSession = authApi.signIn(signIn).execute().body();
+                userSession = testUser.signInAgain();
             } catch (ConsentRequiredException e) {
                 userSession = e.getSession();
                 if (consentUser) {
@@ -143,7 +141,7 @@ public class TestUserHelper2 {
                     throw e;
                 }
             }
-            return new TestUser(userSession);
+            return testUser;
         } catch (RuntimeException ex) {
             // Clean up the account, so we don't end up with a bunch of leftover accounts.
             if (userSession != null) {
