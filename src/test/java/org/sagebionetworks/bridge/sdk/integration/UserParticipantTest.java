@@ -15,10 +15,10 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.sdk.Roles;
 import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Test of the participant APIs that act on the currently authenticated user, which have replaced the 
@@ -50,9 +50,11 @@ public class UserParticipantTest {
         Map<String,String> attributes = Maps.newHashMap();
         attributes.put("can_be_recontacted", "true");
 
-        StudyParticipant participant = new StudyParticipant();
-
-        participant.firstName("Davey").lastName("Crockett").attributes(attributes);
+        StudyParticipant participant = new StudyParticipant.Builder()
+                .withFirstName("Davey")
+                .withLastName("Crockett")
+                .withAttributes(attributes)
+                .build();
 
         userClient.saveStudyParticipant(participant);
 
@@ -69,8 +71,11 @@ public class UserParticipantTest {
         final UserClient userClient = developer.getSession().getUserClient();
 
         StudyParticipant participant = userClient.getStudyParticipant();
-        StudyParticipant updated = new StudyParticipant();
-        updated.externalId("ABC-123-XYZ");
+        
+        StudyParticipant updated = new StudyParticipant.Builder()
+                .copyOf(participant)
+                .withExternalId("ABC-123-XYZ")
+                .build();        
 
         userClient.saveStudyParticipant(updated);
 
@@ -81,32 +86,27 @@ public class UserParticipantTest {
 
     @Test
     public void canUpdateDataGroups() throws Exception {
-        List<String> dataGroups = Lists.newArrayList("sdk-int-1", "sdk-int-2");
+        Set<String> dataGroups = Sets.newHashSet("sdk-int-1", "sdk-int-2");
 
         UserClient userClient = developer.getSession().getUserClient();
 
-        StudyParticipant participant = new StudyParticipant();
-        participant.dataGroups(dataGroups);
+        StudyParticipant participant = new StudyParticipant.Builder()
+                .withDataGroups(dataGroups)
+                .build();               
 
         userClient.saveStudyParticipant(participant);
 
         // session updated
 
-        assertEquals(
-                Sets.newHashSet(dataGroups),
-                Sets.newHashSet(Lists.newArrayList(developer.getSession()
-                                                            .getStudyParticipant()
-                                                            .getDataGroups()))
-        );
+        assertEquals(Sets.newHashSet(dataGroups),
+                Sets.newHashSet(Lists.newArrayList(developer.getSession().getStudyParticipant().getDataGroups())));
 
         // server updated
         participant = userClient.getStudyParticipant();
         assertEquals(Sets.newHashSet(dataGroups), Sets.newHashSet(participant.getDataGroups()));
 
         // now clear the values, it should be possible to remove them.
-        participant = new StudyParticipant();
-
-        participant.dataGroups(Lists.newArrayList());
+        participant = new StudyParticipant.Builder().withDataGroups(Sets.newHashSet()).build();
         userClient.saveStudyParticipant(participant);
 
         // session updated

@@ -19,9 +19,10 @@ import org.sagebionetworks.bridge.sdk.models.schedules.SchedulePlan;
 import org.sagebionetworks.bridge.sdk.models.schedules.ScheduleType;
 import org.sagebionetworks.bridge.sdk.models.schedules.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.sdk.models.schedules.TaskReference;
-import org.sagebionetworks.bridge.sdk.models.studies.EmailTemplate;
 import org.sagebionetworks.bridge.sdk.models.studies.OperatingSystem;
 import org.sagebionetworks.bridge.sdk.models.studies.Study;
+import org.sagebionetworks.bridge.sdk.rest.model.EmailTemplate;
+import org.sagebionetworks.bridge.sdk.rest.model.MimeType;
 
 import com.google.common.collect.Sets;
 
@@ -33,11 +34,18 @@ public class Tests {
     
     public static final String TEST_KEY = "api";
     
-    public static final EmailTemplate TEST_RESET_PASSWORD_TEMPLATE = new EmailTemplate("Reset your password",
-            "<p>${url}</p>", EmailTemplate.MimeType.HTML);
-    public static final EmailTemplate TEST_VERIFY_EMAIL_TEMPLATE = new EmailTemplate("Verify your email",
-            "<p>${url}</p>", EmailTemplate.MimeType.HTML);
+    public static final EmailTemplate TEST_RESET_PASSWORD_TEMPLATE = new EmailTemplate().subject("Reset your password")
+        .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
+    public static final EmailTemplate TEST_VERIFY_EMAIL_TEMPLATE = new EmailTemplate().subject("Verify your email")
+        .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
 
+    public static final org.sagebionetworks.bridge.sdk.models.studies.EmailTemplate TEST_RESET_PASSWORD_TEMPLATE_OLD = new org.sagebionetworks.bridge.sdk.models.studies.EmailTemplate(
+            "Reset your password", "<p>${url}</p>",
+            org.sagebionetworks.bridge.sdk.models.studies.EmailTemplate.MimeType.HTML);
+    public static final org.sagebionetworks.bridge.sdk.models.studies.EmailTemplate TEST_VERIFY_EMAIL_TEMPLATE_OLD = new org.sagebionetworks.bridge.sdk.models.studies.EmailTemplate(
+            "Verify your email", "<p>${url}</p>",
+            org.sagebionetworks.bridge.sdk.models.studies.EmailTemplate.MimeType.HTML);
+        
     public static String randomIdentifier(Class<?> cls) {
         return ("sdk-" + cls.getSimpleName().toLowerCase() + "-" + RandomStringUtils.randomAlphabetic(5)).toLowerCase();
     }
@@ -151,8 +159,8 @@ public class Tests {
         study.getUserProfileAttributes().add("new_profile_attribute");
         study.setTaskIdentifiers(Sets.newHashSet("taskA")); // setting it differently just for the heck of it 
         study.setDataGroups(Sets.newHashSet("beta_users", "production_users"));
-        study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
-        study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
+        study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE_OLD);
+        study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE_OLD);
         study.setHealthCodeExportEnabled(true);
         study.getMinSupportedAppVersions().put(OperatingSystem.ANDROID, 10);
         study.getMinSupportedAppVersions().put(OperatingSystem.IOS, 14);
