@@ -37,7 +37,7 @@ import org.sagebionetworks.bridge.sdk.models.schedules.SurveyReference;
 import org.sagebionetworks.bridge.sdk.models.schedules.TaskReference;
 import org.sagebionetworks.bridge.sdk.models.studies.OperatingSystem;
 import org.sagebionetworks.bridge.sdk.models.surveys.Survey;
-import org.sagebionetworks.bridge.sdk.utils.Utilities;
+import org.sagebionetworks.bridge.sdk.utils.BridgeUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +45,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class SchedulePlanTest {
 
-    private static final ObjectMapper MAPPER = Utilities.getMapper();
+    private static final ObjectMapper MAPPER = BridgeUtils.getMapper();
 
     private TestUser admin;
     private TestUser user;

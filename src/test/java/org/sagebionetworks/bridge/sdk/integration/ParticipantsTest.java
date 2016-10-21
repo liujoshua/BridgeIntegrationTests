@@ -8,7 +8,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import org.junit.After;
@@ -39,9 +38,7 @@ import org.sagebionetworks.bridge.sdk.models.subpopulations.SubpopulationGuid;
 import org.sagebionetworks.bridge.sdk.models.upload.Upload;
 import org.sagebionetworks.bridge.sdk.models.upload.UploadRequest;
 import org.sagebionetworks.bridge.sdk.models.upload.UploadSession;
-import org.sagebionetworks.bridge.sdk.rest.model.AbstractStudyParticipant;
 
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -70,18 +67,19 @@ public class ParticipantsTest {
         try {
             UserClient userClient = user.getSession().getUserClient();
             
-            org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant self = userClient.getStudyParticipant();
+            StudyParticipant self = userClient.getStudyParticipant();
             assertEquals(user.getEmail(), self.getEmail());
 
             // Update and verify changes. Right now there's not a lot that can be changed
-
-            org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant updates = new org
-                    .sagebionetworks.bridge.sdk.rest.model.StudyParticipant();
-            updates
-                    .languages(Arrays.asList("nl", "en"))
-                    .dataGroups(Arrays.asList("group1")).notifyByEmail(false).sharingScope(
-                            AbstractStudyParticipant.SharingScopeEnum.ALL_QUALIFIED_RESEARCHERS);
-
+            LinkedHashSet<String> set = new LinkedHashSet<>();
+            set.add("nl");
+            set.add("en");
+            
+            StudyParticipant updates = new StudyParticipant.Builder()
+                    .withLanguages(set)
+                    .withDataGroups(Sets.newHashSet("group1"))
+                    .withNotifyByEmail(false)
+                    .withSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS).build();
 
             userClient.saveStudyParticipant(updates);
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, user.getSession().getStudyParticipant().getSharingScope());
