@@ -34,6 +34,9 @@ public class TestUserHelper2 {
         private UserSessionInfo userSession;
 
         public TestUser(SignIn signIn) {
+            checkNotNull(signIn.getStudy());
+            checkNotNull(signIn.getEmail());
+            checkNotNull(signIn.getPassword());
             this.signIn = signIn;
             this.manager = new ClientManager.Builder().withSignIn(signIn).build();
         }
@@ -52,11 +55,14 @@ public class TestUserHelper2 {
         public String getDefaultSubpopulation() {
             return signIn.getStudy();
         }
-        public final <T> T getAuthenticatedClient(Class<T> service) {
-            return manager.getAuthenticatedClient(service);
+        public String getStudyId() {
+            return signIn.getStudy();
+        }
+        public <T> T getClient(Class<T> service) {
+            return manager.getClient(service);
         }
         public UserSessionInfo signInAgain() {
-            AuthenticationApi authApi = manager.getUnauthenticatedClient(AuthenticationApi.class);
+            AuthenticationApi authApi = manager.getClient(AuthenticationApi.class);
             try {
                 userSession = authApi.signIn(getSignIn()).execute().body();
             } catch (ConsentRequiredException e) {
@@ -68,7 +74,7 @@ public class TestUserHelper2 {
             return userSession;
         }
         public void signOut() {
-            AuthenticationApi authApi = manager.getAuthenticatedClient(AuthenticationApi.class);
+            AuthenticationApi authApi = manager.getClient(AuthenticationApi.class);
             authApi.signOut(EMPTY_PAYLOAD);
             userSession.setAuthenticated(false);
         }
@@ -76,11 +82,14 @@ public class TestUserHelper2 {
             this.signOut();
 
             ClientManager adminManager = new ClientManager.Builder().withSignIn(ADMIN_SIGN_IN).build();
-            ForAdminsApi adminsApi = adminManager.getAuthenticatedClient(ForAdminsApi.class);
+            ForAdminsApi adminsApi = adminManager.getClient(ForAdminsApi.class);
             adminsApi.deleteUser(userSession.getId());
         }
         public SignIn getSignIn() {
             return signIn;
+        }
+        public ClientManager getClientManager() {
+            return manager;
         }
     }
     public static TestUser getSignedInAdmin() {
@@ -104,7 +113,7 @@ public class TestUserHelper2 {
         checkNotNull(cls);
         
         ClientManager adminManager = new ClientManager.Builder().withSignIn(ADMIN_SIGN_IN).build();
-        ForAdminsApi adminsApi = adminManager.getAuthenticatedClient(ForAdminsApi.class);
+        ForAdminsApi adminsApi = adminManager.getClient(ForAdminsApi.class);
 
         Set<Role> rolesList = Sets.newHashSet();
         if (signUp != null && signUp.getRoles() != null) {
@@ -122,6 +131,7 @@ public class TestUserHelper2 {
         if (signUp.getEmail() == null) {
             signUp.email(emailAddress);
         }
+        signUp.setStudy(Tests.TEST_KEY);
         signUp.setRoles(new ArrayList<>(rolesList));
         signUp.setPassword(PASSWORD);
         signUp.setConsent(consentUser);

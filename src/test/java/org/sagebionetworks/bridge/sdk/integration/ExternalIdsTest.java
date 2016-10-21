@@ -49,7 +49,7 @@ public class ExternalIdsTest {
         for (int i=0; i < LIST_SIZE; i++) {
             identifiers.add(prefix+RandomStringUtils.randomAlphabetic(10));
         }
-        ExternalIdentifiersApi externalIdsClient = developer.getAuthenticatedClient(ExternalIdentifiersApi.class);
+        ExternalIdentifiersApi externalIdsClient = developer.getClient(ExternalIdentifiersApi.class);
         externalIdsClient.addExternalIds(identifiers).execute();
         try {
             PagedResourceListExternalIdentifier page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, prefix, null)

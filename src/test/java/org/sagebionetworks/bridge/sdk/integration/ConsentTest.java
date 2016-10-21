@@ -13,6 +13,7 @@ import org.junit.experimental.categories.Category;
 import org.joda.time.LocalDate;
 import org.joda.time.format.ISODateTimeFormat;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper2.TestUser;
+import org.sagebionetworks.bridge.sdk.rest.RestUtils;
 import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.sdk.rest.api.ParticipantsApi;
@@ -28,11 +29,10 @@ import org.sagebionetworks.bridge.sdk.rest.model.SharingScopeForm;
 import org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.rest.model.Withdrawal;
-import org.sagebionetworks.bridge.sdk.utils.Utilities;
+import org.sagebionetworks.bridge.sdk.utils.BridgeUtils;
 
 import java.io.IOException;
 import java.util.Map;
-
 
 @Category(IntegrationSmokeTest.class)
 @SuppressWarnings("unchecked")
@@ -42,7 +42,7 @@ public class ConsentTest {
     @Test
     public void canToggleDataSharing() throws IOException {
         TestUser testUser = TestUserHelper2.createAndSignInUser(ConsentTest.class, true);
-        ForConsentedUsersApi userApi = testUser.getAuthenticatedClient(ForConsentedUsersApi.class);
+        ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
         try {
             // starts out with no sharing
             UserSessionInfo session = testUser.getSession();
@@ -67,7 +67,7 @@ public class ConsentTest {
             participant = userApi.getUsersParticipantRecord().execute().body();
             assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
 
-            AuthenticationApi authApi = testUser.getAuthenticatedClient(AuthenticationApi.class);
+            AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             authApi.signOut(new EmptyPayload()).execute();
         } finally {
             testUser.signOutAndDeleteUser();
@@ -88,7 +88,7 @@ public class ConsentTest {
     public void signedInUserMustGiveConsent() throws IOException {
         TestUser user = TestUserHelper2.createAndSignInUser(ConsentTest.class, false);
         try {
-            ForConsentedUsersApi userApi = user.getAuthenticatedClient(ForConsentedUsersApi.class);
+            ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
             assertFalse("User has not consented", user.getSession().getConsented());
             try {
                 userApi.getSchedules().execute();
@@ -121,7 +121,7 @@ public class ConsentTest {
             // this is expected when you sign in.
         }
         try {
-            ForConsentedUsersApi userApi = user.getAuthenticatedClient(ForConsentedUsersApi.class);
+            ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
             try {
                 userApi.getSchedules();
             } catch(ConsentRequiredException e) {
@@ -146,7 +146,7 @@ public class ConsentTest {
                 "   \"imageData\":\"" + FAKE_IMAGE_DATA + "\",\n" +
                 "   \"imageMimeType\":\"image/fake\"\n" +
                 "}";
-        ObjectMapper jsonObjectMapper = Utilities.getMapper();
+        ObjectMapper jsonObjectMapper = BridgeUtils.getMapper();
 
         // de-serialize and validate
         ConsentSignature sig = jsonObjectMapper.readValue(sigJson, ConsentSignature.class);
@@ -176,7 +176,7 @@ public class ConsentTest {
                 .imageData(imageData) .imageMimeType(imageMimeType);
         sig.setScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
         try {
-            ForConsentedUsersApi userApi = testUser.getAuthenticatedClient(ForConsentedUsersApi.class);
+            ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
 
             assertFalse("User has not consented", testUser.getSession().getConsented());
             for (ConsentStatus status : testUser.getSession().getConsentStatuses().values()) {
@@ -222,16 +222,16 @@ public class ConsentTest {
             }
             
             // The remote session should also reflect the sharing scope
-            AuthenticationApi authApi = testUser.getAuthenticatedClient(AuthenticationApi.class);
+            AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             authApi.signOut(new EmptyPayload()).execute();
             
             session = testUser.signInAgain();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
-            assertTrue(Utilities.isUserConsented(session));
+            assertTrue(RestUtils.isUserConsented(session));
 
             // withdraw consent
             Withdrawal withdrawal = new Withdrawal().reason("Withdrawing test user from study");
-            userApi = testUser.getAuthenticatedClient(ForConsentedUsersApi.class);
+            userApi = testUser.getClient(ForConsentedUsersApi.class);
             userApi.withdrawConsentFromSubpopulation(testUser.getDefaultSubpopulation(), withdrawal).execute();
             // This method should now (immediately) throw a ConsentRequiredException
             try {
@@ -249,7 +249,7 @@ public class ConsentTest {
     public void canEmailConsentAgreement() throws IOException {
         TestUser testUser = TestUserHelper2.createAndSignInUser(ConsentTest.class, true);
         try {
-            ForConsentedUsersApi userApi = testUser.getAuthenticatedClient(ForConsentedUsersApi.class);
+            ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
             userApi.emailConsentAgreement(testUser.getDefaultSubpopulation(), new EmptyPayload()).execute();
         } finally {
             testUser.signOutAndDeleteUser();
@@ -264,12 +264,12 @@ public class ConsentTest {
             UserSessionInfo session = testUser.getSession();
 
             // Can get activities without an error... user is indeed consented.
-            ForConsentedUsersApi userApi = testUser.getAuthenticatedClient(ForConsentedUsersApi.class);
+            ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
             userApi.getScheduledActivities("+00:00", 1, null).execute();
             
-            assertTrue(Utilities.isUserConsented(session));
+            assertTrue(RestUtils.isUserConsented(session));
             
-            ParticipantsApi participantsApi = researchUser.getAuthenticatedClient(ParticipantsApi.class);
+            ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
             Withdrawal withdrawal = new Withdrawal().reason("I'm just a test user.");
             
             participantsApi.withdrawParticipantFromStudy(session.getId(), withdrawal).execute();
@@ -279,7 +279,7 @@ public class ConsentTest {
                 testUser.signInAgain();
             } catch(ConsentRequiredException e) {
                 assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
-                assertFalse(Utilities.isUserConsented(e.getSession()));
+                assertFalse(RestUtils.isUserConsented(e.getSession()));
             }
         } finally {
             try {
