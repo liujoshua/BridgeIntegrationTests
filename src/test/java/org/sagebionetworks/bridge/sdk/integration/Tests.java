@@ -2,8 +2,10 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.LocalTime;
@@ -16,6 +18,7 @@ import org.sagebionetworks.bridge.sdk.models.schedules.ABTestScheduleStrategy;
 import org.sagebionetworks.bridge.sdk.models.schedules.Activity;
 import org.sagebionetworks.bridge.sdk.models.schedules.Schedule;
 import org.sagebionetworks.bridge.sdk.models.schedules.SchedulePlan;
+import org.sagebionetworks.bridge.sdk.models.schedules.ScheduleStrategy;
 import org.sagebionetworks.bridge.sdk.models.schedules.ScheduleType;
 import org.sagebionetworks.bridge.sdk.models.schedules.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.sdk.models.schedules.TaskReference;
@@ -23,7 +26,9 @@ import org.sagebionetworks.bridge.sdk.models.studies.OperatingSystem;
 import org.sagebionetworks.bridge.sdk.models.studies.Study;
 import org.sagebionetworks.bridge.sdk.rest.model.EmailTemplate;
 import org.sagebionetworks.bridge.sdk.rest.model.MimeType;
+import org.sagebionetworks.bridge.sdk.rest.model.SimpleScheduleStrategy.TypeEnum;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class Tests {
@@ -122,6 +127,32 @@ public class Tests {
         return plan;
     }
     
+    public static org.sagebionetworks.bridge.sdk.rest.model.SchedulePlan getDailyRepeatingSchedulePlan2() {
+        org.sagebionetworks.bridge.sdk.rest.model.SchedulePlan plan = new org.sagebionetworks.bridge.sdk.rest.model.SchedulePlan();
+        plan.setLabel("Daily repeating schedule plan");
+        org.sagebionetworks.bridge.sdk.rest.model.Schedule schedule = new org.sagebionetworks.bridge.sdk.rest.model.Schedule();
+        schedule.setLabel("Test label for the user");
+        schedule.setScheduleType(org.sagebionetworks.bridge.sdk.rest.model.ScheduleType.RECURRING);
+        schedule.setInterval("P1D");
+        schedule.setExpires("P1D");
+        schedule.setTimes(Lists.newArrayList("12:00"));
+        
+        org.sagebionetworks.bridge.sdk.rest.model.TaskReference taskReference = new org.sagebionetworks.bridge.sdk.rest.model.TaskReference();
+        taskReference.setIdentifier("task:CCC");
+        
+        org.sagebionetworks.bridge.sdk.rest.model.Activity activity = new org.sagebionetworks.bridge.sdk.rest.model.Activity();
+        activity.setLabel("Task activity");
+        activity.setTask(taskReference);
+        schedule.setActivities(Lists.newArrayList(activity));
+        
+        org.sagebionetworks.bridge.sdk.rest.model.SimpleScheduleStrategy strategy = new org.sagebionetworks.bridge.sdk.rest.model.SimpleScheduleStrategy();
+        strategy.setSchedule(schedule);
+        strategy.setType(TypeEnum.SIMPLESCHEDULESTRATEGY); // <-- FIXME. This is bad. It's like having a Java type doesn't matter.
+        
+        plan.setStrategy(strategy);
+        return plan;
+    }
+    
     public static SchedulePlan getPersistentSchedulePlan() {
         SchedulePlan plan = new SchedulePlan();
         plan.setLabel("Persistent schedule");
@@ -170,6 +201,34 @@ public class Tests {
         return study;
     }
     
+    public static org.sagebionetworks.bridge.sdk.rest.model.Study getStudy2(String identifier, Integer version) {
+        org.sagebionetworks.bridge.sdk.rest.model.Study study = new org.sagebionetworks.bridge.sdk.rest.model.Study();
+        study.setIdentifier(identifier);
+        study.setMinAgeOfConsent(18);
+        study.setName("Test Study [SDK]");
+        study.setSponsorName("The Test Study Folks [SDK]");
+        study.setSupportEmail("test@test.com");
+        study.setConsentNotificationEmail("test2@test.com");
+        study.setTechnicalEmail("test3@test.com");
+        study.setUsesCustomExportSchedule(true);
+        study.getUserProfileAttributes().add("new_profile_attribute");
+        study.setTaskIdentifiers(Lists.newArrayList("taskA")); // setting it differently just for the heck of it 
+        study.setDataGroups(Lists.newArrayList("beta_users", "production_users"));
+        study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
+        study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
+        study.setHealthCodeExportEnabled(Boolean.TRUE);
+        
+        Map<String,Integer> map = new HashMap<>();
+        map.put("Android", 10);
+        map.put("iPhone OS", 14);
+        study.setMinSupportedAppVersions(map);
+        if (version != null) {
+            study.setVersion(version);
+        }
+        return study;
+    }
+    
+    
     /**
      * Guava does not have a version of this method that also lets you add items.
      */
@@ -182,4 +241,19 @@ public class Tests {
         return set;
     }
     
+    public static <T> boolean assertListsEqualIgnoringOrder(List<T> list1, List<T> list2) {
+        if (list1 == null || list2 == null) {
+            return false;
+        }
+        if (list1.size() != list2.size()) {
+            return false;
+        }
+        for (T item : list1) {
+            if (!list2.contains(item)) {
+                return false;
+            }
+        }
+        return true;
+        
+    }
 }

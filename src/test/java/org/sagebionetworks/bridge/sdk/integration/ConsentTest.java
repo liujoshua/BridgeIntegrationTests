@@ -21,8 +21,8 @@ import org.sagebionetworks.bridge.sdk.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.sdk.rest.model.ConsentSignature;
-import org.sagebionetworks.bridge.sdk.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.sdk.rest.model.EmptyPayload;
+import org.sagebionetworks.bridge.sdk.rest.model.Message;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.SharingScope;
 import org.sagebionetworks.bridge.sdk.rest.model.SharingScopeForm;
@@ -131,7 +131,6 @@ public class ConsentTest {
             ConsentSignature signature = new ConsentSignature().name(user.getEmail())
                     .birthdate(date).scope(SharingScope.SPONSORS_AND_PARTNERS);
             userApi.createConsentSignature(user.getDefaultSubpopulation(), signature).execute();
-            
         } finally {
             user.signOutAndDeleteUser();
         }
@@ -179,9 +178,7 @@ public class ConsentTest {
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
 
             assertFalse("User has not consented", testUser.getSession().getConsented());
-            for (ConsentStatus status : testUser.getSession().getConsentStatuses().values()) {
-                assertFalse(status.getConsented());
-            }
+            assertFalse(RestUtils.isUserConsented(testUser.getSession()));
 
             // get consent should fail if the user hasn't given consent
             try {
@@ -200,9 +197,7 @@ public class ConsentTest {
             
             // Session now shows consent...
             UserSessionInfo session = testUser.signInAgain();
-            for (ConsentStatus status : session.getConsentStatuses().values()) {
-                assertTrue(status.getConsented());
-            }
+            assertTrue(RestUtils.isUserConsented(session));
             
             // get consent and validate that it's the same consent
             ConsentSignature sigFromServer = userApi.getConsentSignature(testUser.getDefaultSubpopulation()).execute().body();
@@ -215,8 +210,12 @@ public class ConsentTest {
             
             // giving consent again will throw
             try {
-                userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute();
-                fail("EntityAlreadyExistsException not thrown");
+                // See BRIDGE-1568
+                sig = new ConsentSignature().name(sig.getName()).birthdate(sig.getBirthdate())
+                        .scope(SharingScope.ALL_QUALIFIED_RESEARCHERS).imageData(sig.getImageData())
+                        .imageMimeType(sig.getImageMimeType());
+                Message message = userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute().body();
+                fail("EntityAlreadyExistsException not thrown: " + message.getMessage());
             } catch (EntityAlreadyExistsException ex) {
                 // expected
             }
