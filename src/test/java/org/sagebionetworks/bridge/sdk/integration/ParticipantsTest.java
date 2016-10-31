@@ -260,10 +260,9 @@ public class ParticipantsTest {
     
     @Test
     public void canResendConsentAgreement() throws Exception {
-        String userId =  researcher.getSession().getId(); // This person should be consented
+        String userId =  researcher.getSession().getId();
 
         ConsentStatus status = researcher.getSession().getConsentStatuses().values().iterator().next();
-        
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
         participantsApi.resendParticipantConsentAgreement(userId, status.getSubpopulationGuid()).execute();
