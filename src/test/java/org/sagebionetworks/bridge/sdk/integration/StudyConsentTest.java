@@ -34,7 +34,7 @@ public class StudyConsentTest {
     @After
     public void after() throws Exception {
         if (subpopGuid != null) {
-            admin.getClient(SubpopulationsApi.class).deleteSubpopulation(subpopGuid, true);
+            admin.getClient(SubpopulationsApi.class).deleteSubpopulation(subpopGuid, true).execute();
         }
         if (developer != null) {
             developer.signOutAndDeleteUser();    
