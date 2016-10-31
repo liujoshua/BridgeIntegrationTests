@@ -5,8 +5,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -141,10 +139,9 @@ public class ConsentTest {
                 "   \"imageData\":\"" + FAKE_IMAGE_DATA + "\",\n" +
                 "   \"imageMimeType\":\"image/fake\"\n" +
                 "}";
-        ObjectMapper jsonObjectMapper = RestUtils.MAPPER;
 
         // de-serialize and validate
-        ConsentSignature sig = jsonObjectMapper.readValue(sigJson, ConsentSignature.class);
+        ConsentSignature sig = RestUtils.GSON.fromJson(sigJson, ConsentSignature.class);
         
         assertEquals("(ConsentSignature instance) name matches", "Jason McSerializer", sig.getName());
         assertEquals("(ConsentSignature instance) birthdate matches", "1985-12-31",
@@ -153,8 +150,8 @@ public class ConsentTest {
         assertEquals("(ConsentSignature instance) imageMimeType matches", "image/fake", sig.getImageMimeType());
 
         // re-serialize, then parse as a raw map to validate the JSON
-        String reserializedJson = jsonObjectMapper.writeValueAsString(sig);
-        Map<String, String> jsonAsMap = jsonObjectMapper.readValue(reserializedJson, Map.class);
+        String reserializedJson = RestUtils.GSON.toJson(sig);
+        Map<String, String> jsonAsMap = RestUtils.GSON.fromJson(reserializedJson, Map.class);
         assertEquals("JSON map has exactly 4 elements", 4, jsonAsMap.size());
         assertEquals("(JSON map) name matches", "Jason McSerializer", jsonAsMap.get("name"));
         assertEquals("(JSON map) birthdate matches", "1985-12-31", jsonAsMap.get("birthdate"));

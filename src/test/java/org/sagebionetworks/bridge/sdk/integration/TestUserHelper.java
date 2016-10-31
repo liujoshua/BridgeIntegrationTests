@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -20,12 +21,8 @@ import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
 import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
 import org.sagebionetworks.bridge.sdk.rest.model.UserSessionInfo;
 
-import com.google.common.collect.Sets;
-
 public class TestUserHelper {
 
-    private static final Config CONFIG = new Config();
-    private static final SignIn ADMIN_SIGN_IN = CONFIG.getAdminSignIn();
     private static final EmptyPayload EMPTY_PAYLOAD = new EmptyPayload();
     private static final String PASSWORD = "P4ssword";
     private static final ClientInfo CLIENT_INFO = new ClientInfo();
@@ -88,8 +85,9 @@ public class TestUserHelper {
         public void signOutAndDeleteUser() throws IOException {
             this.signOut();
 
-            ClientManager adminManager = new ClientManager.Builder().withSignIn(ADMIN_SIGN_IN)
-                    .withClientInfo(manager.getClientInfo()).build();
+            Config config = new Config();
+            ClientManager adminManager = new ClientManager.Builder().withSignIn(config.getAdminSignIn())
+                    .withConfig(config).withClientInfo(manager.getClientInfo()).build();
             ForAdminsApi adminsApi = adminManager.getClient(ForAdminsApi.class);
             adminsApi.deleteUser(userSession.getId()).execute();
         }
@@ -98,6 +96,9 @@ public class TestUserHelper {
         }
         public ClientManager getClientManager() {
             return manager;
+        }
+        public Config getConfig() {
+            return manager.getConfig();
         }
         public void setClientInfo(ClientInfo clientInfo) {
             ClientManager man = new ClientManager.Builder()
@@ -108,9 +109,10 @@ public class TestUserHelper {
         }
     }
     public static TestUser getSignedInAdmin() {
-        ClientManager adminManager = new ClientManager.Builder().withSignIn(ADMIN_SIGN_IN)
-                .withClientInfo(CLIENT_INFO).build();
-        TestUser adminUser = new TestUser(ADMIN_SIGN_IN, adminManager);
+        Config config = new Config();
+        ClientManager adminManager = new ClientManager.Builder().withSignIn(config.getAdminSignIn())
+                .withConfig(config).withClientInfo(CLIENT_INFO).build();
+        TestUser adminUser = new TestUser(config.getAdminSignIn(), adminManager);
         adminUser.signInAgain();
         return adminUser;
     }
@@ -127,7 +129,7 @@ public class TestUserHelper {
         private boolean consentUser;
         private SignUp signUp;
         private ClientInfo clientInfo;
-        private Set<Role> roles = Sets.newHashSet();
+        private Set<Role> roles = new HashSet<>();
         
         public Builder withConsentUser(boolean consentUser) {
             this.consentUser = consentUser;
@@ -160,7 +162,7 @@ public class TestUserHelper {
             TestUser admin = getSignedInAdmin();
             ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
             
-            Set<Role> rolesList = Sets.newHashSet();
+            Set<Role> rolesList = new HashSet<>();
             if (signUp != null && signUp.getRoles() != null) {
                 rolesList.addAll(signUp.getRoles());
             }
@@ -188,7 +190,8 @@ public class TestUserHelper {
             SignIn signIn = new SignIn().study(signUp.getStudy()).email(signUp.getEmail())
                     .password(signUp.getPassword());
             
-            ClientManager manager = new ClientManager.Builder().withSignIn(signIn).withClientInfo(clientInfo).build();
+            ClientManager manager = new ClientManager.Builder().withConfig(admin.getConfig()).withSignIn(signIn)
+                    .withClientInfo(clientInfo).build();
             TestUser testUser = new TestUser(signIn, manager);
 
             UserSessionInfo userSession = null;
