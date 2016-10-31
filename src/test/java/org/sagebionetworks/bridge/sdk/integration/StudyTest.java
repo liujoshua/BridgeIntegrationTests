@@ -2,7 +2,6 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -14,23 +13,23 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ClientInfo;
-import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.Roles;
-import org.sagebionetworks.bridge.sdk.StudyClient;
-import org.sagebionetworks.bridge.sdk.UserClient;
+import org.sagebionetworks.bridge.sdk.ClientManager;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.sdk.exceptions.UnauthorizedException;
-import org.sagebionetworks.bridge.sdk.exceptions.UnsupportedVersionException;
-import org.sagebionetworks.bridge.sdk.models.DateTimeRangeResourceList;
-import org.sagebionetworks.bridge.sdk.models.ResourceList;
-import org.sagebionetworks.bridge.sdk.models.holders.VersionHolder;
-import org.sagebionetworks.bridge.sdk.models.studies.OperatingSystem;
-import org.sagebionetworks.bridge.sdk.models.studies.Study;
-import org.sagebionetworks.bridge.sdk.models.upload.Upload;
-import org.sagebionetworks.bridge.sdk.models.upload.UploadRequest;
-import org.sagebionetworks.bridge.sdk.models.upload.UploadSession;
+import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.sdk.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.sdk.rest.api.UploadsApi;
+import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.sdk.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.sdk.rest.exceptions.UnsupportedVersionException;
+import org.sagebionetworks.bridge.sdk.rest.model.ClientInfo;
+import org.sagebionetworks.bridge.sdk.rest.model.DateTimeRangeResourceListUpload;
+import org.sagebionetworks.bridge.sdk.rest.model.ResourceListStudy;
+import org.sagebionetworks.bridge.sdk.rest.model.Role;
+import org.sagebionetworks.bridge.sdk.rest.model.Study;
+import org.sagebionetworks.bridge.sdk.rest.model.Upload;
+import org.sagebionetworks.bridge.sdk.rest.model.UploadRequest;
+import org.sagebionetworks.bridge.sdk.rest.model.UploadSession;
+import org.sagebionetworks.bridge.sdk.rest.model.VersionHolder;
 
 public class StudyTest {
     
@@ -46,27 +45,26 @@ public class StudyTest {
     }
     
     @After
-    public void after() {
-        ClientProvider.setClientInfo(new ClientInfo.Builder().build());
+    public void after() throws Exception {
         if (createdStudy && study != null) {
-            admin.getSession().getStudyClient().deleteStudy(study.getIdentifier());
+            admin.getClient(StudiesApi.class).deleteStudy(study.getIdentifier());
         }
-        admin.getSession().signOut();
+        admin.signOut();
     }
 
     @Test
     public void crudStudy() throws Exception {
-        StudyClient studyClient = admin.getSession().getStudyClient();
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         
         String identifier = Tests.randomIdentifier(StudyTest.class);
         study = Tests.getStudy(identifier, null);
         assertNull("study version should be null", study.getVersion());
         
-        VersionHolder holder = studyClient.createStudy(study);
+        VersionHolder holder = studiesApi.createStudy(study).execute().body();
         createdStudy = true;
-        assertVersionHasUpdated(holder, study, null);
+        assertNotNull(holder.getVersion());
 
-        Study newStudy = studyClient.getStudy(study.getIdentifier());
+        Study newStudy = studiesApi.getStudy(study.getIdentifier()).execute().body();
         // Verify study has password/email templates
         assertNotNull("password policy should not be null", newStudy.getPasswordPolicy());
         assertNotNull("verify email template should not be null", newStudy.getVerifyEmailTemplate());
@@ -81,30 +79,31 @@ public class StudyTest {
         assertEquals("userProfileAttributes should be equal", study.getUserProfileAttributes(), newStudy.getUserProfileAttributes());
         assertEquals("taskIdentifiers should be equal", study.getTaskIdentifiers(), newStudy.getTaskIdentifiers());
         assertEquals("dataGroups should be equal", study.getDataGroups(), newStudy.getDataGroups());
-        assertEquals("android minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get(OperatingSystem.ANDROID),
-                newStudy.getMinSupportedAppVersions().get(OperatingSystem.ANDROID));
-        assertEquals("iOS minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get(OperatingSystem.IOS),
-                newStudy.getMinSupportedAppVersions().get(OperatingSystem.IOS));
+        assertEquals("android minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get("Android"),
+                newStudy.getMinSupportedAppVersions().get("Android"));
+        assertEquals("iOS minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get("iPhone OS"),
+                newStudy.getMinSupportedAppVersions().get("iPhone OS"));
         // This was set to true even though we didn't set it.
-        assertTrue("strictUploadValidationEnabled should be true", newStudy.isStrictUploadValidationEnabled());
+        assertTrue("strictUploadValidationEnabled should be true", newStudy.getStrictUploadValidationEnabled());
         // And this is true because admins can set it to true. 
-        assertTrue("healthCodeExportEnabled should be true", newStudy.isHealthCodeExportEnabled());
+        assertTrue("healthCodeExportEnabled should be true", newStudy.getHealthCodeExportEnabled());
         // And this is also true
-        assertTrue("emailVerificationEnabled should be true", newStudy.isEmailVerificationEnabled());
+        assertTrue("emailVerificationEnabled should be true", newStudy.getEmailVerificationEnabled());
         
-        Long oldVersion = newStudy.getVersion();
+        Integer oldVersion = newStudy.getVersion();
         alterStudy(newStudy);
-        holder = studyClient.updateStudy(newStudy);
-        assertVersionHasUpdated(holder, newStudy, oldVersion);
+        holder = studiesApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
         
-        Study newerStudy = studyClient.getStudy(newStudy.getIdentifier());
+        Study newerStudy = studiesApi.getStudy(newStudy.getIdentifier()).execute().body();
+        assertTrue(newerStudy.getVersion() > oldVersion);
+        
         assertEquals("Altered Test Study [SDK]", newerStudy.getName());
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals("test4@test.com", newerStudy.getConsentNotificationEmail());
 
-        studyClient.deleteStudy(identifier);
+        studiesApi.deleteStudy(identifier).execute();
         try {
-            studyClient.getStudy(identifier);
+            studiesApi.getStudy(identifier).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
             // expected exception
@@ -113,18 +112,19 @@ public class StudyTest {
     }
 
     @Test
-    public void researcherCannotAccessAnotherStudy() {
-        TestUser researcher = TestUserHelper.createAndSignInUser(StudyTest.class, false, Roles.RESEARCHER);
+    public void researcherCannotAccessAnotherStudy() throws Exception {
+        TestUser researcher = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.RESEARCHER);
         try {
             String identifier = Tests.randomIdentifier(StudyTest.class);
             study = Tests.getStudy(identifier, null);
 
-            StudyClient studyClient = admin.getSession().getStudyClient();
-            studyClient.createStudy(study);
+            StudiesApi adminStudiesApi = admin.getClient(StudiesApi.class);
+            adminStudiesApi.createStudy(study).execute();
             createdStudy = true;
 
             try {
-                researcher.getSession().getStudyClient().getStudy(identifier);
+                StudiesApi resStudiesApi = researcher.getClient(StudiesApi.class);
+                resStudiesApi.getStudy(identifier).execute();
                 fail("Should not have been able to get this other study");
             } catch(UnauthorizedException e) {
                 assertEquals("Unauthorized HTTP response code", 403, e.getStatusCode());
@@ -135,59 +135,71 @@ public class StudyTest {
     }
 
     @Test(expected = UnauthorizedException.class)
-    public void butNormalUserCannotAccessStudy() {
+    public void butNormalUserCannotAccessStudy() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, false);
         try {
-            StudyClient rclient = user.getSession().getStudyClient();
-            rclient.getCurrentStudy();
+            StudiesApi studiesApi = user.getClient(StudiesApi.class);
+            studiesApi.getUsersStudy().execute();
         } finally {
             user.signOutAndDeleteUser();
         }
     }
     
     @Test
-    public void developerCannotSetHealthCodeToExportOrVerifyEmailWorkflow() {
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Roles.DEVELOPER);
+    public void developerCannotSetHealthCodeToExportOrVerifyEmailWorkflow() throws Exception {
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
         try {
-            StudyClient studyClient = developer.getSession().getStudyClient();
+            StudiesApi studiesApi = developer.getClient(StudiesApi.class);
             
-            Study study = studyClient.getCurrentStudy();
+            Study study = studiesApi.getUsersStudy().execute().body();
             study.setHealthCodeExportEnabled(true);
             study.setEmailVerificationEnabled(false);
-            studyClient.updateCurrentStudy(study);
+            studiesApi.updateUsersStudy(study).execute();
             
-            study = studyClient.getCurrentStudy();
-            assertFalse("healthCodeExportEnabled should be true", study.isHealthCodeExportEnabled());
-            assertTrue("emailVersificationEnabled should be true", study.isEmailVerificationEnabled());
+            study = studiesApi.getUsersStudy().execute().body();
+            assertFalse("healthCodeExportEnabled should be true", study.getHealthCodeExportEnabled());
+            assertTrue("emailVersificationEnabled should be true", study.getEmailVerificationEnabled());
         } finally {
             developer.signOutAndDeleteUser();
         }
     }
 
     @Test
-    public void adminCanGetAllStudies() {
-        StudyClient studyClient = admin.getSession().getStudyClient();
+    public void adminCanGetAllStudies() throws Exception {
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         
-        ResourceList<Study> studies = studyClient.getAllStudies();
+        ResourceListStudy studies = studiesApi.getStudies(null).execute().body();
         assertTrue("Should be more than zero studies", studies.getTotal() > 0);
     }
     
     @Test
-    public void userCannotAccessApisWithDeprecatedClient() {
-        StudyClient studyClient = admin.getSession().getStudyClient();
-        Study study = studyClient.getStudy(Tests.TEST_KEY);
+    public void userCannotAccessApisWithDeprecatedClient() throws Exception {
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        Study study = studiesApi.getStudy(Tests.TEST_KEY).execute().body();
         // Set a minimum value that should not any other tests
-        if (study.getMinSupportedAppVersions().get(OperatingSystem.ANDROID) == null) {
-            study.getMinSupportedAppVersions().put(OperatingSystem.ANDROID, 1);
-            studyClient.updateStudy(study);
+        if (study.getMinSupportedAppVersions().get("Android") == null) {
+            study.getMinSupportedAppVersions().put("Android", 1);
+            studiesApi.updateUsersStudy(study).execute();
         }
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
         try {
             
             // This is a version zero client, it should not be accepted
-            ClientProvider.setClientInfo(new ClientInfo.Builder().withDevice("Unknown").withOsName("Android")
-                    .withOsVersion("1").withAppName(Tests.APP_NAME).withAppVersion(0).build());
-            user.getSession().getUserClient().getScheduledActivities(3, DateTimeZone.UTC, null);
+            ClientInfo clientInfo = new ClientInfo();
+            clientInfo.setDeviceName("Unknown");
+            clientInfo.setOsName("Android");
+            clientInfo.setOsVersion("1");
+            clientInfo.setAppName(Tests.APP_NAME);
+            clientInfo.setAppVersion(0);
+            
+            ClientManager manager = new ClientManager.Builder()
+                    .withSignIn(user.getSignIn())
+                    .withClientInfo(clientInfo)
+                    .build();
+            
+            ForConsentedUsersApi usersApi = manager.getClient(ForConsentedUsersApi.class);
+            
+            usersApi.getScheduledActivities("+00:00", 3, null).execute();
             fail("Should have thrown exception");
             
         } catch(UnsupportedVersionException e) {
@@ -199,30 +211,32 @@ public class StudyTest {
     
     @Test
     public void getStudyUploads() throws Exception {
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Roles.DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         TestUser user2 = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
-            StudyClient studyClient = developer.getSession().getStudyClient();
+            UploadsApi devUploadsApi = developer.getClient(UploadsApi.class);
             DateTime startTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
             DateTime endTime = startTime.plusHours(4);
-            int count = studyClient.getUploads(startTime, endTime).getItems().size();
+            int count = devUploadsApi.getStudyUploads(startTime, endTime).execute().body().getItems().size();
 
             // Create a REQUESTED record that we can retrieve through the reporting API.
-            UploadRequest request = new UploadRequest.Builder()
-                    .withContentType("application/zip").withContentLength(100).withContentMd5("ABC")
-                    .withName("upload.zip").build();
+            UploadRequest request = new UploadRequest();
+            request.setName("upload.zip");
+            request.setContentType("application/zip");
+            request.setContentLength(100);
+            request.setContentMd5("ABC");
             
-            UserClient userClient = user.getSession().getUserClient();
-            UploadSession uploadSession = userClient.requestUploadSession(request);
+            ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+            UploadSession uploadSession = usersApi.requestUploadSession(request).execute().body();
             
-            UserClient userClient2 = user2.getSession().getUserClient();
-            UploadSession uploadSession2 = userClient2.requestUploadSession(request);
+            UploadSession uploadSession2 = usersApi.requestUploadSession(request).execute().body();
             
             Thread.sleep(1000); // This does depend on a GSI, so pause for a bit.
             
             // This should retrieve both of the user's uploads.
-            DateTimeRangeResourceList<Upload> results = studyClient.getUploads(startTime, endTime);
+            StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+            DateTimeRangeResourceListUpload results = studiesApi.getStudyUploads(startTime, endTime).execute().body();
             assertEquals(startTime, results.getStartTime());
             assertEquals(endTime, results.getEndTime());
 
@@ -242,22 +256,13 @@ public class StudyTest {
         }
     }
     
-    private Upload getUpload(DateTimeRangeResourceList<Upload> results, String guid) {
+    private Upload getUpload(DateTimeRangeResourceListUpload results, String guid) {
         for (Upload upload : results.getItems()) {
             if (upload.getUploadId().equals(guid)) {
                 return upload;
             }
         }
         return null;
-    }
-    
-    private void assertVersionHasUpdated(VersionHolder holder, Study study, Long oldVersion) {
-        assertNotNull("versionHolder should not have null version", holder.getVersion());
-        assertNotNull("study should not have null versin", study.getVersion());
-        assertEquals("holder version and study version should be equal", holder.getVersion(), study.getVersion());
-        if (oldVersion != null) {
-            assertNotEquals("old version should not equal study's current version", oldVersion, study.getVersion());
-        }
     }
     
     private void alterStudy(Study study) {

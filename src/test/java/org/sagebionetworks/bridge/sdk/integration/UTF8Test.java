@@ -5,22 +5,22 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.Session;
-import org.sagebionetworks.bridge.sdk.StudyClient;
-import org.sagebionetworks.bridge.sdk.UserClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.models.accounts.SignInCredentials;
-import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
-import org.sagebionetworks.bridge.sdk.models.studies.Study;
+import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.sdk.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.sdk.rest.model.EmptyPayload;
+import org.sagebionetworks.bridge.sdk.rest.model.Study;
+import org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.sdk.rest.model.UserSessionInfo;
 
 @Category(IntegrationSmokeTest.class)
 public class UTF8Test {
     @Test
-    public void canSaveAndRetrieveDataStoredInDynamo() {
+    public void canSaveAndRetrieveDataStoredInDynamo() throws Exception {
         String studyId = Tests.randomIdentifier(UTF8Test.class);
         String studyName = "☃지구상의　３대　극지라　불리는";
-        StudyClient studyClient = TestUserHelper.getSignedInAdmin().getSession().getStudyClient();
+        StudiesApi studiesApi = TestUserHelper.getSignedInAdmin().getClient(StudiesApi.class);
 
         // make minimal study
         Study study = new Study();
@@ -30,42 +30,42 @@ public class UTF8Test {
         study.setTechnicalEmail("bridge-testing+technical@sagebase.org");
         study.setSupportEmail("bridge-testing+support@sagebase.org");
         study.setConsentNotificationEmail("bridge-testing+consent@sagebase.org");
-        study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE_OLD);
-        study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE_OLD);
+        study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
+        study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
 
         // create study
-        studyClient.createStudy(study);
+        studiesApi.createStudy(study).execute();
 
         try {
             // get study back and verify fields
-            Study returnedStudy = studyClient.getStudy(studyId);
+            Study returnedStudy = studiesApi.getStudy(studyId).execute().body();
             assertEquals(studyId, returnedStudy.getIdentifier());
             assertEquals(studyName, returnedStudy.getName());
         } finally {
             // clean-up: delete study
-            studyClient.deleteStudy(studyId);
+            studiesApi.deleteStudy(studyId).execute();
         }
     }
 
     @Test
-    public void canSaveAndRetrieveDataStoredInRedis() {
+    public void canSaveAndRetrieveDataStoredInRedis() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(UTF8Test.class, true);
         try {
-            UserClient userClient = testUser.getSession().getUserClient();
+            ForConsentedUsersApi usersApi = testUser.getClient(ForConsentedUsersApi.class);
 
-           StudyParticipant participant = new StudyParticipant.Builder()
-                   .withFirstName("☃")
-                   .withLastName("지구상의　３대　극지라　불리는").build();
+            StudyParticipant participant = new StudyParticipant();
+            participant.setFirstName("☃");
+            participant.setLastName("지구상의　３대　극지라　불리는");
 
-            userClient.saveStudyParticipant(participant);
+            usersApi.updateUsersParticipantRecord(participant).execute();
 
             // Force a refresh of the Redis session cache.
-            testUser.getSession().signOut();
-            Session session = ClientProvider.signIn(new SignInCredentials(Tests.TEST_KEY, testUser.getEmail(), testUser.getPassword()));
+            AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
+            authApi.signOut(new EmptyPayload()).execute();
+            UserSessionInfo session = authApi.signIn(testUser.getSignIn()).execute().body();
 
-            StudyParticipant sessionParticipant = session.getUserClient().getStudyParticipant();
-            assertEquals("☃", sessionParticipant.getFirstName());
-            assertEquals("지구상의　３대　극지라　불리는", sessionParticipant.getLastName());
+            assertEquals("☃", session.getFirstName());
+            assertEquals("지구상의　３대　극지라　불리는", session.getLastName());
         } finally {
             testUser.signOutAndDeleteUser();
         }

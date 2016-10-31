@@ -12,7 +12,7 @@ import org.junit.experimental.categories.Category;
 
 import org.joda.time.LocalDate;
 import org.joda.time.format.ISODateTimeFormat;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper2.TestUser;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.rest.RestUtils;
 import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
@@ -21,17 +21,14 @@ import org.sagebionetworks.bridge.sdk.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.sdk.rest.model.ConsentSignature;
-import org.sagebionetworks.bridge.sdk.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.sdk.rest.model.EmptyPayload;
+import org.sagebionetworks.bridge.sdk.rest.model.Message;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.SharingScope;
-import org.sagebionetworks.bridge.sdk.rest.model.SharingScopeForm;
 import org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.rest.model.Withdrawal;
-import org.sagebionetworks.bridge.sdk.utils.BridgeUtils;
 
-import java.io.IOException;
 import java.util.Map;
 
 @Category(IntegrationSmokeTest.class)
@@ -40,8 +37,8 @@ public class ConsentTest {
     private static final String FAKE_IMAGE_DATA = "VGVzdCBzdHJpbmc=";
 
     @Test
-    public void canToggleDataSharing() throws IOException {
-        TestUser testUser = TestUserHelper2.createAndSignInUser(ConsentTest.class, true);
+    public void canToggleDataSharing() throws Exception {
+        TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
         try {
             // starts out with no sharing
@@ -61,8 +58,7 @@ public class ConsentTest {
             participant = new StudyParticipant();
             participant.sharingScope(SharingScope.NO_SHARING);
 
-            SharingScopeForm sharingScope = new SharingScopeForm().scope(SharingScope.NO_SHARING);
-            userApi.updateUserDataSharing(sharingScope).execute();
+            userApi.updateUsersParticipantRecord(participant).execute();
 
             participant = userApi.getUsersParticipantRecord().execute().body();
             assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
@@ -75,18 +71,18 @@ public class ConsentTest {
     }
 
     @Test
-    public void giveAndGetConsent() throws IOException {
+    public void giveAndGetConsent() throws Exception {
         giveAndGetConsentHelper("Eggplant McTester", new LocalDate(1970, 1, 1), null, null);
     }
 
     @Test
-    public void giveAndGetConsentWithSignatureImage() throws IOException {
+    public void giveAndGetConsentWithSignatureImage() throws Exception {
         giveAndGetConsentHelper("Eggplant McTester", new LocalDate(1970, 1, 1), FAKE_IMAGE_DATA, "image/fake");
     }
 
     @Test
-    public void signedInUserMustGiveConsent() throws IOException {
-        TestUser user = TestUserHelper2.createAndSignInUser(ConsentTest.class, false);
+    public void signedInUserMustGiveConsent() throws Exception {
+        TestUser user = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
         try {
             ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
             assertFalse("User has not consented", user.getSession().getConsented());
@@ -113,10 +109,10 @@ public class ConsentTest {
     }
 
     @Test(expected=InvalidEntityException.class)
-    public void userMustMeetMinAgeRequirements() throws IOException {
+    public void userMustMeetMinAgeRequirements() throws Exception {
         TestUser user = null;
         try {
-            user = TestUserHelper2.createAndSignInUser(ConsentTest.class, false);
+            user = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
         } catch(ConsentRequiredException e) {
             // this is expected when you sign in.
         }
@@ -131,7 +127,6 @@ public class ConsentTest {
             ConsentSignature signature = new ConsentSignature().name(user.getEmail())
                     .birthdate(date).scope(SharingScope.SPONSORS_AND_PARTNERS);
             userApi.createConsentSignature(user.getDefaultSubpopulation(), signature).execute();
-            
         } finally {
             user.signOutAndDeleteUser();
         }
@@ -146,7 +141,7 @@ public class ConsentTest {
                 "   \"imageData\":\"" + FAKE_IMAGE_DATA + "\",\n" +
                 "   \"imageMimeType\":\"image/fake\"\n" +
                 "}";
-        ObjectMapper jsonObjectMapper = BridgeUtils.getMapper();
+        ObjectMapper jsonObjectMapper = RestUtils.MAPPER;
 
         // de-serialize and validate
         ConsentSignature sig = jsonObjectMapper.readValue(sigJson, ConsentSignature.class);
@@ -169,8 +164,8 @@ public class ConsentTest {
 
     // helper method to test consent with and without images
     private static void giveAndGetConsentHelper(String name, LocalDate birthdate, String imageData,
-            String imageMimeType) throws IOException {
-        TestUser testUser = TestUserHelper2.createAndSignInUser(ConsentTest.class, false);
+            String imageMimeType) throws Exception {
+        TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
         
         ConsentSignature sig = new ConsentSignature().name(name).birthdate(birthdate)
                 .imageData(imageData) .imageMimeType(imageMimeType);
@@ -179,9 +174,7 @@ public class ConsentTest {
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
 
             assertFalse("User has not consented", testUser.getSession().getConsented());
-            for (ConsentStatus status : testUser.getSession().getConsentStatuses().values()) {
-                assertFalse(status.getConsented());
-            }
+            assertFalse(RestUtils.isUserConsented(testUser.getSession()));
 
             // get consent should fail if the user hasn't given consent
             try {
@@ -200,9 +193,7 @@ public class ConsentTest {
             
             // Session now shows consent...
             UserSessionInfo session = testUser.signInAgain();
-            for (ConsentStatus status : session.getConsentStatuses().values()) {
-                assertTrue(status.getConsented());
-            }
+            assertTrue(RestUtils.isUserConsented(session));
             
             // get consent and validate that it's the same consent
             ConsentSignature sigFromServer = userApi.getConsentSignature(testUser.getDefaultSubpopulation()).execute().body();
@@ -215,8 +206,12 @@ public class ConsentTest {
             
             // giving consent again will throw
             try {
-                userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute();
-                fail("EntityAlreadyExistsException not thrown");
+                // See BRIDGE-1568
+                sig = new ConsentSignature().name(sig.getName()).birthdate(sig.getBirthdate())
+                        .scope(SharingScope.ALL_QUALIFIED_RESEARCHERS).imageData(sig.getImageData())
+                        .imageMimeType(sig.getImageMimeType());
+                Message message = userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute().body();
+                fail("EntityAlreadyExistsException not thrown: " + message.getMessage());
             } catch (EntityAlreadyExistsException ex) {
                 // expected
             }
@@ -246,8 +241,8 @@ public class ConsentTest {
     }
     
     @Test
-    public void canEmailConsentAgreement() throws IOException {
-        TestUser testUser = TestUserHelper2.createAndSignInUser(ConsentTest.class, true);
+    public void canEmailConsentAgreement() throws Exception {
+        TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
             userApi.emailConsentAgreement(testUser.getDefaultSubpopulation(), new EmptyPayload()).execute();
@@ -257,9 +252,9 @@ public class ConsentTest {
     }
     
     @Test
-    public void canWithdrawFromAllConsentsInStudy() throws IOException {
-        TestUser researchUser = TestUserHelper2.createAndSignInUser(ConsentTest.class, true, Role.RESEARCHER);
-        TestUser testUser = TestUserHelper2.createAndSignInUser(ConsentTest.class, true);
+    public void canWithdrawFromAllConsentsInStudy() throws Exception {
+        TestUser researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.RESEARCHER);
+        TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
             UserSessionInfo session = testUser.getSession();
 

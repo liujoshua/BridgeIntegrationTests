@@ -14,7 +14,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper2.TestUser;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.rest.api.ExternalIdentifiersApi;
 import org.sagebionetworks.bridge.sdk.rest.model.PagedResourceListExternalIdentifier;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
@@ -29,11 +29,11 @@ public class ExternalIdsTest {
     
     @Before
     public void before() throws IOException {
-        developer = TestUserHelper2.createAndSignInUser(ExternalIdsTest.class, false, Role.DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(ExternalIdsTest.class, false, Role.DEVELOPER);
     }
     
     @After
-    public void after() {
+    public void after() throws Exception {
         if (developer != null) {
             developer.signOutAndDeleteUser();    
         }
