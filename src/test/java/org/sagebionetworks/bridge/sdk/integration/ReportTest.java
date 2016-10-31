@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -10,23 +11,24 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.ReportClient;
-import org.sagebionetworks.bridge.sdk.Roles;
-import org.sagebionetworks.bridge.sdk.StudyClient;
-import org.sagebionetworks.bridge.sdk.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.models.DateRangeResourceList;
-import org.sagebionetworks.bridge.sdk.models.ReportTypeResourceList;
-import org.sagebionetworks.bridge.sdk.models.reports.ReportData;
-import org.sagebionetworks.bridge.sdk.models.reports.ReportIndex;
-import org.sagebionetworks.bridge.sdk.models.reports.ReportType;
-import org.sagebionetworks.bridge.sdk.models.studies.Study;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.sdk.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.sdk.rest.api.ReportsApi;
+import org.sagebionetworks.bridge.sdk.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.sdk.rest.exceptions.BadRequestException;
+import org.sagebionetworks.bridge.sdk.rest.model.DateRangeResourceListReportData;
+import org.sagebionetworks.bridge.sdk.rest.model.ReportData;
+import org.sagebionetworks.bridge.sdk.rest.model.ReportIndex;
+import org.sagebionetworks.bridge.sdk.rest.model.ReportType;
+import org.sagebionetworks.bridge.sdk.rest.model.ReportTypeResourceListReportIndex;
+import org.sagebionetworks.bridge.sdk.rest.model.Role;
+import org.sagebionetworks.bridge.sdk.rest.model.Study;
+import org.sagebionetworks.bridge.sdk.rest.model.VersionHolder;
 
-// Don't run in production as right now, it's leaving a participant index every time the test is run.
+import com.google.gson.JsonObject;
+
 public class ReportTest {
     
     private static final LocalDate SEARCH_END_DATE = LocalDate.parse("2016-02-20");
@@ -37,13 +39,13 @@ public class ReportTest {
     private static LocalDate TIME2 = LocalDate.parse("2016-02-03");
     private static LocalDate TIME3 = LocalDate.parse("2016-02-04");
     
-    private static JsonNode DATA1 = JsonNodeFactory.instance.objectNode();
-    private static JsonNode DATA2 = JsonNodeFactory.instance.objectNode();
-    private static JsonNode DATA3 = JsonNodeFactory.instance.objectNode();
+    private static JsonObject DATA1 = new JsonObject();
+    private static JsonObject DATA2 = new JsonObject();
+    private static JsonObject DATA3 = new JsonObject();
     
-    private static ReportData REPORT1 = new ReportData(TIME1, DATA1);
-    private static ReportData REPORT2 = new ReportData(TIME2, DATA2);
-    private static ReportData REPORT3 = new ReportData(TIME3, DATA3);
+    private static ReportData REPORT1;
+    private static ReportData REPORT2;
+    private static ReportData REPORT3;
     
     private TestUser admin;
     
@@ -52,8 +54,16 @@ public class ReportTest {
     private String reportId;
     
     @Before
-    public void before() {
-        ClientProvider.addLanguage("en");
+    public void before() throws Exception {
+        REPORT1 = new ReportData();
+        REPORT1.setDate(TIME1);
+        REPORT1.setData(DATA1);
+        REPORT2 = new ReportData();
+        REPORT2.setDate(TIME2);
+        REPORT2.setData(DATA2);
+        REPORT3 = new ReportData();
+        REPORT3.setDate(TIME3);
+        REPORT3.setData(DATA3);
         
         this.admin = TestUserHelper.getSignedInAdmin();
         this.user = TestUserHelper.createAndSignInUser(ReportTest.class, true);
@@ -61,144 +71,156 @@ public class ReportTest {
     }
 
     @After
-    public void after() {
+    public void after() throws Exception {
         if (user != null) {
             user.signOutAndDeleteUser();
         }
     }
     
     @Test
-    public void developerCanCrudParticipantReport() {
-        TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Roles.DEVELOPER);
+    public void developerCanCrudParticipantReport() throws Exception {
+        TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Role.DEVELOPER);
         try {
-            String userId = user.getSession().getStudyParticipant().getId();
-            ReportClient devReportClient = developer.getSession().getReportClient();
+            String userId = user.getSession().getId();
+            ReportsApi reportsApi = developer.getClient(ReportsApi.class);
             
-            devReportClient.saveParticipantReportByUserId(userId, reportId, REPORT1);
-            devReportClient.saveParticipantReportByUserId(userId, reportId, REPORT2);
-            devReportClient.saveParticipantReportByUserId(userId, reportId, REPORT3);
+            reportsApi.addParticipantReportRecord(userId, reportId, REPORT1).execute();
+            reportsApi.addParticipantReportRecord(userId, reportId, REPORT2).execute();
+            reportsApi.addParticipantReportRecord(userId, reportId, REPORT3).execute();
             
-            ReportClient userReportClient = user.getSession().getReportClient();
-            DateRangeResourceList<ReportData> results = userReportClient.getParticipantReport(reportId,
-                    SEARCH_START_DATE, SEARCH_END_DATE);
-            assertEquals(3, results.getTotal());
+            ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+            
+            DateRangeResourceListReportData results = usersApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+            assertEquals((Integer)3, results.getTotal());
             assertEquals(SEARCH_START_DATE, results.getStartDate());
             assertEquals(SEARCH_END_DATE, results.getEndDate());
             
             // This search is out of range, and should return no results.
-            results = userReportClient
-                    .getParticipantReport(reportId, SEARCH_START_DATE.plusDays(30), SEARCH_END_DATE.plusDays(30));
-            assertEquals(0, results.getTotal());
+            results = usersApi.getParticipantReportRecords(reportId, SEARCH_START_DATE.plusDays(30),
+                    SEARCH_END_DATE.plusDays(30)).execute().body();
+            assertEquals((Integer)0, results.getTotal());
             assertEquals(0, results.getItems().size());
             
             // We should see indices for this participant report
-            ReportTypeResourceList<ReportIndex> indices = devReportClient.getReportIndices(ReportType.PARTICIPANT);
+            ReportTypeResourceListReportIndex indices = reportsApi.getReportIndices("participant").execute().body();
             assertTrue(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.PARTICIPANT, indices.getReportType());
             
             // but not if we ask for study reports
-            indices = devReportClient.getReportIndices(ReportType.STUDY);
+            indices = reportsApi.getReportIndices("study").execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.STUDY, indices.getReportType());
             
             // delete
-            devReportClient.deleteParticipantReport(userId, reportId);
-            results = userReportClient.getParticipantReport(reportId, SEARCH_START_DATE, SEARCH_END_DATE);
+            reportsApi.deleteAllParticipantReportRecords(userId, reportId);
+            results = usersApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
         } finally {
             developer.signOutAndDeleteUser();
-            admin.getSession().getReportClient().forceDeleteOfParticipantReportIndex(reportId);
+            
+            ReportsApi reportsApi = admin.getClient(ReportsApi.class);
+            reportsApi.deleteParticipantReportIndex(reportId).execute();
         }
     }
 
     @Test
-    public void workerCanCrudParticipantReport() {
+    public void workerCanCrudParticipantReport() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
-        StudyClient adminStudyClient = admin.getSession().getStudyClient();
-        Study study = adminStudyClient.getStudy("api");
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        Study study = studiesApi.getStudy("api").execute().body();
         study.setHealthCodeExportEnabled(true);
-        adminStudyClient.updateStudy(study);
+        VersionHolder versionHolder = studiesApi.updateStudy(study.getIdentifier(), study).execute().body();
+        study.setVersion(versionHolder.getVersion());
         
         // Make this worker a researcher solely for the purpose of getting the healthCode needed to user the worker
         // API
-        TestUser worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, Roles.WORKER, Roles.RESEARCHER);
+        TestUser worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, Role.WORKER, Role.RESEARCHER);
         
-        TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, false, Roles.DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, false, Role.DEVELOPER);
         
-        String healthCode = worker.getSession().getParticipantClient()
-                .getStudyParticipant(user.getSession().getStudyParticipant().getId()).getHealthCode();
+        String healthCode = worker.getClient(ParticipantsApi.class)
+                .getParticipant(user.getSession().getId()).execute()
+                .body().getHealthCode();
+        assertNotNull(healthCode);
         try {
-            String userId = user.getSession().getStudyParticipant().getId();
+            REPORT1.setHealthCode(healthCode);
+            REPORT2.setHealthCode(healthCode);
+            REPORT3.setHealthCode(healthCode);
             
-            ReportClient workerReportClient = worker.getSession().getReportClient();
+            String userId = user.getSession().getId();
             
-            workerReportClient.saveParticipantReportByHealthCode(healthCode, reportId, REPORT1);
-            workerReportClient.saveParticipantReportByHealthCode(healthCode, reportId, REPORT2);
-            workerReportClient.saveParticipantReportByHealthCode(healthCode, reportId, REPORT3);
+            ReportsApi workerReportsApi = worker.getClient(ReportsApi.class);
+            workerReportsApi.addParticipantReportRecordForWorker(reportId, REPORT1).execute();
+            workerReportsApi.addParticipantReportRecordForWorker(reportId, REPORT2).execute();
+            workerReportsApi.addParticipantReportRecordForWorker(reportId, REPORT3).execute();
             
-            ReportClient userReportClient = user.getSession().getReportClient();
-            DateRangeResourceList<ReportData> results = userReportClient.getParticipantReport(reportId,
-                    SEARCH_START_DATE, SEARCH_END_DATE);
-            assertEquals(3, results.getTotal());
+            ReportsApi userReportsApi = user.getClient(ReportsApi.class);
+            DateRangeResourceListReportData results = userReportsApi.getParticipantReportRecords(reportId,
+                    SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+            
+            assertEquals((Integer)3, results.getTotal());
             assertEquals(SEARCH_START_DATE, results.getStartDate());
             assertEquals(SEARCH_END_DATE, results.getEndDate());
             
             // This search is out of range, and should return no results.
-            results = userReportClient
-                    .getParticipantReport(reportId, SEARCH_START_DATE.plusDays(30), SEARCH_END_DATE.plusDays(30));
-            assertEquals(0, results.getTotal());
+            results = userReportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE.plusDays(30), 
+                    SEARCH_END_DATE.plusDays(30)).execute().body();
+            assertEquals((Integer)0, results.getTotal());
             assertEquals(0, results.getItems().size());
             
             // delete. Must be done by developer
-            developer.getSession().getReportClient().deleteParticipantReport(userId, reportId);
+            ReportsApi developerReportsApi = developer.getClient(ReportsApi.class);
+            developerReportsApi.deleteAllParticipantReportRecords(userId, reportId).execute();
             
-            results = userReportClient.getParticipantReport(reportId, SEARCH_START_DATE, SEARCH_END_DATE);
-            assertEquals(0, results.getTotal());
+            results = userReportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE)
+                    .execute().body();
+            assertEquals((Integer)0, results.getTotal());
             assertEquals(0, results.getItems().size());
         } finally {
             study.setHealthCodeExportEnabled(false);
-            adminStudyClient.updateStudy(study);
+            studiesApi.updateStudy(study.getIdentifier(), study).execute();
 
             worker.signOutAndDeleteUser();
             developer.signOutAndDeleteUser();
-            admin.getSession().getReportClient().forceDeleteOfParticipantReportIndex(reportId);
+            
+            admin.getClient(ReportsApi.class).deleteParticipantReportIndex(reportId).execute();
         }
     }
 
     @Test
-    public void canCrudStudyReport() {
-        TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Roles.DEVELOPER);
+    public void canCrudStudyReport() throws Exception {
+        TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Role.DEVELOPER);
         try {
-            ReportClient devReportClient = developer.getSession().getReportClient();
-            devReportClient.saveStudyReport(reportId, REPORT1);
-            devReportClient.saveStudyReport(reportId, REPORT2);
-            devReportClient.saveStudyReport(reportId, REPORT3);
+            ReportsApi devReportClient = developer.getClient(ReportsApi.class);
+            devReportClient.addStudyReportRecord(reportId, REPORT1).execute();
+            devReportClient.addStudyReportRecord(reportId, REPORT2).execute();
+            devReportClient.addStudyReportRecord(reportId, REPORT3).execute();
             
-            DateRangeResourceList<ReportData> results = devReportClient.getStudyReport(reportId, SEARCH_START_DATE,
-                    SEARCH_END_DATE);
-            assertEquals(3, results.getTotal());
+            DateRangeResourceListReportData results = devReportClient.getStudyReportRecords(reportId, SEARCH_START_DATE,
+                    SEARCH_END_DATE).execute().body();
+            assertEquals((Integer)3, results.getTotal());
             assertEquals(SEARCH_START_DATE, results.getStartDate());
             assertEquals(SEARCH_END_DATE, results.getEndDate());
 
             // This search is out of range, and should return no results.
             results = devReportClient
-                    .getParticipantReport(reportId, SEARCH_START_DATE.minusDays(30), SEARCH_END_DATE.minusDays(30));
-            assertEquals(0, results.getTotal());
+                    .getParticipantReportRecords(reportId, SEARCH_START_DATE.minusDays(30), SEARCH_END_DATE.minusDays(30)).execute().body();
+            assertEquals((Integer)0, results.getTotal());
             assertEquals(0, results.getItems().size());
             
             // We should see indices for this study report
-            ReportTypeResourceList<ReportIndex> indices = devReportClient.getReportIndices(ReportType.STUDY);
+            ReportTypeResourceListReportIndex indices = devReportClient.getReportIndices("study").execute().body();
             assertTrue(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.STUDY, indices.getReportType());
             
             // but not if we use the other type
-            indices = devReportClient.getReportIndices(ReportType.PARTICIPANT);
+            indices = devReportClient.getReportIndices("participant").execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.PARTICIPANT, indices.getReportType());
             
-            developer.getSession().getReportClient().deleteStudyReport(reportId);
-            results = devReportClient.getParticipantReport(reportId, SEARCH_START_DATE, SEARCH_END_DATE);
-            assertEquals(0, results.getTotal());
+            developer.getClient(ReportsApi.class).deleteAllStudyReportRecords(reportId).execute();
+            results = devReportClient.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+            assertEquals((Integer)0, results.getTotal());
             assertEquals(0, results.getItems().size());
         } finally {
             developer.signOutAndDeleteUser();
@@ -206,29 +228,29 @@ public class ReportTest {
     }
     
     @Test
-    public void correctExceptionsOnBadRequest() {
-        TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Roles.DEVELOPER);
+    public void correctExceptionsOnBadRequest() throws Exception {
+        TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Role.DEVELOPER);
         try {
-            ReportClient devReportClient = developer.getSession().getReportClient();
+            ReportsApi devReportClient = developer.getClient(ReportsApi.class);
             try {
-                devReportClient.getStudyReport(reportId, LocalDate.parse("2010-10-10"), LocalDate.parse("2012-10-10"));
+                devReportClient.getStudyReportRecords(reportId, LocalDate.parse("2010-10-10"), LocalDate.parse("2012-10-10")).execute();
                 fail("Should have thrown an exception");
             } catch(BadRequestException e) {
                 assertEquals("Date range cannot exceed 45 days, startDate=2010-10-10, endDate=2012-10-10", e.getMessage());
             }
             try {
-                devReportClient.getStudyReport(reportId, SEARCH_END_DATE, SEARCH_START_DATE);
+                devReportClient.getStudyReportRecords(reportId, SEARCH_END_DATE, SEARCH_START_DATE).execute();
             } catch(BadRequestException e) {
                 assertEquals("Start date 2016-02-20 can't be after end date 2016-02-01", e.getMessage());
             }
             try {
-                devReportClient.getParticipantReport(reportId, LocalDate.parse("2010-10-10"), LocalDate.parse("2012-10-10"));
+                devReportClient.getParticipantReportRecords(reportId, LocalDate.parse("2010-10-10"), LocalDate.parse("2012-10-10")).execute();
                 fail("Should have thrown an exception");
             } catch(BadRequestException e) {
                 assertEquals("Date range cannot exceed 45 days, startDate=2010-10-10, endDate=2012-10-10", e.getMessage());
             }
             try {
-                devReportClient.getParticipantReport(reportId, SEARCH_END_DATE, SEARCH_START_DATE);
+                devReportClient.getParticipantReportRecords(reportId, SEARCH_END_DATE, SEARCH_START_DATE).execute();
             } catch(BadRequestException e) {
                 assertEquals("Start date 2016-02-20 can't be after end date 2016-02-01", e.getMessage());
             }
@@ -236,8 +258,8 @@ public class ReportTest {
             developer.signOutAndDeleteUser();
         }
     }
-    
-    private boolean containsThisIdentifier(ReportTypeResourceList<ReportIndex> indices, String identifier) {
+
+    private boolean containsThisIdentifier(ReportTypeResourceListReportIndex indices, String identifier) {
         for (ReportIndex index : indices.getItems()) {
             if (index.getIdentifier().equals(identifier)) {
                 return true;

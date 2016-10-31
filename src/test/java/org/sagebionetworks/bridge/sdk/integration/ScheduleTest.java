@@ -4,28 +4,28 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 
-import org.joda.time.DateTimeZone;
+import org.codehaus.plexus.util.ReflectionUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ClientInfo;
-import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.Roles;
-import org.sagebionetworks.bridge.sdk.SchedulePlanClient;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.UserClient;
-import org.sagebionetworks.bridge.sdk.models.Criteria;
-import org.sagebionetworks.bridge.sdk.models.ResourceList;
-import org.sagebionetworks.bridge.sdk.models.schedules.Activity;
-import org.sagebionetworks.bridge.sdk.models.schedules.CriteriaScheduleStrategy;
-import org.sagebionetworks.bridge.sdk.models.schedules.Schedule;
-import org.sagebionetworks.bridge.sdk.models.schedules.ScheduleCriteria;
-import org.sagebionetworks.bridge.sdk.models.schedules.SchedulePlan;
-import org.sagebionetworks.bridge.sdk.models.schedules.ScheduleType;
-import org.sagebionetworks.bridge.sdk.models.schedules.ScheduledActivity;
-import org.sagebionetworks.bridge.sdk.models.schedules.TaskReference;
-import org.sagebionetworks.bridge.sdk.models.studies.OperatingSystem;
+import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.sdk.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.sdk.rest.model.Activity;
+import org.sagebionetworks.bridge.sdk.rest.model.ClientInfo;
+import org.sagebionetworks.bridge.sdk.rest.model.Criteria;
+import org.sagebionetworks.bridge.sdk.rest.model.CriteriaScheduleStrategy;
+import org.sagebionetworks.bridge.sdk.rest.model.ResourceListScheduledActivity;
+import org.sagebionetworks.bridge.sdk.rest.model.Role;
+import org.sagebionetworks.bridge.sdk.rest.model.Schedule;
+import org.sagebionetworks.bridge.sdk.rest.model.ScheduleCriteria;
+import org.sagebionetworks.bridge.sdk.rest.model.SchedulePlan;
+import org.sagebionetworks.bridge.sdk.rest.model.ScheduleType;
+import org.sagebionetworks.bridge.sdk.rest.model.TaskReference;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 
 public class ScheduleTest {
 
@@ -35,23 +35,26 @@ public class ScheduleTest {
     private TestUser developer;
     
     @Before
-    public void before() {
-        user = TestUserHelper.createAndSignInUser(ScheduleTest.class, true);
-        developer = TestUserHelper.createAndSignInUser(ScheduleTest.class, true, Roles.DEVELOPER);
-        ClientProvider.setClientInfo(new ClientInfo.Builder().withAppName(Tests.APP_NAME).withAppVersion(3).build());
+    public void before() throws Exception {
+        ClientInfo clientInfo = getClientInfo(Tests.APP_NAME, 3);
+        
+        user = new TestUserHelper.Builder(ScheduleTest.class).withClientInfo(clientInfo).withConsentUser(true)
+                .createAndSignInUser();
+
+        developer = new TestUserHelper.Builder(ScheduleTest.class).withClientInfo(clientInfo).withConsentUser(true)
+                .withRoles(Role.DEVELOPER).createAndSignInUser();
     }
     
     @After
-    public void after() {
-        ClientProvider.setClientInfo(Tests.TEST_CLIENT_INFO);
+    public void after() throws Exception {
         if (user != null) {
             user.signOutAndDeleteUser();    
         }
         if (developer != null) {
             try {
                 if (planGuid != null) {
-                    SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
-                    schedulePlanClient.deleteSchedulePlan(planGuid);
+                    SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+                    schedulesApi.deleteSchedulePlan(planGuid).execute();
                 }
             } finally {
                 developer.signOutAndDeleteUser();    
@@ -61,31 +64,37 @@ public class ScheduleTest {
     
     @Test
     public void schedulePlanIsCorrect() throws Exception {
-        SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
-        planGuid = schedulePlanClient.createSchedulePlan(Tests.getSimpleSchedulePlan()).getGuid();
+        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        planGuid = schedulesApi.createSchedulePlan(Tests.getSimpleSchedulePlan()).execute().body().getGuid();
         
         SchedulePlan originalPlan = Tests.getSimpleSchedulePlan();
-        SchedulePlan plan = developer.getSession().getSchedulePlanClient().getSchedulePlan(planGuid);
+        SchedulePlan plan = schedulesApi.getSchedulePlan(planGuid).execute().body();
+
         // Fields that are set on the server.
         originalPlan.setGuid(plan.getGuid());
-        originalPlan.setModifiedOn(plan.getModifiedOn());
+        ReflectionUtils.setVariableValueInObject(originalPlan, "modifiedOn", plan.getModifiedOn());
         originalPlan.setVersion(plan.getVersion());
-
-        originalPlan.setGuid(plan.getGuid());
-        originalPlan.setModifiedOn(plan.getModifiedOn());
+        
         Tests.getActivitiesFromSimpleStrategy(originalPlan).set(0, Tests.getActivityFromSimpleStrategy(plan));
+        
+        ReflectionUtils.setVariableValueInObject(originalPlan, "type", SchedulePlan.TypeEnum.SCHEDULEPLAN);
+        
+        Schedule originalSchedule = Tests.getSimpleSchedule(originalPlan);
+        Schedule updatedSchedule = Tests.getSimpleSchedule(plan);
+        originalSchedule.setPersistent(updatedSchedule.getPersistent());
+        ReflectionUtils.setVariableValueInObject(originalSchedule, "type", Schedule.TypeEnum.SCHEDULE);
         
         assertEquals(originalPlan, plan);
     }
 
     @Test
     public void canRetrieveSchedulesForAUser() throws Exception {
-        SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
-        planGuid = schedulePlanClient.createSchedulePlan(Tests.getABTestSchedulePlan()).getGuid();
+        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        planGuid = schedulesApi.createSchedulePlan(Tests.getABTestSchedulePlan()).execute().body().getGuid();
 
-        final UserClient userClient = user.getSession().getUserClient();
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         
-        List<Schedule> schedules = userClient.getSchedules().getItems();
+        List<Schedule> schedules = usersApi.getSchedules().execute().body().getItems();
         assertEquals("There should be one schedule for this user", 1, schedules.size());
     }
     
@@ -93,91 +102,119 @@ public class ScheduleTest {
     @SuppressWarnings("deprecation")
     public void persistentSchedulePlanMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getPersistentSchedulePlan();
-        SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
+        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
         
-        planGuid = schedulePlanClient.createSchedulePlan(plan).getGuid();
+        planGuid = schedulesApi.createSchedulePlan(plan).execute().body().getGuid();
 
-        plan = schedulePlanClient.getSchedulePlan(planGuid);
+        plan = schedulesApi.getSchedulePlan(planGuid).execute().body();
         Schedule schedule = Tests.getSimpleSchedule(plan);
         
         assertEquals(true, schedule.getPersistent());
-        assertEquals(true, schedule.getActivities().get(0).isPersistentlyRescheduledBy(schedule));
     }
     
     @Test
     @SuppressWarnings("deprecation")
     public void simpleSchedulePlanNotMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getSimpleSchedulePlan();
-        SchedulePlanClient schedulePlanClient = developer.getSession().getSchedulePlanClient();
+        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
 
-        planGuid = schedulePlanClient.createSchedulePlan(plan).getGuid();
+        planGuid = schedulesApi.createSchedulePlan(plan).execute().body().getGuid();
 
-        plan = schedulePlanClient.getSchedulePlan(planGuid);
+        plan = schedulesApi.getSchedulePlan(planGuid).execute().body();
         Schedule schedule = Tests.getSimpleSchedule(plan);
         
         assertEquals(false, schedule.getPersistent());
-        assertEquals(false, schedule.getActivities().get(0).isPersistentlyRescheduledBy(schedule));
     }
     
     @Test
-    public void criteriaBasedScheduleIsFilteredForUser() {
+    public void criteriaBasedScheduleIsFilteredForUser() throws Exception {
         SchedulePlan plan = new SchedulePlan();
         plan.setLabel("Criteria plan");
 
-        Criteria criteria1 = new Criteria();
-        criteria1.getMinAppVersions().put(OperatingSystem.ANDROID, 0);
-        criteria1.getMaxAppVersions().put(OperatingSystem.ANDROID, 10);
-        
-        Criteria criteria2 = new Criteria();
-        criteria2.getMinAppVersions().put(OperatingSystem.ANDROID, 11);
-        
         Schedule schedule1 = new Schedule();
         schedule1.setLabel("Schedule 1");
         schedule1.setScheduleType(ScheduleType.ONCE);
-        schedule1.addActivity(new Activity("Activity 1", "", new TaskReference("task:AAA")));
+        schedule1.setActivities(taskActivity("Activity 1", "task:AAA"));
         
         Schedule schedule2 = new Schedule();
         schedule2.setLabel("Schedule 2");
         schedule2.setScheduleType(ScheduleType.ONCE);
-        schedule2.addActivity(new Activity("Activity 2", "", new TaskReference("task:BBB")));
+        schedule2.setActivities(taskActivity("Activity 2", "task:BBB"));
         
-        ScheduleCriteria scheduleCriteria1 = new ScheduleCriteria(schedule1, criteria1);
-        ScheduleCriteria scheduleCriteria2 = new ScheduleCriteria(schedule2, criteria2);
+        Criteria criteria1 = new Criteria();
+        criteria1.setMinAppVersions(new ImmutableMap.Builder<String,Integer>().put("Android",0).build());
+        criteria1.setMaxAppVersions(new ImmutableMap.Builder<String,Integer>().put("Android",10).build());
+        
+        ScheduleCriteria scheduleCriteria1 = new ScheduleCriteria();
+        scheduleCriteria1.setCriteria(criteria1);
+        scheduleCriteria1.setSchedule(schedule1);
+        
+        Criteria criteria2 = new Criteria();
+        criteria2.setMinAppVersions(new ImmutableMap.Builder<String,Integer>().put("Android",11).build());
+        
+        ScheduleCriteria scheduleCriteria2 = new ScheduleCriteria();
+        scheduleCriteria2.setCriteria(criteria2);
+        scheduleCriteria2.setSchedule(schedule2);
         
         CriteriaScheduleStrategy strategy = new CriteriaScheduleStrategy();
-        strategy.addCriteria(scheduleCriteria1);
-        strategy.addCriteria(scheduleCriteria2);
+        strategy.setScheduleCriteria(Lists.newArrayList(scheduleCriteria1, scheduleCriteria2));
+        strategy.setType("CriteriaScheduleStrategy");
         plan.setStrategy(strategy);
         
         user.signOut();        
-        planGuid = developer.getSession().getSchedulePlanClient().createSchedulePlan(plan).getGuid();
+        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        planGuid = schedulesApi.createSchedulePlan(plan).execute().body().getGuid();
         
         // Manipulate the User-Agent string and see scheduled activity change accordingly
-        ClientProvider.setClientInfo(getClientInfoWithVersion(OperatingSystem.ANDROID, 2));
+        user.setClientInfo(getClientInfoWithVersion("Android", 2));
         user.signInAgain();
         activitiesShouldContainTask("Activity 1");
         
         user.signOut();
-        ClientProvider.setClientInfo(getClientInfoWithVersion(OperatingSystem.ANDROID, 12));
+        user.setClientInfo(getClientInfoWithVersion("Android", 12));
         user.signInAgain();
         activitiesShouldContainTask("Activity 2");
 
         // In this final test no matching occurs, but this simply means that the first schedule will match and be 
         // returned (not that all of the schedules in the plan will be returned, that's not how a plan works).
         user.signOut();
-        ClientProvider.setClientInfo(getClientInfoWithVersion(OperatingSystem.IOS, 12));
+        user.setClientInfo(getClientInfoWithVersion("iPhone OS", 12));
         user.signInAgain();
         activitiesShouldContainTask("Activity 1");
     }
+    
+    private ClientInfo getClientInfo(String appName, Integer appVersion) {
+        ClientInfo info = new ClientInfo();
+        info.setAppName(appName);
+        info.setAppVersion(appVersion);
+        info.setDeviceName("Integration Tests");
+        return info;
+    }
+    
+    private List<Activity> taskActivity(String label, String taskIdentifier) {
+        TaskReference ref = new TaskReference();
+        ref.setIdentifier(taskIdentifier);
+        
+        Activity activity = new Activity();
+        activity.setLabel(label);
+        activity.setTask(ref);
+        return Lists.newArrayList(activity);
+    }
 
-    private void activitiesShouldContainTask(String activityLabel) {
-        ResourceList<ScheduledActivity> activities = user.getSession().getUserClient().getScheduledActivities(1, DateTimeZone.UTC, null);
-        assertEquals(1, activities.getTotal());
+    private void activitiesShouldContainTask(String activityLabel) throws Exception {
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+        ResourceListScheduledActivity activities = usersApi.getScheduledActivities("+00:00", 1, null).execute().body();
+        assertEquals((Integer)1, activities.getTotal());
         assertEquals(activityLabel, activities.getItems().get(0).getActivity().getLabel());
     }
     
-    private ClientInfo getClientInfoWithVersion(OperatingSystem os, Integer version) {
-        return new ClientInfo.Builder().withAppName("app").withAppVersion(version).withOsName(os.getOsName())
-                .withDevice("Integration Tests").withOsVersion("2.0.0").build();
+    private ClientInfo getClientInfoWithVersion(String osName, Integer version) {
+        ClientInfo info = new ClientInfo();
+        info.setAppName("app");
+        info.setAppVersion(version);
+        info.setOsName(osName);
+        info.setDeviceName("Integrate Tests");
+        info.setOsVersion("2.0.0");
+        return info;
     }    
 }

@@ -8,7 +8,7 @@ import java.io.IOException;
 
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper2.TestUser;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.sdk.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
@@ -24,7 +24,7 @@ public class SignUpTest {
 
     @Test
     public void canAuthenticateAndCreateClientAndSignOut() throws IOException {
-        TestUser testUser = TestUserHelper2.createAndSignInUser(SignUpTest.class, true);
+        TestUser testUser = TestUserHelper.createAndSignInUser(SignUpTest.class, true);
         try {
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             
@@ -43,7 +43,7 @@ public class SignUpTest {
     
     @Test(expected = EntityNotFoundException.class)
     public void badStudyReturns404() throws IOException {
-        TestUser testUser = TestUserHelper2.createAndSignInUser(SignUpTest.class, true);
+        TestUser testUser = TestUserHelper.createAndSignInUser(SignUpTest.class, true);
         try {
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             
@@ -56,7 +56,7 @@ public class SignUpTest {
     
     @Test(expected = EntityNotFoundException.class)
     public void badEmailCredentialsReturnsException() throws IOException {
-        TestUser testUser = TestUserHelper2.createAndSignInUser(SignUpTest.class, true);
+        TestUser testUser = TestUserHelper.createAndSignInUser(SignUpTest.class, true);
         try {
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             
@@ -69,10 +69,10 @@ public class SignUpTest {
     
     @Test
     public void signUpForStudyWithExternalIdValidation() throws Exception {
-        Study study = Tests.getStudy2(Tests.randomIdentifier(SignUpTest.class), null);
+        Study study = Tests.getStudy(Tests.randomIdentifier(SignUpTest.class), null);
         study.setExternalIdValidationEnabled(true);
         
-        TestUser admin = TestUserHelper2.getSignedInAdmin();
+        TestUser admin = TestUserHelper.getSignedInAdmin();
         
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         adminApi.createStudy(study).execute();

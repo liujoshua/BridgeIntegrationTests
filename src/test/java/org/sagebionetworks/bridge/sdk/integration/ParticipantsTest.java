@@ -12,10 +12,9 @@ import com.google.common.collect.Lists;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper2.TestUser;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.rest.RestUtils;
 import org.sagebionetworks.bridge.sdk.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
@@ -54,12 +53,12 @@ public class ParticipantsTest {
     
     @Before
     public void before() throws Exception {
-        admin = TestUserHelper2.getSignedInAdmin();
-        researcher = TestUserHelper2.createAndSignInUser(ParticipantsTest.class, true, Role.RESEARCHER);
+        admin = TestUserHelper.getSignedInAdmin();
+        researcher = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.RESEARCHER);
     }
     
     @After
-    public void after() {
+    public void after() throws Exception {
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
         }
@@ -67,9 +66,8 @@ public class ParticipantsTest {
 
     // Note: A very similar test exists in UserParticipantTest
     @Test
-    @Ignore
     public void canGetAndUpdateSelf() throws Exception {
-        TestUser user = TestUserHelper2.createAndSignInUser(ParticipantsTest.class, true);
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
             ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
 
@@ -98,7 +96,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void retrieveParticipant() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -111,7 +108,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void canRetrieveAndPageThroughParticipants() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -138,7 +134,6 @@ public class ParticipantsTest {
     }
     
     @Test(expected = BadRequestException.class)
-    @Ignore
     public void cannotSetBadOffset() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -146,7 +141,6 @@ public class ParticipantsTest {
     }
     
     @Test(expected = BadRequestException.class)
-    @Ignore
     public void cannotSetBadPageSize() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -154,7 +148,6 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void crudParticipant() throws Exception {
         String email = Tests.makeEmail(ParticipantsTest.class);
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
@@ -250,44 +243,40 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
-    public void canSendRequestResetPasswordEmail() {
+    public void canSendRequestResetPasswordEmail() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
         // This is sending an email, which is difficult to verify, but this at least should not throw an error.
-        participantsApi.sendParticipantResetPasswordEmail(researcher.getSession().getId());
+        participantsApi.sendParticipantResetPasswordEmail(researcher.getSession().getId()).execute();
     }
     
     @Test
-    @Ignore
-    public void canResendEmailVerification() {
+    public void canResendEmailVerification() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
         // This is sending an email, which is difficult to verify, but this at least should not throw an error.
-        participantsApi.sendParticipantEmailVerification(researcher.getSession().getId());
+        participantsApi.sendParticipantEmailVerification(researcher.getSession().getId()).execute();
     }
     
     @Test
-    @Ignore
-    public void canResendConsentAgreement() {
+    public void canResendConsentAgreement() throws Exception {
         String userId =  researcher.getSession().getId();
 
         ConsentStatus status = researcher.getSession().getConsentStatuses().values().iterator().next();
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        participantsApi.resendParticipantConsentAgreement(userId, status.getSubpopulationGuid());
+        participantsApi.resendParticipantConsentAgreement(userId, status.getSubpopulationGuid()).execute();
     }
     
     @Test
-    @Ignore
     public void canWithdrawUserFromStudy() throws Exception {
-        TestUser user = TestUserHelper2.createAndSignInUser(ParticipantsTest.class, true);
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getId();
         try {
             // Can get activities without an error... user is indeed consented.
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             
-            usersApi.getScheduledActivities("+07:00", 1, null);
+            usersApi.getScheduledActivities("+07:00", 1, null).execute();
             RestUtils.isUserConsented(user.getSession());
             user.signOut();
 
@@ -295,7 +284,7 @@ public class ParticipantsTest {
             withdrawal.setReason("Testing withdrawal API.");
             
             ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-            participantsApi.withdrawParticipantFromStudy(userId, withdrawal);
+            participantsApi.withdrawParticipantFromStudy(userId, withdrawal).execute();
             
             user.signInAgain();
             fail("Should have thrown consent exception");
@@ -307,14 +296,13 @@ public class ParticipantsTest {
     }
     
     @Test
-    @Ignore
     public void getActivityHistory() throws Exception {
         // Make the user a developer so with one account, we can generate some tasks
-        TestUser user = TestUserHelper2.createAndSignInUser(ParticipantsTest.class, true, Role.DEVELOPER);
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.DEVELOPER);
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         
         SchedulesApi schedulePlanApi = user.getClient(SchedulesApi.class);
-        SchedulePlan plan = Tests.getDailyRepeatingSchedulePlan2();
+        SchedulePlan plan = Tests.getDailyRepeatingSchedulePlan();
         
         GuidVersionHolder planKeys = schedulePlanApi.createSchedulePlan(plan).execute().body();
         try {
@@ -331,7 +319,7 @@ public class ParticipantsTest {
             ScheduledActivity finishMe = activities.getItems().get(0);
             finishMe.setStartedOn(DateTime.now());
             finishMe.setFinishedOn(DateTime.now());
-            usersApi.updateScheduledActivities(activities.getItems());
+            usersApi.updateScheduledActivities(activities.getItems()).execute();
             
             // Finished task is now no longer in the list the user sees
             activities = usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
@@ -357,7 +345,7 @@ public class ParticipantsTest {
 
     @Test
     public void getParticipantUploads() throws Exception {
-        TestUser user = TestUserHelper2.createAndSignInUser(ParticipantsTest.class, true);
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getId();
         try {
             // Create a REQUESTED record that we can retrieve through the reporting API.
@@ -380,7 +368,8 @@ public class ParticipantsTest {
             DateTime endTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
             DateTime startTime = endTime.minusDays(1).minusHours(21);
 
-            DateTimeRangeResourceListUpload results = participantsApi.getParticipantUploads(userId, startTime, endTime).execute().body();
+            DateTimeRangeResourceListUpload results = participantsApi.getParticipantUploads(userId, startTime, endTime)
+                    .execute().body();
             
             String uploadId = results.getItems().get(0).getUploadId();
 
