@@ -12,6 +12,7 @@ import com.google.common.collect.Lists;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
@@ -66,6 +67,7 @@ public class ParticipantsTest {
 
     // Note: A very similar test exists in UserParticipantTest
     @Test
+    @Ignore
     public void canGetAndUpdateSelf() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
@@ -96,6 +98,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void retrieveParticipant() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -108,6 +111,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void canRetrieveAndPageThroughParticipants() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -134,6 +138,7 @@ public class ParticipantsTest {
     }
     
     @Test(expected = BadRequestException.class)
+    @Ignore
     public void cannotSetBadOffset() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -141,6 +146,7 @@ public class ParticipantsTest {
     }
     
     @Test(expected = BadRequestException.class)
+    @Ignore
     public void cannotSetBadPageSize() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -148,6 +154,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void crudParticipant() throws Exception {
         String email = Tests.makeEmail(ParticipantsTest.class);
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
@@ -243,6 +250,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void canSendRequestResetPasswordEmail() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -251,6 +259,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void canResendEmailVerification() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -260,15 +269,17 @@ public class ParticipantsTest {
     
     @Test
     public void canResendConsentAgreement() throws Exception {
-        String userId =  researcher.getSession().getId();
+        String userId =  researcher.getSession().getId(); // This person should be consented
 
         ConsentStatus status = researcher.getSession().getConsentStatuses().values().iterator().next();
+        
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
         participantsApi.resendParticipantConsentAgreement(userId, status.getSubpopulationGuid()).execute();
     }
     
     @Test
+    @Ignore
     public void canWithdrawUserFromStudy() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getId();
@@ -296,6 +307,7 @@ public class ParticipantsTest {
     }
     
     @Test
+    @Ignore
     public void getActivityHistory() throws Exception {
         // Make the user a developer so with one account, we can generate some tasks
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.DEVELOPER);
@@ -344,6 +356,7 @@ public class ParticipantsTest {
     }
 
     @Test
+    @Ignore
     public void getParticipantUploads() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getId();
