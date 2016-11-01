@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -209,4 +210,26 @@ public class Tests {
         Set<T> setB = Sets.newHashSet(list2);
         return Sets.difference(setA, setB).isEmpty();
     }
+    
+    // Adapted from http://plexus.codehaus.org/plexus-utils which seems to be defunct.
+    
+    public static void setVariableValueInObject(Object object, String variable, Object value) throws IllegalAccessException {
+        Field field = getFieldByNameIncludingSuperclasses(variable, object.getClass());
+        field.setAccessible(true);
+        field.set(object, value);
+    }
+    
+    @SuppressWarnings("rawtypes")
+    private static Field getFieldByNameIncludingSuperclasses(String fieldName, Class clazz) {
+        Field retValue = null;
+        try {
+            retValue = clazz.getDeclaredField(fieldName);
+        } catch (NoSuchFieldException e) {
+            Class superclass = clazz.getSuperclass();
+            if ( superclass != null ) {
+                retValue = getFieldByNameIncludingSuperclasses( fieldName, superclass );
+            }
+        }
+        return retValue;
+    }    
 }

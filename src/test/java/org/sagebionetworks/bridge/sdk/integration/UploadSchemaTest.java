@@ -12,7 +12,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.codehaus.plexus.util.ReflectionUtils;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -25,11 +24,11 @@ import org.sagebionetworks.bridge.sdk.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.ConcurrentModificationException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.UnauthorizedException;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListUploadSchema;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.sdk.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.sdk.rest.model.UploadSchema;
+import org.sagebionetworks.bridge.sdk.rest.model.UploadSchemaList;
 import org.sagebionetworks.bridge.sdk.rest.model.UploadSchemaType;
 
 public class UploadSchemaTest {
@@ -126,7 +125,7 @@ public class UploadSchemaTest {
         // Step 4a: Use list API to verify v1 and v2 are both still present
         boolean v1Found = false;
         boolean v2Found = false;
-        ResourceListUploadSchema schemaList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId).execute().body();
+        UploadSchemaList schemaList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId).execute().body();
         for (UploadSchema oneSchema : schemaList.getItems()) {
             if (oneSchema.getSchemaId().equals(schemaId)) {
                 int rev = oneSchema.getRevision();
@@ -158,7 +157,7 @@ public class UploadSchemaTest {
         assertNotNull(thrownEx);
 
         // Step 5b: Use list API to verify no schemas with this ID
-        ResourceListUploadSchema schemaList2 = devUploadSchemasApi.getMostRecentUploadSchemas().execute().body();
+        UploadSchemaList schemaList2 = devUploadSchemasApi.getMostRecentUploadSchemas().execute().body();
         for (UploadSchema oneSchema : schemaList2.getItems()) {
             if (oneSchema.getSchemaId().equals(schemaId)) {
                 fail("Found schema with ID " + schemaId + " even though it should have been deleted");
@@ -433,7 +432,7 @@ public class UploadSchemaTest {
         destination.setSurveyCreatedOn(source.getSurveyCreatedOn());
         destination.setSurveyGuid(source.getSurveyGuid());
         destination.setVersion(source.getVersion());
-        ReflectionUtils.setVariableValueInObject(destination, "type", source.getType());
+        Tests.setVariableValueInObject(destination, "type", source.getType());
         return destination;
     }
     

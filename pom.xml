@@ -43,8 +43,8 @@
         </dependency>
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
-            <artifactId>java-sdk</artifactId>
-            <version>0.12.2</version>
+            <artifactId>rest-client</artifactId>
+            <version>0.12.3</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

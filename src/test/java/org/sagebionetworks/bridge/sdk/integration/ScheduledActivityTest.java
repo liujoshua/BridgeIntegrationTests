@@ -22,13 +22,13 @@ import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.sdk.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.sdk.rest.model.Activity;
 import org.sagebionetworks.bridge.sdk.rest.model.ActivityType;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListScheduledActivity;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.Schedule;
 import org.sagebionetworks.bridge.sdk.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.sdk.rest.model.ScheduleStatus;
 import org.sagebionetworks.bridge.sdk.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.sdk.rest.model.ScheduledActivity;
+import org.sagebionetworks.bridge.sdk.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.sdk.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.sdk.rest.model.TaskReference;
 
@@ -119,7 +119,7 @@ public class ScheduledActivityTest {
     
     @Test
     public void createSchedulePlanGetScheduledActivities() throws Exception {
-        ResourceListScheduledActivity scheduledActivities = usersApi.getScheduledActivities("+00:00", 4, 0).execute().body();
+        ScheduledActivityList scheduledActivities = usersApi.getScheduledActivities("+00:00", 4, 0).execute().body();
         
         ScheduledActivity schActivity = scheduledActivities.getItems().get(0);
         assertEquals(ScheduleStatus.SCHEDULED, schActivity.getStatus());
@@ -147,7 +147,7 @@ public class ScheduledActivityTest {
     
     @Test
     public void getScheduledActivitiesWithMinimumActivityValue() throws Exception {
-        ResourceListScheduledActivity scheduledActivities = usersApi.getScheduledActivities("+00:00", 4, 2).execute().body();
+        ScheduledActivityList scheduledActivities = usersApi.getScheduledActivities("+00:00", 4, 2).execute().body();
         
         Multiset<String> idCounts = getMultiset(scheduledActivities);
         assertEquals(1, idCounts.count("task:AAA"));
@@ -164,7 +164,7 @@ public class ScheduledActivityTest {
         assertEquals(5, idCounts.count("task:BBB"));
     }
     
-    private Multiset<String> getMultiset(ResourceListScheduledActivity scheduledActivities) {
+    private Multiset<String> getMultiset(ScheduledActivityList scheduledActivities) {
         return HashMultiset.create(scheduledActivities.getItems().stream()
                 .map((act) -> act.getActivity().getTask().getIdentifier())
                 .collect(Collectors.toList()));

@@ -22,11 +22,11 @@ import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.UnsupportedVersionException;
 import org.sagebionetworks.bridge.sdk.rest.model.ClientInfo;
-import org.sagebionetworks.bridge.sdk.rest.model.DateTimeRangeResourceListUpload;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListStudy;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.Study;
+import org.sagebionetworks.bridge.sdk.rest.model.StudyList;
 import org.sagebionetworks.bridge.sdk.rest.model.Upload;
+import org.sagebionetworks.bridge.sdk.rest.model.UploadList;
 import org.sagebionetworks.bridge.sdk.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.sdk.rest.model.UploadSession;
 import org.sagebionetworks.bridge.sdk.rest.model.VersionHolder;
@@ -34,20 +34,17 @@ import org.sagebionetworks.bridge.sdk.rest.model.VersionHolder;
 public class StudyTest {
     
     private TestUser admin;
-    private boolean createdStudy;
-    private Study study;
+    private String studyId;
 
     @Before
     public void before() {
         admin = TestUserHelper.getSignedInAdmin();
-        createdStudy = false;
-        study = null;
     }
     
     @After
     public void after() throws Exception {
-        if (createdStudy && study != null) {
-            admin.getClient(StudiesApi.class).deleteStudy(study.getIdentifier());
+        if (studyId != null) {
+            admin.getClient(StudiesApi.class).deleteStudy(studyId).execute();
         }
         admin.signOut();
     }
@@ -56,12 +53,11 @@ public class StudyTest {
     public void crudStudy() throws Exception {
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         
-        String identifier = Tests.randomIdentifier(StudyTest.class);
-        study = Tests.getStudy(identifier, null);
+        studyId = Tests.randomIdentifier(StudyTest.class);
+        Study study = Tests.getStudy(studyId, null);
         assertNull("study version should be null", study.getVersion());
         
         VersionHolder holder = studiesApi.createStudy(study).execute().body();
-        createdStudy = true;
         assertNotNull(holder.getVersion());
 
         Study newStudy = studiesApi.getStudy(study.getIdentifier()).execute().body();
@@ -101,30 +97,29 @@ public class StudyTest {
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals("test4@test.com", newerStudy.getConsentNotificationEmail());
 
-        studiesApi.deleteStudy(identifier).execute();
+        studiesApi.deleteStudy(studyId).execute();
         try {
-            studiesApi.getStudy(identifier).execute();
+            studiesApi.getStudy(studyId).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
             // expected exception
         }
-        study = null;
+        studyId = null;
     }
 
     @Test
     public void researcherCannotAccessAnotherStudy() throws Exception {
         TestUser researcher = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.RESEARCHER);
         try {
-            String identifier = Tests.randomIdentifier(StudyTest.class);
-            study = Tests.getStudy(identifier, null);
+            studyId = Tests.randomIdentifier(StudyTest.class);
+            Study study = Tests.getStudy(studyId, null);
 
             StudiesApi adminStudiesApi = admin.getClient(StudiesApi.class);
             adminStudiesApi.createStudy(study).execute();
-            createdStudy = true;
 
             try {
                 StudiesApi resStudiesApi = researcher.getClient(StudiesApi.class);
-                resStudiesApi.getStudy(identifier).execute();
+                resStudiesApi.getStudy(studyId).execute();
                 fail("Should not have been able to get this other study");
             } catch(UnauthorizedException e) {
                 assertEquals("Unauthorized HTTP response code", 403, e.getStatusCode());
@@ -168,7 +163,7 @@ public class StudyTest {
     public void adminCanGetAllStudies() throws Exception {
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         
-        ResourceListStudy studies = studiesApi.getStudies(null).execute().body();
+        StudyList studies = studiesApi.getStudies(null).execute().body();
         assertTrue("Should be more than zero studies", studies.getTotal() > 0);
     }
     
@@ -236,7 +231,7 @@ public class StudyTest {
             
             // This should retrieve both of the user's uploads.
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-            DateTimeRangeResourceListUpload results = studiesApi.getStudyUploads(startTime, endTime).execute().body();
+            UploadList results = studiesApi.getStudyUploads(startTime, endTime).execute().body();
             assertEquals(startTime, results.getStartTime());
             assertEquals(endTime, results.getEndTime());
 
@@ -256,7 +251,7 @@ public class StudyTest {
         }
     }
     
-    private Upload getUpload(DateTimeRangeResourceListUpload results, String guid) {
+    private Upload getUpload(UploadList results, String guid) {
         for (Upload upload : results.getItems()) {
             if (upload.getUploadId().equals(guid)) {
                 return upload;
