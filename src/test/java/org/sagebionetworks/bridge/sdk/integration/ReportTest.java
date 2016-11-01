@@ -80,8 +80,8 @@ public class ReportTest {
     @Test
     public void developerCanCrudParticipantReport() throws Exception {
         TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Role.DEVELOPER);
+        String userId = user.getSession().getId();
         try {
-            String userId = user.getSession().getId();
             ReportsApi reportsApi = developer.getClient(ReportsApi.class);
             
             reportsApi.addParticipantReportRecord(userId, reportId, REPORT1).execute();
@@ -112,7 +112,7 @@ public class ReportTest {
             assertEquals(ReportType.STUDY, indices.getReportType());
             
             // delete
-            reportsApi.deleteAllParticipantReportRecords(userId, reportId);
+            reportsApi.deleteAllParticipantReportRecords(userId, reportId).execute();
             results = usersApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
         } finally {
@@ -142,12 +142,12 @@ public class ReportTest {
                 .getParticipant(user.getSession().getId()).execute()
                 .body().getHealthCode();
         assertNotNull(healthCode);
+        
+        String userId = user.getSession().getId();
         try {
             REPORT1.setHealthCode(healthCode);
             REPORT2.setHealthCode(healthCode);
             REPORT3.setHealthCode(healthCode);
-            
-            String userId = user.getSession().getId();
             
             ReportsApi workerReportsApi = worker.getClient(ReportsApi.class);
             workerReportsApi.addParticipantReportRecordForWorker(reportId, REPORT1).execute();

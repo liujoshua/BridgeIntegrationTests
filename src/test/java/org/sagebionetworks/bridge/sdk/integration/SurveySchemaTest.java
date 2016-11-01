@@ -72,13 +72,13 @@ public class SurveySchemaTest {
     }
 
     @After
-    public void after() {
+    public void after() throws Exception {
         // cleanup surveys
         TestUser admin = TestUserHelper.getSignedInAdmin();
         SurveysApi surveysApi = admin.getClient(SurveysApi.class);
         for (GuidCreatedOnVersionHolder oneSurvey : surveysToDelete) {
             try {
-                surveysApi.deleteSurvey(oneSurvey.getGuid(), oneSurvey.getCreatedOn(), true);
+                surveysApi.deleteSurvey(oneSurvey.getGuid(), oneSurvey.getCreatedOn(), true).execute();
             } catch (RuntimeException ex) {
                 LOG.error("Error deleting survey=" + oneSurvey + ": " + ex.getMessage(), ex);
             }
@@ -86,9 +86,9 @@ public class SurveySchemaTest {
     }
 
     @After
-    public void deleteSchemas() {
+    public void deleteSchemas() throws Exception {
         try {
-            schemasApi.deleteAllRevisionsOfUploadSchema(surveyId);
+            schemasApi.deleteAllRevisionsOfUploadSchema(surveyId).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
         }

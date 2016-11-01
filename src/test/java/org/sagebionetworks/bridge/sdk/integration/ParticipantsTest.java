@@ -237,7 +237,7 @@ public class ParticipantsTest {
             assertEquals(createdOn, retrieved.getCreatedOn()); // hasn't been changed, still exists
         } finally {
             if (id != null) {
-                admin.getClient(ForAdminsApi.class).deleteUser(id);
+                admin.getClient(ForAdminsApi.class).deleteUser(id).execute();
             }
         }
     }
