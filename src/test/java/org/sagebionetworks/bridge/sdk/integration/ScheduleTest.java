@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 
-import org.codehaus.plexus.util.ReflectionUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,12 +15,12 @@ import org.sagebionetworks.bridge.sdk.rest.model.Activity;
 import org.sagebionetworks.bridge.sdk.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.sdk.rest.model.Criteria;
 import org.sagebionetworks.bridge.sdk.rest.model.CriteriaScheduleStrategy;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListScheduledActivity;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.Schedule;
 import org.sagebionetworks.bridge.sdk.rest.model.ScheduleCriteria;
 import org.sagebionetworks.bridge.sdk.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.sdk.rest.model.ScheduleType;
+import org.sagebionetworks.bridge.sdk.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.sdk.rest.model.TaskReference;
 
 import com.google.common.collect.ImmutableMap;
@@ -72,17 +71,17 @@ public class ScheduleTest {
 
         // Fields that are set on the server.
         originalPlan.setGuid(plan.getGuid());
-        ReflectionUtils.setVariableValueInObject(originalPlan, "modifiedOn", plan.getModifiedOn());
+        Tests.setVariableValueInObject(originalPlan, "modifiedOn", plan.getModifiedOn());
         originalPlan.setVersion(plan.getVersion());
         
         Tests.getActivitiesFromSimpleStrategy(originalPlan).set(0, Tests.getActivityFromSimpleStrategy(plan));
         
-        ReflectionUtils.setVariableValueInObject(originalPlan, "type", SchedulePlan.TypeEnum.SCHEDULEPLAN);
+        Tests.setVariableValueInObject(originalPlan, "type", SchedulePlan.TypeEnum.SCHEDULEPLAN);
         
         Schedule originalSchedule = Tests.getSimpleSchedule(originalPlan);
         Schedule updatedSchedule = Tests.getSimpleSchedule(plan);
         originalSchedule.setPersistent(updatedSchedule.getPersistent());
-        ReflectionUtils.setVariableValueInObject(originalSchedule, "type", Schedule.TypeEnum.SCHEDULE);
+        Tests.setVariableValueInObject(originalSchedule, "type", Schedule.TypeEnum.SCHEDULE);
         
         assertEquals(originalPlan, plan);
     }
@@ -203,7 +202,7 @@ public class ScheduleTest {
 
     private void activitiesShouldContainTask(String activityLabel) throws Exception {
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
-        ResourceListScheduledActivity activities = usersApi.getScheduledActivities("+00:00", 1, null).execute().body();
+        ScheduledActivityList activities = usersApi.getScheduledActivities("+00:00", 1, null).execute().body();
         assertEquals((Integer)1, activities.getTotal());
         assertEquals(activityLabel, activities.getItems().get(0).getActivity().getLabel());
     }

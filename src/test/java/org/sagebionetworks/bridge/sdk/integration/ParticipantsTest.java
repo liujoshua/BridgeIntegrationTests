@@ -24,19 +24,19 @@ import org.sagebionetworks.bridge.sdk.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.sdk.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.sdk.rest.model.AccountSummary;
+import org.sagebionetworks.bridge.sdk.rest.model.AccountSummaryList;
+import org.sagebionetworks.bridge.sdk.rest.model.ActivityList;
 import org.sagebionetworks.bridge.sdk.rest.model.ConsentStatus;
-import org.sagebionetworks.bridge.sdk.rest.model.DateTimeRangeResourceListUpload;
 import org.sagebionetworks.bridge.sdk.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.sdk.rest.model.IdentifierHolder;
-import org.sagebionetworks.bridge.sdk.rest.model.PagedResourceListAccountSummary;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListActivity;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListScheduledActivity;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.sdk.rest.model.ScheduledActivity;
+import org.sagebionetworks.bridge.sdk.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.sdk.rest.model.SharingScope;
 import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
 import org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.sdk.rest.model.UploadList;
 import org.sagebionetworks.bridge.sdk.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.sdk.rest.model.UploadSession;
 import org.sagebionetworks.bridge.sdk.rest.model.Withdrawal;
@@ -111,7 +111,7 @@ public class ParticipantsTest {
     public void canRetrieveAndPageThroughParticipants() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        PagedResourceListAccountSummary summaries = participantsApi.getParticipants(0, 10, null).execute().body();
+        AccountSummaryList summaries = participantsApi.getParticipants(0, 10, null).execute().body();
 
         // Well we know there's at least two accounts... the admin and the researcher.
         assertEquals(new Integer(0), summaries.getOffsetBy());
@@ -176,7 +176,7 @@ public class ParticipantsTest {
             // It has been persisted. Right now we don't get the ID back so we have to conduct a 
             // search by email to get this user.
             // Can be found through paged results
-            PagedResourceListAccountSummary search = participantsApi.getParticipants(0,  10, email).execute().body();
+            AccountSummaryList search = participantsApi.getParticipants(0,  10, email).execute().body();
             assertEquals((Integer)1, search.getTotal());
             AccountSummary summary = search.getItems().get(0);
             assertEquals("FirstName", summary.getFirstName());
@@ -309,7 +309,7 @@ public class ParticipantsTest {
             String userId = user.getSession().getId();
 
             // Now ask for something, so activities are generated
-            ResourceListScheduledActivity activities = usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
+            ScheduledActivityList activities = usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
             
             // Verify there is more than one activity
             int count = activities.getItems().size();
@@ -327,7 +327,7 @@ public class ParticipantsTest {
             
             // But the researcher will still see the full list
             ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-            ResourceListActivity resActivities = participantsApi.getParticipantActivities(userId, null, null).execute().body();
+            ActivityList resActivities = participantsApi.getParticipantActivities(userId, null, null).execute().body();
             assertEquals(count, resActivities.getItems().size());
             
             // Researcher can delete all the activities as well.
@@ -368,8 +368,7 @@ public class ParticipantsTest {
             DateTime endTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
             DateTime startTime = endTime.minusDays(1).minusHours(21);
 
-            DateTimeRangeResourceListUpload results = participantsApi.getParticipantUploads(userId, startTime, endTime)
-                    .execute().body();
+            UploadList results = participantsApi.getParticipantUploads(userId, startTime, endTime).execute().body();
             
             String uploadId = results.getItems().get(0).getUploadId();
 

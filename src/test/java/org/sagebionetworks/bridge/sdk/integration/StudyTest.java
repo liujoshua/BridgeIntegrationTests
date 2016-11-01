@@ -22,11 +22,11 @@ import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.UnsupportedVersionException;
 import org.sagebionetworks.bridge.sdk.rest.model.ClientInfo;
-import org.sagebionetworks.bridge.sdk.rest.model.DateTimeRangeResourceListUpload;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListStudy;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.Study;
+import org.sagebionetworks.bridge.sdk.rest.model.StudyList;
 import org.sagebionetworks.bridge.sdk.rest.model.Upload;
+import org.sagebionetworks.bridge.sdk.rest.model.UploadList;
 import org.sagebionetworks.bridge.sdk.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.sdk.rest.model.UploadSession;
 import org.sagebionetworks.bridge.sdk.rest.model.VersionHolder;
@@ -163,7 +163,7 @@ public class StudyTest {
     public void adminCanGetAllStudies() throws Exception {
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         
-        ResourceListStudy studies = studiesApi.getStudies(null).execute().body();
+        StudyList studies = studiesApi.getStudies(null).execute().body();
         assertTrue("Should be more than zero studies", studies.getTotal() > 0);
     }
     
@@ -231,7 +231,7 @@ public class StudyTest {
             
             // This should retrieve both of the user's uploads.
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-            DateTimeRangeResourceListUpload results = studiesApi.getStudyUploads(startTime, endTime).execute().body();
+            UploadList results = studiesApi.getStudyUploads(startTime, endTime).execute().body();
             assertEquals(startTime, results.getStartTime());
             assertEquals(endTime, results.getEndTime());
 
@@ -251,7 +251,7 @@ public class StudyTest {
         }
     }
     
-    private Upload getUpload(DateTimeRangeResourceListUpload results, String guid) {
+    private Upload getUpload(UploadList results, String guid) {
         for (Upload upload : results.getItems()) {
             if (upload.getUploadId().equals(guid)) {
                 return upload;

@@ -14,9 +14,9 @@ import org.sagebionetworks.bridge.sdk.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.sdk.rest.model.EmptyPayload;
 import org.sagebionetworks.bridge.sdk.rest.model.GuidVersionHolder;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListStudyConsent;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.StudyConsent;
+import org.sagebionetworks.bridge.sdk.rest.model.StudyConsentList;
 import org.sagebionetworks.bridge.sdk.rest.model.Subpopulation;
 
 public class StudyConsentTest {
@@ -88,7 +88,7 @@ public class StudyConsentTest {
         consent.setDocumentContent("<p>Test content</p>");
         studyConsentsApi.createConsent(subpopGuid, consent).execute();
 
-        ResourceListStudyConsent studyConsents = studyConsentsApi.getAllConsents(subpopGuid).execute().body();
+        StudyConsentList studyConsents = studyConsentsApi.getAllConsents(subpopGuid).execute().body();
 
         assertEquals((Integer)2, studyConsents.getTotal());
 
@@ -108,7 +108,7 @@ public class StudyConsentTest {
         StudyConsent newOne = studyConsentsApi.getMostRecentConsent(subpopGuid).execute().body();
         assertTrue(newOne.getCreatedOn().isAfter(published.getCreatedOn()));
         
-        ResourceListStudyConsent studyConsents2 = studyConsentsApi.getAllConsents(subpopGuid).execute().body();
+        StudyConsentList studyConsents2 = studyConsentsApi.getAllConsents(subpopGuid).execute().body();
         assertEquals((Integer)3, studyConsents2.getTotal());
     }
 

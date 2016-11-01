@@ -8,7 +8,6 @@ import static org.junit.Assert.fail;
 import java.util.List;
 import java.util.Map;
 
-import org.codehaus.plexus.util.ReflectionUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,10 +23,10 @@ import org.sagebionetworks.bridge.sdk.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.sdk.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.sdk.rest.model.Criteria;
 import org.sagebionetworks.bridge.sdk.rest.model.GuidVersionHolder;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListSubpopulation;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
 import org.sagebionetworks.bridge.sdk.rest.model.Subpopulation;
+import org.sagebionetworks.bridge.sdk.rest.model.SubpopulationList;
 
 public class SubpopulationTest {
 
@@ -52,7 +51,7 @@ public class SubpopulationTest {
         SubpopulationsApi subpopulationsApi = developer.getClient(SubpopulationsApi.class);
         
         // Study has a default subpopulation
-        ResourceListSubpopulation subpops = subpopulationsApi.getSubpopulations().execute().body();
+        SubpopulationList subpops = subpopulationsApi.getSubpopulations().execute().body();
         int initialCount = subpops.getTotal();
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));
         
@@ -70,7 +69,7 @@ public class SubpopulationTest {
         // Read it back
         Subpopulation retrieved = subpopulationsApi.getSubpopulation(subpop.getGuid()).execute().body();
         assertEquals("Later Consent Group", retrieved.getName());
-        ReflectionUtils.setVariableValueInObject(criteria, "type", Criteria.TypeEnum.CRITERIA);
+        Tests.setVariableValueInObject(criteria, "type", Criteria.TypeEnum.CRITERIA);
         assertEquals(criteria, retrieved.getCriteria());
         assertEquals(keys.getGuid(), retrieved.getGuid());
         assertEquals(keys.getVersion(), retrieved.getVersion());

@@ -7,7 +7,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import org.codehaus.plexus.util.ReflectionUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,10 +26,10 @@ import org.sagebionetworks.bridge.sdk.rest.model.Criteria;
 import org.sagebionetworks.bridge.sdk.rest.model.CriteriaScheduleStrategy;
 import org.sagebionetworks.bridge.sdk.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.sdk.rest.model.GuidVersionHolder;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListSchedule;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.Schedule;
 import org.sagebionetworks.bridge.sdk.rest.model.ScheduleCriteria;
+import org.sagebionetworks.bridge.sdk.rest.model.ScheduleList;
 import org.sagebionetworks.bridge.sdk.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.sdk.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.sdk.rest.model.SimpleScheduleStrategy;
@@ -129,7 +128,7 @@ public class SchedulePlanTest {
         assertEquals("Strategy type has been changed", "SimpleScheduleStrategy",
                 plan.getStrategy().getClass().getSimpleName());
 
-        ResourceListSchedule schedules = usersApi.getSchedules().execute().body();
+        ScheduleList schedules = usersApi.getSchedules().execute().body();
         assertTrue("Schedules exist", !schedules.getItems().isEmpty());
 
         // Delete
@@ -260,9 +259,9 @@ public class SchedulePlanTest {
             // Update the fields we expect to be updated on the server
             Tests.getActivitiesFromSimpleStrategy(plan).set(0, Tests.getActivityFromSimpleStrategy(newPlan));
 
-            ReflectionUtils.setVariableValueInObject(plan, "type", SchedulePlan.TypeEnum.SCHEDULEPLAN);
-            ReflectionUtils.setVariableValueInObject(plan, "modifiedOn", newPlan.getModifiedOn());
-            ReflectionUtils.setVariableValueInObject(strategy.getSchedule(), "type", Schedule.TypeEnum.SCHEDULE);
+            Tests.setVariableValueInObject(plan, "type", SchedulePlan.TypeEnum.SCHEDULEPLAN);
+            Tests.setVariableValueInObject(plan, "modifiedOn", newPlan.getModifiedOn());
+            Tests.setVariableValueInObject(strategy.getSchedule(), "type", Schedule.TypeEnum.SCHEDULE);
             strategy.getSchedule().setPersistent(false);
             plan.setVersion(newPlan.getVersion());
             plan.setGuid(newPlan.getGuid());
@@ -284,19 +283,19 @@ public class SchedulePlanTest {
      * including type and GUIDs. Copy these values over to the original object, using reflection where necessary. 
      */
     private void updateScheduleCriteria(ScheduleCriteria original, ScheduleCriteria updated) throws Exception {
-        ReflectionUtils.setVariableValueInObject(original, "type", ScheduleCriteria.TypeEnum.SCHEDULECRITERIA);
+        Tests.setVariableValueInObject(original, "type", ScheduleCriteria.TypeEnum.SCHEDULECRITERIA);
         
         Schedule originalSchedule = original.getSchedule();
-        ReflectionUtils.setVariableValueInObject(originalSchedule, "type", Schedule.TypeEnum.SCHEDULE);
+        Tests.setVariableValueInObject(originalSchedule, "type", Schedule.TypeEnum.SCHEDULE);
         
         originalSchedule.setPersistent(updated.getSchedule().getPersistent());
         
         Activity originalActivity = originalSchedule.getActivities().get(0);
         originalActivity.setGuid(updated.getSchedule().getActivities().get(0).getGuid());
         originalActivity.setActivityType(ActivityType.TASK);
-        ReflectionUtils.setVariableValueInObject(originalActivity, "type", Activity.TypeEnum.ACTIVITY);
-        ReflectionUtils.setVariableValueInObject(originalActivity.getTask(), "type", TaskReference.TypeEnum.TASKREFERENCE);
+        Tests.setVariableValueInObject(originalActivity, "type", Activity.TypeEnum.ACTIVITY);
+        Tests.setVariableValueInObject(originalActivity.getTask(), "type", TaskReference.TypeEnum.TASKREFERENCE);
         
-        ReflectionUtils.setVariableValueInObject(original.getCriteria(), "type", Criteria.TypeEnum.CRITERIA);
+        Tests.setVariableValueInObject(original.getCriteria(), "type", Criteria.TypeEnum.CRITERIA);
     }
 }

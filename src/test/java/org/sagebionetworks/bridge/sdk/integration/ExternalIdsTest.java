@@ -16,7 +16,7 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.sdk.rest.api.ExternalIdentifiersApi;
-import org.sagebionetworks.bridge.sdk.rest.model.PagedResourceListExternalIdentifier;
+import org.sagebionetworks.bridge.sdk.rest.model.ExternalIdentifierList;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 
 import com.google.common.collect.Lists;
@@ -52,14 +52,14 @@ public class ExternalIdsTest {
         ExternalIdentifiersApi externalIdsClient = developer.getClient(ExternalIdentifiersApi.class);
         externalIdsClient.addExternalIds(identifiers).execute();
         try {
-            PagedResourceListExternalIdentifier page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, prefix, null)
+            ExternalIdentifierList page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, prefix, null)
                     .execute().body();
             assertEquals(PAGE_SIZE, page1.getItems().size());
             assertEquals(LIST_SIZE, page1.getTotal().intValue());
             assertNotNull(page1.getOffsetKey());
             
             String offsetKey = page1.getOffsetKey();    
-            PagedResourceListExternalIdentifier page2 = externalIdsClient
+            ExternalIdentifierList page2 = externalIdsClient
                     .getExternalIds(offsetKey, PAGE_SIZE, prefix, null).execute().body();
             assertEquals(PAGE_SIZE, page2.getItems().size());
             assertEquals(LIST_SIZE, page2.getTotal().intValue());
@@ -82,7 +82,7 @@ public class ExternalIdsTest {
         } finally {
             externalIdsClient.deleteExternalIds(identifiers).execute();
         }
-        PagedResourceListExternalIdentifier page = externalIdsClient.getExternalIds(null, null, prefix, null).execute().body();
+        ExternalIdentifierList page = externalIdsClient.getExternalIds(null, null, prefix, null).execute().body();
         assertEquals(0, page.getTotal().intValue());
     }
     

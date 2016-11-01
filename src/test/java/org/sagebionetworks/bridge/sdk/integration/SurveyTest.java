@@ -44,18 +44,17 @@ import org.sagebionetworks.bridge.sdk.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.sdk.rest.model.Image;
 import org.sagebionetworks.bridge.sdk.rest.model.MultiValueConstraints;
 import org.sagebionetworks.bridge.sdk.rest.model.Operator;
-import org.sagebionetworks.bridge.sdk.rest.model.ResourceListSurvey;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.StringConstraints;
 import org.sagebionetworks.bridge.sdk.rest.model.Survey;
 import org.sagebionetworks.bridge.sdk.rest.model.SurveyElement;
 import org.sagebionetworks.bridge.sdk.rest.model.SurveyInfoScreen;
+import org.sagebionetworks.bridge.sdk.rest.model.SurveyList;
 import org.sagebionetworks.bridge.sdk.rest.model.SurveyQuestion;
 import org.sagebionetworks.bridge.sdk.rest.model.SurveyQuestionOption;
 import org.sagebionetworks.bridge.sdk.rest.model.SurveyRule;
 import org.sagebionetworks.bridge.sdk.rest.model.UIHint;
 
-@SuppressWarnings("Convert2streamapi")
 public class SurveyTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
     private static final EmptyPayload EMPTY = new EmptyPayload();
@@ -195,14 +194,14 @@ public class SurveyTest {
 
         // Sleep to clear eventual consistency problems.
         Thread.sleep(2000);
-        ResourceListSurvey recentSurveys = surveysApi.getMostRecentSurveys().execute().body();
+        SurveyList recentSurveys = surveysApi.getMostRecentSurveys().execute().body();
         containsAll(recentSurveys.getItems(), key, key1, key2);
 
         key = surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), EMPTY, false).execute().body();
         key2 = surveysApi.publishSurvey(key2.getGuid(), key2.getCreatedOn(), EMPTY, false).execute().body();
 
         Thread.sleep(2000);
-        ResourceListSurvey publishedSurveys = surveysApi.getPublishedSurveys().execute().body();
+        SurveyList publishedSurveys = surveysApi.getPublishedSurveys().execute().body();
         containsAll(publishedSurveys.getItems(), key, key2);
     }
 
@@ -310,7 +309,7 @@ public class SurveyTest {
         
         surveysToDelete.add(new MutableHolder(keys));
 
-        ResourceListSurvey allRevisions = surveysApi.getAllVersionsOfSurvey(keys.getGuid()).execute().body();
+        SurveyList allRevisions = surveysApi.getAllVersionsOfSurvey(keys.getGuid()).execute().body();
         assertEquals("There are now two versions", (Integer)2, allRevisions.getTotal());
 
         Survey mostRecent = surveysApi.getPublishedSurveyVersion(existingSurvey.getGuid()).execute().body();
@@ -420,7 +419,7 @@ public class SurveyTest {
         assertKeysEqual(survey1aKeys, survey1aAgain);
 
         // We only expect the most recently published versions, namely 1b and 2b.
-        ResourceListSurvey surveyResourceList = workerSurveyClient.getAllPublishedSurveysInStudy(Tests.TEST_KEY).execute().body();
+        SurveyList surveyResourceList = workerSurveyClient.getAllPublishedSurveysInStudy(Tests.TEST_KEY).execute().body();
         containsAll(surveyResourceList.getItems(), new MutableHolder(survey1b), new MutableHolder(survey2b));
     }
 

@@ -18,11 +18,11 @@ import org.sagebionetworks.bridge.sdk.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.sdk.rest.api.ReportsApi;
 import org.sagebionetworks.bridge.sdk.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.sdk.rest.exceptions.BadRequestException;
-import org.sagebionetworks.bridge.sdk.rest.model.DateRangeResourceListReportData;
 import org.sagebionetworks.bridge.sdk.rest.model.ReportData;
+import org.sagebionetworks.bridge.sdk.rest.model.ReportDataList;
 import org.sagebionetworks.bridge.sdk.rest.model.ReportIndex;
+import org.sagebionetworks.bridge.sdk.rest.model.ReportIndexList;
 import org.sagebionetworks.bridge.sdk.rest.model.ReportType;
-import org.sagebionetworks.bridge.sdk.rest.model.ReportTypeResourceListReportIndex;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.Study;
 import org.sagebionetworks.bridge.sdk.rest.model.VersionHolder;
@@ -90,7 +90,7 @@ public class ReportTest {
             
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             
-            DateRangeResourceListReportData results = usersApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+            ReportDataList results = usersApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
             assertEquals((Integer)3, results.getTotal());
             assertEquals(SEARCH_START_DATE, results.getStartDate());
             assertEquals(SEARCH_END_DATE, results.getEndDate());
@@ -102,7 +102,7 @@ public class ReportTest {
             assertEquals(0, results.getItems().size());
             
             // We should see indices for this participant report
-            ReportTypeResourceListReportIndex indices = reportsApi.getReportIndices("participant").execute().body();
+            ReportIndexList indices = reportsApi.getReportIndices("participant").execute().body();
             assertTrue(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.PARTICIPANT, indices.getReportType());
             
@@ -155,16 +155,17 @@ public class ReportTest {
             workerReportsApi.addParticipantReportRecordForWorker(reportId, REPORT3).execute();
             
             ReportsApi userReportsApi = user.getClient(ReportsApi.class);
-            DateRangeResourceListReportData results = userReportsApi.getParticipantReportRecords(reportId,
-                    SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+            ReportDataList results = userReportsApi
+                    .getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
             
             assertEquals((Integer)3, results.getTotal());
             assertEquals(SEARCH_START_DATE, results.getStartDate());
             assertEquals(SEARCH_END_DATE, results.getEndDate());
             
             // This search is out of range, and should return no results.
-            results = userReportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE.plusDays(30), 
-                    SEARCH_END_DATE.plusDays(30)).execute().body();
+            results = userReportsApi
+                    .getParticipantReportRecords(reportId, SEARCH_START_DATE.plusDays(30), SEARCH_END_DATE.plusDays(30))
+                    .execute().body();
             assertEquals((Integer)0, results.getTotal());
             assertEquals(0, results.getItems().size());
             
@@ -196,8 +197,8 @@ public class ReportTest {
             devReportClient.addStudyReportRecord(reportId, REPORT2).execute();
             devReportClient.addStudyReportRecord(reportId, REPORT3).execute();
             
-            DateRangeResourceListReportData results = devReportClient.getStudyReportRecords(reportId, SEARCH_START_DATE,
-                    SEARCH_END_DATE).execute().body();
+            ReportDataList results = devReportClient.getStudyReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE)
+                    .execute().body();
             assertEquals((Integer)3, results.getTotal());
             assertEquals(SEARCH_START_DATE, results.getStartDate());
             assertEquals(SEARCH_END_DATE, results.getEndDate());
@@ -209,7 +210,7 @@ public class ReportTest {
             assertEquals(0, results.getItems().size());
             
             // We should see indices for this study report
-            ReportTypeResourceListReportIndex indices = devReportClient.getReportIndices("study").execute().body();
+            ReportIndexList indices = devReportClient.getReportIndices("study").execute().body();
             assertTrue(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.STUDY, indices.getReportType());
             
@@ -259,7 +260,7 @@ public class ReportTest {
         }
     }
 
-    private boolean containsThisIdentifier(ReportTypeResourceListReportIndex indices, String identifier) {
+    private boolean containsThisIdentifier(ReportIndexList indices, String identifier) {
         for (ReportIndex index : indices.getItems()) {
             if (index.getIdentifier().equals(identifier)) {
                 return true;

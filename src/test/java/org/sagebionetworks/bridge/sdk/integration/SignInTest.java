@@ -17,7 +17,7 @@ import org.sagebionetworks.bridge.sdk.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.sdk.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.sdk.rest.model.AccountSummary;
-import org.sagebionetworks.bridge.sdk.rest.model.PagedResourceListAccountSummary;
+import org.sagebionetworks.bridge.sdk.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.sdk.rest.model.Role;
 import org.sagebionetworks.bridge.sdk.rest.model.SharingScope;
 import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
@@ -91,8 +91,7 @@ public class SignInTest {
 
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        PagedResourceListAccountSummary summaries = participantsApi.getParticipants(0, 10,
-                signUp.getEmail()).execute().body();
+        AccountSummaryList summaries = participantsApi.getParticipants(0, 10, signUp.getEmail()).execute().body();
         assertEquals(1, summaries.getItems().size());
         
         AccountSummary summary = summaries.getItems().get(0);
