@@ -8,18 +8,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.sagebionetworks.bridge.sdk.ClientManager;
-import org.sagebionetworks.bridge.sdk.Config;
-import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.BridgeSDKException;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.ConsentRequiredException;
-import org.sagebionetworks.bridge.sdk.rest.model.ClientInfo;
-import org.sagebionetworks.bridge.sdk.rest.model.EmptyPayload;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
-import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
-import org.sagebionetworks.bridge.sdk.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.Config;
+import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
+import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.rest.model.ClientInfo;
+import org.sagebionetworks.bridge.rest.model.EmptyPayload;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 public class TestUserHelper {
 

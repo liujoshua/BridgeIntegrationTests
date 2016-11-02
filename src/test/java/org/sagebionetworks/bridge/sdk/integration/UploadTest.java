@@ -14,23 +14,23 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.sagebionetworks.bridge.sdk.rest.RestUtils;
-import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ForWorkersApi;
-import org.sagebionetworks.bridge.sdk.rest.api.UploadSchemasApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.sdk.rest.model.EmptyPayload;
-import org.sagebionetworks.bridge.sdk.rest.model.HealthDataRecord;
-import org.sagebionetworks.bridge.sdk.rest.model.RecordExportStatusRequest;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.SynapseExporterStatus;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadFieldDefinition;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadFieldType;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadSchema;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadSchemaType;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadSession;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadStatus;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadValidationStatus;
+import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
+import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.EmptyPayload;
+import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
+import org.sagebionetworks.bridge.rest.model.RecordExportStatusRequest;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SynapseExporterStatus;
+import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
+import org.sagebionetworks.bridge.rest.model.UploadFieldType;
+import org.sagebionetworks.bridge.rest.model.UploadSchema;
+import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
+import org.sagebionetworks.bridge.rest.model.UploadSession;
+import org.sagebionetworks.bridge.rest.model.UploadStatus;
+import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 
 import com.google.common.collect.Lists;
 
@@ -78,7 +78,7 @@ public class UploadTest {
             
             legacySurveySchema = new UploadSchema();
             legacySurveySchema.setSchemaId("legacy-survey");
-            legacySurveySchema.setRevision(1);
+            legacySurveySchema.setRevision(1L);
             legacySurveySchema.setName("Legacy (RK/AC) Survey");
             legacySurveySchema.setSchemaType(UploadSchemaType.SURVEY);
             legacySurveySchema.setFieldDefinitions(Lists.newArrayList(def1,def2));
@@ -113,7 +113,7 @@ public class UploadTest {
             
             legacyNonSurveySchema = new UploadSchema();
             legacyNonSurveySchema.setSchemaId("legacy-non-survey");
-            legacyNonSurveySchema.setRevision(1);
+            legacyNonSurveySchema.setRevision(1L);
             legacyNonSurveySchema.setName("Legacy (RK/AC) Non-Survey");
             legacyNonSurveySchema.setSchemaType(UploadSchemaType.DATA);
             legacyNonSurveySchema.setFieldDefinitions(Lists.newArrayList(def1,def2,def3,def4,def5));

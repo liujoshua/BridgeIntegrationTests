@@ -9,13 +9,13 @@ import java.util.List;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.sdk.rest.model.AccountStatus;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.SharingScope;
-import org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.sdk.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.model.AccountStatus;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 import com.google.common.collect.Lists;
 

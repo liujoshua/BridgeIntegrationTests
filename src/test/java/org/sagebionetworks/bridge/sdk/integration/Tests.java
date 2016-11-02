@@ -10,18 +10,18 @@ import java.util.Set;
 
 import org.apache.commons.lang3.RandomStringUtils;
 
-import org.sagebionetworks.bridge.sdk.Config;
-import org.sagebionetworks.bridge.sdk.rest.model.ABTestGroup;
-import org.sagebionetworks.bridge.sdk.rest.model.ABTestScheduleStrategy;
-import org.sagebionetworks.bridge.sdk.rest.model.Activity;
-import org.sagebionetworks.bridge.sdk.rest.model.EmailTemplate;
-import org.sagebionetworks.bridge.sdk.rest.model.MimeType;
-import org.sagebionetworks.bridge.sdk.rest.model.Schedule;
-import org.sagebionetworks.bridge.sdk.rest.model.SchedulePlan;
-import org.sagebionetworks.bridge.sdk.rest.model.ScheduleType;
-import org.sagebionetworks.bridge.sdk.rest.model.SimpleScheduleStrategy;
-import org.sagebionetworks.bridge.sdk.rest.model.Study;
-import org.sagebionetworks.bridge.sdk.rest.model.TaskReference;
+import org.sagebionetworks.bridge.rest.Config;
+import org.sagebionetworks.bridge.rest.model.ABTestGroup;
+import org.sagebionetworks.bridge.rest.model.ABTestScheduleStrategy;
+import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.EmailTemplate;
+import org.sagebionetworks.bridge.rest.model.MimeType;
+import org.sagebionetworks.bridge.rest.model.Schedule;
+import org.sagebionetworks.bridge.rest.model.SchedulePlan;
+import org.sagebionetworks.bridge.rest.model.ScheduleType;
+import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
+import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.TaskReference;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -175,7 +175,7 @@ public class Tests {
         return ((SimpleScheduleStrategy)plan.getStrategy()).getSchedule().getActivities().get(0);    
     }
     
-    public static Study getStudy(String identifier, Integer version) {
+    public static Study getStudy(String identifier, Long version) {
         Study study = new Study();
         study.setIdentifier(identifier);
         study.setMinAgeOfConsent(18);

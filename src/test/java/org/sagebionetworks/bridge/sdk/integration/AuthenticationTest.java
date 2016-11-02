@@ -14,15 +14,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.sagebionetworks.bridge.sdk.ClientManager;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.sdk.rest.model.Email;
-import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
-import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
-import org.sagebionetworks.bridge.sdk.rest.model.Study;
+
+import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.Study;
 
 @Category(IntegrationSmokeTest.class)
 public class AuthenticationTest {

@@ -18,19 +18,19 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.sdk.rest.api.SchedulesApi;
-import org.sagebionetworks.bridge.sdk.rest.model.Activity;
-import org.sagebionetworks.bridge.sdk.rest.model.ActivityType;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.Schedule;
-import org.sagebionetworks.bridge.sdk.rest.model.SchedulePlan;
-import org.sagebionetworks.bridge.sdk.rest.model.ScheduleStatus;
-import org.sagebionetworks.bridge.sdk.rest.model.ScheduleType;
-import org.sagebionetworks.bridge.sdk.rest.model.ScheduledActivity;
-import org.sagebionetworks.bridge.sdk.rest.model.ScheduledActivityList;
-import org.sagebionetworks.bridge.sdk.rest.model.SimpleScheduleStrategy;
-import org.sagebionetworks.bridge.sdk.rest.model.TaskReference;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.ActivityType;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.Schedule;
+import org.sagebionetworks.bridge.rest.model.SchedulePlan;
+import org.sagebionetworks.bridge.rest.model.ScheduleStatus;
+import org.sagebionetworks.bridge.rest.model.ScheduleType;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
+import org.sagebionetworks.bridge.rest.model.TaskReference;
 
 @Category(IntegrationSmokeTest.class)
 public class ScheduledActivityTest {

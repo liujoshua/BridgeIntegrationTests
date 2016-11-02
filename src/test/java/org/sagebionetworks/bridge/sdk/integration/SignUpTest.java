@@ -9,16 +9,16 @@ import java.io.IOException;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.InvalidEntityException;
-import org.sagebionetworks.bridge.sdk.rest.model.Email;
-import org.sagebionetworks.bridge.sdk.rest.model.EmptyPayload;
-import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
-import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
-import org.sagebionetworks.bridge.sdk.rest.model.Study;
-import org.sagebionetworks.bridge.sdk.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
+import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.EmptyPayload;
+import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 public class SignUpTest {
 

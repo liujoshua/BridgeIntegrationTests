@@ -8,12 +8,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
-import org.sagebionetworks.bridge.sdk.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 public class UserManagementTest {
 

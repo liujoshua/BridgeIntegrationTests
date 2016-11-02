@@ -7,10 +7,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.UnauthorizedException;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.Study;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.Study;
 
 public class SelfStudyTest {
 

@@ -8,7 +8,7 @@
     <version>0.8.23</version>
 
     <properties>
-    	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
@@ -44,7 +44,7 @@
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
             <artifactId>rest-client</artifactId>
-            <version>0.12.3</version>
+            <version>0.12.4</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

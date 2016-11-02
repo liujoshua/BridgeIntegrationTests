@@ -15,9 +15,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.ExternalIdentifiersApi;
-import org.sagebionetworks.bridge.sdk.rest.model.ExternalIdentifierList;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
+import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
+import org.sagebionetworks.bridge.rest.model.Role;
 
 import com.google.common.collect.Lists;
 

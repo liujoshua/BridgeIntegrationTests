@@ -19,17 +19,17 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.rest.api.ForWorkersApi;
-import org.sagebionetworks.bridge.sdk.rest.api.UploadSchemasApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.ConcurrentModificationException;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.UnauthorizedException;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadFieldDefinition;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadFieldType;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadSchema;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadSchemaList;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadSchemaType;
+import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
+import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
+import org.sagebionetworks.bridge.rest.exceptions.ConcurrentModificationException;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
+import org.sagebionetworks.bridge.rest.model.UploadFieldType;
+import org.sagebionetworks.bridge.rest.model.UploadSchema;
+import org.sagebionetworks.bridge.rest.model.UploadSchemaList;
+import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 
 public class UploadSchemaTest {
     // We put spaces in the schema ID to test URL encoding.
@@ -109,7 +109,7 @@ public class UploadSchemaTest {
 
         // Step 3b: Worker client can also get schemas, and can get schemas by study, schema, and rev.
         // This schema should be identical to updatedSchemaV2, except it also has the study ID.
-        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevisionInStudy(Tests.TEST_KEY, schemaId, 2).execute().body();
+        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevisionInStudy(Tests.TEST_KEY, schemaId, 2L).execute().body();
         assertEquals(Tests.TEST_KEY, workerSchemaV2.getStudyId());
 
         UploadSchema workerSchemaV2MinusStudyId = copy(null, workerSchemaV2);
@@ -118,7 +118,7 @@ public class UploadSchemaTest {
         assertEquals(updatedSchemaV2, workerSchemaV2MinusStudyId);
 
         // Step 4: Delete v3 and verify the getter returns v2.
-        devUploadSchemasApi.deleteUploadSchema(schemaId, 3).execute();
+        devUploadSchemasApi.deleteUploadSchema(schemaId, 3L).execute();
         UploadSchema returnedAfterDelete = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body();
         assertEquals(updatedSchemaV2, returnedAfterDelete);
 
@@ -128,7 +128,7 @@ public class UploadSchemaTest {
         UploadSchemaList schemaList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId).execute().body();
         for (UploadSchema oneSchema : schemaList.getItems()) {
             if (oneSchema.getSchemaId().equals(schemaId)) {
-                int rev = oneSchema.getRevision();
+                long rev = oneSchema.getRevision();
                 if (rev == 1) {
                     assertEquals(createdSchemaV1, oneSchema);
                     v1Found = true;
@@ -248,7 +248,7 @@ public class UploadSchemaTest {
         devUploadSchemasApi.createOrUpdateUploadSchema(makeSimpleSchema(schemaId, null, null)).execute();
 
         // Now that the schema is created, run the update test.
-        testVersionConflict(1, null);
+        testVersionConflict(1L, null);
     }
 
     @Test
@@ -258,10 +258,10 @@ public class UploadSchemaTest {
 
         // This time, we add the DDB version parameter (since this now exists in DDB) to make sure we don't croak when
         // this is present.
-        testVersionConflict(1, 1L);
+        testVersionConflict(1L, 1L);
     }
 
-    private void testVersionConflict(Integer rev, Long version) throws Exception {
+    private void testVersionConflict(Long rev, Long version) throws Exception {
         UploadSchema schema = makeSimpleSchema(schemaId, rev, version);
 
         // Create/update the schema and verified it was created/updated.
@@ -279,7 +279,7 @@ public class UploadSchemaTest {
 
     // Helper to make an upload schema with the minimum of attributes. Takes in rev and version to facilitate testing
     // create vs update and handling version conflicts.
-    private static UploadSchema makeSimpleSchema(String schemaId, Integer rev, Long version) {
+    private static UploadSchema makeSimpleSchema(String schemaId, Long rev, Long version) {
         UploadFieldDefinition fieldDef = new UploadFieldDefinition();
         fieldDef.setName("field");
         fieldDef.setType(UploadFieldType.STRING);
@@ -311,7 +311,7 @@ public class UploadSchemaTest {
 
         UploadSchema schemaV1 = new UploadSchema();
         schemaV1.setName("Schema");
-        schemaV1.setRevision(2);
+        schemaV1.setRevision(2L);
         schemaV1.setSchemaId(schemaId);
         schemaV1.setSchemaType(UploadSchemaType.DATA);
         schemaV1.setFieldDefinitions(fieldDefListV1);
@@ -368,7 +368,7 @@ public class UploadSchemaTest {
         schemaV2.setVersion(fetchedSchemaV1.getVersion());
         schemaV2.setFieldDefinitions(fieldDefListV2);
         
-        UploadSchema updatedSchema = devUploadSchemasApi.updateUploadSchema(schemaId, 2, schemaV2).execute().body();
+        UploadSchema updatedSchema = devUploadSchemasApi.updateUploadSchema(schemaId, 2L, schemaV2).execute().body();
         assertEquals("Updated Schema", updatedSchema.getName());
         assertEquals(2, updatedSchema.getRevision().intValue());
         assertEquals(schemaId, updatedSchema.getSchemaId());
@@ -382,7 +382,7 @@ public class UploadSchemaTest {
 
         // update it again, version conflict
         try {
-            devUploadSchemasApi.updateUploadSchema(schemaId, 2, schemaV2).execute();
+            devUploadSchemasApi.updateUploadSchema(schemaId, 2L, schemaV2).execute();
             fail("expected exception");
         } catch (ConcurrentModificationException ex) {
             // expected exception

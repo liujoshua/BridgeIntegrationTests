@@ -13,23 +13,24 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ClientManager;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.sdk.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.sdk.rest.api.UploadsApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.UnauthorizedException;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.UnsupportedVersionException;
-import org.sagebionetworks.bridge.sdk.rest.model.ClientInfo;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.Study;
-import org.sagebionetworks.bridge.sdk.rest.model.StudyList;
-import org.sagebionetworks.bridge.sdk.rest.model.Upload;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadList;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadRequest;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadSession;
-import org.sagebionetworks.bridge.sdk.rest.model.VersionHolder;
+
+import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.api.UploadsApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.rest.exceptions.UnsupportedVersionException;
+import org.sagebionetworks.bridge.rest.model.ClientInfo;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.StudyList;
+import org.sagebionetworks.bridge.rest.model.Upload;
+import org.sagebionetworks.bridge.rest.model.UploadList;
+import org.sagebionetworks.bridge.rest.model.UploadRequest;
+import org.sagebionetworks.bridge.rest.model.UploadSession;
+import org.sagebionetworks.bridge.rest.model.VersionHolder;
 
 public class StudyTest {
     
@@ -86,7 +87,7 @@ public class StudyTest {
         // And this is also true
         assertTrue("emailVerificationEnabled should be true", newStudy.getEmailVerificationEnabled());
         
-        Integer oldVersion = newStudy.getVersion();
+        Long oldVersion = newStudy.getVersion();
         alterStudy(newStudy);
         holder = studiesApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
         
@@ -219,7 +220,7 @@ public class StudyTest {
             UploadRequest request = new UploadRequest();
             request.setName("upload.zip");
             request.setContentType("application/zip");
-            request.setContentLength(100);
+            request.setContentLength(100L);
             request.setContentMd5("ABC");
             
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);

@@ -12,21 +12,21 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ClientManager;
+import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.sdk.rest.api.SubpopulationsApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.BadRequestException;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.ConsentRequiredException;
-import org.sagebionetworks.bridge.sdk.rest.model.ClientInfo;
-import org.sagebionetworks.bridge.sdk.rest.model.ConsentStatus;
-import org.sagebionetworks.bridge.sdk.rest.model.Criteria;
-import org.sagebionetworks.bridge.sdk.rest.model.GuidVersionHolder;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
-import org.sagebionetworks.bridge.sdk.rest.model.Subpopulation;
-import org.sagebionetworks.bridge.sdk.rest.model.SubpopulationList;
+import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
+import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.rest.model.ClientInfo;
+import org.sagebionetworks.bridge.rest.model.ConsentStatus;
+import org.sagebionetworks.bridge.rest.model.Criteria;
+import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.Subpopulation;
+import org.sagebionetworks.bridge.rest.model.SubpopulationList;
 
 public class SubpopulationTest {
 

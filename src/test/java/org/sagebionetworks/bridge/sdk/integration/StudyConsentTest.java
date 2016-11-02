@@ -9,15 +9,15 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.StudyConsentsApi;
-import org.sagebionetworks.bridge.sdk.rest.api.SubpopulationsApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.BridgeSDKException;
-import org.sagebionetworks.bridge.sdk.rest.model.EmptyPayload;
-import org.sagebionetworks.bridge.sdk.rest.model.GuidVersionHolder;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.StudyConsent;
-import org.sagebionetworks.bridge.sdk.rest.model.StudyConsentList;
-import org.sagebionetworks.bridge.sdk.rest.model.Subpopulation;
+import org.sagebionetworks.bridge.rest.api.StudyConsentsApi;
+import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
+import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
+import org.sagebionetworks.bridge.rest.model.EmptyPayload;
+import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.StudyConsent;
+import org.sagebionetworks.bridge.rest.model.StudyConsentList;
+import org.sagebionetworks.bridge.rest.model.Subpopulation;
 
 public class StudyConsentTest {
 
