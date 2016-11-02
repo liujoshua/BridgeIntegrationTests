@@ -6,13 +6,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.sdk.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.sdk.rest.model.EmptyPayload;
-import org.sagebionetworks.bridge.sdk.rest.model.Study;
-import org.sagebionetworks.bridge.sdk.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.sdk.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.model.EmptyPayload;
+import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 @Category(IntegrationSmokeTest.class)
 public class UTF8Test {

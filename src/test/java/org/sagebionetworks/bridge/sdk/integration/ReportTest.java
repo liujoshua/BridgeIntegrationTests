@@ -13,19 +13,19 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
-import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ReportsApi;
-import org.sagebionetworks.bridge.sdk.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.BadRequestException;
-import org.sagebionetworks.bridge.sdk.rest.model.ReportData;
-import org.sagebionetworks.bridge.sdk.rest.model.ReportDataList;
-import org.sagebionetworks.bridge.sdk.rest.model.ReportIndex;
-import org.sagebionetworks.bridge.sdk.rest.model.ReportIndexList;
-import org.sagebionetworks.bridge.sdk.rest.model.ReportType;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.Study;
-import org.sagebionetworks.bridge.sdk.rest.model.VersionHolder;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.ReportsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
+import org.sagebionetworks.bridge.rest.model.ReportData;
+import org.sagebionetworks.bridge.rest.model.ReportDataList;
+import org.sagebionetworks.bridge.rest.model.ReportIndex;
+import org.sagebionetworks.bridge.rest.model.ReportIndexList;
+import org.sagebionetworks.bridge.rest.model.ReportType;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.VersionHolder;
 
 import com.google.gson.JsonObject;
 

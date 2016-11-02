@@ -32,28 +32,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.sdk.rest.api.SurveysApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.PublishedSurveyException;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.UnauthorizedException;
-import org.sagebionetworks.bridge.sdk.rest.model.Constraints;
-import org.sagebionetworks.bridge.sdk.rest.model.DataType;
-import org.sagebionetworks.bridge.sdk.rest.model.DateTimeConstraints;
-import org.sagebionetworks.bridge.sdk.rest.model.EmptyPayload;
-import org.sagebionetworks.bridge.sdk.rest.model.GuidCreatedOnVersionHolder;
-import org.sagebionetworks.bridge.sdk.rest.model.Image;
-import org.sagebionetworks.bridge.sdk.rest.model.MultiValueConstraints;
-import org.sagebionetworks.bridge.sdk.rest.model.Operator;
-import org.sagebionetworks.bridge.sdk.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.rest.model.StringConstraints;
-import org.sagebionetworks.bridge.sdk.rest.model.Survey;
-import org.sagebionetworks.bridge.sdk.rest.model.SurveyElement;
-import org.sagebionetworks.bridge.sdk.rest.model.SurveyInfoScreen;
-import org.sagebionetworks.bridge.sdk.rest.model.SurveyList;
-import org.sagebionetworks.bridge.sdk.rest.model.SurveyQuestion;
-import org.sagebionetworks.bridge.sdk.rest.model.SurveyQuestionOption;
-import org.sagebionetworks.bridge.sdk.rest.model.SurveyRule;
-import org.sagebionetworks.bridge.sdk.rest.model.UIHint;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.SurveysApi;
+import org.sagebionetworks.bridge.rest.exceptions.PublishedSurveyException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.rest.model.Constraints;
+import org.sagebionetworks.bridge.rest.model.DataType;
+import org.sagebionetworks.bridge.rest.model.DateTimeConstraints;
+import org.sagebionetworks.bridge.rest.model.EmptyPayload;
+import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
+import org.sagebionetworks.bridge.rest.model.Image;
+import org.sagebionetworks.bridge.rest.model.MultiValueConstraints;
+import org.sagebionetworks.bridge.rest.model.Operator;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.StringConstraints;
+import org.sagebionetworks.bridge.rest.model.Survey;
+import org.sagebionetworks.bridge.rest.model.SurveyElement;
+import org.sagebionetworks.bridge.rest.model.SurveyInfoScreen;
+import org.sagebionetworks.bridge.rest.model.SurveyList;
+import org.sagebionetworks.bridge.rest.model.SurveyQuestion;
+import org.sagebionetworks.bridge.rest.model.SurveyQuestionOption;
+import org.sagebionetworks.bridge.rest.model.SurveyRule;
+import org.sagebionetworks.bridge.rest.model.UIHint;
 
 public class SurveyTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
@@ -490,7 +490,7 @@ public class SurveyTest {
     private class MutableHolder extends GuidCreatedOnVersionHolder {
         private final String guid;
         private final DateTime createdOn;
-        private final Integer version;
+        private final Long version;
         MutableHolder(GuidCreatedOnVersionHolder keys) {
             this.guid = keys.getGuid();
             this.createdOn = keys.getCreatedOn();
@@ -510,7 +510,7 @@ public class SurveyTest {
             return createdOn;
         }
         @Override
-        public Integer getVersion() {
+        public Long getVersion() {
             return version;
         }
         @Override
