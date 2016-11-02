@@ -5,7 +5,7 @@
 
     <groupId>org.sagebionetworks</groupId>
     <artifactId>BridgeIntegrationTests</artifactId>
-    <version>0.8.23</version>
+    <version>0.9.0</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -44,7 +44,7 @@
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
             <artifactId>rest-client</artifactId>
-            <version>0.12.4</version>
+            <version>0.12.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>

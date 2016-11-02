@@ -76,12 +76,12 @@ public class ScheduleTest {
         
         Tests.getActivitiesFromSimpleStrategy(originalPlan).set(0, Tests.getActivityFromSimpleStrategy(plan));
         
-        Tests.setVariableValueInObject(originalPlan, "type", SchedulePlan.TypeEnum.SCHEDULEPLAN);
+        Tests.setVariableValueInObject(originalPlan, "type", "SchedulePlan");
         
         Schedule originalSchedule = Tests.getSimpleSchedule(originalPlan);
         Schedule updatedSchedule = Tests.getSimpleSchedule(plan);
         originalSchedule.setPersistent(updatedSchedule.getPersistent());
-        Tests.setVariableValueInObject(originalSchedule, "type", Schedule.TypeEnum.SCHEDULE);
+        Tests.setVariableValueInObject(originalSchedule, "type", "Schedule");
         
         assertEquals(originalPlan, plan);
     }
@@ -157,7 +157,6 @@ public class ScheduleTest {
         
         CriteriaScheduleStrategy strategy = new CriteriaScheduleStrategy();
         strategy.setScheduleCriteria(Lists.newArrayList(scheduleCriteria1, scheduleCriteria2));
-        strategy.setType("CriteriaScheduleStrategy");
         plan.setStrategy(strategy);
         
         user.signOut();        

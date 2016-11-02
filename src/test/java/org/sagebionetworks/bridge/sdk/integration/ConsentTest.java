@@ -19,7 +19,6 @@ import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
-import org.sagebionetworks.bridge.rest.model.EmptyPayload;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
@@ -62,7 +61,7 @@ public class ConsentTest {
             assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
 
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
-            authApi.signOut(new EmptyPayload()).execute();
+            authApi.signOut().execute();
         } finally {
             testUser.signOutAndDeleteUser();
         }
@@ -215,7 +214,7 @@ public class ConsentTest {
             
             // The remote session should also reflect the sharing scope
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
-            authApi.signOut(new EmptyPayload()).execute();
+            authApi.signOut().execute();
             
             session = testUser.signInAgain();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
@@ -242,7 +241,7 @@ public class ConsentTest {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
-            userApi.emailConsentAgreement(testUser.getDefaultSubpopulation(), new EmptyPayload()).execute();
+            userApi.emailConsentAgreement(testUser.getDefaultSubpopulation()).execute();
         } finally {
             testUser.signOutAndDeleteUser();
         }

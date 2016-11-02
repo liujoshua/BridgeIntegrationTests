@@ -39,7 +39,6 @@ import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Constraints;
 import org.sagebionetworks.bridge.rest.model.DataType;
 import org.sagebionetworks.bridge.rest.model.DateTimeConstraints;
-import org.sagebionetworks.bridge.rest.model.EmptyPayload;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Image;
 import org.sagebionetworks.bridge.rest.model.MultiValueConstraints;
@@ -57,7 +56,6 @@ import org.sagebionetworks.bridge.rest.model.UIHint;
 
 public class SurveyTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
-    private static final EmptyPayload EMPTY = new EmptyPayload();
     
     private static TestUser developer;
     private static TestUser user;
@@ -131,7 +129,7 @@ public class SurveyTest {
         List<SurveyElement> questions = survey.getElements();
         String prompt = ((SurveyQuestion)questions.get(1)).getPrompt();
         assertEquals("Prompt is correct.", "When did you last have a medical check-up?", prompt);
-        surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), EMPTY, false).execute();
+        surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), false).execute();
         
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         survey = usersApi.getPublishedSurveyVersion(key.getGuid()).execute().body();
@@ -160,7 +158,7 @@ public class SurveyTest {
         survey = surveysApi.getSurvey(laterKey.getGuid(), laterKey.getCreatedOn()).execute().body();
         assertFalse("survey is not published.", survey.getPublished());
 
-        surveysApi.publishSurvey(survey.getGuid(), survey.getCreatedOn(), EMPTY, false).execute();
+        surveysApi.publishSurvey(survey.getGuid(), survey.getCreatedOn(), false).execute();
         survey = surveysApi.getSurvey(survey.getGuid(), survey.getCreatedOn()).execute().body();
         assertTrue("survey is now published.", survey.getPublished());
     }
@@ -197,8 +195,8 @@ public class SurveyTest {
         SurveyList recentSurveys = surveysApi.getMostRecentSurveys().execute().body();
         containsAll(recentSurveys.getItems(), key, key1, key2);
 
-        key = surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), EMPTY, false).execute().body();
-        key2 = surveysApi.publishSurvey(key2.getGuid(), key2.getCreatedOn(), EMPTY, false).execute().body();
+        key = surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), false).execute().body();
+        key2 = surveysApi.publishSurvey(key2.getGuid(), key2.getCreatedOn(), false).execute().body();
 
         Thread.sleep(2000);
         SurveyList publishedSurveys = surveysApi.getPublishedSurveys().execute().body();
@@ -260,7 +258,7 @@ public class SurveyTest {
         
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
         GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, survey);
-        keys = surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), EMPTY, false).execute().body();
+        keys = surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute().body();
         
         survey.setName("This is a new name");
         survey.setVersion(keys.getVersion());
@@ -282,7 +280,7 @@ public class SurveyTest {
 
         GuidCreatedOnVersionHolder key1 = versionSurvey(surveysApi, key);
         GuidCreatedOnVersionHolder key2 = versionSurvey(surveysApi, key1);
-        surveysApi.publishSurvey(key2.getGuid(), key2.getCreatedOn(), EMPTY, false).execute();
+        surveysApi.publishSurvey(key2.getGuid(), key2.getCreatedOn(), false).execute();
         versionSurvey(surveysApi, key2);
 
         Survey found = surveysApi.getPublishedSurveyVersion(key2.getGuid()).execute().body();
@@ -300,12 +298,12 @@ public class SurveyTest {
         Survey existingSurvey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
         existingSurvey.setName("This is an update test");
 
-        keys = surveysApi.versionSurvey(existingSurvey.getGuid(), existingSurvey.getCreatedOn(), EMPTY).execute().body();
+        keys = surveysApi.versionSurvey(existingSurvey.getGuid(), existingSurvey.getCreatedOn()).execute().body();
         
         existingSurvey.setVersion(keys.getVersion());
         keys = surveysApi.updateSurvey(keys.getGuid(), keys.getCreatedOn(), existingSurvey).execute().body();
         
-        keys = surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), EMPTY, false).execute().body();
+        keys = surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute().body();
         
         surveysToDelete.add(new MutableHolder(keys));
 
@@ -349,7 +347,6 @@ public class SurveyTest {
         question.setUiHint(UIHint.TEXTFIELD);
         StringConstraints sc = new StringConstraints();
         sc.setDataType(DataType.STRING);
-        sc.setType("StringConstraints");
         question.setConstraints(sc);
         question.setType("SurveyQuestion");
         survey.getElements().add(question);
@@ -390,14 +387,14 @@ public class SurveyTest {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
 
         GuidCreatedOnVersionHolder survey1aKeys = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
-        surveysApi.publishSurvey(survey1aKeys.getGuid(), survey1aKeys.getCreatedOn(), EMPTY, false).execute();
+        surveysApi.publishSurvey(survey1aKeys.getGuid(), survey1aKeys.getCreatedOn(), false).execute();
         GuidCreatedOnVersionHolder survey1bKeys = versionSurvey(surveysApi, survey1aKeys);
-        surveysApi.publishSurvey(survey1bKeys.getGuid(), survey1bKeys.getCreatedOn(), EMPTY, false).execute();
+        surveysApi.publishSurvey(survey1bKeys.getGuid(), survey1bKeys.getCreatedOn(), false).execute();
 
         GuidCreatedOnVersionHolder survey2aKeys = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
-        surveysApi.publishSurvey(survey2aKeys.getGuid(), survey2aKeys.getCreatedOn(), EMPTY, false).execute();
+        surveysApi.publishSurvey(survey2aKeys.getGuid(), survey2aKeys.getCreatedOn(), false).execute();
         GuidCreatedOnVersionHolder survey2bKeys = versionSurvey(surveysApi, survey2aKeys);
-        surveysApi.publishSurvey(survey2bKeys.getGuid(), survey2bKeys.getCreatedOn(), EMPTY, false).execute();
+        surveysApi.publishSurvey(survey2bKeys.getGuid(), survey2bKeys.getCreatedOn(), false).execute();
 
         // Sleep to clear eventual consistency problems.
         SurveysApi workerSurveyClient = worker.getClient(SurveysApi.class);
@@ -438,7 +435,6 @@ public class SurveyTest {
         
         StringConstraints constraints = new StringConstraints();
         constraints.setDataType(DataType.STRING);
-        constraints.setType("StringConstraints");
         constraints.getRules().add(rule); // end survey
 
         SurveyQuestion question = new SurveyQuestion();
@@ -540,7 +536,7 @@ public class SurveyTest {
 
     private GuidCreatedOnVersionHolder versionSurvey(SurveysApi surveysApi, GuidCreatedOnVersionHolder survey) throws Exception {
         GuidCreatedOnVersionHolder versionHolder = surveysApi
-                .versionSurvey(survey.getGuid(), survey.getCreatedOn(), EMPTY).execute().body();
+                .versionSurvey(survey.getGuid(), survey.getCreatedOn()).execute().body();
         surveysToDelete.add(versionHolder);
         return versionHolder;
     }

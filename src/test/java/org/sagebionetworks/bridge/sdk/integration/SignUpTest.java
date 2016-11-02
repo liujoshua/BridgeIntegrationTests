@@ -14,7 +14,6 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.Email;
-import org.sagebionetworks.bridge.rest.model.EmptyPayload;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
@@ -28,14 +27,14 @@ public class SignUpTest {
         try {
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             
-            authApi.signOut(new EmptyPayload()).execute();
+            authApi.signOut().execute();
             
             SignIn signIn = testUser.getSignIn();
             UserSessionInfo session = authApi.signIn(signIn).execute().body();
             
             assertTrue(session.getAuthenticated());
 
-            authApi.signOut(new EmptyPayload()).execute();
+            authApi.signOut().execute();
         } finally {
             testUser.signOutAndDeleteUser();
         }

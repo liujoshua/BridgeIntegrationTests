@@ -15,7 +15,6 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
-import org.sagebionetworks.bridge.rest.model.EmptyPayload;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -23,7 +22,6 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 public class TestUserHelper {
 
-    private static final EmptyPayload EMPTY_PAYLOAD = new EmptyPayload();
     private static final String PASSWORD = "P4ssword";
     private static final ClientInfo CLIENT_INFO = new ClientInfo();
     static {
@@ -79,7 +77,7 @@ public class TestUserHelper {
         }
         public void signOut() throws IOException {
             AuthenticationApi authApi = manager.getClient(AuthenticationApi.class);
-            authApi.signOut(EMPTY_PAYLOAD).execute();
+            authApi.signOut().execute();
             userSession.setAuthenticated(false);
         }
         public void signOutAndDeleteUser() throws IOException {

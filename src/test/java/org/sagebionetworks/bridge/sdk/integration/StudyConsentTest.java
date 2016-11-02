@@ -12,7 +12,6 @@ import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.StudyConsentsApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
-import org.sagebionetworks.bridge.rest.model.EmptyPayload;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.StudyConsent;
@@ -97,7 +96,7 @@ public class StudyConsentTest {
         assertEquals(consent.getDocumentContent(), current.getDocumentContent());
         assertNotNull(current.getCreatedOn());
 
-        studyConsentsApi.publishConsent(subpopGuid, current.getCreatedOn(), new EmptyPayload()).execute();
+        studyConsentsApi.publishConsent(subpopGuid, current.getCreatedOn()).execute();
 
         StudyConsent published = studyConsentsApi.getPublishedConsent(subpopGuid).execute().body();
         subpop = subpopulationsApi.getSubpopulation(subpopGuid).execute().body();

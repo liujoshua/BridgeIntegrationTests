@@ -9,7 +9,6 @@ import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.rest.model.EmptyPayload;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -61,7 +60,7 @@ public class UTF8Test {
 
             // Force a refresh of the Redis session cache.
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
-            authApi.signOut(new EmptyPayload()).execute();
+            authApi.signOut().execute();
             UserSessionInfo session = authApi.signIn(testUser.getSignIn()).execute().body();
 
             assertEquals("☃", session.getFirstName());

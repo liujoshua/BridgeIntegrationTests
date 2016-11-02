@@ -260,9 +260,9 @@ public class SchedulePlanTest {
             // Update the fields we expect to be updated on the server
             Tests.getActivitiesFromSimpleStrategy(plan).set(0, Tests.getActivityFromSimpleStrategy(newPlan));
 
-            Tests.setVariableValueInObject(plan, "type", SchedulePlan.TypeEnum.SCHEDULEPLAN);
+            Tests.setVariableValueInObject(plan, "type", "SchedulePlan");
             Tests.setVariableValueInObject(plan, "modifiedOn", newPlan.getModifiedOn());
-            Tests.setVariableValueInObject(strategy.getSchedule(), "type", Schedule.TypeEnum.SCHEDULE);
+            Tests.setVariableValueInObject(strategy.getSchedule(), "type", "Schedule");
             strategy.getSchedule().setPersistent(false);
             plan.setVersion(newPlan.getVersion());
             plan.setGuid(newPlan.getGuid());
@@ -284,19 +284,19 @@ public class SchedulePlanTest {
      * including type and GUIDs. Copy these values over to the original object, using reflection where necessary. 
      */
     private void updateScheduleCriteria(ScheduleCriteria original, ScheduleCriteria updated) throws Exception {
-        Tests.setVariableValueInObject(original, "type", ScheduleCriteria.TypeEnum.SCHEDULECRITERIA);
+        Tests.setVariableValueInObject(original, "type", "ScheduleCriteria");
         
         Schedule originalSchedule = original.getSchedule();
-        Tests.setVariableValueInObject(originalSchedule, "type", Schedule.TypeEnum.SCHEDULE);
+        Tests.setVariableValueInObject(originalSchedule, "type", "Schedule");
         
         originalSchedule.setPersistent(updated.getSchedule().getPersistent());
         
         Activity originalActivity = originalSchedule.getActivities().get(0);
         originalActivity.setGuid(updated.getSchedule().getActivities().get(0).getGuid());
         originalActivity.setActivityType(ActivityType.TASK);
-        Tests.setVariableValueInObject(originalActivity, "type", Activity.TypeEnum.ACTIVITY);
-        Tests.setVariableValueInObject(originalActivity.getTask(), "type", TaskReference.TypeEnum.TASKREFERENCE);
+        Tests.setVariableValueInObject(originalActivity, "type", "Activity");
+        Tests.setVariableValueInObject(originalActivity.getTask(), "type", "TaskReference");
         
-        Tests.setVariableValueInObject(original.getCriteria(), "type", Criteria.TypeEnum.CRITERIA);
+        Tests.setVariableValueInObject(original.getCriteria(), "type", "Criteria");
     }
 }

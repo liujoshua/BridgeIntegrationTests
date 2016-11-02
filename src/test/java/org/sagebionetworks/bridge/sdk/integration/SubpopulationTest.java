@@ -69,7 +69,7 @@ public class SubpopulationTest {
         // Read it back
         Subpopulation retrieved = subpopulationsApi.getSubpopulation(subpop.getGuid()).execute().body();
         assertEquals("Later Consent Group", retrieved.getName());
-        Tests.setVariableValueInObject(criteria, "type", Criteria.TypeEnum.CRITERIA);
+        Tests.setVariableValueInObject(criteria, "type", "Criteria");
         assertEquals(criteria, retrieved.getCriteria());
         assertEquals(keys.getGuid(), retrieved.getGuid());
         assertEquals(keys.getVersion(), retrieved.getVersion());
