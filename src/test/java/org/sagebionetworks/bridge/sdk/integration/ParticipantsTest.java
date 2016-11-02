@@ -114,7 +114,7 @@ public class ParticipantsTest {
         AccountSummaryList summaries = participantsApi.getParticipants(0, 10, null).execute().body();
 
         // Well we know there's at least two accounts... the admin and the researcher.
-        assertEquals(new Integer(0), summaries.getOffsetBy());
+        assertEquals((Long)0L, summaries.getOffsetBy());
         assertEquals((Integer)10, summaries.getPageSize());
         assertTrue(summaries.getItems().size() <= summaries.getTotal());
         assertTrue(summaries.getItems().size() > 2);
