@@ -19,7 +19,6 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.rest.model.EmptyPayload;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.RecordExportStatusRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -177,7 +176,7 @@ public class UploadTest {
         }
         // userClient.upload marks the download complete
         // marking an already completed download as complete again should succeed (and be a no-op)
-        worker.getClient(ForWorkersApi.class).completeUploadSession(session.getId(), new EmptyPayload());
+        worker.getClient(ForWorkersApi.class).completeUploadSession(session.getId());
 
         assertNotNull("Upload status is not null, UploadId=" + uploadId, status);
         assertEquals("Upload succeeded, UploadId=" + uploadId, UploadStatus.SUCCEEDED, status.getStatus());

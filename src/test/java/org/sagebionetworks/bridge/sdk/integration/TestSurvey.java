@@ -86,7 +86,6 @@ public class TestSurvey {
         mvc.setAllowOther(false);
         mvc.setAllowMultiple(true);
         mvc.setDataType(DataType.STRING);
-        mvc.setType("MultiValueConstraints");
         multiValueQuestion.setConstraints(mvc);
         multiValueQuestion.setPrompt("How do you feel today?");
         multiValueQuestion.setIdentifier(MULTIVALUE_ID);
@@ -99,7 +98,6 @@ public class TestSurvey {
         c.setMaxLength(255);
         c.setPattern("\\d{3}-\\d{3}-\\d{4}");
         c.setDataType(DataType.STRING);
-        c.setType("StringConstraints");
         stringQuestion.setPrompt("Please enter an emergency phone number (###-###-####)?");
         stringQuestion.setPromptDetail("This should be someone else's number.");
         stringQuestion.setIdentifier(STRING_ID);
@@ -110,7 +108,6 @@ public class TestSurvey {
         SurveyQuestion booleanQuestion = new SurveyQuestion();
         BooleanConstraints c9 = new BooleanConstraints();
         c9.setDataType(DataType.BOOLEAN);
-        c9.setType("BooleanContraints");
         booleanQuestion.setPrompt("Do you have high blood pressure?");
         booleanQuestion.setIdentifier(BOOLEAN_ID);
         booleanQuestion.setConstraints(c9);
@@ -123,7 +120,6 @@ public class TestSurvey {
         c2.setEarliestValue(LocalDate.parse("2000-01-01"));
         c2.setLatestValue(LocalDate.parse("2020-12-31"));
         c2.setAllowFuture(true);
-        c2.setType("DateConstraints");
         dateQuestion.setPrompt("When did you last have a medical check-up?");
         dateQuestion.setIdentifier(DATE_ID);
         dateQuestion.setConstraints(c2);
@@ -136,7 +132,6 @@ public class TestSurvey {
         c3.setEarliestValue(DateTime.parse("2000-01-01").withZone(DateTimeZone.UTC));
         c3.setLatestValue(DateTime.parse("2020-12-31").withZone(DateTimeZone.UTC));
         c3.setDataType(DataType.DATETIME);
-        c3.setType("DateTimeConstraints");
         dateTimeQuestion.setPrompt("When is your next medical check-up scheduled?");
         dateTimeQuestion.setIdentifier(DATETIME_ID);
         dateTimeQuestion.setConstraints(c3);
@@ -149,7 +144,6 @@ public class TestSurvey {
         c4.setMaxValue(BigDecimal.valueOf(10.0d));
         c4.setStep(BigDecimal.valueOf(0.1d));
         c4.setDataType(DataType.DECIMAL);
-        c4.setType("DecimalConstraints");
         decimalQuestion.setPrompt("What dosage (in grams) do you take of deleuterium each day?");
         decimalQuestion.setIdentifier(DECIMAL_ID);
         decimalQuestion.setConstraints(c4);
@@ -162,7 +156,6 @@ public class TestSurvey {
         c5.setMaxValue(120);
         c5.setUnit(Unit.MINUTES);
         c5.setDataType(DataType.DURATION);
-        c5.setType("DurationConstraints");
         durationQuestion.setPrompt("How log does your appointment take, on average?");
         durationQuestion.setIdentifier(DURATION_ID);
         durationQuestion.setConstraints(c5);
@@ -178,7 +171,6 @@ public class TestSurvey {
         c6.setMaxValue(8);
         c6.setRules(Lists.newArrayList(rule1, rule2));
         c6.setDataType(DataType.INTEGER);
-        c6.setType("IntegerConstraints");
         integerQuestion.setPrompt("How many times a day do you take your blood pressure?");
         integerQuestion.setIdentifier(INTEGER_ID);
         integerQuestion.setConstraints(c6);
@@ -188,7 +180,6 @@ public class TestSurvey {
         SurveyQuestion timeQuestion = new SurveyQuestion();
         TimeConstraints c7 = new TimeConstraints();
         c7.setDataType(DataType.TIME);
-        c7.setType("TimeConstraints");
         timeQuestion.setPrompt("What times of the day do you take deleuterium?");
         timeQuestion.setIdentifier(TIME_ID);
         timeQuestion.setConstraints(c7);

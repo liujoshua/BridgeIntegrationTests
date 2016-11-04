@@ -26,7 +26,6 @@ import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.BooleanConstraints;
 import org.sagebionetworks.bridge.rest.model.DataType;
-import org.sagebionetworks.bridge.rest.model.EmptyPayload;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.MultiValueConstraints;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -128,7 +127,6 @@ public class SurveySchemaTest {
         MultiValueConstraints updatedQ1Con = new MultiValueConstraints();
         updatedQ1Con.setAllowMultiple(true);
         updatedQ1Con.setAllowOther(false);
-        updatedQ1Con.setType("MultiValueConstraints");
         updatedQ1Con.setDataType(DataType.STRING);
         
         SurveyQuestionOption option1 = new SurveyQuestionOption();
@@ -152,7 +150,6 @@ public class SurveySchemaTest {
         q3.setPrompt("Write something:");
         
         StringConstraints sc = new StringConstraints();
-        sc.setType("StringConstraints");
         sc.setDataType(DataType.STRING);
         
         q3.setConstraints(sc);
@@ -166,7 +163,7 @@ public class SurveySchemaTest {
         surveyToUpdate.getElements().add(q3);
 
         surveysApi.updateSurvey(surveyToUpdate.getGuid(), surveyToUpdate.getCreatedOn(), surveyToUpdate).execute();
-        surveysApi.publishSurvey(keysV2.getGuid(), keysV2.getCreatedOn(), new EmptyPayload(), false).execute();
+        surveysApi.publishSurvey(keysV2.getGuid(), keysV2.getCreatedOn(), false).execute();
 
         // Fetch and validate schema. It should have been edited in-place, with new fields added.
         UploadSchema updatedSchema = schemasApi.getMostRecentUploadSchema(surveyId).execute().body();
@@ -206,7 +203,6 @@ public class SurveySchemaTest {
         updatedQ2.setType("SurveyQuestion");
         
         StringConstraints sc = new StringConstraints();
-        sc.setType("StringConstraints");
         sc.setDataType(DataType.STRING);
         updatedQ2.setConstraints(sc);
         updatedQ2.setType("SurveyQuestion");
@@ -218,7 +214,7 @@ public class SurveySchemaTest {
         surveyToUpdate.getElements().add(updatedQ2);
 
         surveysApi.updateSurvey(surveyToUpdate.getGuid(), surveyToUpdate.getCreatedOn(), surveyToUpdate).execute();
-        surveysApi.publishSurvey(keysV2.getGuid(), keysV2.getCreatedOn(), new EmptyPayload(), false).execute();
+        surveysApi.publishSurvey(keysV2.getGuid(), keysV2.getCreatedOn(), false).execute();
 
         // Fetch and validate schema. It should have been bumped to rev2. Deleted fields are not present.
         UploadSchema updatedSchema = schemasApi.getMostRecentUploadSchema(surveyId).execute().body();
@@ -249,7 +245,6 @@ public class SurveySchemaTest {
         SurveyQuestionOption option2 = new SurveyQuestionOption();
         option2.setLabel("qwerty");
         updatedQ1Con.setEnumeration(ImmutableList.of(option1, option2));
-        updatedQ1Con.setType("MultiValueConstraints");
         updatedQ1Con.setDataType(DataType.STRING);
 
         SurveyQuestion updatedQ1 = new SurveyQuestion();
@@ -260,7 +255,6 @@ public class SurveySchemaTest {
         updatedQ1.setType("SurveyQuestion");
         
         StringConstraints sc = new StringConstraints();
-        sc.setType("StringConstraints");
         sc.setDataType(DataType.STRING);
 
         SurveyQuestion q3 = new SurveyQuestion();
@@ -278,7 +272,7 @@ public class SurveySchemaTest {
         surveyToUpdate.getElements().add(q3);
 
         keysV2 = surveysApi.updateSurvey(surveyToUpdate.getGuid(), surveyToUpdate.getCreatedOn(), surveyToUpdate).execute().body();
-        keysV2 = surveysApi.publishSurvey(keysV2.getGuid(), keysV2.getCreatedOn(), new EmptyPayload(), true).execute().body();
+        keysV2 = surveysApi.publishSurvey(keysV2.getGuid(), keysV2.getCreatedOn(), true).execute().body();
 
         // Fetch and validate schema. We should get rev2, because we asked to bump the rev. We also shouldn't get any
         // of the rev 1 choices and fields.
@@ -313,7 +307,6 @@ public class SurveySchemaTest {
         con.setAllowMultiple(true);
         con.setAllowOther(true);
         con.setEnumeration(ImmutableList.of(option1, option2));
-        con.setType("MultiValueConstraints");
         con.setDataType(DataType.STRING);
 
         SurveyQuestion q1 = new SurveyQuestion();
@@ -324,7 +317,6 @@ public class SurveySchemaTest {
         q1.setType("SurveyQuestion");
         
         BooleanConstraints bc = new BooleanConstraints();
-        bc.setType("BooleanConstraints");
         bc.setDataType(DataType.BOOLEAN);
         
         SurveyQuestion q2 = new SurveyQuestion();
@@ -342,7 +334,7 @@ public class SurveySchemaTest {
 
         // create and publish survey
         GuidCreatedOnVersionHolder key = createSurvey(survey);
-        surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), new EmptyPayload(), false).execute();
+        surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), false).execute();
         return key;
     }
 
@@ -364,7 +356,7 @@ public class SurveySchemaTest {
 
     private GuidCreatedOnVersionHolder versionSurvey(GuidCreatedOnVersionHolder survey) throws Exception {
         GuidCreatedOnVersionHolder versionHolder = surveysApi
-                .versionSurvey(survey.getGuid(), survey.getCreatedOn(), new EmptyPayload()).execute().body();
+                .versionSurvey(survey.getGuid(), survey.getCreatedOn()).execute().body();
         surveysToDelete.add(versionHolder);
         return versionHolder;
     }
