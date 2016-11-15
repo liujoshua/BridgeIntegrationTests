@@ -62,6 +62,9 @@ public class StudyTest {
         assertNotNull(holder.getVersion());
 
         Study newStudy = studiesApi.getStudy(study.getIdentifier()).execute().body();
+
+        study.addDataGroupsItem("test_user"); // added by the server, required for equality of dataGroups.
+        
         // Verify study has password/email templates
         assertNotNull("password policy should not be null", newStudy.getPasswordPolicy());
         assertNotNull("verify email template should not be null", newStudy.getVerifyEmailTemplate());
@@ -75,7 +78,7 @@ public class StudyTest {
         assertEquals("consentNotificationEmail should be equal", study.getConsentNotificationEmail(), newStudy.getConsentNotificationEmail());
         assertEquals("userProfileAttributes should be equal", study.getUserProfileAttributes(), newStudy.getUserProfileAttributes());
         assertEquals("taskIdentifiers should be equal", study.getTaskIdentifiers(), newStudy.getTaskIdentifiers());
-        assertEquals("dataGroups should be equal", study.getDataGroups(), newStudy.getDataGroups());
+        assertTrue("dataGroups should be equal", Tests.assertListsEqualIgnoringOrder(study.getDataGroups(), newStudy.getDataGroups()));
         assertEquals("android minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get("Android"),
                 newStudy.getMinSupportedAppVersions().get("Android"));
         assertEquals("iOS minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get("iPhone OS"),
