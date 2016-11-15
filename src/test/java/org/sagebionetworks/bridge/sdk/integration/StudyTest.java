@@ -62,6 +62,9 @@ public class StudyTest {
         assertNotNull(holder.getVersion());
 
         Study newStudy = studiesApi.getStudy(study.getIdentifier()).execute().body();
+
+        study.addDataGroupsItem("test_user"); // added by the server.
+        
         // Verify study has password/email templates
         assertNotNull("password policy should not be null", newStudy.getPasswordPolicy());
         assertNotNull("verify email template should not be null", newStudy.getVerifyEmailTemplate());
