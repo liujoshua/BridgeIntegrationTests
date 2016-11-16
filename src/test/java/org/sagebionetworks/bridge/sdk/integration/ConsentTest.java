@@ -15,14 +15,18 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.ConsentStatus;
+import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
 
@@ -64,6 +68,62 @@ public class ConsentTest {
             authApi.signOut().execute();
         } finally {
             testUser.signOutAndDeleteUser();
+        }
+    }
+    
+    // BRIDGE-1594
+    @Test
+    public void giveConsentAndWithdrawTwice() throws Exception {
+        TestUser admin = TestUserHelper.getSignedInAdmin();
+        TestUser developer = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.DEVELOPER);
+        TestUser user = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
+        SubpopulationsApi subpopsApi = developer.getClientManager().getClient(SubpopulationsApi.class);
+        GuidVersionHolder keys = null;
+        try {
+            
+            Subpopulation subpop = new Subpopulation();
+            subpop.setName("Optional additional consent");
+            subpop.setRequired(false);
+            keys = subpopsApi.createSubpopulation(subpop).execute().body();
+            
+            ConsentSignature signature = new ConsentSignature();
+            signature.setName("Test User");
+            signature.setScope(SharingScope.NO_SHARING);
+            signature.setBirthdate(LocalDate.parse("1970-04-04"));
+            
+            Withdrawal withdrawal = new Withdrawal();
+            withdrawal.setReason("A reason.");
+            
+            // Now, this user will consent to both consents, then withdraw from the required consent, 
+            // then withdraw from the optional consent, and this should work where it didn't before.
+            ForConsentedUsersApi usersApi = user.getClientManager().getClient(ForConsentedUsersApi.class);
+            
+            usersApi.createConsentSignature(user.getStudyId(), signature).execute();
+            usersApi.createConsentSignature(keys.getGuid(), signature).execute();
+            
+            // Withdrawing the optional consent first, you should then be able to get the second consent
+            usersApi.withdrawConsentFromSubpopulation(keys.getGuid(), withdrawal).execute();
+            
+            user.signOut();
+            user.signInAgain();
+            
+            usersApi.withdrawConsentFromSubpopulation(user.getStudyId(), withdrawal).execute();
+            
+            user.signOut();
+            try {
+                user.signInAgain();
+                fail("Should have thrown an exception.");
+            } catch(ConsentRequiredException e) {
+                UserSessionInfo session = e.getSession();
+                for (ConsentStatus status : session.getConsentStatuses().values()) {
+                    assertFalse(status.getConsented());
+                }
+                assertFalse(RestUtils.isUserConsented(session));
+            }
+        } finally {
+            admin.getClient(SubpopulationsApi.class).deleteSubpopulation(keys.getGuid(), true).execute();
+            user.signOutAndDeleteUser();
+            developer.signOutAndDeleteUser();
         }
     }
 
