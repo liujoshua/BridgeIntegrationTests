@@ -103,6 +103,10 @@ public class ConsentTest {
             
             // Withdrawing the optional consent first, you should then be able to get the second consent
             usersApi.withdrawConsentFromSubpopulation(keys.getGuid(), withdrawal).execute();
+            
+            user.signOut();
+            user.signInAgain();
+            
             usersApi.withdrawConsentFromSubpopulation(user.getStudyId(), withdrawal).execute();
             
             user.signOut();
