@@ -111,7 +111,7 @@ public class ParticipantsTest {
     public void canRetrieveAndPageThroughParticipants() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        AccountSummaryList summaries = participantsApi.getParticipants(0, 10, null).execute().body();
+        AccountSummaryList summaries = participantsApi.getParticipants(0, 10, null, null, null).execute().body();
 
         // Well we know there's at least two accounts... the admin and the researcher.
         assertEquals((Long)0L, summaries.getOffsetBy());
@@ -127,7 +127,7 @@ public class ParticipantsTest {
         
         // Filter to only the researcher
         
-        summaries = participantsApi.getParticipants(0, 10, researcher.getEmail()).execute().body();
+        summaries = participantsApi.getParticipants(0, 10, researcher.getEmail(), null, null).execute().body();
         assertEquals(1, summaries.getItems().size());
         assertEquals(researcher.getEmail(), summaries.getItems().get(0).getEmail());
         assertEquals(researcher.getEmail(), summaries.getEmailFilter()/*getFilters().get("emailFilter")*/);
@@ -137,14 +137,14 @@ public class ParticipantsTest {
     public void cannotSetBadOffset() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        participantsApi.getParticipants(-1, 10, null).execute();
+        participantsApi.getParticipants(-1, 10, null, null, null).execute();
     }
     
     @Test(expected = BadRequestException.class)
     public void cannotSetBadPageSize() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        participantsApi.getParticipants(0, 4, null).execute();
+        participantsApi.getParticipants(0, 4, null, null, null).execute();
     }
     
     @Test
@@ -176,7 +176,7 @@ public class ParticipantsTest {
             // It has been persisted. Right now we don't get the ID back so we have to conduct a 
             // search by email to get this user.
             // Can be found through paged results
-            AccountSummaryList search = participantsApi.getParticipants(0,  10, email).execute().body();
+            AccountSummaryList search = participantsApi.getParticipants(0, 10, email, null, null).execute().body();
             assertEquals((Integer)1, search.getTotal());
             AccountSummary summary = search.getItems().get(0);
             assertEquals("FirstName", summary.getFirstName());

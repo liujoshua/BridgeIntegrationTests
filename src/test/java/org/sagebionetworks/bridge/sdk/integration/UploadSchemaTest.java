@@ -95,11 +95,13 @@ public class UploadSchemaTest {
         UploadFieldDefinition bazFieldDef = field("baz", true, UploadFieldType.BOOLEAN);
 
         // Step 1: Create initial version of schema.
-        UploadSchema schemaV1 = schema(null, "Upload Schema Integration Tests", schemaId, UploadSchemaType.DATA, fooFieldDef);
+        UploadSchema schemaV1 = schema(null, "Upload Schema Integration Tests", schemaId, UploadSchemaType.IOS_DATA,
+                fooFieldDef);
         UploadSchema createdSchemaV1 = createOrUpdateSchemaAndVerify(schemaV1);
 
         // Step 2: Update to v2
-        UploadSchema schemaV2 = schema(createdSchemaV1, "Schema Test II: The Sequel", schemaId, UploadSchemaType.DATA, fooFieldDef, barFieldDef);
+        UploadSchema schemaV2 = schema(createdSchemaV1, "Schema Test II: The Sequel", schemaId,
+                UploadSchemaType.IOS_DATA, fooFieldDef, barFieldDef);
         UploadSchema updatedSchemaV2 = createOrUpdateSchemaAndVerify(schemaV2);
 
         // Step 3: Another update. Having multiple versions helps test the delete API.
@@ -221,7 +223,7 @@ public class UploadSchemaTest {
         def4.setUnboundedText(true);
         
         List<UploadFieldDefinition> fieldDefList = ImmutableList.of(def1, def2, def3, def4);
-        UploadSchema schema = schema("Schema", schemaId, UploadSchemaType.SURVEY, fieldDefList);
+        UploadSchema schema = schema("Schema", schemaId, UploadSchemaType.IOS_SURVEY, fieldDefList);
         schema.setSurveyGuid("survey");
         schema.setSurveyCreatedOn(surveyCreatedOn);
                 
@@ -231,7 +233,7 @@ public class UploadSchemaTest {
         assertEquals("Schema", createdSchema.getName());
         assertEquals(1, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
-        assertEquals(UploadSchemaType.SURVEY, createdSchema.getSchemaType());
+        assertEquals(UploadSchemaType.IOS_SURVEY, createdSchema.getSchemaType());
         assertNull(createdSchema.getStudyId());
         assertEquals("survey", createdSchema.getSurveyGuid());
         assertEquals(surveyCreatedOnMillis, createdSchema.getSurveyCreatedOn().getMillis());
@@ -288,7 +290,7 @@ public class UploadSchemaTest {
         schema.setName("Schema");
         schema.setSchemaId(schemaId);
         schema.setRevision(rev);
-        schema.setSchemaType(UploadSchemaType.DATA);
+        schema.setSchemaType(UploadSchemaType.IOS_DATA);
         schema.setFieldDefinitions(Lists.newArrayList(fieldDef));
         return schema;
     }
@@ -313,14 +315,14 @@ public class UploadSchemaTest {
         schemaV1.setName("Schema");
         schemaV1.setRevision(2L);
         schemaV1.setSchemaId(schemaId);
-        schemaV1.setSchemaType(UploadSchemaType.DATA);
+        schemaV1.setSchemaType(UploadSchemaType.IOS_DATA);
         schemaV1.setFieldDefinitions(fieldDefListV1);
         
         UploadSchema createdSchema = devUploadSchemasApi.createUploadSchema(schemaV1).execute().body();
         assertEquals("Schema", createdSchema.getName());
         assertEquals(2, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
-        assertEquals(UploadSchemaType.DATA, createdSchema.getSchemaType());
+        assertEquals(UploadSchemaType.IOS_DATA, createdSchema.getSchemaType());
         assertNull(createdSchema.getStudyId());
         assertEquals(fieldDefListV1, createdSchema.getFieldDefinitions());
 
@@ -372,7 +374,7 @@ public class UploadSchemaTest {
         assertEquals("Updated Schema", updatedSchema.getName());
         assertEquals(2, updatedSchema.getRevision().intValue());
         assertEquals(schemaId, updatedSchema.getSchemaId());
-        assertEquals(UploadSchemaType.DATA, updatedSchema.getSchemaType());
+        assertEquals(UploadSchemaType.IOS_DATA, updatedSchema.getSchemaType());
         assertNull(updatedSchema.getStudyId());
         assertEquals(fieldDefListV2, updatedSchema.getFieldDefinitions());
 
