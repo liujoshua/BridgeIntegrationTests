@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
@@ -44,6 +45,8 @@ import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -113,6 +116,11 @@ public class ParticipantsTest {
         
         AccountSummaryList summaries = participantsApi.getParticipants(0, 10, null, null, null).execute().body();
 
+        int total = summaries.getTotal();
+        Collections.sort(summaries.getItems(), Comparator.comparing(AccountSummary::getCreatedOn));
+        DateTime oldest = summaries.getItems().get(0).getCreatedOn();
+        DateTime newest = summaries.getItems().get(summaries.getItems().size()-1).getCreatedOn();
+        
         // Well we know there's at least two accounts... the admin and the researcher.
         assertEquals((Long)0L, summaries.getOffsetBy());
         assertEquals((Integer)10, summaries.getPageSize());
@@ -126,11 +134,33 @@ public class ParticipantsTest {
         assertNotNull(summary.getId());
         
         // Filter to only the researcher
-        
         summaries = participantsApi.getParticipants(0, 10, researcher.getEmail(), null, null).execute().body();
         assertEquals(1, summaries.getItems().size());
         assertEquals(researcher.getEmail(), summaries.getItems().get(0).getEmail());
-        assertEquals(researcher.getEmail(), summaries.getEmailFilter()/*getFilters().get("emailFilter")*/);
+        assertEquals(researcher.getEmail(), summaries.getEmailFilter());
+
+        // Date filter that would not include the newest participant
+        summaries = participantsApi.getParticipants(0, 10, null, null, oldest.plusDays(1)).execute().body();
+        assertTrue(summaries.getTotal() < total);
+        assertNull(summaries.getStartDate());
+        assertEquals(summaries.getEndDate(), oldest.plusDays(1));
+        doesNotIncludeThisAccountCreatedOn(summaries, newest);
+        
+        // Date filter that would not include the oldest participant
+        summaries = participantsApi.getParticipants(0, 10, null, newest.minusDays(1), null).execute().body();
+        assertTrue(summaries.getTotal() < total);
+        assertEquals(summaries.getStartDate(), newest.minusDays(1));
+        assertNull(summaries.getEndDate());
+        doesNotIncludeThisAccountCreatedOn(summaries, oldest);
+    }
+    
+    private boolean doesNotIncludeThisAccountCreatedOn(AccountSummaryList list, DateTime createdOn) {
+        for (AccountSummary summary : list.getItems()) {
+            if (summary.getCreatedOn().equals(createdOn)) {
+                return false;
+            }
+        }
+        return true;
     }
     
     @Test(expected = BadRequestException.class)
