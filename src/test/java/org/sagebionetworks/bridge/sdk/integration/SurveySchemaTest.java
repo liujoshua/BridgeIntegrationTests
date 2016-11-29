@@ -341,7 +341,7 @@ public class SurveySchemaTest {
     private void validateCommonSchemaProperties(UploadSchema schema, GuidCreatedOnVersionHolder surveyKeys) {
         assertEquals(SURVEY_NAME, schema.getName());
         assertEquals(surveyId, schema.getSchemaId());
-        assertEquals(UploadSchemaType.SURVEY, schema.getSchemaType());
+        assertEquals(UploadSchemaType.IOS_SURVEY, schema.getSchemaType());
         assertEquals(surveyKeys.getGuid(), schema.getSurveyGuid());
         assertEquals(surveyKeys.getCreatedOn(), schema.getSurveyCreatedOn());
     }

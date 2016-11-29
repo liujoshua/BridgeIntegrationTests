@@ -79,7 +79,7 @@ public class UploadTest {
             legacySurveySchema.setSchemaId("legacy-survey");
             legacySurveySchema.setRevision(1L);
             legacySurveySchema.setName("Legacy (RK/AC) Survey");
-            legacySurveySchema.setSchemaType(UploadSchemaType.SURVEY);
+            legacySurveySchema.setSchemaType(UploadSchemaType.IOS_SURVEY);
             legacySurveySchema.setFieldDefinitions(Lists.newArrayList(def1,def2));
             uploadSchemasApi.createUploadSchema(legacySurveySchema).execute();
         }
@@ -114,7 +114,7 @@ public class UploadTest {
             legacyNonSurveySchema.setSchemaId("legacy-non-survey");
             legacyNonSurveySchema.setRevision(1L);
             legacyNonSurveySchema.setName("Legacy (RK/AC) Non-Survey");
-            legacyNonSurveySchema.setSchemaType(UploadSchemaType.DATA);
+            legacyNonSurveySchema.setSchemaType(UploadSchemaType.IOS_DATA);
             legacyNonSurveySchema.setFieldDefinitions(Lists.newArrayList(def1,def2,def3,def4,def5));
             uploadSchemasApi.createUploadSchema(legacyNonSurveySchema).execute();
         }

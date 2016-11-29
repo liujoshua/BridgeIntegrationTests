@@ -91,7 +91,8 @@ public class SignInTest {
 
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        AccountSummaryList summaries = participantsApi.getParticipants(0, 10, signUp.getEmail()).execute().body();
+        AccountSummaryList summaries = participantsApi.getParticipants(0, 10, signUp.getEmail(), null, null).execute()
+                .body();
         assertEquals(1, summaries.getItems().size());
         
         AccountSummary summary = summaries.getItems().get(0);
