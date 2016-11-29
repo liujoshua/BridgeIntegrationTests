@@ -80,10 +80,6 @@ public class UserParticipantTest {
             assertEquals("Last name updated", "Crockett2", participant.getLastName());
             assertEquals("true", participant.getAttributes().get("can_be_recontacted"));
             assertFalse(participant.getNotifyByEmail());
-            
-            participant.setNotifyByEmail(false);
-            participantsApi.updateUsersParticipantRecord(participant).execute().body();
-            participant = participantsApi.getUsersParticipantRecord().execute().body();
         } finally {
             user.signOutAndDeleteUser();
         }
