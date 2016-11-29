@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 
@@ -50,26 +51,39 @@ public class UserParticipantTest {
             ParticipantsApi participantsApi = user.getClient(ParticipantsApi.class);
 
             StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
+
+            // This should be true by default, once a participant is created:
+            assertTrue(participant.getNotifyByEmail());
+            
             participant.setFirstName("Davey");
             participant.setLastName("Crockett");
             participant.setAttributes(new ImmutableMap.Builder<String,String>().put("can_be_recontacted","true").build());
+            participant.setNotifyByEmail(null); // this should have no effect
             participantsApi.updateUsersParticipantRecord(participant).execute().body();
 
             participant = participantsApi.getUsersParticipantRecord().execute().body();
             assertEquals("Davey", participant.getFirstName());
             assertEquals("Crockett", participant.getLastName());
             assertEquals("true", participant.getAttributes().get("can_be_recontacted"));
-
+            // This should not have been changed as the result of updating other fields
+            assertTrue(participant.getNotifyByEmail());
+            
             // Now update only some of the record but verify the map is still there
             participant = participantsApi.getUsersParticipantRecord().execute().body();
             participant.setFirstName("Davey2");
             participant.setLastName("Crockett2");
+            participant.setNotifyByEmail(false);
             participantsApi.updateUsersParticipantRecord(participant).execute().body();
             
             participant = participantsApi.getUsersParticipantRecord().execute().body();
             assertEquals("First name updated", "Davey2", participant.getFirstName());
             assertEquals("Last name updated", "Crockett2", participant.getLastName());
             assertEquals("true", participant.getAttributes().get("can_be_recontacted"));
+            assertFalse(participant.getNotifyByEmail());
+            
+            participant.setNotifyByEmail(false);
+            participantsApi.updateUsersParticipantRecord(participant).execute().body();
+            participant = participantsApi.getUsersParticipantRecord().execute().body();
         } finally {
             user.signOutAndDeleteUser();
         }

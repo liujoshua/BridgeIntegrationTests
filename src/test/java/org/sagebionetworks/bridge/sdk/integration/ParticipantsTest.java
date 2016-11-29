@@ -81,14 +81,16 @@ public class ParticipantsTest {
 
             self.setLanguages(set);
             self.setDataGroups(Lists.newArrayList("group1"));
-            self.setNotifyByEmail(false);
             self.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
+            self.setNotifyByEmail(null); // BRIDGE-1604: should use default value: true
 
             userApi.updateUsersParticipantRecord(self).execute();
             
             self = userApi.getUsersParticipantRecord().execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
             assertEquals(Lists.newArrayList("group1"), self.getDataGroups());
+            assertTrue(self.getNotifyByEmail());  // BRIDGE-1604: true value returned
+            
             // also language, but this hasn't been added to the session object yet.
         } finally {
             user.signOutAndDeleteUser();
@@ -162,7 +164,7 @@ public class ParticipantsTest {
         participant.setEmail(email);
         participant.setExternalId("externalID");
         participant.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
-        participant.setNotifyByEmail(true);
+        // BRIDGE-1604: leave notifyByEmail to its default value (should be true)
         participant.setDataGroups(dataGroups);
         participant.setLanguages(languages);
         participant.setStatus(AccountStatus.DISABLED); // should be ignored
@@ -210,7 +212,7 @@ public class ParticipantsTest {
             newParticipant.setEmail(email);
             newParticipant.setExternalId("externalID2");
             newParticipant.setSharingScope(SharingScope.NO_SHARING);
-            newParticipant.setNotifyByEmail(false);
+            newParticipant.setNotifyByEmail(null);
             newParticipant.setDataGroups(newDataGroups);
             newParticipant.setLanguages(newLanguages);
             newParticipant.setAttributes(newAttributes);
@@ -228,7 +230,8 @@ public class ParticipantsTest {
             assertEquals(email, retrieved.getEmail());
             assertEquals("externalID2", retrieved.getExternalId());
             assertEquals(SharingScope.NO_SHARING, retrieved.getSharingScope());
-            assertFalse(retrieved.getNotifyByEmail());
+            // BRIDGE-1604: should still be true, even though it was not sent to the server. Through participants API 
+            assertTrue(retrieved.getNotifyByEmail());
             assertListsEqualIgnoringOrder(newDataGroups, retrieved.getDataGroups());
             assertListsEqualIgnoringOrder(newLanguages, retrieved.getLanguages());
             assertEquals(id, retrieved.getId());
