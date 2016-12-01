@@ -343,7 +343,6 @@ public class SurveyTest {
         SurveyQuestion question = new SurveyQuestion();
         question.setIdentifier("bar");
         question.setPrompt("Prompt");
-        question.setFireEvent(true);
         question.setUiHint(UIHint.TEXTFIELD);
         StringConstraints sc = new StringConstraints();
         sc.setDataType(DataType.STRING);
@@ -373,7 +372,6 @@ public class SurveyTest {
         assertNotNull(newQuestion.getGuid());
         assertEquals("bar", newQuestion.getIdentifier());
         assertEquals("Prompt", newQuestion.getPrompt());
-        assertEquals(true, newQuestion.getFireEvent());
         assertEquals(UIHint.TEXTFIELD, newQuestion.getUiHint());
     }
 
@@ -440,7 +438,6 @@ public class SurveyTest {
         SurveyQuestion question = new SurveyQuestion();
         question.setIdentifier("bar");
         question.setPrompt("Prompt");
-        question.setFireEvent(true);
         question.setUiHint(UIHint.TEXTFIELD);
         question.setConstraints(constraints);
         question.setType("SurveyQuestion");
