@@ -11,16 +11,30 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 public class SignUpTest {
 
+    @Test
+    public void defaultValuesExist() throws Exception {
+        TestUser testUser = TestUserHelper.createAndSignInUser(SignUpTest.class, true);
+        
+        ParticipantsApi participantsApi = testUser.getClientManager().getClient(ParticipantsApi.class);
+        
+        StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
+        assertTrue(participant.getNotifyByEmail());
+        assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
+    }
+    
     @Test
     public void canAuthenticateAndCreateClientAndSignOut() throws IOException {
         TestUser testUser = TestUserHelper.createAndSignInUser(SignUpTest.class, true);
