@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
@@ -13,16 +14,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.sagebionetworks.bridge.sdk.ClientManager;
-import org.sagebionetworks.bridge.sdk.Config;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper2.TestUser;
-import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.sdk.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.sdk.rest.model.Email;
-import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
-import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
-import org.sagebionetworks.bridge.sdk.rest.model.Study;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+
+import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.Study;
 
 @Category(IntegrationSmokeTest.class)
 public class AuthenticationTest {
@@ -32,12 +33,12 @@ public class AuthenticationTest {
     
     @BeforeClass
     public static void beforeClass() throws IOException {
-        testUser = TestUserHelper2.createAndSignInUser(AuthenticationTest.class, true);
+        testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         authApi = testUser.getClient(AuthenticationApi.class);
     }
     
     @AfterClass
-    public static void afterClass() {
+    public static void afterClass() throws Exception {
         testUser.signOutAndDeleteUser();
     }
     
@@ -65,7 +66,7 @@ public class AuthenticationTest {
     
     @Test
     public void accountWithOneStudySeparateFromAccountWithSecondStudy() throws IOException {
-        TestUser adminUser = TestUserHelper2.getSignedInAdmin();
+        TestUser adminUser = TestUserHelper.getSignedInAdmin();
         ForAdminsApi adminsApi = adminUser.getClient(ForAdminsApi.class);
         String studyId = Tests.randomIdentifier(AuthenticationTest.class);
         try {
@@ -104,10 +105,10 @@ public class AuthenticationTest {
     // BRIDGE-465. We can at least verify that it gets processed as an error.
     @Test
     public void emailVerificationThrowsTheCorrectError() throws Exception {
-        Config config = testUser.getClientManager().getConfig();
+        String hostUrl = testUser.getClientManager().getHostUrl();
         
         HttpResponse response = Request
-            .Post(config.getEnvironment().getUrl() + "/api/v1/auth/verifyEmail?study=api")
+            .Post(hostUrl + "/api/v1/auth/verifyEmail?study=api")
             .body(new StringEntity("{\"sptoken\":\"testtoken\",\"study\":\"api\"}"))
             .execute().returnResponse();
         assertEquals(404, response.getStatusLine().getStatusCode());
@@ -117,8 +118,8 @@ public class AuthenticationTest {
     // Should not be able to tell from the sign up response if an email is enrolled in the study or not.
     // Server change is not yet checked in for this.
     @Test
-    public void secondTimeSignUpLooksTheSameAsFirstTimeSignUp() throws IOException {
-        TestUser testUser = TestUserHelper2.createAndSignInUser(AuthenticationTest.class, true);
+    public void secondTimeSignUpLooksTheSameAsFirstTimeSignUp() throws Exception {
+        TestUser testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         try {
             testUser.signOut();
             

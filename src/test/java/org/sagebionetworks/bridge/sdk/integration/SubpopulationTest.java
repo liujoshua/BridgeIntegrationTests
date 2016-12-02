@@ -12,93 +12,91 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.AdminClient;
-import org.sagebionetworks.bridge.sdk.ClientInfo;
-import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.Roles;
-import org.sagebionetworks.bridge.sdk.SubpopulationClient;
+import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.exceptions.BadRequestException;
-import org.sagebionetworks.bridge.sdk.exceptions.ConsentRequiredException;
-import org.sagebionetworks.bridge.sdk.models.Criteria;
-import org.sagebionetworks.bridge.sdk.models.ResourceList;
-import org.sagebionetworks.bridge.sdk.models.holders.GuidVersionHolder;
-import org.sagebionetworks.bridge.sdk.models.studies.OperatingSystem;
-import org.sagebionetworks.bridge.sdk.models.subpopulations.ConsentStatus;
-import org.sagebionetworks.bridge.sdk.models.subpopulations.Subpopulation;
-import org.sagebionetworks.bridge.sdk.models.subpopulations.SubpopulationGuid;
+import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
+import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.rest.model.ClientInfo;
+import org.sagebionetworks.bridge.rest.model.ConsentStatus;
+import org.sagebionetworks.bridge.rest.model.Criteria;
+import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.Subpopulation;
+import org.sagebionetworks.bridge.rest.model.SubpopulationList;
 
 public class SubpopulationTest {
 
     private TestUser admin;
     private TestUser developer;
-    private SubpopulationGuid guid;
     
     @Before
-    public void before() {
+    public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        developer = TestUserHelper.createAndSignInUser(SubpopulationTest.class, false, Roles.DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(SubpopulationTest.class, false, Role.DEVELOPER);
     }
     
     @After
-    public void after() {
-        if (guid != null) {
-            admin.getSession().getSubpopulationClient().deleteSubpopulationPermanently(guid);    
-        }
+    public void after() throws Exception {
         if (developer != null) {
             developer.signOutAndDeleteUser();    
         }
     }
     
     @Test
-    public void canCRUD() {
-        SubpopulationClient subpopulationClient = developer.getSession().getSubpopulationClient();
+    public void canCRUD() throws Exception {
+        SubpopulationsApi subpopulationsApi = developer.getClient(SubpopulationsApi.class);
         
         // Study has a default subpopulation
-        ResourceList<Subpopulation> subpops = subpopulationClient.getAllSubpopulations();
+        SubpopulationList subpops = subpopulationsApi.getSubpopulations().execute().body();
         int initialCount = subpops.getTotal();
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));
         
         Criteria criteria = new Criteria();
-        criteria.getMinAppVersions().put(OperatingSystem.ANDROID, 10);
+        criteria.getMinAppVersions().put("Android", 10);
         
         // Create a new one
         Subpopulation subpop = new Subpopulation();
         subpop.setName("Later Consent Group");
         subpop.setCriteria(criteria);
-        GuidVersionHolder keys = subpopulationClient.createSubpopulation(subpop);
-        subpop.setHolder(keys);
-        
-        guid = subpop.getGuid();
+        GuidVersionHolder keys = subpopulationsApi.createSubpopulation(subpop).execute().body();
+        subpop.setGuid(keys.getGuid());
+        subpop.setVersion(keys.getVersion());
         
         // Read it back
-        Subpopulation retrieved = subpopulationClient.getSubpopulation(subpop.getGuid());
+        Subpopulation retrieved = subpopulationsApi.getSubpopulation(subpop.getGuid()).execute().body();
         assertEquals("Later Consent Group", retrieved.getName());
+        Tests.setVariableValueInObject(criteria, "type", "Criteria");
         assertEquals(criteria, retrieved.getCriteria());
-        assertEquals(keys.getGuid(), retrieved.getGuid().getGuid());
+        assertEquals(keys.getGuid(), retrieved.getGuid());
         assertEquals(keys.getVersion(), retrieved.getVersion());
         
         // Update it
         retrieved.setDescription("Adding a description");
-        retrieved.getCriteria().getMinAppVersions().put(OperatingSystem.ANDROID, 8);
-        keys = subpopulationClient.updateSubpopulation(retrieved);
-        retrieved.setHolder(keys);
+        retrieved.getCriteria().getMinAppVersions().put("Android", 8);
+        keys = subpopulationsApi.updateSubpopulation(retrieved.getGuid(), retrieved).execute().body();
+        retrieved.setGuid(keys.getGuid());
+        retrieved.setVersion(keys.getVersion());
         
         // Verify it is available in the list
-        subpops = subpopulationClient.getAllSubpopulations();
-        assertEquals(initialCount+1, subpops.getTotal());
+        subpops = subpopulationsApi.getSubpopulations().execute().body();
+        assertEquals((Integer)(initialCount+1), subpops.getTotal());
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));
         assertNotNull(findByName(subpops.getItems(), "Later Consent Group"));
 
         // Delete it
-        subpopulationClient.deleteSubpopulation(retrieved.getGuid());
-        assertEquals(initialCount, subpopulationClient.getAllSubpopulations().getTotal());
+        SubpopulationsApi adminSubpopApi = admin.getClient(SubpopulationsApi.class);
+        adminSubpopApi.deleteSubpopulation(retrieved.getGuid(), true).execute();
+        assertEquals((Integer)initialCount, subpopulationsApi.getSubpopulations().execute().body().getTotal());
         
         // Cannot delete the default, however:
         try {
             Subpopulation defaultSubpop = findByName(subpops.getItems(), "Default Consent Group");
             assertNotNull(defaultSubpop);
-            subpopulationClient.deleteSubpopulation(defaultSubpop.getGuid());
+            adminSubpopApi.deleteSubpopulation(defaultSubpop.getGuid(), true).execute();
             fail("Should have thrown an exception.");
         } catch(BadRequestException e) {
             assertEquals("Cannot delete the default subpopulation for a study.", e.getMessage());
@@ -106,82 +104,99 @@ public class SubpopulationTest {
     }
     
     @Test
-    public void createSubpopulationsWithCriteriaAndVerifyFiltering() {
-        SubpopulationClient subpopulationClient = developer.getSession().getSubpopulationClient();
+    public void createSubpopulationsWithCriteriaAndVerifyFiltering() throws Exception {
+        SubpopulationsApi subpopulationsApi = developer.getClient(SubpopulationsApi.class);
         Subpopulation subpop1 = null;
         Subpopulation subpop2 = null;
-        ClientInfo info = ClientProvider.getClientInfo();
         
         TestUser user = TestUserHelper.createAndSignInUser(SubpopulationTest.class, false);
         user.signOut();        
         try {
             Criteria criteria1 = new Criteria();
-            criteria1.getMinAppVersions().put(OperatingSystem.ANDROID, 0);
-            criteria1.getMaxAppVersions().put(OperatingSystem.ANDROID, 10);
+            criteria1.getMinAppVersions().put("Android", 0);
+            criteria1.getMaxAppVersions().put("Android", 10);
             subpop1 = new Subpopulation();
             subpop1.setName("Consent Group 1");
             subpop1.setCriteria(criteria1);
             subpop1.setRequired(true);
             
             Criteria criteria2 = new Criteria();
-            criteria2.getMinAppVersions().put(OperatingSystem.ANDROID, 11);
+            criteria2.getMinAppVersions().put("Android", 11);
             subpop2 = new Subpopulation();
             subpop2.setName("Consent Group 2");
             subpop2.setCriteria(criteria2);
             subpop2.setRequired(true);
             
-            subpop1.setHolder( subpopulationClient.createSubpopulation(subpop1) );
-            subpop2.setHolder( subpopulationClient.createSubpopulation(subpop2) );
+            updateSubpopulation(subpopulationsApi, subpop1);
+            updateSubpopulation(subpopulationsApi, subpop2);
             
             // Manipulate the User-Agent string and see the 412 exception contain different 
             // required subpopulations
             try {
-                ClientProvider.setClientInfo(getClientInfoWithVersion(OperatingSystem.ANDROID, 2));
-                user.signInAgain();
+                ClientManager manager = clientManager(user.getSignIn(), getClientInfoWithVersion("Android", 2));
+                manager.getClient(AuthenticationApi.class).signIn(user.getSignIn()).execute();
                 fail("Should have thrown exception");
             } catch(ConsentRequiredException e) {
-                Map<SubpopulationGuid,ConsentStatus> statuses = e.getSession().getConsentStatuses();
+                Map<String,ConsentStatus> statuses = e.getSession().getConsentStatuses();
 
                 assertNotNull(statuses.get(subpop1.getGuid()));
                 assertNull(statuses.get(subpop2.getGuid()));
             }
             try {
                 user.signOut();
-                ClientProvider.setClientInfo(getClientInfoWithVersion(OperatingSystem.ANDROID, 12));
-                user.signInAgain();
+                ClientManager manager = clientManager(user.getSignIn(), getClientInfoWithVersion("Android", 12));
+                manager.getClient(AuthenticationApi.class).signIn(user.getSignIn()).execute();
                 fail("Should have thrown exception");
             } catch(ConsentRequiredException e) {
-                Map<SubpopulationGuid,ConsentStatus> statuses = e.getSession().getConsentStatuses();
+                Map<String,ConsentStatus> statuses = e.getSession().getConsentStatuses();
                 assertNull(statuses.get(subpop1.getGuid()));
                 assertNotNull(statuses.get(subpop2.getGuid()));
             }
             // Finally... both are returned to an iOS client
             try {
                 user.signOut();
-                ClientProvider.setClientInfo(getClientInfoWithVersion(OperatingSystem.IOS, 12));
-                user.signInAgain();
+                ClientManager manager = clientManager(user.getSignIn(), getClientInfoWithVersion("iPhone OS", 12));
+                manager.getClient(AuthenticationApi.class).signIn(user.getSignIn()).execute();
                 fail("Should have thrown exception");
             } catch(ConsentRequiredException e) {
-                Map<SubpopulationGuid,ConsentStatus> statuses = e.getSession().getConsentStatuses();
+                Map<String,ConsentStatus> statuses = e.getSession().getConsentStatuses();
                 assertNotNull(statuses.get(subpop1.getGuid()));
                 assertNotNull(statuses.get(subpop2.getGuid()));
             }
         } finally {
             user.signOutAndDeleteUser();
-            ClientProvider.setClientInfo(info);
-            AdminClient adminClient = admin.getSession().getAdminClient();
+            ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
             if (subpop1 != null) {
-                adminClient.deleteSubpopulationPermanently(subpop1.getGuid());
+                adminApi.deleteSubpopulation(subpop1.getGuid(), true).execute();
             }
             if (subpop2 != null) {
-                adminClient.deleteSubpopulationPermanently(subpop2.getGuid());
+                adminApi.deleteSubpopulation(subpop2.getGuid(), true).execute();
             }
         }
     }
     
-    private ClientInfo getClientInfoWithVersion(OperatingSystem os, Integer version) {
-        return new ClientInfo.Builder().withAppName("app").withAppVersion(version).withOsName(os.getOsName())
-                .withDevice("Integration Tests").withOsVersion("2.0.0").build();
+    private ClientManager clientManager(SignIn signIn, ClientInfo clientInfo) {
+        return new ClientManager.Builder()
+                .withSignIn(signIn)
+                .withClientInfo(clientInfo).build();
+    }
+    
+    private void updateSubpopulation(SubpopulationsApi subpopulationsApi, Subpopulation subpop) throws Exception {
+        GuidVersionHolder holder = subpopulationsApi.createSubpopulation(subpop).execute().body();
+        subpop.setGuid(holder.getGuid());
+        subpop.setVersion(holder.getVersion());
+    }
+    
+    private ClientInfo getClientInfoWithVersion(String osName, Integer version) {
+        ClientInfo info = new ClientInfo();
+        info.setAppName("App");
+        info.setAppVersion(version);
+        info.setDeviceName("Integration Tests");
+        info.setOsName(osName);
+        info.setOsVersion("2.0.0");
+        info.setSdkName("BridgeJavaSDK");
+        info.setSdkVersion(Integer.parseInt(developer.getClientManager().getConfig().getSdkVersion()));
+        return info;
     }
     
     private Subpopulation findByName(List<Subpopulation> subpops, String name) {

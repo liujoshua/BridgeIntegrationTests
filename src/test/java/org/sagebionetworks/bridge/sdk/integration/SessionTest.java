@@ -1,71 +1,61 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
-import static org.sagebionetworks.bridge.sdk.Roles.ADMIN;
-import static org.sagebionetworks.bridge.sdk.Roles.RESEARCHER;
-import static org.sagebionetworks.bridge.sdk.Roles.TEST_USERS;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.List;
 
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.ParticipantClient;
-import org.sagebionetworks.bridge.sdk.Roles;
-import org.sagebionetworks.bridge.sdk.Session;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.models.accounts.AccountStatus;
-import org.sagebionetworks.bridge.sdk.models.accounts.SharingScope;
-import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.model.AccountStatus;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 
+// This test has gotten less useful since we no longer manipulate the session in the client 
+// api classes. Still I've rewritten it to examine updates on the server.
 public class SessionTest {
     
     @Test
-    public void canGetStudyParticipantWithAllData() {
+    public void canGetStudyParticipantWithAllData() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(SessionTest.class, true);
         try {
-            // Roles. These should not be set.
-            Set<Roles> roles = Sets.newHashSet(ADMIN);
+            List<Role> roles = Lists.newArrayList(Role.ADMIN);
+            List<String> dataGroups = Lists.newArrayList("group1");
+            List<String> languages = Lists.newArrayList("de");
             
-            Set<String> dataGroups = Sets.newHashSet("group1");
+            ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+
+            StudyParticipant updated = usersApi.getUsersParticipantRecord().execute().body();
+            updated.setFirstName("TestFirstName");
+            updated.setExternalId("an_external_id");
+            updated.setDataGroups(dataGroups);
+            updated.setNotifyByEmail(false);
+            updated.setStatus(AccountStatus.DISABLED);
+            updated.setSharingScope(SharingScope.SPONSORS_AND_PARTNERS);
+            updated.setRoles(roles);
+            updated.setLastName("TestLastName");
+            updated.setLanguages(languages);
             
-            LinkedHashSet<String> languages = new LinkedHashSet<>();
-            languages.add("de");
-            languages.add("fr");
+            usersApi.updateUsersParticipantRecord(updated).execute();
             
-            StudyParticipant participant = user.getSession().getStudyParticipant();
-            
-            StudyParticipant updated = new StudyParticipant.Builder()
-                    .copyOf(participant)
-                    .withFirstName("TestFirstName")
-                    .withExternalId("an_external_id")
-                    .withDataGroups(Sets.newHashSet(dataGroups.iterator().next()))
-                    .withNotifyByEmail(false)
-                    .withStatus(AccountStatus.DISABLED)
-                    .withSharingScope(SharingScope.SPONSORS_AND_PARTNERS)
-                    .withRoles(roles)
-                    .withLastName("TestLastName")
-                    .withLanguages(Tests.newLinkedHashSet("de"))
-                    .build();
-            
-            user.getSession().getUserClient().saveStudyParticipant(updated);
-            
-            StudyParticipant asUpdated = user.getSession().getStudyParticipant();
+            StudyParticipant asUpdated = usersApi.getUsersParticipantRecord().execute().body();
             
             assertEquals("TestFirstName", asUpdated.getFirstName());
             assertEquals("TestLastName", asUpdated.getLastName());
-            assertEquals(Tests.newLinkedHashSet("de"), asUpdated.getLanguages());
+            assertEquals(languages, asUpdated.getLanguages());
             assertEquals(dataGroups, asUpdated.getDataGroups());
             assertEquals("an_external_id", asUpdated.getExternalId());
-            assertFalse(asUpdated.isNotifyByEmail());
+            assertFalse(asUpdated.getNotifyByEmail());
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, asUpdated.getSharingScope());
-            assertEquals(Sets.newHashSet(TEST_USERS), asUpdated.getRoles());
+            assertTrue(asUpdated.getRoles().isEmpty()); // can't update the role
             assertEquals(AccountStatus.ENABLED, asUpdated.getStatus());
         } finally {
             if (user != null) {
@@ -76,57 +66,42 @@ public class SessionTest {
 
     @Test
     public void sessionUpdatedWhenResearcherUpdatesOwnAccount() throws Exception {
-        StudyParticipant participant = new StudyParticipant.Builder().withRoles(Sets.newHashSet(RESEARCHER)).build();
-        TestUser researcher = TestUserHelper.createAndSignInUser(SessionTest.class, false, participant);
+        TestUser researcher = TestUserHelper.createAndSignInUser(SessionTest.class, false, Role.RESEARCHER);
         try {
             // Roles. ADMIN should not be set.
-            Set<Roles> roles = Sets.newHashSet(RESEARCHER, ADMIN);
+            List<Role> roles = Lists.newArrayList(Role.RESEARCHER, Role.ADMIN);
+            List<String> dataGroups = Lists.newArrayList("group1");
+            List<String> languages = Lists.newArrayList("de", "fr");
+
+            ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+
+            StudyParticipant participant = participantsApi.getParticipant(researcher.getSession().getId()).execute().body();
+            participant.setFirstName("TestFirstName");
+            participant.setLastName("TestLastName");
+            participant.setLanguages(languages);
+            participant.setDataGroups(dataGroups);
+            participant.setExternalId("an_external_id");
+            participant.setNotifyByEmail(false);
+            participant.setSharingScope(SharingScope.SPONSORS_AND_PARTNERS);
+            participant.setRoles(roles);
+
+            participantsApi.updateParticipant(participant.getId(), participant).execute();
             
-            Set<String> dataGroups = Sets.newHashSet("group1");
-            
-            LinkedHashSet<String> languages = new LinkedHashSet<>();
-            languages.add("de");
-            languages.add("fr");
-            
-            ParticipantClient participantClient = researcher.getSession().getParticipantClient();
-            Session session = researcher.getSession();
-            
-            participant = participantClient.getStudyParticipant(session.getStudyParticipant().getId());
-            StudyParticipant updated = new StudyParticipant.Builder().copyOf(participant)
-                    .withFirstName("TestFirstName")
-                    .withLastName("TestLastName")
-                    .withLanguages(languages)
-                    .withDataGroups(dataGroups)
-                    .withExternalId("an_external_id")
-                    .withNotifyByEmail(false)
-                    .withSharingScope(SharingScope.SPONSORS_AND_PARTNERS)
-                    .withRoles(roles)
-                    .build();
-            // don't test disabling the account because, you can disable the account, causing lots of confusion.
-            assertNotNull(updated.getId());
-            
-            participantClient.updateStudyParticipant(updated);
-            
-            // When you update your own record via this API, you are signed out.
-            assertFalse(session.isSignedIn());
-            
+            researcher.signOut();
             researcher.signInAgain();
-            session = researcher.getSession();
+            UserSessionInfo session = researcher.getSession();
             
-            assertTrue(session.isSignedIn());
-            
-            // This should have updated the researcher's session StudyParticipant
-            StudyParticipant asUpdated = session.getStudyParticipant();
-            
-            assertEquals("TestFirstName", asUpdated.getFirstName());
-            assertEquals("TestLastName", asUpdated.getLastName());
-            assertEquals(languages, asUpdated.getLanguages());
-            assertEquals(dataGroups, asUpdated.getDataGroups());
-            assertEquals("an_external_id", asUpdated.getExternalId());
-            assertFalse(asUpdated.isNotifyByEmail());
-            assertEquals(SharingScope.SPONSORS_AND_PARTNERS, asUpdated.getSharingScope());
-            assertEquals(Sets.newHashSet(RESEARCHER), asUpdated.getRoles());
-            assertEquals(AccountStatus.ENABLED, asUpdated.getStatus());
+            // Session should be updated with this information. 
+            assertTrue(session.getAuthenticated());
+            assertEquals("TestFirstName", session.getFirstName());
+            assertEquals("TestLastName", session.getLastName());
+            assertEquals(languages, session.getLanguages());
+            assertEquals(dataGroups, session.getDataGroups());
+            assertEquals("an_external_id", session.getExternalId());
+            assertFalse(session.getNotifyByEmail());
+            assertEquals(SharingScope.SPONSORS_AND_PARTNERS, session.getSharingScope());
+            assertEquals(Lists.newArrayList(Role.RESEARCHER), session.getRoles());
+            assertEquals(AccountStatus.ENABLED, session.getStatus());
         } finally {
             if (researcher != null) {
                 researcher.signOutAndDeleteUser();

@@ -1,58 +1,65 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.sagebionetworks.bridge.sdk.AdminClient;
-import org.sagebionetworks.bridge.sdk.ClientProvider;
-import org.sagebionetworks.bridge.sdk.Config;
-import org.sagebionetworks.bridge.sdk.ParticipantClient;
-import org.sagebionetworks.bridge.sdk.Roles;
-import org.sagebionetworks.bridge.sdk.Session;
+
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.models.accounts.StudyParticipant;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 public class UserManagementTest {
 
-    private Session adminSession;
-    private AdminClient adminClient;
-
+    private TestUser admin;
     private TestUser researcher;
-    private ParticipantClient participantClient;
 
     @Before
-    public void before() {
-        Config config = ClientProvider.getConfig();
-        adminSession = ClientProvider.signIn(config.getAdminCredentials());
-        adminClient = adminSession.getAdminClient();
+    public void before() throws Exception {
+        admin = TestUserHelper.getSignedInAdmin();
 
-        researcher = TestUserHelper.createAndSignInUser(UserManagementTest.class, true, Roles.RESEARCHER);
-        participantClient = researcher.getSession().getParticipantClient();
+        researcher = TestUserHelper.createAndSignInUser(UserManagementTest.class, true, Role.RESEARCHER);
     }
 
     @After
-    public void after() {
+    public void after() throws Exception {
         if (researcher != null) {
             researcher.signOutAndDeleteUser(); //must do before admin session signout    
         }
-        adminSession.signOut();
+        admin.signOut();
     }
 
     @Test
-    public void canCreateAndSignOutAndDeleteUser() {
+    public void canCreateAndSignOutAndDeleteUser() throws Exception {
         String email = Tests.makeEmail(UserManagementTest.class);
         String password = "P4ssword";
 
-        StudyParticipant participant = new StudyParticipant.Builder()
-                .withEmail(email).withPassword(password).build();
+        SignUp signUp = new SignUp();
+        signUp.setStudy(admin.getStudyId());
+        signUp.setEmail(email);
+        signUp.setConsent(true);
+        signUp.setPassword(password);
         
-        String id = adminClient.createUser(participant, true);
-        assertNotNull(id);
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        
+        UserSessionInfo userSession = adminApi.createUser(signUp).execute().body();
+        assertNotNull(userSession.getId());
+        
+        adminApi.deleteUser(userSession.getId()).execute();
 
-        participantClient.signOutUser(id);
-        adminClient.deleteUser(id);
+        try {
+            ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+            participantsApi.getParticipant(userSession.getId()).execute();
+            fail("Should have thrown an exception");
+        } catch(EntityNotFoundException e) {
+            
+        }
     }
 
 }

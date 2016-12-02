@@ -6,10 +6,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.Roles;
-import org.sagebionetworks.bridge.sdk.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.sdk.models.studies.Study;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.Study;
 
 public class SelfStudyTest {
 
@@ -18,14 +19,14 @@ public class SelfStudyTest {
     private TestUser developer;
     
     @Before
-    public void before() {
+    public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        researcher = TestUserHelper.createAndSignInUser(SelfStudyTest.class, false, Roles.RESEARCHER);
-        developer= TestUserHelper.createAndSignInUser(SelfStudyTest.class, false, Roles.DEVELOPER);
+        researcher = TestUserHelper.createAndSignInUser(SelfStudyTest.class, false, Role.RESEARCHER);
+        developer= TestUserHelper.createAndSignInUser(SelfStudyTest.class, false, Role.DEVELOPER);
     }
     
     @After
-    public void after() {
+    public void after() throws Exception {
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
         }
@@ -35,28 +36,30 @@ public class SelfStudyTest {
     }
     
     @Test
-    public void getCurrentStudy() {
-        Study study = researcher.getSession().getStudyClient().getCurrentStudy();
+    public void getCurrentStudy() throws Exception {
+        Study study = researcher.getClient(StudiesApi.class).getUsersStudy().execute().body();
         assertEquals("api", study.getIdentifier());
         
-        study = developer.getSession().getStudyClient().getCurrentStudy();
+        study = developer.getClient(StudiesApi.class).getUsersStudy().execute().body();
         assertEquals("api", study.getIdentifier());
         
-        study = admin.getSession().getAdminClient().getStudy();
+        study = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
         assertEquals("api", study.getIdentifier());
     }
     
     @Test(expected = UnauthorizedException.class)
-    public void researcherCannotUpdateStudy() {
-        Study study = researcher.getSession().getStudyClient().getCurrentStudy();
+    public void researcherCannotUpdateStudy() throws Exception {
+        StudiesApi studiesApi = researcher.getClient(StudiesApi.class);
+        Study study = studiesApi.getUsersStudy().execute().body();
         study.setName("Test");
-        researcher.getSession().getStudyClient().updateStudy(study);
+        studiesApi.updateUsersStudy(study).execute();
     }
     
     @Test(expected = UnauthorizedException.class)
-    public void adminCannotUpdateStudyThroughResearcherAPI() {
-        Study study = admin.getSession().getStudyClient().getCurrentStudy();
+    public void adminCannotUpdateStudyThroughResearcherAPI() throws Exception {
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        Study study = studiesApi.getUsersStudy().execute().body();
         study.setName("Test");
-        researcher.getSession().getStudyClient().updateStudy(study);
+        studiesApi.updateUsersStudy(study).execute();
     }
 }
