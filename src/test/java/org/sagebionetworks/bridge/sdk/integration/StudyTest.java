@@ -107,71 +107,76 @@ public class StudyTest {
 
     @Test
     public void createSynapseProjectTeam() throws IOException, SynapseException {
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        // only use developer to signin
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
+        try {
+            StudiesApi studiesApi = developer.getClient(StudiesApi.class);
 
-        // integration test with synapseclient
-        // pre-setup - remove current study's project and team info
-        Study currentStudy = studiesApi.getUsersStudy().execute().body();
-        currentStudy.setSynapseDataAccessTeamId(null);
-        currentStudy.setSynapseProjectId(null);
+            // integration test with synapseclient
+            // pre-setup - remove current study's project and team info
+            Study currentStudy = studiesApi.getUsersStudy().execute().body();
+            currentStudy.setSynapseDataAccessTeamId(null);
+            currentStudy.setSynapseProjectId(null);
 
-        VersionHolder holder = studiesApi.updateStudy(currentStudy.getIdentifier(), currentStudy).execute().body();
-        assertNotNull(holder.getVersion());
+            studiesApi.updateUsersStudy(currentStudy).execute().body();
 
-        // execute
-        studiesApi.createSynapseProjectTeam(TEST_USER_ID.toString()).execute().body();
+            // execute
+            studiesApi.createSynapseProjectTeam(TEST_USER_ID.toString()).execute().body();
 
-        // verify study
-        Study newStudy = studiesApi.getStudy(currentStudy.getIdentifier()).execute().body();
-        assertEquals(newStudy.getIdentifier(), currentStudy.getIdentifier());
-        String projectId = newStudy.getSynapseProjectId();
-        Long teamId = newStudy.getSynapseDataAccessTeamId();
+            // verify study
+            Study newStudy = studiesApi.getUsersStudy().execute().body();
+            assertEquals(newStudy.getIdentifier(), currentStudy.getIdentifier());
+            String projectId = newStudy.getSynapseProjectId();
+            Long teamId = newStudy.getSynapseDataAccessTeamId();
 
-        // verify if project and team exists
-        Entity project = synapseClient.getEntityById(projectId);
-        assertNotNull(project);
-        assertEquals(project.getEntityType(), "org.sagebionetworks.repo.model.Project");
-        this.project = (Project) project;
-        Team team = synapseClient.getTeam(teamId.toString());
-        assertNotNull(team);
-        this.team = team;
+            // verify if project and team exists
+            Entity project = synapseClient.getEntityById(projectId);
+            assertNotNull(project);
+            assertEquals(project.getEntityType(), "org.sagebionetworks.repo.model.Project");
+            this.project = (Project) project;
+            Team team = synapseClient.getTeam(teamId.toString());
+            assertNotNull(team);
+            this.team = team;
 
-        // project acl
-        AccessControlList projectAcl = synapseClient.getACL(projectId);
-        Set<ResourceAccess> projectRa =  projectAcl.getResourceAccess();
-        assertNotNull(projectRa);
-        assertEquals(projectRa.size(), 3); // target user, exporter and bridgepf itself
-        // first verify exporter
-        List<ResourceAccess> retListForExporter = projectRa.stream()
-                .filter(ra -> ra.getPrincipalId().equals(Long.parseLong(EXPORTER_SYNAPSE_USER_ID)))
-                .collect(Collectors.toList());
+            // project acl
+            AccessControlList projectAcl = synapseClient.getACL(projectId);
+            Set<ResourceAccess> projectRa =  projectAcl.getResourceAccess();
+            assertNotNull(projectRa);
+            assertEquals(projectRa.size(), 3); // target user, exporter and bridgepf itself
+            // first verify exporter
+            List<ResourceAccess> retListForExporter = projectRa.stream()
+                    .filter(ra -> ra.getPrincipalId().equals(Long.parseLong(EXPORTER_SYNAPSE_USER_ID)))
+                    .collect(Collectors.toList());
 
-        assertNotNull(retListForExporter);
-        assertEquals(retListForExporter.size(), 1); // should only have one exporter info
-        ResourceAccess exporterRa = retListForExporter.get(0);
-        assertNotNull(exporterRa);
-        assertEquals(exporterRa.getPrincipalId().toString(), EXPORTER_SYNAPSE_USER_ID);
-        assertEquals(exporterRa.getAccessType(), ModelConstants.ENITY_ADMIN_ACCESS_PERMISSIONS);
-        // then verify target user
-        List<ResourceAccess> retListForUser = projectRa.stream()
-                .filter(ra -> ra.getPrincipalId().equals(TEST_USER_ID))
-                .collect(Collectors.toList());
+            assertNotNull(retListForExporter);
+            assertEquals(retListForExporter.size(), 1); // should only have one exporter info
+            ResourceAccess exporterRa = retListForExporter.get(0);
+            assertNotNull(exporterRa);
+            assertEquals(exporterRa.getPrincipalId().toString(), EXPORTER_SYNAPSE_USER_ID);
+            assertEquals(exporterRa.getAccessType(), ModelConstants.ENITY_ADMIN_ACCESS_PERMISSIONS);
+            // then verify target user
+            List<ResourceAccess> retListForUser = projectRa.stream()
+                    .filter(ra -> ra.getPrincipalId().equals(TEST_USER_ID))
+                    .collect(Collectors.toList());
 
-        assertNotNull(retListForUser);
-        assertEquals(retListForUser.size(), 1); // should only have target user info
-        ResourceAccess userRa = retListForUser.get(0);
-        assertNotNull(userRa);
-        assertEquals(userRa.getPrincipalId(), TEST_USER_ID);
-        assertEquals(userRa.getAccessType(), ModelConstants.ENITY_ADMIN_ACCESS_PERMISSIONS);
+            assertNotNull(retListForUser);
+            assertEquals(retListForUser.size(), 1); // should only have target user info
+            ResourceAccess userRa = retListForUser.get(0);
+            assertNotNull(userRa);
+            assertEquals(userRa.getPrincipalId(), TEST_USER_ID);
+            assertEquals(userRa.getAccessType(), ModelConstants.ENITY_ADMIN_ACCESS_PERMISSIONS);
 
-        // membership invitation to target user
-        // (teamId, inviteeId, limit, offset)
-        PaginatedResults<MembershipInvtnSubmission> retInvitations =  synapseClient.getOpenMembershipInvitationSubmissions(teamId.toString(), TEST_USER_ID.toString(), 1, 0);
-        List<MembershipInvtnSubmission> invitationList = retInvitations.getResults();
-        assertEquals(invitationList.size(), 1); // only one invitation submission from newly created team to target user
-        MembershipInvtnSubmission invtnSubmission = invitationList.get(0);
-        assertEquals(invtnSubmission.getInviteeId(), TEST_USER_ID.toString());
-        assertEquals(invtnSubmission.getTeamId(), teamId.toString());
+            // membership invitation to target user
+            // (teamId, inviteeId, limit, offset)
+            PaginatedResults<MembershipInvtnSubmission> retInvitations =  synapseClient.getOpenMembershipInvitationSubmissions(teamId.toString(), TEST_USER_ID.toString(), 1, 0);
+            List<MembershipInvtnSubmission> invitationList = retInvitations.getResults();
+            assertEquals(invitationList.size(), 1); // only one invitation submission from newly created team to target user
+            MembershipInvtnSubmission invtnSubmission = invitationList.get(0);
+            assertEquals(invtnSubmission.getInviteeId(), TEST_USER_ID.toString());
+            assertEquals(invtnSubmission.getTeamId(), teamId.toString());
+        } finally {
+            developer.signOutAndDeleteUser();
+        }
     }
 
     @Test
@@ -181,14 +186,14 @@ public class StudyTest {
         studyId = Tests.randomIdentifier(StudyTest.class);
         Study study = Tests.getStudy(studyId, null);
         assertNull("study version should be null", study.getVersion());
-        
+
         VersionHolder holder = studiesApi.createStudy(study).execute().body();
         assertNotNull(holder.getVersion());
 
         Study newStudy = studiesApi.getStudy(study.getIdentifier()).execute().body();
 
         study.addDataGroupsItem("test_user"); // added by the server, required for equality of dataGroups.
-        
+
         // Verify study has password/email templates
         assertNotNull("password policy should not be null", newStudy.getPasswordPolicy());
         assertNotNull("verify email template should not be null", newStudy.getVerifyEmailTemplate());
@@ -209,18 +214,18 @@ public class StudyTest {
                 newStudy.getMinSupportedAppVersions().get("iPhone OS"));
         // This was set to true even though we didn't set it.
         assertTrue("strictUploadValidationEnabled should be true", newStudy.getStrictUploadValidationEnabled());
-        // And this is true because admins can set it to true. 
+        // And this is true because admins can set it to true.
         assertTrue("healthCodeExportEnabled should be true", newStudy.getHealthCodeExportEnabled());
         // And this is also true
         assertTrue("emailVerificationEnabled should be true", newStudy.getEmailVerificationEnabled());
-        
+
         Long oldVersion = newStudy.getVersion();
         alterStudy(newStudy);
         holder = studiesApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
-        
+
         Study newerStudy = studiesApi.getStudy(newStudy.getIdentifier()).execute().body();
         assertTrue(newerStudy.getVersion() > oldVersion);
-        
+
         assertEquals("Altered Test Study [SDK]", newerStudy.getName());
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals("test4@test.com", newerStudy.getConsentNotificationEmail());
@@ -267,18 +272,18 @@ public class StudyTest {
             user.signOutAndDeleteUser();
         }
     }
-    
+
     @Test
     public void developerCannotSetHealthCodeToExportOrVerifyEmailWorkflow() throws Exception {
         TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
         try {
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-            
+
             Study study = studiesApi.getUsersStudy().execute().body();
             study.setHealthCodeExportEnabled(true);
             study.setEmailVerificationEnabled(false);
             studiesApi.updateUsersStudy(study).execute();
-            
+
             study = studiesApi.getUsersStudy().execute().body();
             assertFalse("healthCodeExportEnabled should be true", study.getHealthCodeExportEnabled());
             assertTrue("emailVersificationEnabled should be true", study.getEmailVerificationEnabled());
@@ -290,11 +295,11 @@ public class StudyTest {
     @Test
     public void adminCanGetAllStudies() throws Exception {
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        
+
         StudyList studies = studiesApi.getStudies(null).execute().body();
         assertTrue("Should be more than zero studies", studies.getTotal() > 0);
     }
-    
+
     @Test
     public void userCannotAccessApisWithDeprecatedClient() throws Exception {
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
@@ -306,7 +311,7 @@ public class StudyTest {
         }
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
         try {
-            
+
             // This is a version zero client, it should not be accepted
             ClientInfo clientInfo = new ClientInfo();
             clientInfo.setDeviceName("Unknown");
@@ -314,24 +319,24 @@ public class StudyTest {
             clientInfo.setOsVersion("1");
             clientInfo.setAppName(Tests.APP_NAME);
             clientInfo.setAppVersion(0);
-            
+
             ClientManager manager = new ClientManager.Builder()
                     .withSignIn(user.getSignIn())
                     .withClientInfo(clientInfo)
                     .build();
-            
+
             ForConsentedUsersApi usersApi = manager.getClient(ForConsentedUsersApi.class);
-            
+
             usersApi.getScheduledActivities("+00:00", 3, null).execute();
             fail("Should have thrown exception");
-            
+
         } catch(UnsupportedVersionException e) {
             // This is good.
         } finally {
             user.signOutAndDeleteUser();
         }
     }
-    
+
     @Test
     public void getStudyUploads() throws Exception {
         TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
@@ -349,14 +354,14 @@ public class StudyTest {
             request.setContentType("application/zip");
             request.setContentLength(100L);
             request.setContentMd5("ABC");
-            
+
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             UploadSession uploadSession = usersApi.requestUploadSession(request).execute().body();
-            
+
             UploadSession uploadSession2 = usersApi.requestUploadSession(request).execute().body();
-            
+
             Thread.sleep(1000); // This does depend on a GSI, so pause for a bit.
-            
+
             // This should retrieve both of the user's uploads.
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
             UploadList results = studiesApi.getUploads(startTime, endTime).execute().body();
@@ -387,7 +392,7 @@ public class StudyTest {
         }
         return null;
     }
-    
+
     private void alterStudy(Study study) {
         study.setName("Altered Test Study [SDK]");
         study.setSupportEmail("test3@test.com");
