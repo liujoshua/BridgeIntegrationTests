@@ -14,7 +14,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.config.PropertiesConfig;
-import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.model.*;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
@@ -31,17 +30,12 @@ import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.reflection.model.PaginatedResults;
 import org.sagebionetworks.repo.model.*;
 import org.sagebionetworks.repo.model.util.ModelConstants;
-import retrofit2.Call;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
