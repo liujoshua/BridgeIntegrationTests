@@ -44,8 +44,13 @@
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
             <artifactId>rest-client</artifactId>
-            <version>0.12.13</version>
+            <version>0.12.14</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.sagebionetworks</groupId>
+            <artifactId>synapseJavaClient</artifactId>
+            <version>161.0-4-g843de2c</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -60,6 +65,11 @@
             <id>org-sagebridge-repo-maven-releases</id>
             <name>org-sagebridge-repo-maven-releases</name>
             <url>http://repo-maven.sagebridge.org/</url>
+        </repository>
+        <repository>
+            <id>org-sagebridge-repo-maven-local</id>
+            <name>org-sagebridge-repo-maven-local</name>
+            <url>http://sagebionetworks.artifactoryonline.com/sagebionetworks/libs-releases-local/</url>
         </repository>
     </repositories>
 

@@ -13,6 +13,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.Config;
+import org.sagebionetworks.bridge.rest.model.*;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
 import org.sagebionetworks.bridge.rest.ClientManager;
@@ -22,38 +24,166 @@ import org.sagebionetworks.bridge.rest.api.UploadsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.exceptions.UnsupportedVersionException;
-import org.sagebionetworks.bridge.rest.model.ClientInfo;
-import org.sagebionetworks.bridge.rest.model.Role;
-import org.sagebionetworks.bridge.rest.model.Study;
-import org.sagebionetworks.bridge.rest.model.StudyList;
-import org.sagebionetworks.bridge.rest.model.Upload;
-import org.sagebionetworks.bridge.rest.model.UploadList;
-import org.sagebionetworks.bridge.rest.model.UploadRequest;
-import org.sagebionetworks.bridge.rest.model.UploadSession;
-import org.sagebionetworks.bridge.rest.model.VersionHolder;
+import org.sagebionetworks.client.SynapseAdminClientImpl;
+import org.sagebionetworks.client.SynapseClient;
+import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.reflection.model.PaginatedResults;
+import org.sagebionetworks.repo.model.*;
+import org.sagebionetworks.repo.model.util.ModelConstants;
+import retrofit2.Call;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class StudyTest {
     
     private TestUser admin;
     private String studyId;
+    private SynapseClient synapseClient;
+    private Project project;
+    private Team team;
+
+    private Properties config;
+
+    private static final String USER_NAME = "synapse.user";
+    private static final String SYNAPSE_API_KEY_NAME = "synapse.api.key";
+    private static final String EXPORTER_SYNAPSE_USER_ID_NAME = "exporter.synapse.user.id";
+    private static final String TEST_USER_ID_NAME = "test.synapse.user.id";
+
+    // synapse related attributes
+    private static String SYNAPSE_USER;
+    private static String SYNAPSE_API_KEY;
+    private static String EXPORTER_SYNAPSE_USER_ID;
+    private static Long TEST_USER_ID; // test user exists in synapse
+    private static final String USER_CONFIG_FILE = System.getProperty("user.home") + "/bridge-sdk.properties";
 
     @Before
     public void before() {
+        // pre-load test user id and exporter synapse user id
+        setupProperties();
+
         admin = TestUserHelper.getSignedInAdmin();
+        synapseClient = new SynapseAdminClientImpl();
+        synapseClient.setUserName(SYNAPSE_USER);
+        synapseClient.setApiKey(SYNAPSE_API_KEY);
     }
-    
+
     @After
     public void after() throws Exception {
         if (studyId != null) {
             admin.getClient(StudiesApi.class).deleteStudy(studyId).execute();
         }
+        if (project != null) {
+            synapseClient.deleteEntityById(project.getId());
+        }
+        if (team != null) {
+            synapseClient.deleteTeam(team.getId());
+        }
         admin.signOut();
+    }
+
+    private void setupProperties() {
+        config = new Properties();
+
+        // load from user's local file
+        loadProperties(USER_CONFIG_FILE, config);
+
+        SYNAPSE_USER = config.getProperty(USER_NAME);
+        SYNAPSE_API_KEY = config.getProperty(SYNAPSE_API_KEY_NAME);
+        EXPORTER_SYNAPSE_USER_ID = config.getProperty(EXPORTER_SYNAPSE_USER_ID_NAME);
+        TEST_USER_ID = Long.parseLong(config.getProperty(TEST_USER_ID_NAME));
+    }
+
+    private void loadProperties(final String fileName, final Properties properties) {
+        File file = new File(fileName);
+        if (file.exists()) {
+            try (InputStream in = new FileInputStream(file)) {
+                properties.load(in);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    @Test
+    public void createSynapseProjectTeam() throws IOException, SynapseException {
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+
+        // integration test with synapseclient
+        // pre-setup - remove current study's project and team info
+        Study currentStudy = studiesApi.getUsersStudy().execute().body();
+        currentStudy.setSynapseDataAccessTeamId(null);
+        currentStudy.setSynapseProjectId(null);
+
+        VersionHolder holder = studiesApi.updateStudy(currentStudy.getIdentifier(), currentStudy).execute().body();
+        assertNotNull(holder.getVersion());
+
+        // execute
+        studiesApi.createSynapseProjectTeam(TEST_USER_ID.toString()).execute().body();
+
+        // verify study
+        Study newStudy = studiesApi.getStudy(currentStudy.getIdentifier()).execute().body();
+        assertEquals(newStudy.getIdentifier(), currentStudy.getIdentifier());
+        String projectId = newStudy.getSynapseProjectId();
+        Long teamId = newStudy.getSynapseDataAccessTeamId();
+
+        // verify if project and team exists
+        Entity project = synapseClient.getEntityById(projectId);
+        assertNotNull(project);
+        assertEquals(project.getEntityType(), "org.sagebionetworks.repo.model.Project");
+        this.project = (Project) project;
+        Team team = synapseClient.getTeam(teamId.toString());
+        assertNotNull(team);
+        this.team = team;
+
+        // project acl
+        AccessControlList projectAcl = synapseClient.getACL(projectId);
+        Set<ResourceAccess> projectRa =  projectAcl.getResourceAccess();
+        assertNotNull(projectRa);
+        assertEquals(projectRa.size(), 3); // target user, exporter and bridgepf itself
+        // first verify exporter
+        List<ResourceAccess> retListForExporter = projectRa.stream()
+                .filter(ra -> ra.getPrincipalId().equals(Long.parseLong(EXPORTER_SYNAPSE_USER_ID)))
+                .collect(Collectors.toList());
+
+        assertNotNull(retListForExporter);
+        assertEquals(retListForExporter.size(), 1); // should only have one exporter info
+        ResourceAccess exporterRa = retListForExporter.get(0);
+        assertNotNull(exporterRa);
+        assertEquals(exporterRa.getPrincipalId().toString(), EXPORTER_SYNAPSE_USER_ID);
+        assertEquals(exporterRa.getAccessType(), ModelConstants.ENITY_ADMIN_ACCESS_PERMISSIONS);
+        // then verify target user
+        List<ResourceAccess> retListForUser = projectRa.stream()
+                .filter(ra -> ra.getPrincipalId().equals(TEST_USER_ID))
+                .collect(Collectors.toList());
+
+        assertNotNull(retListForUser);
+        assertEquals(retListForUser.size(), 1); // should only have target user info
+        ResourceAccess userRa = retListForUser.get(0);
+        assertNotNull(userRa);
+        assertEquals(userRa.getPrincipalId(), TEST_USER_ID);
+        assertEquals(userRa.getAccessType(), ModelConstants.ENITY_ADMIN_ACCESS_PERMISSIONS);
+
+        // membership invitation to target user
+        // (teamId, inviteeId, limit, offset)
+        PaginatedResults<MembershipInvtnSubmission> retInvitations =  synapseClient.getOpenMembershipInvitationSubmissions(teamId.toString(), TEST_USER_ID.toString(), 1, 0);
+        List<MembershipInvtnSubmission> invitationList = retInvitations.getResults();
+        assertEquals(invitationList.size(), 1); // only one invitation submission from newly created team to target user
+        MembershipInvtnSubmission invtnSubmission = invitationList.get(0);
+        assertEquals(invtnSubmission.getInviteeId(), TEST_USER_ID.toString());
+        assertEquals(invtnSubmission.getTeamId(), teamId.toString());
     }
 
     @Test
     public void crudStudy() throws Exception {
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        
+
         studyId = Tests.randomIdentifier(StudyTest.class);
         Study study = Tests.getStudy(studyId, null);
         assertNull("study version should be null", study.getVersion());
@@ -254,7 +384,7 @@ public class StudyTest {
             }
         }
     }
-    
+
     private Upload getUpload(UploadList results, String guid) {
         for (Upload upload : results.getItems()) {
             if (upload.getUploadId().equals(guid)) {
