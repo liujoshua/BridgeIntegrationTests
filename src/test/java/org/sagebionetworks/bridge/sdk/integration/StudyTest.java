@@ -13,6 +13,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.config.PropertiesConfig;
 import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.model.*;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
@@ -36,6 +37,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -49,8 +53,6 @@ public class StudyTest {
     private Project project;
     private Team team;
 
-    private Properties config;
-
     private static final String USER_NAME = "synapse.user";
     private static final String SYNAPSE_API_KEY_NAME = "synapse.api.key";
     private static final String EXPORTER_SYNAPSE_USER_ID_NAME = "exporter.synapse.user.id";
@@ -61,10 +63,12 @@ public class StudyTest {
     private static String SYNAPSE_API_KEY;
     private static String EXPORTER_SYNAPSE_USER_ID;
     private static Long TEST_USER_ID; // test user exists in synapse
-    private static final String USER_CONFIG_FILE = System.getProperty("user.home") + "/bridge-sdk.properties";
+    private static final String CONFIG_FILE = "bridge-sdk-test.properties";
+    private static final String DEFAULT_CONFIG_FILE = CONFIG_FILE;
+    private static final String USER_CONFIG_FILE = System.getProperty("user.home") + "/" + CONFIG_FILE;
 
     @Before
-    public void before() {
+    public void before() throws IOException {
         // pre-load test user id and exporter synapse user id
         setupProperties();
 
@@ -88,27 +92,23 @@ public class StudyTest {
         admin.signOut();
     }
 
-    private void setupProperties() {
-        config = new Properties();
+    private org.sagebionetworks.bridge.config.Config bridgeIntegTestConfig() throws IOException {
+        Path localConfigPath = Paths.get(USER_CONFIG_FILE);
 
-        // load from user's local file
-        loadProperties(USER_CONFIG_FILE, config);
-
-        SYNAPSE_USER = config.getProperty(USER_NAME);
-        SYNAPSE_API_KEY = config.getProperty(SYNAPSE_API_KEY_NAME);
-        EXPORTER_SYNAPSE_USER_ID = config.getProperty(EXPORTER_SYNAPSE_USER_ID_NAME);
-        TEST_USER_ID = Long.parseLong(config.getProperty(TEST_USER_ID_NAME));
+        if (Files.exists(localConfigPath)) {
+            return new PropertiesConfig(DEFAULT_CONFIG_FILE, localConfigPath);
+        } else {
+            return new PropertiesConfig(DEFAULT_CONFIG_FILE);
+        }
     }
 
-    private void loadProperties(final String fileName, final Properties properties) {
-        File file = new File(fileName);
-        if (file.exists()) {
-            try (InputStream in = new FileInputStream(file)) {
-                properties.load(in);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+    private void setupProperties() throws IOException {
+        org.sagebionetworks.bridge.config.Config config = bridgeIntegTestConfig();
+
+        SYNAPSE_USER = config.get(USER_NAME);
+        SYNAPSE_API_KEY = config.get(SYNAPSE_API_KEY_NAME);
+        EXPORTER_SYNAPSE_USER_ID = config.get(EXPORTER_SYNAPSE_USER_ID_NAME);
+        TEST_USER_ID = Long.parseLong(config.get(TEST_USER_ID_NAME));
     }
 
     @Test
