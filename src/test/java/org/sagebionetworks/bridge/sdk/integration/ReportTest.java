@@ -19,6 +19,7 @@ import org.sagebionetworks.bridge.rest.api.ReportsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.model.ReportData;
+import org.sagebionetworks.bridge.rest.model.ReportDataForWorker;
 import org.sagebionetworks.bridge.rest.model.ReportDataList;
 import org.sagebionetworks.bridge.rest.model.ReportIndex;
 import org.sagebionetworks.bridge.rest.model.ReportIndexList;
@@ -125,6 +126,16 @@ public class ReportTest {
 
     @Test
     public void workerCanCrudParticipantReport() throws Exception {
+        ReportDataForWorker report1 = new ReportDataForWorker();
+        report1.setDate(TIME1);
+        report1.setData(DATA1);
+        ReportDataForWorker report2 = new ReportDataForWorker();
+        report2.setDate(TIME2);
+        report2.setData(DATA2);
+        ReportDataForWorker report3 = new ReportDataForWorker();
+        report3.setDate(TIME3);
+        report3.setData(DATA3);
+        
         TestUser admin = TestUserHelper.getSignedInAdmin();
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         Study study = studiesApi.getStudy("api").execute().body();
@@ -145,14 +156,14 @@ public class ReportTest {
         
         String userId = user.getSession().getId();
         try {
-            REPORT1.setHealthCode(healthCode);
-            REPORT2.setHealthCode(healthCode);
-            REPORT3.setHealthCode(healthCode);
+            report1.setHealthCode(healthCode);
+            report2.setHealthCode(healthCode);
+            report3.setHealthCode(healthCode);
             
             ReportsApi workerReportsApi = worker.getClient(ReportsApi.class);
-            workerReportsApi.addParticipantReportRecordForWorker(reportId, REPORT1).execute();
-            workerReportsApi.addParticipantReportRecordForWorker(reportId, REPORT2).execute();
-            workerReportsApi.addParticipantReportRecordForWorker(reportId, REPORT3).execute();
+            workerReportsApi.addParticipantReportRecordForWorker(reportId, report1).execute();
+            workerReportsApi.addParticipantReportRecordForWorker(reportId, report2).execute();
+            workerReportsApi.addParticipantReportRecordForWorker(reportId, report3).execute();
             
             ReportsApi userReportsApi = user.getClient(ReportsApi.class);
             ReportDataList results = userReportsApi

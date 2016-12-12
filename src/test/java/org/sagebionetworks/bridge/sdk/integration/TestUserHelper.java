@@ -20,8 +20,11 @@ import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
+import com.google.common.collect.Lists;
+
 public class TestUserHelper {
 
+    private static final List<String> LANGUAGES = Lists.newArrayList("en");
     private static final String PASSWORD = "P4ssword";
     private static final ClientInfo CLIENT_INFO = new ClientInfo();
     static {
@@ -85,7 +88,7 @@ public class TestUserHelper {
 
             Config config = new Config();
             ClientManager adminManager = new ClientManager.Builder().withSignIn(config.getAdminSignIn())
-                    .withConfig(config).withClientInfo(manager.getClientInfo()).build();
+                    .withConfig(config).withClientInfo(manager.getClientInfo()).withAcceptLanguage(LANGUAGES).build();
             ForAdminsApi adminsApi = adminManager.getClient(ForAdminsApi.class);
             adminsApi.deleteUser(userSession.getId()).execute();
         }
@@ -102,14 +105,15 @@ public class TestUserHelper {
             ClientManager man = new ClientManager.Builder()
                     .withClientInfo(clientInfo)
                     .withSignIn(signIn)
-                    .withConfig(manager.getConfig()).build();
+                    .withConfig(manager.getConfig())
+                    .withAcceptLanguage(LANGUAGES).build();
             this.manager = man;
         }
     }
     public static TestUser getSignedInAdmin() {
         Config config = new Config();
         ClientManager adminManager = new ClientManager.Builder().withSignIn(config.getAdminSignIn())
-                .withConfig(config).withClientInfo(CLIENT_INFO).build();
+                .withConfig(config).withClientInfo(CLIENT_INFO).withAcceptLanguage(LANGUAGES).build();
         TestUser adminUser = new TestUser(config.getAdminSignIn(), adminManager);
         adminUser.signInAgain();
         return adminUser;
@@ -189,7 +193,7 @@ public class TestUserHelper {
                     .password(signUp.getPassword());
             
             ClientManager manager = new ClientManager.Builder().withConfig(admin.getConfig()).withSignIn(signIn)
-                    .withClientInfo(clientInfo).build();
+                    .withClientInfo(clientInfo).withAcceptLanguage(LANGUAGES).build();
             TestUser testUser = new TestUser(signIn, manager);
 
             UserSessionInfo userSession = null;
