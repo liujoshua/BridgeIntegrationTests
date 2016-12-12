@@ -20,6 +20,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
@@ -44,7 +45,8 @@ public class SurveySchemaTest {
 
     private static final String SURVEY_NAME = "Compatibility Test Survey";
 
-    private static TestUserHelper.TestUser developer;
+    private static TestUser admin;
+    private static TestUser developer;
     private static UploadSchemasApi schemasApi;
     private static SurveysApi surveysApi;
 
@@ -56,6 +58,7 @@ public class SurveySchemaTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
+        admin = TestUserHelper.getSignedInAdmin();
         developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.DEVELOPER);
         schemasApi = developer.getClient(UploadSchemasApi.class);
         surveysApi = developer.getClient(SurveysApi.class);
@@ -73,7 +76,6 @@ public class SurveySchemaTest {
     @After
     public void after() throws Exception {
         // cleanup surveys
-        TestUser admin = TestUserHelper.getSignedInAdmin();
         SurveysApi surveysApi = admin.getClient(SurveysApi.class);
         for (GuidCreatedOnVersionHolder oneSurvey : surveysToDelete) {
             try {
@@ -86,8 +88,9 @@ public class SurveySchemaTest {
 
     @After
     public void deleteSchemas() throws Exception {
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         try {
-            schemasApi.deleteAllRevisionsOfUploadSchema(surveyId).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(Tests.TEST_KEY, surveyId).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
         }
