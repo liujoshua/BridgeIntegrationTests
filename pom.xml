@@ -57,12 +57,6 @@
             <artifactId>synapseJavaClient</artifactId>
             <version>161.0-4-g843de2c</version>
         </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>1.7.21</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <repositories>
