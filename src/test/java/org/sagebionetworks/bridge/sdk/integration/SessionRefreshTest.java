@@ -5,6 +5,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+
+import static org.junit.Assert.fail;
 
 public class SessionRefreshTest {
     private static TestUserHelper.TestUser user;
@@ -22,7 +25,7 @@ public class SessionRefreshTest {
     }
 
     @Test
-    public void test() throws Exception {
+    public void testReauthenticationThrowsConsentException() throws Exception {
         // User starts out signed in. Initial call succeeds.
         user.getClient(ParticipantsApi.class).getUsersParticipantRecord().execute();
 
@@ -30,6 +33,11 @@ public class SessionRefreshTest {
         user.signOut();
 
         // Call should succeed again. Sign-in happens again behind the scenes
-        user.getClient(ParticipantsApi.class).getUsersParticipantRecord().execute();
+        try {
+            user.getClient(ParticipantsApi.class).getUsersParticipantRecord().execute();
+            fail("ConsentRequiredException expected");
+        } catch (ConsentRequiredException e) {
+            // this is expected
+        }
     }
 }
