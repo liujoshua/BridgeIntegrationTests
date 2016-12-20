@@ -11,6 +11,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.config.PropertiesConfig;
@@ -105,7 +106,11 @@ public class StudyTest {
         TEST_USER_ID = Long.parseLong(config.get(TEST_USER_ID_NAME));
     }
 
+    // Disabled this test: This test stomps the Synapse configuration in the API study. This is used by the
+    // Bridge-Exporter to test the Bridge-Exporter as part of the release process. The conflict introduced in this test
+    // causes Bridge-Exporter tests to fail.
     @Test
+    @Ignore
     public void createSynapseProjectTeam() throws IOException, SynapseException {
         // only use developer to signin
         TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
