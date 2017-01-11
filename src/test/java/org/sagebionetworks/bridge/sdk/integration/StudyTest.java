@@ -217,6 +217,12 @@ public class StudyTest {
                 newStudy.getMinSupportedAppVersions().get("Android"));
         assertEquals("iOS minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get("iPhone OS"),
                 newStudy.getMinSupportedAppVersions().get("iPhone OS"));
+        
+        assertEquals("android push ARN should be equal", study.getPushNotificationARNs().get("Android"),
+                newStudy.getPushNotificationARNs().get("Android"));        
+        assertEquals("iOS push ARN should be equal", study.getPushNotificationARNs().get("iPhone OS"),
+                newStudy.getPushNotificationARNs().get("iPhone OS"));        
+        
         // This was set to true even though we didn't set it.
         assertTrue("strictUploadValidationEnabled should be true", newStudy.getStrictUploadValidationEnabled());
         // And this is true because admins can set it to true.

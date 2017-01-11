@@ -196,6 +196,12 @@ public class Tests {
         map.put("Android", 10);
         map.put("iPhone OS", 14);
         study.setMinSupportedAppVersions(map);
+        
+        Map<String,String> platformMap = new HashMap<>();
+        platformMap.put("Android", "arn:android:"+identifier);
+        platformMap.put("iPhone OS", "arn:ios:"+identifier);
+        study.setPushNotificationARNs(platformMap);
+        
         if (version != null) {
             study.setVersion(version);
         }
