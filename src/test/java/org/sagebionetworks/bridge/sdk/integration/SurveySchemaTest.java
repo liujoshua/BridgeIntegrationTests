@@ -1,26 +1,14 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -38,13 +26,25 @@ import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class SurveySchemaTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveySchemaTest.class);
 
     private static final String SURVEY_NAME = "Compatibility Test Survey";
 
-    private static TestUserHelper.TestUser developer;
+    private static TestUser admin;
+    private static TestUser developer;
     private static UploadSchemasApi schemasApi;
     private static SurveysApi surveysApi;
 
@@ -56,6 +56,7 @@ public class SurveySchemaTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
+        admin = TestUserHelper.getSignedInAdmin();
         developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.DEVELOPER);
         schemasApi = developer.getClient(UploadSchemasApi.class);
         surveysApi = developer.getClient(SurveysApi.class);
@@ -73,7 +74,6 @@ public class SurveySchemaTest {
     @After
     public void after() throws Exception {
         // cleanup surveys
-        TestUser admin = TestUserHelper.getSignedInAdmin();
         SurveysApi surveysApi = admin.getClient(SurveysApi.class);
         for (GuidCreatedOnVersionHolder oneSurvey : surveysToDelete) {
             try {
@@ -86,8 +86,9 @@ public class SurveySchemaTest {
 
     @After
     public void deleteSchemas() throws Exception {
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         try {
-            schemasApi.deleteAllRevisionsOfUploadSchema(surveyId).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(Tests.TEST_KEY, surveyId).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
         }

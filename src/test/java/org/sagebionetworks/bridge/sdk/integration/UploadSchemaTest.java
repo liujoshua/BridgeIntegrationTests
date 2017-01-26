@@ -1,16 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.util.List;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 import org.junit.After;
@@ -18,7 +9,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConcurrentModificationException;
@@ -31,6 +22,16 @@ import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaList;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 public class UploadSchemaTest {
     // We put spaces in the schema ID to test URL encoding.
     private static final String TEST_SCHEMA_ID_PREFIX = "integration test schema ";
@@ -38,6 +39,7 @@ public class UploadSchemaTest {
     private static TestUserHelper.TestUser developer;
     private static TestUserHelper.TestUser user;
     private static TestUserHelper.TestUser worker;
+    private static ForAdminsApi adminApi;
     private static UploadSchemasApi devUploadSchemasApi;
     private static ForWorkersApi workerUploadSchemasApi;
 
@@ -45,9 +47,12 @@ public class UploadSchemaTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
+        TestUserHelper.TestUser admin = TestUserHelper.getSignedInAdmin();
         developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
         worker = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.WORKER);
+
+        adminApi = admin.getClient(ForAdminsApi.class);
         devUploadSchemasApi = developer.getClient(UploadSchemasApi.class);
         workerUploadSchemasApi = worker.getClient(ForWorkersApi.class);
     }
@@ -60,7 +65,7 @@ public class UploadSchemaTest {
     @After
     public void deleteSchemas() throws Exception {
         try {
-            devUploadSchemasApi.deleteAllRevisionsOfUploadSchema(schemaId).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(Tests.TEST_KEY, schemaId).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
         }
@@ -119,34 +124,22 @@ public class UploadSchemaTest {
         
         assertEquals(updatedSchemaV2, workerSchemaV2MinusStudyId);
 
-        // Step 4: Delete v3 and verify the getter returns v2.
-        devUploadSchemasApi.deleteUploadSchema(schemaId, 3L).execute();
-        UploadSchema returnedAfterDelete = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body();
-        assertEquals(updatedSchemaV2, returnedAfterDelete);
-
-        // Step 4a: Use list API to verify v1 and v2 are both still present
-        boolean v1Found = false;
-        boolean v2Found = false;
+        // Step 4a: Use list API to verify all 3 versions are still present
+        Set<Long> foundRevSet = new HashSet<>();
         UploadSchemaList schemaList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId).execute().body();
+        //noinspection Convert2streamapi
         for (UploadSchema oneSchema : schemaList.getItems()) {
             if (oneSchema.getSchemaId().equals(schemaId)) {
-                long rev = oneSchema.getRevision();
-                if (rev == 1) {
-                    assertEquals(createdSchemaV1, oneSchema);
-                    v1Found = true;
-                } else if (rev == 2) {
-                    assertEquals(updatedSchemaV2, oneSchema);
-                    v2Found = true;
-                } else {
-                    fail("Unexpected schema revision: " + rev);
-                }
+                foundRevSet.add(oneSchema.getRevision());
             }
         }
-        assertTrue(v1Found);
-        assertTrue(v2Found);
+        assertEquals(3, foundRevSet.size());
+        assertTrue(foundRevSet.contains(1L));
+        assertTrue(foundRevSet.contains(2L));
+        assertTrue(foundRevSet.contains(3L));
 
         // Step 5: Delete all schemas with the test schema ID
-        devUploadSchemasApi.deleteAllRevisionsOfUploadSchema(schemaId).execute();
+        adminApi.deleteAllRevisionsOfUploadSchema(Tests.TEST_KEY, schemaId).execute();
 
         // Step 5a: Get API should throw
         Exception thrownEx = null;

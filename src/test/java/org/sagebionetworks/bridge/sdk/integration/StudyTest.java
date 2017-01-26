@@ -4,6 +4,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.sagebionetworks.bridge.config.PropertiesConfig;
 import org.sagebionetworks.bridge.rest.ClientManager;
@@ -118,7 +119,11 @@ public class StudyTest {
         TEST_USER_ID = Long.parseLong(config.get(TEST_USER_ID_NAME));
     }
 
+    // Disabled this test: This test stomps the Synapse configuration in the API study. This is used by the
+    // Bridge-Exporter to test the Bridge-Exporter as part of the release process. The conflict introduced in this test
+    // causes Bridge-Exporter tests to fail.
     @Test
+    @Ignore
     public void createSynapseProjectTeam() throws IOException, SynapseException {
         // only use developer to signin
         TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
@@ -225,6 +230,12 @@ public class StudyTest {
                 newStudy.getMinSupportedAppVersions().get("Android"));
         assertEquals("iOS minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get("iPhone OS"),
                 newStudy.getMinSupportedAppVersions().get("iPhone OS"));
+        
+        assertEquals("android push ARN should be equal", study.getPushNotificationARNs().get("Android"),
+                newStudy.getPushNotificationARNs().get("Android"));        
+        assertEquals("iOS push ARN should be equal", study.getPushNotificationARNs().get("iPhone OS"),
+                newStudy.getPushNotificationARNs().get("iPhone OS"));        
+        
         // This was set to true even though we didn't set it.
         assertTrue("strictUploadValidationEnabled should be true", newStudy.getStrictUploadValidationEnabled());
         // And this is true because admins can set it to true.
