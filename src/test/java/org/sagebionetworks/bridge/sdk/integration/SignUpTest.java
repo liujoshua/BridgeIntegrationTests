@@ -1,14 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-
 import org.junit.Test;
-
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
@@ -21,6 +13,13 @@ import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+
+import java.io.IOException;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class SignUpTest {
 
@@ -111,7 +110,7 @@ public class SignUpTest {
                 assertEquals("ExternalIdentifier not found.", e.getMessage());
             }
         } finally {
-            adminApi.deleteStudy(study.getIdentifier()).execute();
+            adminApi.deleteStudy(study.getIdentifier(), true).execute();
         }
     }
 }
