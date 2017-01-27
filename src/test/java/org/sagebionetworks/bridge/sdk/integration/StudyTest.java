@@ -382,6 +382,7 @@ public class StudyTest {
             UploadsApi devUploadsApi = developer.getClient(UploadsApi.class);
             DateTime startTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
             DateTime endTime = startTime.plusHours(4);
+
             int count = devUploadsApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body().getItems().size();
 
             // Create a REQUESTED record that we can retrieve through the reporting API.
@@ -400,7 +401,9 @@ public class StudyTest {
 
             // This should retrieve both of the user's uploads.
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+
             UploadList results = studiesApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body();
+          
             assertEquals(startTime, results.getStartTime());
             assertEquals(endTime, results.getEndTime());
 

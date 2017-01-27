@@ -97,6 +97,7 @@ public class SchedulePlanTest {
         // We want a version that will return the schedule plan. Zero doesn't do it.
         ClientManager manager = new ClientManager.Builder()
                 .withSignIn(developer.getSignIn())
+                .withAcceptLanguage(Lists.newArrayList("en"))
                 .withClientInfo(clientInfo).build();
 
         SchedulePlan plan = Tests.getABTestSchedulePlan();
