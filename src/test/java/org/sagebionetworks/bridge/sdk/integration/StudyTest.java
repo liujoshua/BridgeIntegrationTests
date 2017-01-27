@@ -7,31 +7,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import org.sagebionetworks.bridge.config.PropertiesConfig;
-import org.sagebionetworks.bridge.rest.model.*;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-
-import org.sagebionetworks.bridge.rest.ClientManager;
-import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.rest.api.UploadsApi;
-import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
-import org.sagebionetworks.bridge.rest.exceptions.UnsupportedVersionException;
-import org.sagebionetworks.client.SynapseAdminClientImpl;
-import org.sagebionetworks.client.SynapseClient;
-import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.reflection.model.PaginatedResults;
-import org.sagebionetworks.repo.model.*;
-import org.sagebionetworks.repo.model.util.ModelConstants;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +14,43 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.sagebionetworks.client.SynapseAdminClientImpl;
+import org.sagebionetworks.client.SynapseClient;
+import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.reflection.model.PaginatedResults;
+import org.sagebionetworks.repo.model.AccessControlList;
+import org.sagebionetworks.repo.model.Entity;
+import org.sagebionetworks.repo.model.MembershipInvtnSubmission;
+import org.sagebionetworks.repo.model.Project;
+import org.sagebionetworks.repo.model.ResourceAccess;
+import org.sagebionetworks.repo.model.Team;
+import org.sagebionetworks.repo.model.util.ModelConstants;
+
+import org.sagebionetworks.bridge.config.PropertiesConfig;
+import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.api.UploadsApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.rest.exceptions.UnsupportedVersionException;
+import org.sagebionetworks.bridge.rest.model.ClientInfo;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.StudyList;
+import org.sagebionetworks.bridge.rest.model.Upload;
+import org.sagebionetworks.bridge.rest.model.UploadList;
+import org.sagebionetworks.bridge.rest.model.UploadRequest;
+import org.sagebionetworks.bridge.rest.model.UploadSession;
+import org.sagebionetworks.bridge.rest.model.VersionHolder;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
 public class StudyTest {
     
@@ -61,6 +73,8 @@ public class StudyTest {
     private static final String CONFIG_FILE = "bridge-sdk-test.properties";
     private static final String DEFAULT_CONFIG_FILE = CONFIG_FILE;
     private static final String USER_CONFIG_FILE = System.getProperty("user.home") + "/" + CONFIG_FILE;
+
+    private static final long MAX_PAGE_SIZE = 100L;
 
     @Before
     public void before() throws IOException {
@@ -241,6 +255,17 @@ public class StudyTest {
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals("test4@test.com", newerStudy.getConsentNotificationEmail());
 
+        // logically delete a study by admin
+        studiesApi.deleteStudy(studyId, false).execute();
+        Study retStudy = studiesApi.getStudy(studyId).execute().body();
+        assertNotNull(retStudy);
+
+        // and try to update that deleted study
+        retStudy.setSponsorName("renewed-sponsor-name");
+        holder = studiesApi.updateStudy(retStudy.getIdentifier(), retStudy).execute().body();
+        Study retRenewedStudy = studiesApi.getStudy(retStudy.getIdentifier()).execute().body();
+        assertEquals("renewed-sponsor-name", retRenewedStudy.getSponsorName());
+
         studiesApi.deleteStudy(studyId, true).execute();
         try {
             studiesApi.getStudy(studyId).execute();
@@ -296,7 +321,7 @@ public class StudyTest {
             studiesApi.updateUsersStudy(study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
-            assertFalse("healthCodeExportEnabled should be true", study.getHealthCodeExportEnabled());
+            assertFalse("healthCodeExportEnabled should be false", study.getHealthCodeExportEnabled());
             assertTrue("emailVersificationEnabled should be true", study.getEmailVerificationEnabled());
         } finally {
             developer.signOutAndDeleteUser();
@@ -357,7 +382,8 @@ public class StudyTest {
             UploadsApi devUploadsApi = developer.getClient(UploadsApi.class);
             DateTime startTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
             DateTime endTime = startTime.plusHours(4);
-            int count = devUploadsApi.getUploads(startTime, endTime, null, null).execute().body().getItems().size();
+
+            int count = devUploadsApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body().getItems().size();
 
             // Create a REQUESTED record that we can retrieve through the reporting API.
             UploadRequest request = new UploadRequest();
@@ -375,13 +401,50 @@ public class StudyTest {
 
             // This should retrieve both of the user's uploads.
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-            UploadList results = studiesApi.getUploads(startTime, endTime, null, null).execute().body();
+
+            UploadList results = studiesApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body();
+          
             assertEquals(startTime, results.getStartTime());
             assertEquals(endTime, results.getEndTime());
 
             assertEquals(count+2, results.getItems().size());
             assertNotNull(getUpload(results, uploadSession.getId()));
             assertNotNull(getUpload(results, uploadSession2.getId()));
+
+            // then test pagination by setting max pagesize to 1
+            UploadList pagedResults = studiesApi.getUploads(startTime, endTime, 1L, null).execute().body();
+            assertEquals(startTime, pagedResults.getStartTime());
+            assertEquals(endTime, pagedResults.getEndTime());
+
+            assertEquals(count+1, pagedResults.getItems().size());
+            assertEquals(count+2, pagedResults.getTotal().intValue());
+            assertEquals(1, pagedResults.getPageSize().intValue());
+            assertNotNull(pagedResults.getOffsetKey());
+            assertEquals(uploadSession2.getId(), pagedResults.getOffsetKey()); // offsetkey is first session's upload id
+            assertNotNull(getUpload(pagedResults, uploadSession2.getId()));
+            assertNull(getUpload(pagedResults, uploadSession.getId()));
+
+            // then getupload again with offsetkey from session1
+            UploadList secondPagedResults = studiesApi.getUploads(startTime, endTime, 1L, pagedResults.getOffsetKey()).execute().body();
+            assertEquals(startTime, secondPagedResults.getStartTime());
+            assertEquals(endTime, secondPagedResults.getEndTime());
+
+            assertEquals(count+1, secondPagedResults.getItems().size());
+            assertEquals(count+2, secondPagedResults.getTotal().intValue());
+            assertEquals(1, secondPagedResults.getPageSize().intValue());
+            assertNull(secondPagedResults.getOffsetKey()); // no offset key at the last page
+            assertNull(getUpload(secondPagedResults, uploadSession2.getId()));
+            assertNotNull(getUpload(secondPagedResults, uploadSession.getId()));
+
+            // then check if will set default page size if not given by user
+            UploadList nullPageSizeResults = studiesApi.getUploads(startTime, endTime, null, null).execute().body();
+            assertEquals(startTime, nullPageSizeResults.getStartTime());
+            assertEquals(endTime, nullPageSizeResults.getEndTime());
+            assertNotNull(nullPageSizeResults.getPageSize());
+            assertEquals(count+2, nullPageSizeResults.getItems().size());
+            assertEquals(count+2, nullPageSizeResults.getTotal().intValue());
+            assertNotNull(getUpload(nullPageSizeResults, uploadSession.getId()));
+            assertNotNull(getUpload(nullPageSizeResults, uploadSession2.getId()));
         } finally {
             if (user != null) {
                 user.signOutAndDeleteUser();
