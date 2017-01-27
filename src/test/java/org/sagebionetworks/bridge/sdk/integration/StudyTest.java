@@ -1,11 +1,38 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.sagebionetworks.client.SynapseAdminClientImpl;
+import org.sagebionetworks.client.SynapseClient;
+import org.sagebionetworks.client.exceptions.SynapseException;
+import org.sagebionetworks.reflection.model.PaginatedResults;
+import org.sagebionetworks.repo.model.AccessControlList;
+import org.sagebionetworks.repo.model.Entity;
+import org.sagebionetworks.repo.model.MembershipInvtnSubmission;
+import org.sagebionetworks.repo.model.Project;
+import org.sagebionetworks.repo.model.ResourceAccess;
+import org.sagebionetworks.repo.model.Team;
+import org.sagebionetworks.repo.model.util.ModelConstants;
+
 import org.sagebionetworks.bridge.config.PropertiesConfig;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -24,32 +51,6 @@ import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.client.SynapseAdminClientImpl;
-import org.sagebionetworks.client.SynapseClient;
-import org.sagebionetworks.client.exceptions.SynapseException;
-import org.sagebionetworks.reflection.model.PaginatedResults;
-import org.sagebionetworks.repo.model.AccessControlList;
-import org.sagebionetworks.repo.model.Entity;
-import org.sagebionetworks.repo.model.MembershipInvtnSubmission;
-import org.sagebionetworks.repo.model.Project;
-import org.sagebionetworks.repo.model.ResourceAccess;
-import org.sagebionetworks.repo.model.Team;
-import org.sagebionetworks.repo.model.util.ModelConstants;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class StudyTest {
     
@@ -254,6 +255,17 @@ public class StudyTest {
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals("test4@test.com", newerStudy.getConsentNotificationEmail());
 
+        // logically delete a study by admin
+        studiesApi.deleteStudy(studyId, false).execute();
+        Study retStudy = studiesApi.getStudy(studyId).execute().body();
+        assertNotNull(retStudy);
+
+        // and try to update that deleted study
+        retStudy.setSponsorName("renewed-sponsor-name");
+        holder = studiesApi.updateStudy(retStudy.getIdentifier(), retStudy).execute().body();
+        Study retRenewedStudy = studiesApi.getStudy(retStudy.getIdentifier()).execute().body();
+        assertEquals("renewed-sponsor-name", retRenewedStudy.getSponsorName());
+
         studiesApi.deleteStudy(studyId, true).execute();
         try {
             studiesApi.getStudy(studyId).execute();
@@ -420,6 +432,16 @@ public class StudyTest {
             assertNull(secondPagedResults.getOffsetKey()); // no offset key at the last page
             assertNull(getUpload(secondPagedResults, uploadSession2.getId()));
             assertNotNull(getUpload(secondPagedResults, uploadSession.getId()));
+
+            // then check if will set default page size if not given by user
+            UploadList nullPageSizeResults = studiesApi.getUploads(startTime, endTime, null, null).execute().body();
+            assertEquals(startTime, nullPageSizeResults.getStartTime());
+            assertEquals(endTime, nullPageSizeResults.getEndTime());
+            assertNotNull(nullPageSizeResults.getPageSize());
+            assertEquals(count+2, nullPageSizeResults.getItems().size());
+            assertEquals(count+2, nullPageSizeResults.getTotal().intValue());
+            assertNotNull(getUpload(nullPageSizeResults, uploadSession.getId()));
+            assertNotNull(getUpload(nullPageSizeResults, uploadSession2.getId()));
         } finally {
             if (user != null) {
                 user.signOutAndDeleteUser();
