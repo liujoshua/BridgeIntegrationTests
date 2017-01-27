@@ -111,7 +111,7 @@ public class SignUpTest {
                 assertEquals("ExternalIdentifier not found.", e.getMessage());
             }
         } finally {
-            adminApi.deleteStudy(study.getIdentifier()).execute();
+            adminApi.deleteStudy(study.getIdentifier(), true).execute();
         }
     }
 }

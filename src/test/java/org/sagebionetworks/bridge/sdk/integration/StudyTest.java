@@ -76,7 +76,7 @@ public class StudyTest {
     @After
     public void after() throws Exception {
         if (studyId != null) {
-            admin.getClient(StudiesApi.class).deleteStudy(studyId).execute();
+            admin.getClient(StudiesApi.class).deleteStudy(studyId, true).execute();
         }
         if (project != null) {
             synapseClient.deleteEntityById(project.getId());
@@ -241,7 +241,7 @@ public class StudyTest {
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals("test4@test.com", newerStudy.getConsentNotificationEmail());
 
-        studiesApi.deleteStudy(studyId).execute();
+        studiesApi.deleteStudy(studyId, true).execute();
         try {
             studiesApi.getStudy(studyId).execute();
             fail("Should have thrown exception");
@@ -357,7 +357,7 @@ public class StudyTest {
             UploadsApi devUploadsApi = developer.getClient(UploadsApi.class);
             DateTime startTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
             DateTime endTime = startTime.plusHours(4);
-            int count = devUploadsApi.getUploads(startTime, endTime).execute().body().getItems().size();
+            int count = devUploadsApi.getUploads(startTime, endTime, null, null).execute().body().getItems().size();
 
             // Create a REQUESTED record that we can retrieve through the reporting API.
             UploadRequest request = new UploadRequest();
@@ -375,7 +375,7 @@ public class StudyTest {
 
             // This should retrieve both of the user's uploads.
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-            UploadList results = studiesApi.getUploads(startTime, endTime).execute().body();
+            UploadList results = studiesApi.getUploads(startTime, endTime, null, null).execute().body();
             assertEquals(startTime, results.getStartTime());
             assertEquals(endTime, results.getEndTime());
 
