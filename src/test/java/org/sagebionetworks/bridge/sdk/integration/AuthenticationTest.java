@@ -98,7 +98,7 @@ public class AuthenticationTest {
                 assertEquals(404, e.getStatusCode());
             }
         } finally {
-            adminsApi.deleteStudy(studyId).execute();
+            adminsApi.deleteStudy(studyId, true).execute();
         }
     }
     

@@ -42,7 +42,7 @@ public class UTF8Test {
             assertEquals(studyName, returnedStudy.getName());
         } finally {
             // clean-up: delete study
-            studiesApi.deleteStudy(studyId).execute();
+            studiesApi.deleteStudy(studyId, true).execute();
         }
     }
 
