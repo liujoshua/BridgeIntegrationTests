@@ -6,9 +6,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Locale;
 
+import com.google.common.collect.ImmutableList;
+import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -182,13 +183,20 @@ public class UploadTest {
         assertEquals("Upload succeeded, UploadId=" + uploadId, UploadStatus.SUCCEEDED, status.getStatus());
         assertTrue("Upload has no validation messages, UploadId=" + uploadId, status.getMessageList().isEmpty());
 
+        // Test some basic record properties.
         HealthDataRecord record = status.getRecord();
+        assertEquals(uploadId, record.getUploadId());
+        assertNotNull(record.getId());
 
-        assertNotNull(record);
+        // For createdOn and createdOnTimeZone, these exist in the test files, but are kind of all over the place. For
+        // now, just verify that the createdOn exists and that createdOnTimeZone can be parsed as a timezone as part of
+        // a date.
+        assertNotNull(record.getCreatedOn());
+        assertNotNull(DateTime.parse("2017-01-25T16:36" + record.getCreatedOnTimeZone()));
 
         // check for update record export status, no need to activate exporter in testing
         RecordExportStatusRequest statusRequest = new RecordExportStatusRequest();
-        statusRequest.setRecordIds(Arrays.asList(record.getId()));
+        statusRequest.setRecordIds(ImmutableList.of(record.getId()));
         statusRequest.setSynapseExporterStatus(SynapseExporterStatus.NOT_EXPORTED);
         worker.getClient(ForWorkersApi.class).updateRecordExportStatuses(statusRequest).execute();
 
