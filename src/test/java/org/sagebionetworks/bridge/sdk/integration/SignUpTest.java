@@ -26,12 +26,15 @@ public class SignUpTest {
     @Test
     public void defaultValuesExist() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(SignUpTest.class, true);
-        
-        ParticipantsApi participantsApi = testUser.getClientManager().getClient(ParticipantsApi.class);
-        
-        StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
-        assertTrue(participant.getNotifyByEmail());
-        assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
+        try {
+            ParticipantsApi participantsApi = testUser.getClientManager().getClient(ParticipantsApi.class);
+
+            StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
+            assertTrue(participant.getNotifyByEmail());
+            assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
+        } finally {
+            testUser.signOutAndDeleteUser();
+        }
     }
     
     @Test
