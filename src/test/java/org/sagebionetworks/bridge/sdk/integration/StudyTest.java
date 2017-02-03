@@ -414,7 +414,7 @@ public class StudyTest {
             assertEquals(endTime, pagedResults.getEndTime());
 
             assertEquals(count+1, pagedResults.getItems().size());
-            assertEquals(count+2, pagedResults.getTotal().intValue());
+            assertEquals(count+1, pagedResults.getTotal().intValue());
             assertEquals(1, pagedResults.getPageSize().intValue());
             assertNotNull(pagedResults.getOffsetKey());
             assertEquals(uploadSession2.getId(), pagedResults.getOffsetKey()); // offsetkey is first session's upload id
@@ -427,7 +427,7 @@ public class StudyTest {
             assertEquals(endTime, secondPagedResults.getEndTime());
 
             assertEquals(count+1, secondPagedResults.getItems().size());
-            assertEquals(count+2, secondPagedResults.getTotal().intValue());
+            assertEquals(count+1, secondPagedResults.getTotal().intValue());
             assertEquals(1, secondPagedResults.getPageSize().intValue());
             assertNull(secondPagedResults.getOffsetKey()); // no offset key at the last page
             assertNull(getUpload(secondPagedResults, uploadSession2.getId()));
