@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
@@ -8,6 +9,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
@@ -88,13 +90,28 @@ public class ScheduleTest {
 
     @Test
     public void canRetrieveSchedulesForAUser() throws Exception {
+        // Make a schedule plan. Stick a probabilistically unique label on it so we can find it again later.
+        // Note: We stick the label on the *schedule*, not the schedule *plan*. This is because the end user only ever
+        // sees the schedule, not the schedule plan.
+        String label = Tests.randomIdentifier(this.getClass());
+        SchedulePlan schedulePlan = Tests.getSimpleSchedulePlan();
+        Tests.getSimpleSchedule(schedulePlan).setLabel(label);
+
         SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
-        planGuid = schedulesApi.createSchedulePlan(Tests.getABTestSchedulePlan()).execute().body().getGuid();
+        planGuid = schedulesApi.createSchedulePlan(schedulePlan).execute().body().getGuid();
 
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
-        
+
+        // There may be multiple schedules from other tests. Loop through all schedules until we find the one we're
+        // looking for.
+        boolean foundSchedule = false;
         List<Schedule> schedules = usersApi.getSchedules().execute().body().getItems();
-        assertEquals("There should be one schedule for this user", 1, schedules.size());
+        for (Schedule oneSchedule : schedules) {
+            if (label.equals(oneSchedule.getLabel())) {
+                foundSchedule = true;
+            }
+        }
+        assertTrue(foundSchedule);
     }
     
     @Test
@@ -130,15 +147,17 @@ public class ScheduleTest {
         SchedulePlan plan = new SchedulePlan();
         plan.setLabel("Criteria plan");
 
+        String activityLabel1 = Tests.randomIdentifier(this.getClass());
         Schedule schedule1 = new Schedule();
         schedule1.setLabel("Schedule 1");
         schedule1.setScheduleType(ScheduleType.ONCE);
-        schedule1.setActivities(taskActivity("Activity 1", "task:AAA"));
-        
+        schedule1.setActivities(taskActivity(activityLabel1, "task:AAA"));
+
+        String activityLabel2 = Tests.randomIdentifier(this.getClass());
         Schedule schedule2 = new Schedule();
         schedule2.setLabel("Schedule 2");
         schedule2.setScheduleType(ScheduleType.ONCE);
-        schedule2.setActivities(taskActivity("Activity 2", "task:BBB"));
+        schedule2.setActivities(taskActivity(activityLabel2, "task:BBB"));
         
         Criteria criteria1 = new Criteria();
         criteria1.setMinAppVersions(new ImmutableMap.Builder<String,Integer>().put("Android",0).build());
@@ -166,19 +185,19 @@ public class ScheduleTest {
         // Manipulate the User-Agent string and see scheduled activity change accordingly
         user.setClientInfo(getClientInfoWithVersion("Android", 2));
         user.signInAgain();
-        activitiesShouldContainTask("Activity 1");
+        activitiesShouldContainTask(activityLabel1);
         
         user.signOut();
         user.setClientInfo(getClientInfoWithVersion("Android", 12));
         user.signInAgain();
-        activitiesShouldContainTask("Activity 2");
+        activitiesShouldContainTask(activityLabel2);
 
         // In this final test no matching occurs, but this simply means that the first schedule will match and be 
         // returned (not that all of the schedules in the plan will be returned, that's not how a plan works).
         user.signOut();
         user.setClientInfo(getClientInfoWithVersion("iPhone OS", 12));
         user.signInAgain();
-        activitiesShouldContainTask("Activity 1");
+        activitiesShouldContainTask(activityLabel1);
     }
     
     private ClientInfo getClientInfo(String appName, Integer appVersion) {
@@ -202,8 +221,16 @@ public class ScheduleTest {
     private void activitiesShouldContainTask(String activityLabel) throws Exception {
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         ScheduledActivityList activities = usersApi.getScheduledActivities("+00:00", 1, null).execute().body();
-        assertEquals((Integer)1, activities.getTotal());
-        assertEquals(activityLabel, activities.getItems().get(0).getActivity().getLabel());
+
+        // There may be other tasks, but there should only be one task with this label. Loop through tasks and count
+        // the number of tasks with this label.
+        int numMatchingActivities = 0;
+        for (ScheduledActivity oneActivity : activities.getItems()) {
+            if (activityLabel.equals(oneActivity.getActivity().getLabel())) {
+                numMatchingActivities++;
+            }
+        }
+        assertEquals(1, numMatchingActivities);
     }
     
     private ClientInfo getClientInfoWithVersion(String osName, Integer version) {

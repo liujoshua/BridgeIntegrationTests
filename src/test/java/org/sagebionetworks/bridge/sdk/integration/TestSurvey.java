@@ -97,6 +97,8 @@ public class TestSurvey {
         c.setMinLength(2);
         c.setMaxLength(255);
         c.setPattern("\\d{3}-\\d{3}-\\d{4}");
+        c.setPatternErrorMessage("Please enter phone number");
+        c.setPatternPlaceholder("###-###-####");
         c.setDataType(DataType.STRING);
         stringQuestion.setPrompt("Please enter an emergency phone number (###-###-####)?");
         stringQuestion.setPromptDetail("This should be someone else's number.");
