@@ -246,7 +246,7 @@ public class StudyTest {
 
         Long oldVersion = newStudy.getVersion();
         alterStudy(newStudy);
-        holder = studiesApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
+        studiesApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
 
         Study newerStudy = studiesApi.getStudy(newStudy.getIdentifier()).execute().body();
         assertTrue(newerStudy.getVersion() > oldVersion);
@@ -262,7 +262,7 @@ public class StudyTest {
 
         // and try to update that deleted study
         retStudy.setSponsorName("renewed-sponsor-name");
-        holder = studiesApi.updateStudy(retStudy.getIdentifier(), retStudy).execute().body();
+        studiesApi.updateStudy(retStudy.getIdentifier(), retStudy).execute().body();
         Study retRenewedStudy = studiesApi.getStudy(retStudy.getIdentifier()).execute().body();
         assertEquals("renewed-sponsor-name", retRenewedStudy.getSponsorName());
 
@@ -343,7 +343,7 @@ public class StudyTest {
         // Set a minimum value that should not any other tests
         if (study.getMinSupportedAppVersions().get("Android") == null) {
             study.getMinSupportedAppVersions().put("Android", 1);
-            studiesApi.updateUsersStudy(study).execute();
+            studiesApi.updateStudy(Tests.TEST_KEY, study).execute();
         }
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
         try {
@@ -400,6 +400,8 @@ public class StudyTest {
             Thread.sleep(1000); // This does depend on a GSI, so pause for a bit.
 
             // This should retrieve both of the user's uploads.
+            // NOTE: This assumes that there aren't more than a few dozen uploads in the API study in the last few
+            // hours.
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
 
             UploadList results = studiesApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body();
@@ -412,29 +414,22 @@ public class StudyTest {
             assertNotNull(getUpload(results, uploadSession2.getId()));
 
             // then test pagination by setting max pagesize to 1
+            // There are at least 2 uploads, so we know there are at least 2 pages.
             UploadList pagedResults = studiesApi.getUploads(startTime, endTime, 1L, null).execute().body();
             assertEquals(startTime, pagedResults.getStartTime());
             assertEquals(endTime, pagedResults.getEndTime());
 
-            assertEquals(count+1, pagedResults.getItems().size());
-            assertEquals(count+2, pagedResults.getTotal().intValue());
+            assertEquals(1, pagedResults.getItems().size());
             assertEquals(1, pagedResults.getPageSize().intValue());
             assertNotNull(pagedResults.getOffsetKey());
-            assertEquals(uploadSession2.getId(), pagedResults.getOffsetKey()); // offsetkey is first session's upload id
-            assertNotNull(getUpload(pagedResults, uploadSession2.getId()));
-            assertNull(getUpload(pagedResults, uploadSession.getId()));
 
             // then getupload again with offsetkey from session1
             UploadList secondPagedResults = studiesApi.getUploads(startTime, endTime, 1L, pagedResults.getOffsetKey()).execute().body();
             assertEquals(startTime, secondPagedResults.getStartTime());
             assertEquals(endTime, secondPagedResults.getEndTime());
 
-            assertEquals(count+1, secondPagedResults.getItems().size());
-            assertEquals(count+2, secondPagedResults.getTotal().intValue());
+            assertEquals(1, secondPagedResults.getItems().size());
             assertEquals(1, secondPagedResults.getPageSize().intValue());
-            assertNull(secondPagedResults.getOffsetKey()); // no offset key at the last page
-            assertNull(getUpload(secondPagedResults, uploadSession2.getId()));
-            assertNotNull(getUpload(secondPagedResults, uploadSession.getId()));
 
             // then check if will set default page size if not given by user
             UploadList nullPageSizeResults = studiesApi.getUploads(startTime, endTime, null, null).execute().body();
@@ -442,7 +437,6 @@ public class StudyTest {
             assertEquals(endTime, nullPageSizeResults.getEndTime());
             assertNotNull(nullPageSizeResults.getPageSize());
             assertEquals(count+2, nullPageSizeResults.getItems().size());
-            assertEquals(count+2, nullPageSizeResults.getTotal().intValue());
             assertNotNull(getUpload(nullPageSizeResults, uploadSession.getId()));
             assertNotNull(getUpload(nullPageSizeResults, uploadSession2.getId()));
         } finally {
