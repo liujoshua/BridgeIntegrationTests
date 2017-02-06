@@ -111,7 +111,7 @@ public class ReportTest {
             indices = reportsApi.getReportIndices("study").execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.STUDY, indices.getReportType());
-            
+
             // delete
             reportsApi.deleteAllParticipantReportRecords(userId, reportId).execute();
             results = usersApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute()
@@ -255,7 +255,7 @@ public class ReportTest {
                         SEARCH_END_DATE).execute().body();
                 fail("Should have thrown exception");
             } catch(EntityNotFoundException e) {
-                
+                // expected exception
             }
 
             // Convert the index so the report is public.
@@ -272,6 +272,32 @@ public class ReportTest {
         } finally {
             ReportsApi devReportClient = developer.getClient(ReportsApi.class);
             devReportClient.deleteAllStudyReportRecords(reportId).execute();
+            developer.signOutAndDeleteUser();
+        }
+    }
+
+    @Test
+    public void differentStudyReportsMakeDifferentIndices() throws Exception {
+        // We previously had a bug in ReportService where if you create two reports with the same type but different
+        // IDs, it would only create one index. (This was caused by a cache using the wrong cache key.) This is
+        // unlikely to happen again, since the cache was removed. However, in order to verify the fix and prevent
+        // future regression, this test has been added.
+
+        TestUser developer = TestUserHelper.createAndSignInUser(this.getClass(), false, Role.DEVELOPER);
+        try {
+            // Create reports with different IDs.
+            ReportsApi devReportClient = developer.getClient(ReportsApi.class);
+            devReportClient.addStudyReportRecord(reportId + 1, REPORT1).execute();
+            devReportClient.addStudyReportRecord(reportId + 2, REPORT2).execute();
+
+            // We should see indices for both reports.
+            ReportIndexList indices = devReportClient.getReportIndices("study").execute().body();
+            assertTrue(containsThisIdentifier(indices, reportId + 1));
+            assertTrue(containsThisIdentifier(indices, reportId + 2));
+
+            developer.getClient(ReportsApi.class).deleteAllStudyReportRecords(reportId + 1).execute();
+            developer.getClient(ReportsApi.class).deleteAllStudyReportRecords(reportId + 2).execute();
+        } finally {
             developer.signOutAndDeleteUser();
         }
     }
