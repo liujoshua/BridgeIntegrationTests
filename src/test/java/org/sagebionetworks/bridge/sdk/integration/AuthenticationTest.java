@@ -18,6 +18,9 @@ import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
@@ -110,7 +113,9 @@ public class AuthenticationTest {
             .body(new StringEntity("{\"sptoken\":\"testtoken\",\"study\":\"api\"}"))
             .execute().returnResponse();
         assertEquals(404, response.getStatusLine().getStatusCode());
-        assertEquals("{\"message\":\"Account not found.\"}", EntityUtils.toString(response.getEntity()));
+        
+        JsonNode node = new ObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
+        assertEquals("Account not found.", node.get("message").asText());
     }
     
     // Should not be able to tell from the sign up response if an email is enrolled in the study or not.
