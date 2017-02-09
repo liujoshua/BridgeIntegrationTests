@@ -533,30 +533,6 @@ public class SurveyTest {
         }
     }
     
-    @Test
-    public void cannotPhysicallyDeleteSurveyInCombinedActivity() throws Exception {
-        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
-        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
-
-        GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
-        
-        keys = surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute().body();
-        
-        SchedulePlan plan = createSchedulePlanTo(keys);
-        GuidVersionHolder holder = schedulesApi.createSchedulePlan(plan).execute().body();
-        
-        // Should not be able to physically delete this survey
-        try {
-            SurveysApi adminSurveysApi = admin.getClient(SurveysApi.class);
-            adminSurveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
-            fail("Should have thrown an exception.");
-        } catch(ConstraintViolationException e) {
-            
-        } finally {
-            schedulesApi.deleteSchedulePlan(holder.getGuid()).execute();
-        }
-    }
-    
     private SchedulePlan createSchedulePlanTo(GuidCreatedOnVersionHolder keys) {
         SurveyReference surveyReference = new SurveyReference().guid(keys.getGuid()).createdOn(keys.getCreatedOn());
         
