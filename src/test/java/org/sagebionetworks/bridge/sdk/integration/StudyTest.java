@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.ImmutableList;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
@@ -140,8 +141,7 @@ public class StudyTest {
             studiesApi.updateUsersStudy(currentStudy).execute().body();
 
             // execute
-            studiesApi.createSynapseProjectTeam(TEST_USER_ID.toString()).execute().body();
-
+            studiesApi.createSynapseProjectTeam(ImmutableList.of(TEST_USER_ID.toString())).execute().body();
             // verify study
             Study newStudy = studiesApi.getUsersStudy().execute().body();
             assertEquals(newStudy.getIdentifier(), currentStudy.getIdentifier());
@@ -161,7 +161,7 @@ public class StudyTest {
             AccessControlList projectAcl = synapseClient.getACL(projectId);
             Set<ResourceAccess> projectRa =  projectAcl.getResourceAccess();
             assertNotNull(projectRa);
-            assertEquals(projectRa.size(), 3); // target user, exporter and bridgepf itself
+            assertEquals(projectRa.size(), 4); // target user, exporter and bridgepf itself --- and the new team
             // first verify exporter
             List<ResourceAccess> retListForExporter = projectRa.stream()
                     .filter(ra -> ra.getPrincipalId().equals(Long.parseLong(EXPORTER_SYNAPSE_USER_ID)))
