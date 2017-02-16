@@ -86,6 +86,7 @@ public class SignUpTest {
     public void signUpForStudyWithExternalIdValidation() throws Exception {
         Study study = Tests.getStudy(Tests.randomIdentifier(SignUpTest.class), null);
         study.setExternalIdValidationEnabled(true);
+        study.setExternalIdRequiredOnSignup(true);
         
         TestUser admin = TestUserHelper.getSignedInAdmin();
         
@@ -102,7 +103,7 @@ public class SignUpTest {
                 authApi.signUp(signUp).execute();
                 fail("Should have thrown exception");
             } catch(InvalidEntityException e) {
-                assertEquals("StudyParticipant is invalid: externalId cannot be null or blank", e.getMessage());
+                assertEquals("StudyParticipant is invalid: externalId is required", e.getMessage());
             }
             try {
                 // Wrong ID. We can't add an ID to this study, as we can't add a user.
