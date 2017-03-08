@@ -123,7 +123,7 @@ public class CompoundActivityDefinitionTest {
             // Test list. Since there might be other defs from other tests, page through the defs to find the ones
             // corresponding to the test.
             List<CompoundActivityDefinition> defList = compoundActivityDefinitionsApi
-                    .getAllCompoundActivityDefinitionsInStudy().execute().body().getItems();
+                    .getAllCompoundActivityDefinitions().execute().body().getItems();
             Map<String, CompoundActivityDefinition> defsByTaskId = Maps.uniqueIndex(defList,
                     CompoundActivityDefinition::getTaskId);
 
@@ -159,7 +159,8 @@ public class CompoundActivityDefinitionTest {
         assertEquals(SCHEMA_ID, schemaList.get(0).getId());
     }
 
-    // Similarly, for survey lists.
+    // Similarly, for survey lists. Also, the href property is set by the server, and there's no simple way to get that
+    // to work using .equals().
     private static void assertSurveyList(List<SurveyReference> surveyList) {
         assertEquals(1, surveyList.size());
         assertEquals(SURVEY_ID, surveyList.get(0).getIdentifier());
