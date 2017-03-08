@@ -31,6 +31,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
+import org.sagebionetworks.bridge.rest.model.IntegerConstraints;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
 import com.google.common.collect.Lists;
@@ -55,7 +57,6 @@ import org.sagebionetworks.bridge.rest.model.Operator;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
-import org.sagebionetworks.bridge.rest.model.ScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
@@ -178,6 +179,21 @@ public class SurveyTest {
         surveysApi.publishSurvey(survey.getGuid(), survey.getCreatedOn(), false).execute();
         survey = surveysApi.getSurvey(survey.getGuid(), survey.getCreatedOn()).execute().body();
         assertTrue("survey is now published.", survey.getPublished());
+    }
+
+    @Test(expected = InvalidEntityException.class)
+    public void createInvalidSurveyReturns400() throws Exception {
+        // This should seem obvious. However, there was a previous bug in BridgePF where the 400 invalid survey
+        // exception would be masked by an obscure 500 NullPointerException. The only codepath where this happens is
+        // is creating surveys with invalid survey elements, which goes through the SurveyElementFactory.
+        //
+        // The easiest way to repro this bug is to create a survey question with a constraint without a DataType.
+        // The bug would cause a 500 NPE. When fixed, it will produce a 400 InvalidEntityException with all the
+        // validation messages.
+
+        Survey survey = new Survey().addElementsItem(new SurveyQuestion().constraints(new IntegerConstraints()));
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        surveysApi.createSurvey(survey).execute();
     }
 
     @Test
