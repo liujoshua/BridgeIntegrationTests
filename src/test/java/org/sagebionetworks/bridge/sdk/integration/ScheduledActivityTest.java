@@ -192,6 +192,17 @@ public class ScheduledActivityTest {
         scheduledActivities = usersApi.getScheduledActivities("+00:00", 3, null).execute().body();
         schActivity = findActivity1(scheduledActivities);
         assertNull(schActivity);
+        
+        // But the activities continue to be in the history APIs
+        list = usersApi.getActivityHistory(activity.getGuid(),
+                startDateTime, endDateTime, null, 5L).execute().body();
+        assertFalse(list.getItems().isEmpty());
+        assertNotNull(list.getItems().get(0).getFinishedOn());
+        
+        list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
+                startDateTime, endDateTime, null, 5L).execute().body();
+        assertFalse(list.getItems().isEmpty());
+        assertNotNull(list.getItems().get(0).getFinishedOn());
     }
 
     @Test
