@@ -31,19 +31,34 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
+import org.sagebionetworks.bridge.rest.model.IntegerConstraints;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+
+import com.google.common.collect.Lists;
+
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
+import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.PublishedSurveyException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.ActivityType;
 import org.sagebionetworks.bridge.rest.model.Constraints;
 import org.sagebionetworks.bridge.rest.model.DataType;
 import org.sagebionetworks.bridge.rest.model.DateTimeConstraints;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
+import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Image;
 import org.sagebionetworks.bridge.rest.model.MultiValueConstraints;
 import org.sagebionetworks.bridge.rest.model.Operator;
 import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.Schedule;
+import org.sagebionetworks.bridge.rest.model.SchedulePlan;
+import org.sagebionetworks.bridge.rest.model.ScheduleType;
+import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyElement;
@@ -51,12 +66,14 @@ import org.sagebionetworks.bridge.rest.model.SurveyInfoScreen;
 import org.sagebionetworks.bridge.rest.model.SurveyList;
 import org.sagebionetworks.bridge.rest.model.SurveyQuestion;
 import org.sagebionetworks.bridge.rest.model.SurveyQuestionOption;
+import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.rest.model.SurveyRule;
 import org.sagebionetworks.bridge.rest.model.UIHint;
 
 public class SurveyTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
     
+    private static TestUser admin;
     private static TestUser developer;
     private static TestUser user;
     private static TestUser worker;
@@ -67,6 +84,7 @@ public class SurveyTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
+        admin = TestUserHelper.getSignedInAdmin();
         developer = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(SurveyTest.class, true);
         worker = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.WORKER);
@@ -161,6 +179,21 @@ public class SurveyTest {
         surveysApi.publishSurvey(survey.getGuid(), survey.getCreatedOn(), false).execute();
         survey = surveysApi.getSurvey(survey.getGuid(), survey.getCreatedOn()).execute().body();
         assertTrue("survey is now published.", survey.getPublished());
+    }
+
+    @Test(expected = InvalidEntityException.class)
+    public void createInvalidSurveyReturns400() throws Exception {
+        // This should seem obvious. However, there was a previous bug in BridgePF where the 400 invalid survey
+        // exception would be masked by an obscure 500 NullPointerException. The only codepath where this happens is
+        // is creating surveys with invalid survey elements, which goes through the SurveyElementFactory.
+        //
+        // The easiest way to repro this bug is to create a survey question with a constraint without a DataType.
+        // The bug would cause a 500 NPE. When fixed, it will produce a 400 InvalidEntityException with all the
+        // validation messages.
+
+        Survey survey = new Survey().addElementsItem(new SurveyQuestion().constraints(new IntegerConstraints()));
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        surveysApi.createSurvey(survey).execute();
     }
 
     @Test
@@ -452,6 +485,81 @@ public class SurveyTest {
         assertEquals("true", retrievedRule.getValue());
         assertEquals(Operator.EQ, retrievedRule.getOperator());
         assertNull(retrievedRule.getSkipTo());
+    }
+    
+    @Test
+    public void cannotLogicallyDeletePublishedSurvey() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+
+        GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        
+        surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
+        
+        try {
+            surveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
+            fail("Should have thrown exception");
+        } catch(PublishedSurveyException e) {
+        }
+        // you can still retrieve the survey in lists
+        SurveyList list = surveysApi.getPublishedSurveys().execute().body();
+        assertTrue(list.getItems().stream()
+                .anyMatch(survey -> survey.getGuid().equals(keys.getGuid())));
+    }
+    
+    @Test
+    public void cannotLogicallyDeleteSurveyTwice() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+
+        GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        
+        surveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
+        try {
+            surveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+        }
+        try {
+            surveysApi.getAllVersionsOfSurvey(keys.getGuid()).execute().body();    
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+        }
+    }
+    
+    @Test
+    public void cannotPhysicallyDeleteSurveyInSchedule() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+
+        GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        
+        keys = surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute().body();
+        
+        SchedulePlan plan = createSchedulePlanTo(keys);
+        GuidVersionHolder holder = schedulesApi.createSchedulePlan(plan).execute().body();
+        
+        // Should not be able to physically delete this survey
+        try {
+            SurveysApi adminSurveysApi = admin.getClient(SurveysApi.class);
+            adminSurveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
+            fail("Should have thrown an exception.");
+        } catch(ConstraintViolationException e) {
+            
+        } finally {
+            schedulesApi.deleteSchedulePlan(holder.getGuid()).execute();
+        }
+    }
+    
+    private SchedulePlan createSchedulePlanTo(GuidCreatedOnVersionHolder keys) {
+        SurveyReference surveyReference = new SurveyReference().guid(keys.getGuid()).createdOn(keys.getCreatedOn());
+        
+        Activity activity = new Activity().label("Do this survey").activityType(ActivityType.SURVEY)
+                .survey(surveyReference);
+        Schedule schedule = new Schedule().activities(Lists.newArrayList(activity));
+        schedule.setScheduleType(ScheduleType.ONCE);
+        
+        SimpleScheduleStrategy strategy = new SimpleScheduleStrategy().schedule(schedule);
+        
+        return new SchedulePlan().label("Plan").strategy(strategy);
     }
     
     private Constraints getConstraints(Survey survey, String id) {

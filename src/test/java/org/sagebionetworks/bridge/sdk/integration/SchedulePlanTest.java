@@ -275,7 +275,7 @@ public class SchedulePlanTest {
             }
             if (surveyKeys != null) {
                 SurveysApi surveysApi = admin.getClient(SurveysApi.class);
-                surveysApi.deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true);
+                surveysApi.deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true).execute();
             }
         }
     }
