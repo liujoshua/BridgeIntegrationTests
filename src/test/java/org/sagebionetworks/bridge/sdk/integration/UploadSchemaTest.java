@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
@@ -22,8 +23,11 @@ import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaList;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -153,6 +157,7 @@ public class UploadSchemaTest {
 
         // Step 5b: Use list API to verify no schemas with this ID
         UploadSchemaList schemaList2 = devUploadSchemasApi.getMostRecentUploadSchemas().execute().body();
+        //noinspection Convert2streamapi
         for (UploadSchema oneSchema : schemaList2.getItems()) {
             if (oneSchema.getSchemaId().equals(schemaId)) {
                 fail("Found schema with ID " + schemaId + " even though it should have been deleted");
@@ -190,6 +195,10 @@ public class UploadSchemaTest {
         final DateTime surveyCreatedOn = DateTime.parse("2016-04-29T16:00:00.002-0700");
         final long surveyCreatedOnMillis = surveyCreatedOn.getMillis();
 
+        // Maps for min/maxAppVersions.
+        Map<String, Integer> maxAppVersionMap = ImmutableMap.of("integ-test", 10);
+        Map<String, Integer> minAppVersionMap = ImmutableMap.of("integ-test", 2);
+
         // Create schema with all the fields. Note that no single field can logically have all the fields (some of
         // which are enforced server-side).
         UploadFieldDefinition def1 = new UploadFieldDefinition();
@@ -217,12 +226,16 @@ public class UploadSchemaTest {
         
         List<UploadFieldDefinition> fieldDefList = ImmutableList.of(def1, def2, def3, def4);
         UploadSchema schema = schema("Schema", schemaId, UploadSchemaType.IOS_SURVEY, fieldDefList);
+        schema.setMaxAppVersions(maxAppVersionMap);
+        schema.setMinAppVersions(minAppVersionMap);
         schema.setSurveyGuid("survey");
         schema.setSurveyCreatedOn(surveyCreatedOn);
-                
+
         UploadSchema createdSchema = devUploadSchemasApi.createOrUpdateUploadSchema(schema).execute().body();
 
         assertEquals(fieldDefList, createdSchema.getFieldDefinitions());
+        assertEquals(maxAppVersionMap, createdSchema.getMaxAppVersions());
+        assertEquals(minAppVersionMap, createdSchema.getMinAppVersions());
         assertEquals("Schema", createdSchema.getName());
         assertEquals(1, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
@@ -284,6 +297,7 @@ public class UploadSchemaTest {
         schema.setSchemaId(schemaId);
         schema.setRevision(rev);
         schema.setSchemaType(UploadSchemaType.IOS_DATA);
+        schema.setVersion(version);
         schema.setFieldDefinitions(Lists.newArrayList(fieldDef));
         return schema;
     }
@@ -399,10 +413,8 @@ public class UploadSchemaTest {
     
     private UploadSchema schema(UploadSchema source, String name, String id, UploadSchemaType type,
             UploadFieldDefinition... definitions) throws Exception {
-        List<UploadFieldDefinition> defs = Lists.newArrayList();
-        for (UploadFieldDefinition def : definitions) {
-            defs.add(def);
-        }
+        List<UploadFieldDefinition> defs = new ArrayList<>();
+        Collections.addAll(defs, definitions);
         UploadSchema schema = new UploadSchema();
         if (source != null) {
             copy(schema, source);
