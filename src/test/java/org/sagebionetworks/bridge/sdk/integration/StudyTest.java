@@ -244,6 +244,9 @@ public class StudyTest {
         // And this is also true
         assertTrue("emailVerificationEnabled should be true", newStudy.getEmailVerificationEnabled());
 
+        // assert disable study
+        assertTrue(newStudy.getDisableExport());
+
         Long oldVersion = newStudy.getVersion();
         alterStudy(newStudy);
         studiesApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
