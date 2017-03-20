@@ -1,8 +1,10 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,9 +22,11 @@ import com.google.common.collect.Multiset;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ActivityType;
+import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
@@ -36,6 +40,7 @@ import org.sagebionetworks.bridge.rest.model.TaskReference;
 @Category(IntegrationSmokeTest.class)
 public class ScheduledActivityTest {
     
+    private TestUser researcher;
     private TestUser user;
     private TestUser developer;
     private SchedulesApi schedulePlansApi;
@@ -46,6 +51,7 @@ public class ScheduledActivityTest {
     public void before() throws Exception {
         schedulePlanGuidList = new ArrayList<>();
 
+        researcher = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Role.RESEARCHER);
         developer = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true);
 
@@ -113,6 +119,9 @@ public class ScheduledActivityTest {
                 schedulePlansApi.deleteSchedulePlan(oneSchedulePlanGuid).execute();
             }
         } finally {
+            if (researcher != null) {
+                researcher.signOutAndDeleteUser();
+            }
             if (developer != null) {
                 developer.signOutAndDeleteUser();
             }
@@ -137,6 +146,34 @@ public class ScheduledActivityTest {
         assertEquals("Activity 1", activity.getLabel());
         assertEquals("task:AAA", activity.getTask().getIdentifier());
 
+        DateTime startDateTime = DateTime.now().minusDays(10);
+        DateTime endDateTime = DateTime.now().plusDays(10);
+
+        // You can see this activity in history...
+        ForwardCursorScheduledActivityList list = usersApi.getActivityHistory(activity.getGuid(),
+                startDateTime, endDateTime, null, 5L).execute().body();
+
+        ScheduledActivity retrievedFromHistory = list.getItems().get(0);
+        Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
+        assertEquals(schActivity, retrievedFromHistory);
+        
+        // You can see this activity in the researcher API
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
+                startDateTime, endDateTime, null, 5L).execute().body();
+        
+        retrievedFromHistory = list.getItems().get(0);
+        Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
+        assertEquals(schActivity, retrievedFromHistory);
+        assertFalse(list.getHasNext());
+        assertTrue(startDateTime.isEqual(list.getScheduledOnStart()));
+        assertTrue(endDateTime.isEqual(list.getScheduledOnEnd()));
+        
+        // If we ask for a date range that doesn't include it, it is not returned.
+        list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
+                DateTime.now().plusDays(10), DateTime.now().plusDays(12), null, 5L).execute().body();
+        assertTrue(list.getItems().isEmpty());
+        
         // Start the activity.
         schActivity.setStartedOn(DateTime.now());
         usersApi.updateScheduledActivities(scheduledActivities.getItems()).execute();
@@ -155,19 +192,17 @@ public class ScheduledActivityTest {
         scheduledActivities = usersApi.getScheduledActivities("+00:00", 3, null).execute().body();
         schActivity = findActivity1(scheduledActivities);
         assertNull(schActivity);
-    }
-
-    // api study may have other schedule plans in it with other scheduled activities. To prevent tests from
-    // conflicting, look for the activity with label "Activity 1".
-    private static ScheduledActivity findActivity1(ScheduledActivityList scheduledActivityList) {
-        for (ScheduledActivity oneScheduledActivity : scheduledActivityList.getItems()) {
-            if ("Activity 1".equals(oneScheduledActivity.getActivity().getLabel())) {
-                return oneScheduledActivity;
-            }
-        }
-
-        // It doesn't exist. Return null and let the test deal with it.
-        return null;
+        
+        // But the activities continue to be in the history APIs
+        list = usersApi.getActivityHistory(activity.getGuid(),
+                startDateTime, endDateTime, null, 5L).execute().body();
+        assertFalse(list.getItems().isEmpty());
+        assertNotNull(list.getItems().get(0).getFinishedOn());
+        
+        list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
+                startDateTime, endDateTime, null, 5L).execute().body();
+        assertFalse(list.getItems().isEmpty());
+        assertNotNull(list.getItems().get(0).getFinishedOn());
     }
 
     @Test
@@ -187,6 +222,19 @@ public class ScheduledActivityTest {
         idCounts = getTaskIdsFromTaskReferences(scheduledActivities);
         assertEquals(1, idCounts.count("task:AAA"));
         assertEquals(5, idCounts.count("task:BBB"));
+    }
+
+    // api study may have other schedule plans in it with other scheduled activities. To prevent tests from
+    // conflicting, look for the activity with label "Activity 1".
+    private static ScheduledActivity findActivity1(ScheduledActivityList scheduledActivityList) {
+        for (ScheduledActivity oneScheduledActivity : scheduledActivityList.getItems()) {
+            if ("Activity 1".equals(oneScheduledActivity.getActivity().getLabel())) {
+                return oneScheduledActivity;
+            }
+        }
+
+        // It doesn't exist. Return null and let the test deal with it.
+        return null;
     }
     
     private Multiset<String> getTaskIdsFromTaskReferences(ScheduledActivityList scheduledActivities) {
