@@ -21,6 +21,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
@@ -39,6 +40,26 @@ import org.sagebionetworks.bridge.rest.model.TaskReference;
 
 @Category(IntegrationSmokeTest.class)
 public class ScheduledActivityTest {
+    
+    public static class ClientData {
+        final String name;
+        final boolean enabled;
+        final int count;
+        public ClientData(String name, boolean enabled, int count) {
+            this.name = name;
+            this.enabled = enabled;
+            this.count = count;
+        }
+        public String getName() {
+            return name;
+        }
+        public boolean getEnabled() {
+            return enabled;
+        }
+        public int getCount() {
+            return count;
+        }
+    }
     
     private TestUser researcher;
     private TestUser user;
@@ -176,15 +197,20 @@ public class ScheduledActivityTest {
         
         // Start the activity.
         schActivity.setStartedOn(DateTime.now());
+        schActivity.setClientData(new ClientData("Test Name", true, 100));
         usersApi.updateScheduledActivities(scheduledActivities.getItems()).execute();
 
         // Get activities back and validate that it's started.
         scheduledActivities = usersApi.getScheduledActivities("+00:00", 3, null).execute().body();
         schActivity = findActivity1(scheduledActivities);
         assertNotNull(schActivity);
+        ClientData clientData = RestUtils.toType(schActivity.getClientData(), ClientData.class);
+        assertEquals("Test Name", clientData.getName());
+        assertTrue(clientData.getEnabled());
+        assertEquals(100, clientData.getCount());
         assertEquals(ScheduleStatus.STARTED, schActivity.getStatus());
 
-        // Finish the activity.
+        // Finish the activity, save some data
         schActivity.setFinishedOn(DateTime.now());
         usersApi.updateScheduledActivities(scheduledActivities.getItems()).execute();
 
