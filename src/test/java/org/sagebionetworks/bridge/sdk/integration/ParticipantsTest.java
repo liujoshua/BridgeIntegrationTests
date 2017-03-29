@@ -26,8 +26,8 @@ import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
-import org.sagebionetworks.bridge.rest.model.ActivityList;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
+import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -36,6 +36,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UploadList;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
@@ -358,15 +359,21 @@ public class ParticipantsTest {
             activities = usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
             assertTrue(activities.getItems().size() < count);
             
+            plan = schedulePlanApi.getSchedulePlan(planKeys.getGuid()).execute().body();
+            String activityGuid = ((SimpleScheduleStrategy)plan.getStrategy()).getSchedule().getActivities().get(0).getGuid();
+            
             // But the researcher will still see the full list
             ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-            ActivityList resActivities = participantsApi.getParticipantActivities(userId, null, null).execute().body();
+            
+            ForwardCursorScheduledActivityList resActivities = participantsApi
+                    .getParticipantActivityHistory(userId, activityGuid, null, null, null, 50L).execute().body();
             assertEquals(count, resActivities.getItems().size());
             
             // Researcher can delete all the activities as well.
             participantsApi.deleteParticipantActivities(userId).execute();
             
-            resActivities = participantsApi.getParticipantActivities(userId, null, null).execute().body();
+            resActivities = participantsApi
+                    .getParticipantActivityHistory(userId, activityGuid, null, null, null, 50L).execute().body();
             assertEquals(0, resActivities.getItems().size());
         } finally {
             if (user != null) {
