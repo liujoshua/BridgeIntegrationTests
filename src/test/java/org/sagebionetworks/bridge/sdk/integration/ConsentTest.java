@@ -269,7 +269,7 @@ public class ConsentTest {
                 sig = new ConsentSignature().name(sig.getName()).birthdate(sig.getBirthdate())
                         .scope(SharingScope.ALL_QUALIFIED_RESEARCHERS).imageData(sig.getImageData())
                         .imageMimeType(sig.getImageMimeType());
-                userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute().body();
+                userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute();
                 fail("EntityAlreadyExistsException not thrown");
             } catch (EntityAlreadyExistsException ex) {
                 // expected
