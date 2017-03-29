@@ -22,7 +22,6 @@ import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
-import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -241,14 +240,18 @@ public class ConsentTest {
             }
 
             // give consent
-            userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute();
+            UserSessionInfo session = userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute().body();
+            
+            ConsentStatus status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
+            assertTrue(status.getConsented());
+            assertTrue(status.getSignedMostRecentConsent());
             
             // Participant record shows sharing scope has been set
             StudyParticipant participant = userApi.getUsersParticipantRecord().execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, participant.getSharingScope());
             
             // Session now shows consent...
-            UserSessionInfo session = testUser.signInAgain();
+            session = testUser.signInAgain();
             assertTrue(RestUtils.isUserConsented(session));
             
             // get consent and validate that it's the same consent
@@ -266,8 +269,8 @@ public class ConsentTest {
                 sig = new ConsentSignature().name(sig.getName()).birthdate(sig.getBirthdate())
                         .scope(SharingScope.ALL_QUALIFIED_RESEARCHERS).imageData(sig.getImageData())
                         .imageMimeType(sig.getImageMimeType());
-                Message message = userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute().body();
-                fail("EntityAlreadyExistsException not thrown: " + message.getMessage());
+                userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute();
+                fail("EntityAlreadyExistsException not thrown");
             } catch (EntityAlreadyExistsException ex) {
                 // expected
             }
@@ -283,7 +286,13 @@ public class ConsentTest {
             // withdraw consent
             Withdrawal withdrawal = new Withdrawal().reason("Withdrawing test user from study");
             userApi = testUser.getClient(ForConsentedUsersApi.class);
-            userApi.withdrawConsentFromSubpopulation(testUser.getDefaultSubpopulation(), withdrawal).execute();
+            session = userApi.withdrawConsentFromSubpopulation(testUser.getDefaultSubpopulation(), withdrawal).execute()
+                    .body();
+            
+            status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
+            assertFalse(status.getConsented());
+            assertFalse(status.getSignedMostRecentConsent());
+            
             // This method should now (immediately) throw a ConsentRequiredException
             try {
                 userApi.getSchedules().execute();
