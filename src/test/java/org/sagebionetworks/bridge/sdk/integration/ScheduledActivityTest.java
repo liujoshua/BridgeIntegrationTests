@@ -172,7 +172,7 @@ public class ScheduledActivityTest {
 
         // You can see this activity in history...
         ForwardCursorScheduledActivityList list = usersApi.getActivityHistory(activity.getGuid(),
-                startDateTime, endDateTime, null, "5").execute().body();
+                startDateTime, endDateTime, null, 5L).execute().body();
 
         ScheduledActivity retrievedFromHistory = list.getItems().get(0);
         Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
@@ -221,7 +221,7 @@ public class ScheduledActivityTest {
         
         // But the activities continue to be in the history APIs
         list = usersApi.getActivityHistory(activity.getGuid(),
-                startDateTime, endDateTime, null, "5").execute().body();
+                startDateTime, endDateTime, null, 5L).execute().body();
         assertFalse(list.getItems().isEmpty());
         assertNotNull(list.getItems().get(0).getFinishedOn());
         
