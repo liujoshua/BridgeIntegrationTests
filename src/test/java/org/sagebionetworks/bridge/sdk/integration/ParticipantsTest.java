@@ -311,7 +311,7 @@ public class ParticipantsTest {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             
             usersApi.getScheduledActivities("+07:00", 1, null).execute();
-            RestUtils.isUserConsented(user.getSession());
+            assertTrue(RestUtils.isUserConsented(user.getSession()));
             user.signOut();
 
             Withdrawal withdrawal = new Withdrawal();
@@ -323,7 +323,7 @@ public class ParticipantsTest {
             user.signInAgain();
             fail("Should have thrown consent exception");
         } catch(ConsentRequiredException e) {
-            RestUtils.isUserConsented(e.getSession());
+            assertFalse(RestUtils.isUserConsented(e.getSession()));
         } finally {
             user.signOutAndDeleteUser();
         }
@@ -340,7 +340,7 @@ public class ParticipantsTest {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             
             usersApi.getScheduledActivities("+07:00", 1, null).execute();
-            RestUtils.isUserConsented(user.getSession());
+            assertTrue(RestUtils.isUserConsented(user.getSession()));
             user.signOut();
 
             Withdrawal withdrawal = new Withdrawal();
@@ -352,7 +352,7 @@ public class ParticipantsTest {
             user.signInAgain();
             fail("Should have thrown consent exception");
         } catch(ConsentRequiredException e) {
-            RestUtils.isUserConsented(e.getSession());
+            assertFalse(RestUtils.isUserConsented(e.getSession()));
         } finally {
             user.signOutAndDeleteUser();
         }
