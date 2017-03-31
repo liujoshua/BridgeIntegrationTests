@@ -311,7 +311,7 @@ public class ParticipantsTest {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             
             usersApi.getScheduledActivities("+07:00", 1, null).execute();
-            RestUtils.isUserConsented(user.getSession());
+            assertTrue(RestUtils.isUserConsented(user.getSession()));
             user.signOut();
 
             Withdrawal withdrawal = new Withdrawal();
@@ -323,7 +323,36 @@ public class ParticipantsTest {
             user.signInAgain();
             fail("Should have thrown consent exception");
         } catch(ConsentRequiredException e) {
-            RestUtils.isUserConsented(e.getSession());
+            assertFalse(RestUtils.isUserConsented(e.getSession()));
+        } finally {
+            user.signOutAndDeleteUser();
+        }
+    }
+    
+    @Test
+    public void canWithdrawUserFromSubpopulation() throws Exception {
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
+        String userId = user.getSession().getId();
+        String subpopGuid = user.getSession().getConsentStatuses().entrySet().iterator().next().getValue()
+                .getSubpopulationGuid();
+        try {
+            // Can get activities without an error... user is indeed consented.
+            ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+            
+            usersApi.getScheduledActivities("+07:00", 1, null).execute();
+            assertTrue(RestUtils.isUserConsented(user.getSession()));
+            user.signOut();
+
+            Withdrawal withdrawal = new Withdrawal();
+            withdrawal.setReason("Testing withdrawal API.");
+            
+            ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+            participantsApi.withdrawParticipantFromSubpopulation(userId, subpopGuid, withdrawal).execute();
+            
+            user.signInAgain();
+            fail("Should have thrown consent exception");
+        } catch(ConsentRequiredException e) {
+            assertFalse(RestUtils.isUserConsented(e.getSession()));
         } finally {
             user.signOutAndDeleteUser();
         }
