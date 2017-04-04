@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -122,6 +123,7 @@ public class UploadSchemaTest {
         // This schema should be identical to updatedSchemaV2, except it also has the study ID.
         UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevisionInStudy(Tests.TEST_KEY, schemaId, 2L).execute().body();
         assertEquals(Tests.TEST_KEY, workerSchemaV2.getStudyId());
+        assertSchemaFilledIn(workerSchemaV2);
 
         UploadSchema workerSchemaV2MinusStudyId = copy(null, workerSchemaV2);
         workerSchemaV2MinusStudyId.setStudyId(null);
@@ -133,6 +135,7 @@ public class UploadSchemaTest {
         UploadSchemaList schemaList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId).execute().body();
         //noinspection Convert2streamapi
         for (UploadSchema oneSchema : schemaList.getItems()) {
+            assertSchemaFilledIn(oneSchema);
             if (oneSchema.getSchemaId().equals(schemaId)) {
                 foundRevSet.add(oneSchema.getRevision());
             }
@@ -159,6 +162,7 @@ public class UploadSchemaTest {
         UploadSchemaList schemaList2 = devUploadSchemasApi.getMostRecentUploadSchemas().execute().body();
         //noinspection Convert2streamapi
         for (UploadSchema oneSchema : schemaList2.getItems()) {
+            assertSchemaFilledIn(oneSchema);
             if (oneSchema.getSchemaId().equals(schemaId)) {
                 fail("Found schema with ID " + schemaId + " even though it should have been deleted");
             }
@@ -166,22 +170,33 @@ public class UploadSchemaTest {
     }
 
     private static UploadSchema createOrUpdateSchemaAndVerify(UploadSchema schema) throws Exception {
+        String schemaId = schema.getSchemaId();
         UploadSchema returnedSchema = devUploadSchemasApi.createOrUpdateUploadSchema(schema).execute().body();
 
         // all fields should match, except revision which is incremented
         assertEquals(schema.getFieldDefinitions(), returnedSchema.getFieldDefinitions());
         assertEquals(schema.getName(), returnedSchema.getName());
-        assertEquals(schema.getSchemaId(), returnedSchema.getSchemaId());
+        assertEquals(schemaId, returnedSchema.getSchemaId());
         assertEquals(schema.getSchemaType(), returnedSchema.getSchemaType());
 
         // developer APIs never return study IDs
         assertNull(schema.getStudyId());
 
+        long newSchemaRev;
         if (schema.getRevision() == null) {
-            assertEquals(1, returnedSchema.getRevision().intValue());
+            newSchemaRev = 1;
         } else {
-            assertEquals(schema.getRevision() + 1, returnedSchema.getRevision().intValue());
+            newSchemaRev = schema.getRevision().intValue() + 1;
         }
+        assertEquals(newSchemaRev, returnedSchema.getRevision().longValue());
+
+        // get by id and rev should return the same schema
+        UploadSchema gettedSchema = devUploadSchemasApi.getUploadSchema(schemaId, newSchemaRev).execute().body();
+        assertEquals(returnedSchema, gettedSchema);
+
+        // get latest by id should also return the same schema
+        UploadSchema gettedLatestSchema = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body();
+        assertEquals(returnedSchema, gettedLatestSchema);
 
         return returnedSchema;
     }
@@ -450,5 +465,12 @@ public class UploadSchemaTest {
         schema.setSchemaType(type);
         schema.setFieldDefinitions(definitions);
         return schema;
+    }
+
+    // Verifies the schema is filled in. This ensures that we're correctly getting all schema fields, and not just
+    // index keys.
+    private static void assertSchemaFilledIn(UploadSchema schema) {
+        assertNotNull(schema.getName());
+        assertFalse(schema.getFieldDefinitions().isEmpty());
     }
 }
