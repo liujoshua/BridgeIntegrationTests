@@ -43,6 +43,8 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.exceptions.UnsupportedVersionException;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
+import org.sagebionetworks.bridge.rest.model.EmailTemplate;
+import org.sagebionetworks.bridge.rest.model.MimeType;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
@@ -76,7 +78,7 @@ public class StudyTest {
     private static final String USER_CONFIG_FILE = System.getProperty("user.home") + "/" + CONFIG_FILE;
 
     private static final long MAX_PAGE_SIZE = 100L;
-
+    
     @Before
     public void before() throws IOException {
         // pre-load test user id and exporter synapse user id
@@ -210,13 +212,14 @@ public class StudyTest {
         assertNotNull(holder.getVersion());
 
         Study newStudy = studiesApi.getStudy(study.getIdentifier()).execute().body();
-
+        
         study.addDataGroupsItem("test_user"); // added by the server, required for equality of dataGroups.
 
         // Verify study has password/email templates
         assertNotNull("password policy should not be null", newStudy.getPasswordPolicy());
         assertNotNull("verify email template should not be null", newStudy.getVerifyEmailTemplate());
         assertNotNull("password reset template should not be null", newStudy.getResetPasswordTemplate());
+        assertNotNull("email sign in template should not be null", newStudy.getEmailSignInTemplate());
         assertEquals("name should be equal", study.getName(), newStudy.getName());
         assertEquals("minAgeOfConsent should be equal", study.getMinAgeOfConsent(), newStudy.getMinAgeOfConsent());
         assertEquals("sponsorName should be equal", study.getSponsorName(), newStudy.getSponsorName());
@@ -239,10 +242,9 @@ public class StudyTest {
         
         // This was set to true even though we didn't set it.
         assertTrue("strictUploadValidationEnabled should be true", newStudy.getStrictUploadValidationEnabled());
-        // And this is true because admins can set it to true.
         assertTrue("healthCodeExportEnabled should be true", newStudy.getHealthCodeExportEnabled());
-        // And this is also true
         assertTrue("emailVerificationEnabled should be true", newStudy.getEmailVerificationEnabled());
+        assertFalse("emailSignInEnabled should be false", newStudy.getEmailSignInEnabled());
 
         // assert disable study
         assertTrue(newStudy.getDisableExport());
@@ -258,6 +260,17 @@ public class StudyTest {
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals("test4@test.com", newerStudy.getConsentNotificationEmail());
 
+        assertEquals("subject", newerStudy.getEmailSignInTemplate().getSubject());
+        assertEquals("body ${token}", newerStudy.getEmailSignInTemplate().getBody());
+        assertEquals(MimeType.TEXT_HTML, newerStudy.getEmailSignInTemplate().getMimeType());
+
+        // Set stuff that only an admin can set.
+        newerStudy.setEmailSignInEnabled(true);
+        studiesApi.updateStudy(newerStudy.getIdentifier(), newerStudy).execute().body();
+        Study newestStudy = studiesApi.getStudy(newStudy.getIdentifier()).execute().body();
+        
+        assertTrue("emailSignInEnabled should be true after update", newestStudy.getEmailSignInEnabled());
+        
         // logically delete a study by admin
         studiesApi.deleteStudy(studyId, false).execute();
         Study retStudy = studiesApi.getStudy(studyId).execute().body();
@@ -468,6 +481,9 @@ public class StudyTest {
         study.setName("Altered Test Study [SDK]");
         study.setSupportEmail("test3@test.com");
         study.setConsentNotificationEmail("test4@test.com");
+        
+        EmailTemplate template = new EmailTemplate().subject("subject").body("body ${token}").mimeType(MimeType.TEXT_HTML);
+        study.setEmailSignInTemplate(template);
     }
 
 }
