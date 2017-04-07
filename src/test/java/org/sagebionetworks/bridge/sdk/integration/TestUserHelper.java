@@ -22,6 +22,7 @@ import java.util.Set;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class TestUserHelper {
+    private static final Config CONFIG = new Config();
 
     private static final List<String> LANGUAGES = Lists.newArrayList("en");
     private static final String PASSWORD = "P4ssword";
@@ -85,9 +86,8 @@ public class TestUserHelper {
         public void signOutAndDeleteUser() throws IOException {
             this.signOut();
 
-            Config config = new Config();
-            ClientManager adminManager = new ClientManager.Builder().withSignIn(config.getAdminSignIn())
-                    .withConfig(config).withClientInfo(manager.getClientInfo()).withAcceptLanguage(LANGUAGES).build();
+            ClientManager adminManager = new ClientManager.Builder().withSignIn(CONFIG.getAdminSignIn())
+                    .withConfig(CONFIG).withClientInfo(manager.getClientInfo()).withAcceptLanguage(LANGUAGES).build();
             ForAdminsApi adminsApi = adminManager.getClient(ForAdminsApi.class);
             adminsApi.deleteUser(userSession.getId()).execute();
         }
@@ -110,12 +110,34 @@ public class TestUserHelper {
         }
     }
     public static TestUser getSignedInAdmin() {
-        Config config = new Config();
-        ClientManager adminManager = new ClientManager.Builder().withSignIn(config.getAdminSignIn())
-                .withConfig(config).withClientInfo(CLIENT_INFO).withAcceptLanguage(LANGUAGES).build();
-        TestUser adminUser = new TestUser(config.getAdminSignIn(), adminManager);
-        adminUser.signInAgain();
-        return adminUser;
+        return getSignedInUser(CONFIG.getAdminSignIn());
+    }
+
+    // Returns a pre-configured Developer account in the API study.
+    public static TestUser getSignedInApiDeveloper() {
+        String email = CONFIG.fromProperty(Config.Props.API_DEVELOPER_EMAIL);
+        String password = CONFIG.fromProperty(Config.Props.API_DEVELOPER_PASSWORD);
+        String studyId = CONFIG.fromProperty(Config.Props.API_DEVELOPER_STUDY);
+        SignIn signIn = new SignIn().email(email).password(password).study(studyId);
+        return getSignedInUser(signIn);
+    }
+
+    // Returns a pre-configured Developer account in the Shared study.
+    public static TestUser getSignedInSharedDeveloper() {
+        String email = CONFIG.fromProperty(Config.Props.SHARED_DEVELOPER_EMAIL);
+        String password = CONFIG.fromProperty(Config.Props.SHARED_DEVELOPER_PASSWORD);
+        String studyId = CONFIG.fromProperty(Config.Props.SHARED_DEVELOPER_STUDY);
+        SignIn signIn = new SignIn().email(email).password(password).study(studyId);
+        return getSignedInUser(signIn);
+    }
+
+    // Returns the test user for the given sign-in credentials.
+    public static TestUser getSignedInUser(SignIn signIn) {
+        ClientManager manager = new ClientManager.Builder().withSignIn(signIn).withConfig(CONFIG)
+                .withClientInfo(CLIENT_INFO).withAcceptLanguage(LANGUAGES).build();
+        TestUser user = new TestUser(signIn, manager);
+        user.signInAgain();
+        return user;
     }
 
     public static TestUser createAndSignInUser(Class<?> cls, boolean consentUser, Role... roles) throws IOException {
