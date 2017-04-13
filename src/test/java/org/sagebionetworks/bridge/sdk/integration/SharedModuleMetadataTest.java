@@ -27,6 +27,7 @@ import org.sagebionetworks.bridge.rest.exceptions.ConcurrentModificationExceptio
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
+import org.sagebionetworks.bridge.rest.model.SharedModuleMetadataList;
 import org.sagebionetworks.bridge.rest.model.SharedModuleType;
 
 public class SharedModuleMetadataTest {
@@ -45,6 +46,7 @@ public class SharedModuleMetadataTest {
 
     private static SharedModulesApi apiDeveloperModulesApi;
     private static SharedModulesApi sharedDeveloperModulesApi;
+    private static SharedModulesApi nonAuthSharedModulesApi;
 
     private String moduleId;
 
@@ -54,6 +56,7 @@ public class SharedModuleMetadataTest {
         apiDeveloperModulesApi = apiDeveloper.getClient(SharedModulesApi.class);
         TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
+        nonAuthSharedModulesApi = TestUserHelper.getNonAuthClient(SharedModulesApi.class);
     }
 
     @Before
@@ -68,6 +71,28 @@ public class SharedModuleMetadataTest {
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the module.
         }
+    }
+
+    @Test
+    public void testNonAuthUserGetAndQueryCalls() throws Exception {
+        // first create a test metadata
+        SharedModuleMetadata metadata = testCreateGetPublished(1, null);
+
+        // execute query and get
+        SharedModuleMetadata retMetadata = nonAuthSharedModulesApi.getMetadataByIdAndVersion(metadata.getId(), metadata.getVersion()).execute().body();
+        assertEquals(metadata, retMetadata);
+
+        retMetadata = nonAuthSharedModulesApi.getMetadataByIdLatestVersion(metadata.getId()).execute().body();
+        assertEquals(metadata, retMetadata);
+
+        SharedModuleMetadataList retMetadataList = nonAuthSharedModulesApi
+                .queryAllMetadata(false, true, "id=" + "\'" + metadata.getId() + "\'", null).execute().body();
+        assertEquals(1, retMetadataList.getItems().size());
+        assertEquals(metadata, retMetadataList.getItems().get(0));
+
+        retMetadataList = nonAuthSharedModulesApi.queryMetadataById(metadata.getId(), true, true, null, null).execute().body();
+        assertEquals(1, retMetadataList.getItems().size());
+        assertEquals(metadata, retMetadataList.getItems().get(0));
     }
 
     @Test
@@ -148,6 +173,26 @@ public class SharedModuleMetadataTest {
         // create
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(inputVersion)
                 .name(MODULE_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
+        SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
+        assertEquals(moduleId, createdMetadata.getId());
+        assertEquals(expectedVersion, createdMetadata.getVersion().intValue());
+        assertEquals(MODULE_NAME, createdMetadata.getName());
+        assertEquals(SCHEMA_ID, createdMetadata.getSchemaId());
+        assertEquals(SCHEMA_REV, createdMetadata.getSchemaRevision().intValue());
+
+        // get latest, make sure it matches
+        SharedModuleMetadata gettedLatestMetadata = sharedDeveloperModulesApi.getMetadataByIdLatestVersion(moduleId)
+                .execute().body();
+        assertEquals(createdMetadata, gettedLatestMetadata);
+
+        return createdMetadata;
+    }
+
+    private SharedModuleMetadata testCreateGetPublished(int expectedVersion, Integer inputVersion) throws Exception {
+        // create
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(inputVersion)
+                .name(MODULE_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV).published(true);
         SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
                 .body();
         assertEquals(moduleId, createdMetadata.getId());
