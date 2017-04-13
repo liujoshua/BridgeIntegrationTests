@@ -1,5 +1,19 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -10,6 +24,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
@@ -22,20 +37,6 @@ import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaList;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class UploadSchemaTest {
     // We put spaces in the schema ID to test URL encoding.
@@ -245,6 +246,7 @@ public class UploadSchemaTest {
         schema.setMinAppVersions(minAppVersionMap);
         schema.setSurveyGuid("survey");
         schema.setSurveyCreatedOn(surveyCreatedOn);
+        schema.setPublished(true);
 
         UploadSchema createdSchema = devUploadSchemasApi.createOrUpdateUploadSchema(schema).execute().body();
 
@@ -258,6 +260,7 @@ public class UploadSchemaTest {
         assertNull(createdSchema.getStudyId());
         assertEquals("survey", createdSchema.getSurveyGuid());
         assertEquals(surveyCreatedOnMillis, createdSchema.getSurveyCreatedOn().getMillis());
+        assertTrue(createdSchema.getPublished());
     }
 
     @Test

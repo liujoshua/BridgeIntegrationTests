@@ -123,6 +123,7 @@ public class SharedModuleTest {
         // Get local schema and verify some fields.
         localSchema = apiDeveloper.getClient(UploadSchemasApi.class).getUploadSchema(importStatus.getSchemaId(),
                 importStatus.getSchemaRevision().longValue()).execute().body();
+        sharedSchema.setPublished(true);
         assertLocalSchema(sharedSchema, localSchema);
 
         // import status should say schema
@@ -161,6 +162,7 @@ public class SharedModuleTest {
         // Get local schema and verify some fields.
         localSchema = apiDeveloper.getClient(UploadSchemasApi.class).getUploadSchema(importStatus.getSchemaId(),
                 importStatus.getSchemaRevision().longValue()).execute().body();
+        sharedSchema.setPublished(true);
         assertLocalSchema(sharedSchema, localSchema);
 
         // import status should say schema
