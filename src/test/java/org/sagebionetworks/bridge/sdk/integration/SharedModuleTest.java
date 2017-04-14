@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -116,6 +117,8 @@ public class SharedModuleTest {
         sharedSchema = createSharedSchema();
         module = createModuleForSchema(sharedSchema);
 
+        assertFalse(sharedSchema.getPublished());
+
         // Copy to local study.
         SharedModuleImportStatus importStatus = apiDeveloper.getClient(SharedModulesApi.class)
                 .importModuleByIdAndVersion(module.getId(), module.getVersion()).execute().body();
@@ -123,6 +126,9 @@ public class SharedModuleTest {
         // Get local schema and verify some fields.
         localSchema = apiDeveloper.getClient(UploadSchemasApi.class).getUploadSchema(importStatus.getSchemaId(),
                 importStatus.getSchemaRevision().longValue()).execute().body();
+
+        assertTrue(localSchema.getPublished());
+
         sharedSchema.setPublished(true);
         assertLocalSchema(sharedSchema, localSchema);
 
@@ -155,6 +161,8 @@ public class SharedModuleTest {
         sharedSchema = createSharedSchema();
         module = createModuleForSchema(sharedSchema);
 
+        assertFalse(sharedSchema.getPublished());
+
         // Copy to local study.
         SharedModuleImportStatus importStatus = apiDeveloper.getClient(SharedModulesApi.class)
                 .importModuleByIdLatestPublishedVersion(module.getId()).execute().body();
@@ -162,6 +170,9 @@ public class SharedModuleTest {
         // Get local schema and verify some fields.
         localSchema = apiDeveloper.getClient(UploadSchemasApi.class).getUploadSchema(importStatus.getSchemaId(),
                 importStatus.getSchemaRevision().longValue()).execute().body();
+
+        assertTrue(localSchema.getPublished());
+
         sharedSchema.setPublished(true);
         assertLocalSchema(sharedSchema, localSchema);
 
