@@ -76,8 +76,10 @@ public class SharedModuleMetadataTest {
     @Test
     public void testNonAuthUserGetAndQueryCalls() throws Exception {
         // first create a test metadata
-        SharedModuleMetadata metadata = testCreateGetPublished(1, null);
-
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(1)
+                .name(MODULE_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV).published(true);
+        SharedModuleMetadata metadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
         // execute query and get
         SharedModuleMetadata retMetadata = nonAuthSharedModulesApi.getMetadataByIdAndVersion(metadata.getId(), metadata.getVersion()).execute().body();
         assertEquals(metadata, retMetadata);
@@ -173,26 +175,6 @@ public class SharedModuleMetadataTest {
         // create
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(inputVersion)
                 .name(MODULE_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
-        SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
-                .body();
-        assertEquals(moduleId, createdMetadata.getId());
-        assertEquals(expectedVersion, createdMetadata.getVersion().intValue());
-        assertEquals(MODULE_NAME, createdMetadata.getName());
-        assertEquals(SCHEMA_ID, createdMetadata.getSchemaId());
-        assertEquals(SCHEMA_REV, createdMetadata.getSchemaRevision().intValue());
-
-        // get latest, make sure it matches
-        SharedModuleMetadata gettedLatestMetadata = sharedDeveloperModulesApi.getMetadataByIdLatestVersion(moduleId)
-                .execute().body();
-        assertEquals(createdMetadata, gettedLatestMetadata);
-
-        return createdMetadata;
-    }
-
-    private SharedModuleMetadata testCreateGetPublished(int expectedVersion, Integer inputVersion) throws Exception {
-        // create
-        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(inputVersion)
-                .name(MODULE_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV).published(true);
         SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
                 .body();
         assertEquals(moduleId, createdMetadata.getId());

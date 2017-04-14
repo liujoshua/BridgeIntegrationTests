@@ -145,16 +145,7 @@ public class TestUserHelper {
 
     // return an non-auth user
     public static <T> T getNonAuthClient(Class<T> service) {
-        String email = CONFIG.fromProperty(Config.Props.SHARED_DEVELOPER_EMAIL);
-        String password = CONFIG.fromProperty(Config.Props.SHARED_DEVELOPER_PASSWORD);
-        String studyId = CONFIG.fromProperty(Config.Props.SHARED_DEVELOPER_STUDY);
-        SignIn signIn = new SignIn().email(email).password(password).study(studyId);
-
-        // only used to get host url from client manager
-        ClientManager manager = new ClientManager.Builder().withSignIn(signIn).withConfig(CONFIG)
-                .withClientInfo(CLIENT_INFO).withAcceptLanguage(LANGUAGES).build();
-
-        ApiClientProvider provider = new ApiClientProvider(manager.getHostUrl(), RestUtils.getUserAgent(CLIENT_INFO), RestUtils.getAcceptLanguage(LANGUAGES));
+        ApiClientProvider provider = new ApiClientProvider(ClientManager.getUrl(CONFIG.getEnvironment()), RestUtils.getUserAgent(CLIENT_INFO), RestUtils.getAcceptLanguage(LANGUAGES));
 
         return provider.getClient(service);
     }
