@@ -92,7 +92,7 @@ public class SharedModuleMetadataTest {
         assertEquals(1, retMetadataList.getItems().size());
         assertEquals(metadata, retMetadataList.getItems().get(0));
 
-        retMetadataList = nonAuthSharedModulesApi.queryMetadataById(metadata.getId(), true, true, null, null).execute().body();
+        retMetadataList = nonAuthSharedModulesApi.queryMetadataById(metadata.getId(), true, false, null, null).execute().body();
         assertEquals(1, retMetadataList.getItems().size());
         assertEquals(metadata, retMetadataList.getItems().get(0));
     }
