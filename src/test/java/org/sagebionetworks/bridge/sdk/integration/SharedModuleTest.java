@@ -127,9 +127,6 @@ public class SharedModuleTest {
         localSchema = apiDeveloper.getClient(UploadSchemasApi.class).getUploadSchema(importStatus.getSchemaId(),
                 importStatus.getSchemaRevision().longValue()).execute().body();
 
-        assertTrue(localSchema.getPublished());
-
-        sharedSchema.setPublished(true);
         assertLocalSchema(sharedSchema, localSchema);
 
         // import status should say schema
@@ -171,9 +168,6 @@ public class SharedModuleTest {
         localSchema = apiDeveloper.getClient(UploadSchemasApi.class).getUploadSchema(importStatus.getSchemaId(),
                 importStatus.getSchemaRevision().longValue()).execute().body();
 
-        assertTrue(localSchema.getPublished());
-
-        sharedSchema.setPublished(true);
         assertLocalSchema(sharedSchema, localSchema);
 
         // import status should say schema
@@ -205,6 +199,7 @@ public class SharedModuleTest {
         assertEquals(sharedSchema.getName(), localSchema.getName());
         assertEquals(sharedSchema.getSchemaType(), localSchema.getSchemaType());
         assertEquals(sharedSchema.getFieldDefinitions(), localSchema.getFieldDefinitions());
+        assertTrue(localSchema.getPublished());
     }
 
     // Helper method to create a survey in the shared module library. Returns the created survey.
