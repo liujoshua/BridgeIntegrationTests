@@ -77,7 +77,7 @@ public class SharedModuleMetadataTest {
     public void testNonAuthUserGetAndQueryCalls() throws Exception {
         // first create a test metadata
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(1)
-                .name(MODULE_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV).published(true);
+                .name(MODULE_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
         SharedModuleMetadata metadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
                 .body();
         // execute query and get
@@ -88,7 +88,7 @@ public class SharedModuleMetadataTest {
         assertEquals(metadata, retMetadata);
 
         SharedModuleMetadataList retMetadataList = nonAuthSharedModulesApi
-                .queryAllMetadata(false, true, "id=" + "\'" + metadata.getId() + "\'", null).execute().body();
+                .queryAllMetadata(false, false, "id=" + "\'" + metadata.getId() + "\'", null).execute().body();
         assertEquals(1, retMetadataList.getItems().size());
         assertEquals(metadata, retMetadataList.getItems().get(0));
 
