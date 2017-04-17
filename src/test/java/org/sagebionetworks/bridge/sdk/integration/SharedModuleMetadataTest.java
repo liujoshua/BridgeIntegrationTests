@@ -33,6 +33,7 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
+import org.sagebionetworks.bridge.rest.model.SharedModuleMetadataList;
 import org.sagebionetworks.bridge.rest.model.SharedModuleType;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
@@ -55,6 +56,7 @@ public class SharedModuleMetadataTest {
 
     private static SharedModulesApi apiDeveloperModulesApi;
     private static SharedModulesApi sharedDeveloperModulesApi;
+    private static SharedModulesApi nonAuthSharedModulesApi;
     private static UploadSchemasApi devUploadSchemasApi;
     private static SurveysApi devSurveysApi;
     private static String studyId;
@@ -69,6 +71,7 @@ public class SharedModuleMetadataTest {
         apiDeveloperModulesApi = apiDeveloper.getClient(SharedModulesApi.class);
         TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
+        nonAuthSharedModulesApi = TestUserHelper.getNonAuthClient(SharedModulesApi.class);
         devUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
         devSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
         studyId = sharedDeveloper.getStudyId();
@@ -101,6 +104,30 @@ public class SharedModuleMetadataTest {
         // also delete created upload schema
         devUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyId, SCHEMA_ID).execute();
         devSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
+    }
+
+    @Test
+    public void testNonAuthUserGetAndQueryCalls() throws Exception {
+        // first create a test metadata
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(1)
+                .name(MODULE_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
+        SharedModuleMetadata metadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
+        // execute query and get
+        SharedModuleMetadata retMetadata = nonAuthSharedModulesApi.getMetadataByIdAndVersion(metadata.getId(), metadata.getVersion()).execute().body();
+        assertEquals(metadata, retMetadata);
+
+        retMetadata = nonAuthSharedModulesApi.getMetadataByIdLatestVersion(metadata.getId()).execute().body();
+        assertEquals(metadata, retMetadata);
+
+        SharedModuleMetadataList retMetadataList = nonAuthSharedModulesApi
+                .queryAllMetadata(false, false, "id=" + "\'" + metadata.getId() + "\'", null).execute().body();
+        assertEquals(1, retMetadataList.getItems().size());
+        assertEquals(metadata, retMetadataList.getItems().get(0));
+
+        retMetadataList = nonAuthSharedModulesApi.queryMetadataById(metadata.getId(), true, false, null, null).execute().body();
+        assertEquals(1, retMetadataList.getItems().size());
+        assertEquals(metadata, retMetadataList.getItems().get(0));
     }
 
     @Test
