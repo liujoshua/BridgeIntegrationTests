@@ -10,8 +10,10 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 
+import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.Config;
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
@@ -139,6 +141,13 @@ public class TestUserHelper {
         TestUser user = new TestUser(signIn, manager);
         user.signInAgain();
         return user;
+    }
+
+    // return an non-auth user
+    public static <T> T getNonAuthClient(Class<T> service) {
+        ApiClientProvider provider = new ApiClientProvider(ClientManager.getUrl(CONFIG.getEnvironment()), RestUtils.getUserAgent(CLIENT_INFO), RestUtils.getAcceptLanguage(LANGUAGES));
+
+        return provider.getClient(service);
     }
 
     public static TestUser createAndSignInUser(Class<?> cls, boolean consentUser, Role... roles) throws IOException {
