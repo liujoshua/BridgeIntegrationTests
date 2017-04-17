@@ -28,7 +28,7 @@ public class TestUserHelper {
     private static final Config CONFIG = new Config();
 
     private static final List<String> LANGUAGES = Lists.newArrayList("en");
-    private static final String PASSWORD = "P4ssword";
+    private static final String PASSWORD = "P4ssword!";
     private static final ClientInfo CLIENT_INFO = new ClientInfo();
     static {
         CLIENT_INFO.setAppName("Integration Tests");
