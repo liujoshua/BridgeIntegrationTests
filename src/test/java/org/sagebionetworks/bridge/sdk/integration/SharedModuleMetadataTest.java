@@ -6,13 +6,16 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.sdk.integration.UploadSchemaTest.makeSimpleSchema;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -21,13 +24,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
+import org.sagebionetworks.bridge.rest.api.SurveysApi;
+import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.rest.exceptions.ConcurrentModificationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.SharedModuleType;
+import org.sagebionetworks.bridge.rest.model.Survey;
+import org.sagebionetworks.bridge.rest.model.UploadSchema;
 
 public class SharedModuleMetadataTest {
     private static final Logger LOG = LoggerFactory.getLogger(SharedModuleMetadataTest.class);
@@ -36,17 +44,24 @@ public class SharedModuleMetadataTest {
     private static final String NOTES = "These are some notes about a module.";
     private static final String OS = "Unix";
     private static final String SCHEMA_ID = "dummy-schema";
-    private static final int SCHEMA_REV = 42;
+    private static final int SCHEMA_REV = 1;
     private static final String SURVEY_CREATED_ON_STRING = "2017-04-06T17:34:03.507Z";
     private static final String SURVEY_GUID = "dummy-survey-guid";
+    private static final String SURVEY_NAME = "dummy-survey-name";
+    private static final String SURVEY_IDENTIFIER = "dummy-survey-identifier";
 
     // Note that this is canonically a set. However, Swagger only supports a list, so some wonkiness happens.
     private static final Set<String> TAGS = ImmutableSet.of("foo", "bar", "baz");
 
     private static SharedModulesApi apiDeveloperModulesApi;
     private static SharedModulesApi sharedDeveloperModulesApi;
+    private static UploadSchemasApi devUploadSchemasApi;
+    private static SurveysApi devSurveysApi;
+    private static String studyId;
 
     private String moduleId;
+    private String surveyGuid;
+    private DateTime surveyCreatedOn;
 
     @BeforeClass
     public static void beforeClass() {
@@ -54,11 +69,25 @@ public class SharedModuleMetadataTest {
         apiDeveloperModulesApi = apiDeveloper.getClient(SharedModulesApi.class);
         TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
+        devUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
+        devSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
+        studyId = sharedDeveloper.getStudyId();
     }
 
     @Before
-    public void before() {
+    public void before() throws IOException {
         moduleId = "integ-test-module-" + RandomStringUtils.randomAlphabetic(4);
+
+        // create test upload schema
+        UploadSchema uploadSchema = makeSimpleSchema(SCHEMA_ID, (long) 0, 0L);
+        UploadSchema retSchema = devUploadSchemasApi.createUploadSchema(uploadSchema).execute().body();
+
+        Survey survey = new Survey().createdOn(DateTime.parse(SURVEY_CREATED_ON_STRING)).guid(SURVEY_GUID).name(SURVEY_NAME).identifier(SURVEY_IDENTIFIER);
+        GuidCreatedOnVersionHolder retSurvey = devSurveysApi.createSurvey(survey).execute().body();
+
+        // modify member var to fit with real survey info
+        surveyGuid = retSurvey.getGuid();
+        surveyCreatedOn = retSurvey.getCreatedOn();
     }
 
     @After
@@ -68,6 +97,10 @@ public class SharedModuleMetadataTest {
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the module.
         }
+
+        // also delete created upload schema
+        devUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyId, SCHEMA_ID).execute();
+        devSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
     }
 
     @Test
@@ -89,8 +122,8 @@ public class SharedModuleMetadataTest {
 
         // Update v6. Verify the changes.
         SharedModuleMetadata metadataToUpdateV6 = new SharedModuleMetadata().id(moduleId).version(6)
-                .name("Updated Module").schemaId(null).schemaRevision(null).surveyCreatedOn(SURVEY_CREATED_ON_STRING)
-                .surveyGuid(SURVEY_GUID);
+                .name("Updated Module").schemaId(null).schemaRevision(null).surveyCreatedOn(surveyCreatedOn.toString())
+                .surveyGuid(surveyGuid);
         SharedModuleMetadata updatedMetadataV6 = sharedDeveloperModulesApi.updateMetadata(moduleId, 6,
                 metadataToUpdateV6).execute().body();
         assertEquals(moduleId, updatedMetadataV6.getId());
@@ -98,8 +131,8 @@ public class SharedModuleMetadataTest {
         assertEquals("Updated Module", updatedMetadataV6.getName());
         assertNull(updatedMetadataV6.getSchemaId());
         assertNull(updatedMetadataV6.getSchemaRevision());
-        assertEquals(SURVEY_CREATED_ON_STRING, updatedMetadataV6.getSurveyCreatedOn());
-        assertEquals(SURVEY_GUID, updatedMetadataV6.getSurveyGuid());
+        assertEquals(surveyCreatedOn.toString(), updatedMetadataV6.getSurveyCreatedOn());
+        assertEquals(surveyGuid, updatedMetadataV6.getSurveyGuid());
 
         // Get latest. Verify it's same as the updated version.
         SharedModuleMetadata gettedUpdatedMetadataV6 = sharedDeveloperModulesApi.getMetadataByIdLatestVersion(moduleId)
@@ -181,15 +214,15 @@ public class SharedModuleMetadataTest {
     @Test
     public void surveyModule() throws Exception {
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
-                .surveyCreatedOn(SURVEY_CREATED_ON_STRING).surveyGuid(SURVEY_GUID);
+                .surveyCreatedOn(surveyCreatedOn.toString()).surveyGuid(surveyGuid);
         SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
                 .body();
         assertEquals(moduleId, createdMetadata.getId());
         assertNotNull(createdMetadata.getVersion());
         assertEquals(MODULE_NAME, createdMetadata.getName());
         assertEquals(SharedModuleType.SURVEY, createdMetadata.getModuleType());
-        assertEquals(SURVEY_CREATED_ON_STRING, createdMetadata.getSurveyCreatedOn());
-        assertEquals(SURVEY_GUID, createdMetadata.getSurveyGuid());
+        assertEquals(surveyCreatedOn.toString(), createdMetadata.getSurveyCreatedOn());
+        assertEquals(surveyGuid, createdMetadata.getSurveyGuid());
     }
 
     @Test
@@ -348,6 +381,9 @@ public class SharedModuleMetadataTest {
 
         // Create a few module versions for test. Create a module with a different ID to make sure it's not also being
         // returned.
+        UploadSchema uploadSchemaV1 = makeSimpleSchema(SCHEMA_ID, (long) 0, 0L);
+        UploadSchema retSchema = devUploadSchemasApi.createUploadSchema(uploadSchemaV1).execute().body();
+
         SharedModuleMetadata moduleV1ToCreate = new SharedModuleMetadata().id(moduleId).version(1)
                 .name("Test Module Version 1").schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV).published(true)
                 .licenseRestricted(true);

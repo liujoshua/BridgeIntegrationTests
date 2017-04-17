@@ -1,5 +1,19 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -10,32 +24,22 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
+import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConcurrentModificationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaList;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class UploadSchemaTest {
     // We put spaces in the schema ID to test URL encoding.
@@ -47,6 +51,9 @@ public class UploadSchemaTest {
     private static ForAdminsApi adminApi;
     private static UploadSchemasApi devUploadSchemasApi;
     private static ForWorkersApi workerUploadSchemasApi;
+    private static SharedModulesApi sharedDeveloperModulesApi;
+    private static UploadSchemasApi sharedUploadSchemasApi;
+    private static String studyIdShared;
 
     private String schemaId;
 
@@ -56,10 +63,15 @@ public class UploadSchemaTest {
         developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
         worker = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.WORKER);
+        TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
+        sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
 
         adminApi = admin.getClient(ForAdminsApi.class);
         devUploadSchemasApi = developer.getClient(UploadSchemasApi.class);
+        sharedUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
         workerUploadSchemasApi = worker.getClient(ForWorkersApi.class);
+
+        studyIdShared = sharedDeveloper.getStudyId();
     }
 
     @Before
@@ -95,6 +107,35 @@ public class UploadSchemaTest {
         if (worker != null) {
             worker.signOutAndDeleteUser();
         }
+    }
+
+    @Test
+    public void testDeleteWithSharedModule() throws Exception {
+        // create test upload schema and test shared module
+        String moduleId = "integ-test-module-delete";
+
+        UploadSchema uploadSchema = makeSimpleSchema("dummy-schema-id", (long) 0, 0L);
+        UploadSchema retSchema = sharedUploadSchemasApi.createUploadSchema(uploadSchema).execute().body();
+
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(retSchema.getVersion().intValue())
+                .name("Integ Test Schema").schemaId(retSchema.getSchemaId()).schemaRevision(retSchema.getRevision().intValue());
+        SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
+
+        // execute delete
+        Exception thrownEx = null;
+        try {
+            sharedUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+            fail("expected exception");
+        } catch (BadRequestException e) {
+            thrownEx = e;
+        } finally {
+            // finally delete shared module and uploaded schema
+            sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
+
+            sharedUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+        }
+        assertNotNull(thrownEx);
     }
     
     @Test
@@ -302,7 +343,7 @@ public class UploadSchemaTest {
 
     // Helper to make an upload schema with the minimum of attributes. Takes in rev and version to facilitate testing
     // create vs update and handling version conflicts.
-    private static UploadSchema makeSimpleSchema(String schemaId, Long rev, Long version) {
+    static UploadSchema makeSimpleSchema(String schemaId, Long rev, Long version) {
         UploadFieldDefinition fieldDef = new UploadFieldDefinition();
         fieldDef.setName("field");
         fieldDef.setType(UploadFieldType.STRING);

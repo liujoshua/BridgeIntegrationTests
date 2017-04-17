@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
@@ -31,17 +32,14 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
-import org.sagebionetworks.bridge.rest.model.IntegerConstraints;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-
-import com.google.common.collect.Lists;
-
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.exceptions.PublishedSurveyException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Activity;
@@ -52,12 +50,14 @@ import org.sagebionetworks.bridge.rest.model.DateTimeConstraints;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Image;
+import org.sagebionetworks.bridge.rest.model.IntegerConstraints;
 import org.sagebionetworks.bridge.rest.model.MultiValueConstraints;
 import org.sagebionetworks.bridge.rest.model.Operator;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
+import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
 import org.sagebionetworks.bridge.rest.model.Survey;
@@ -69,14 +69,20 @@ import org.sagebionetworks.bridge.rest.model.SurveyQuestionOption;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.rest.model.SurveyRule;
 import org.sagebionetworks.bridge.rest.model.UIHint;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
 public class SurveyTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
-    
+
+    private static final String SURVEY_NAME = "dummy-survey-name";
+    private static final String SURVEY_IDENTIFIER = "dummy-survey-identifier";
+
     private static TestUser admin;
     private static TestUser developer;
     private static TestUser user;
     private static TestUser worker;
+    private static SharedModulesApi sharedDeveloperModulesApi;
+    private static SurveysApi sharedSurveysApi;
 
     // We use SimpleGuidCreatedOnVersionHolder, because we need to use an immutable version holder, to ensure we're
     // deleting the correct surveys.
@@ -88,6 +94,10 @@ public class SurveyTest {
         developer = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(SurveyTest.class, true);
         worker = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.WORKER);
+
+        TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
+        sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
+        sharedSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
     }
 
     @Before
@@ -131,6 +141,35 @@ public class SurveyTest {
         if (worker != null) {
             worker.signOutAndDeleteUser();
         }
+    }
+
+    @Test
+    public void testDeleteWithSharedModule() throws Exception {
+        // create test survey and test shared module
+        String moduleId = "integ-test-module-delete";
+
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(SURVEY_IDENTIFIER);
+        GuidCreatedOnVersionHolder retSurvey = sharedSurveysApi.createSurvey(survey).execute().body();
+
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
+                .name("Integ Test Schema").surveyCreatedOn(retSurvey.getCreatedOn().toString()).surveyGuid(retSurvey.getGuid());
+        SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
+
+        // execute delete
+        Exception thrownEx = null;
+        try {
+            sharedSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            fail("expected exception");
+        } catch (BadRequestException e) {
+            thrownEx = e;
+        } finally {
+            // finally delete shared module and uploaded schema
+            sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
+
+            sharedSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+        }
+        assertNotNull(thrownEx);
     }
 
     @Test(expected=UnauthorizedException.class)
