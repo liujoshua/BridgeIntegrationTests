@@ -156,7 +156,7 @@ public class SurveyTest {
 
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
                 .name("Integ Test Schema").surveyCreatedOn(retSurvey.getCreatedOn().toString()).surveyGuid(retSurvey.getGuid());
-        SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
                 .body();
 
         // execute delete
@@ -185,7 +185,7 @@ public class SurveyTest {
 
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
                 .name("Integ Test Schema").surveyCreatedOn(retSurvey.getCreatedOn().toString()).surveyGuid(retSurvey.getGuid());
-        SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
                 .body();
 
         // execute delete

@@ -57,6 +57,8 @@ public class SharedModuleMetadataTest {
     private static SharedModulesApi nonAuthSharedModulesApi;
     private static UploadSchemasApi devUploadSchemasApi;
     private static SurveysApi devSurveysApi;
+    private static UploadSchemasApi adminUploadSchemasApi;
+    private static SurveysApi adminSurveysApi;
     private static String studyId;
 
     private String moduleId;
@@ -66,6 +68,7 @@ public class SharedModuleMetadataTest {
 
     @BeforeClass
     public static void beforeClass() {
+        TestUserHelper.TestUser admin = TestUserHelper.getSignedInAdmin();
         TestUserHelper.TestUser apiDeveloper = TestUserHelper.getSignedInApiDeveloper();
         apiDeveloperModulesApi = apiDeveloper.getClient(SharedModulesApi.class);
         TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
@@ -74,6 +77,8 @@ public class SharedModuleMetadataTest {
         devUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
         devSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
         studyId = sharedDeveloper.getStudyId();
+        adminUploadSchemasApi = admin.getClient(UploadSchemasApi.class);
+        adminSurveysApi = admin.getClient(SurveysApi.class);
     }
 
     @Before
@@ -102,8 +107,8 @@ public class SharedModuleMetadataTest {
         }
 
         // also delete created upload schema
-        devUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyId, schemaId).execute();
-        devSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
+        adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyId, schemaId).execute();
+        adminSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
     }
 
     @Test

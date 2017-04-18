@@ -122,13 +122,13 @@ public class UploadSchemaTest {
 
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
                 .name("Integ Test Schema").schemaId(retSchema.getSchemaId()).schemaRevision(retSchema.getRevision().intValue());
-        SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
                 .body();
 
         // execute delete
         Exception thrownEx = null;
         try {
-            adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
@@ -136,7 +136,7 @@ public class UploadSchemaTest {
             // finally delete shared module and uploaded schema
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
-            adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
         }
         assertNotNull(thrownEx);
     }
