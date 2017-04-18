@@ -155,6 +155,10 @@ public class SurveyTest {
         questions = survey.getElements();
         prompt = ((SurveyQuestion)questions.get(1)).getPrompt();
         assertEquals("Prompt is correct.", "When did you last have a medical check-up?", prompt);
+
+        // Check optional parameters.
+        assertEquals(TestSurvey.MODULE_ID, survey.getModuleId());
+        assertEquals(TestSurvey.MODULE_VERSION, survey.getModuleVersion().intValue());
     }
 
     @Test
