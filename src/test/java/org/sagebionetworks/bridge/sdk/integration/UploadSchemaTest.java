@@ -112,12 +112,13 @@ public class UploadSchemaTest {
     @Test
     public void testDeleteWithSharedModule() throws Exception {
         // create test upload schema and test shared module
-        String moduleId = "integ-test-module-delete";
+        String moduleId = "integ-test-module-delete" + RandomStringUtils.randomAlphabetic(4);
+        String schemaId = "integ-test-schema-delete" + RandomStringUtils.randomAlphabetic(4);
 
-        UploadSchema uploadSchema = makeSimpleSchema("dummy-schema-id", (long) 0, 0L);
+        UploadSchema uploadSchema = makeSimpleSchema(schemaId, (long) 0, 0L);
         UploadSchema retSchema = sharedUploadSchemasApi.createUploadSchema(uploadSchema).execute().body();
 
-        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(retSchema.getVersion().intValue())
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
                 .name("Integ Test Schema").schemaId(retSchema.getSchemaId()).schemaRevision(retSchema.getRevision().intValue());
         SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
                 .body();

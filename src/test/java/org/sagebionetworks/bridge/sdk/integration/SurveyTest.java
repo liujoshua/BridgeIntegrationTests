@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
@@ -146,7 +147,7 @@ public class SurveyTest {
     @Test
     public void testDeleteWithSharedModule() throws Exception {
         // create test survey and test shared module
-        String moduleId = "integ-test-module-delete";
+        String moduleId = "integ-test-module-delete" + RandomStringUtils.randomAlphabetic(4);;
 
         Survey survey = new Survey().name(SURVEY_NAME).identifier(SURVEY_IDENTIFIER);
         GuidCreatedOnVersionHolder retSurvey = sharedSurveysApi.createSurvey(survey).execute().body();
