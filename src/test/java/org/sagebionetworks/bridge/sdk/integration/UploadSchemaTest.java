@@ -480,6 +480,7 @@ public class UploadSchemaTest {
         schema.setName(name);
         schema.setSchemaType(type);
         schema.setFieldDefinitions(defs);
+        schema.setPublished(false);
         return schema;
     }
     
@@ -496,6 +497,7 @@ public class UploadSchemaTest {
         destination.setSurveyCreatedOn(source.getSurveyCreatedOn());
         destination.setSurveyGuid(source.getSurveyGuid());
         destination.setVersion(source.getVersion());
+        destination.setPublished(source.getPublished());
         Tests.setVariableValueInObject(destination, "type", source.getType());
         return destination;
     }

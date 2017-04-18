@@ -19,7 +19,6 @@ import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,7 +109,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test
-    @Ignore
     public void testNonAuthUserGetAndQueryCalls() throws Exception {
         // first create a test metadata
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(1)

@@ -145,7 +145,7 @@ public class SurveyTest {
     }
 
     @Test
-    public void testDeleteWithSharedModule() throws Exception {
+    public void testPermanentDeleteWithSharedModule() throws Exception {
         // create test survey and test shared module
         String moduleId = "integ-test-module-delete" + RandomStringUtils.randomAlphabetic(4);;
 
@@ -169,6 +169,35 @@ public class SurveyTest {
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
             sharedSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+        }
+        assertNotNull(thrownEx);
+    }
+
+    @Test
+    public void testVirtualDeleteWithSharedModule() throws Exception {
+        // create test survey and test shared module
+        String moduleId = "integ-test-module-delete" + RandomStringUtils.randomAlphabetic(4);;
+
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(SURVEY_IDENTIFIER);
+        GuidCreatedOnVersionHolder retSurvey = sharedSurveysApi.createSurvey(survey).execute().body();
+
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
+                .name("Integ Test Schema").surveyCreatedOn(retSurvey.getCreatedOn().toString()).surveyGuid(retSurvey.getGuid());
+        SharedModuleMetadata createdMetadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
+
+        // execute delete
+        Exception thrownEx = null;
+        try {
+            sharedSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            fail("expected exception");
+        } catch (BadRequestException e) {
+            thrownEx = e;
+        } finally {
+            // finally delete shared module and uploaded schema
+            sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
+
+            sharedSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), false).execute();
         }
         assertNotNull(thrownEx);
     }
