@@ -84,6 +84,7 @@ public class SurveyTest {
     private static TestUser worker;
     private static SharedModulesApi sharedDeveloperModulesApi;
     private static SurveysApi sharedSurveysApi;
+    private static SurveysApi adminSurveysApi;
 
     // We use SimpleGuidCreatedOnVersionHolder, because we need to use an immutable version holder, to ensure we're
     // deleting the correct surveys.
@@ -99,6 +100,7 @@ public class SurveyTest {
         TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
         sharedSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
+        adminSurveysApi = admin.getClient(SurveysApi.class);
     }
 
     @Before
@@ -160,7 +162,7 @@ public class SurveyTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            sharedSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
@@ -168,7 +170,7 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
-            sharedSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -189,7 +191,7 @@ public class SurveyTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            sharedSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), false).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
@@ -197,7 +199,7 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
-            sharedSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), false).execute();
+            adminSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
         }
         assertNotNull(thrownEx);
     }

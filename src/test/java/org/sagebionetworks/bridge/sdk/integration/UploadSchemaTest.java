@@ -53,6 +53,7 @@ public class UploadSchemaTest {
     private static ForWorkersApi workerUploadSchemasApi;
     private static SharedModulesApi sharedDeveloperModulesApi;
     private static UploadSchemasApi sharedUploadSchemasApi;
+    private static UploadSchemasApi adminUploadSchemasApi;
     private static String studyIdShared;
 
     private String schemaId;
@@ -69,6 +70,7 @@ public class UploadSchemaTest {
         adminApi = admin.getClient(ForAdminsApi.class);
         devUploadSchemasApi = developer.getClient(UploadSchemasApi.class);
         sharedUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
+        adminUploadSchemasApi = admin.getClient(UploadSchemasApi.class);
         workerUploadSchemasApi = worker.getClient(ForWorkersApi.class);
 
         studyIdShared = sharedDeveloper.getStudyId();
@@ -126,7 +128,7 @@ public class UploadSchemaTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            sharedUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+            adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
@@ -134,7 +136,7 @@ public class UploadSchemaTest {
             // finally delete shared module and uploaded schema
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
-            sharedUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+            adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
         }
         assertNotNull(thrownEx);
     }

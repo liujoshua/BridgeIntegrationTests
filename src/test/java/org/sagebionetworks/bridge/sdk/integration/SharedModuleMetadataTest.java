@@ -47,9 +47,7 @@ public class SharedModuleMetadataTest {
     private static final int SCHEMA_REV = 1;
     private static final String SURVEY_NAME = "dummy-survey-name";
     private static final String SURVEY_IDENTIFIER = "dummy-survey-identifier";
-    private static final Long METADATA_REV = 0L;
-    private static final Long METADATA_VERSION = 0L;
-
+    private static final Long SCHEMA_VERSION = 0L;
 
     // Note that this is canonically a set. However, Swagger only supports a list, so some wonkiness happens.
     private static final Set<String> TAGS = ImmutableSet.of("foo", "bar", "baz");
@@ -62,7 +60,7 @@ public class SharedModuleMetadataTest {
     private static String studyId;
 
     private String moduleId;
-    private String schemaId = "dummy-schema";
+    private String schemaId;
     private String surveyGuid;
     private DateTime surveyCreatedOn;
 
@@ -84,7 +82,7 @@ public class SharedModuleMetadataTest {
         schemaId = "dummy-schema-id-" + RandomStringUtils.randomAlphabetic(4);
 
         // create test upload schema
-        UploadSchema uploadSchema = makeSimpleSchema(schemaId, METADATA_REV, METADATA_VERSION);
+        UploadSchema uploadSchema = makeSimpleSchema(schemaId, (long) SCHEMA_REV, SCHEMA_VERSION);
         devUploadSchemasApi.createUploadSchema(uploadSchema).execute().body();
 
         Survey survey = new Survey().name(SURVEY_NAME).identifier(SURVEY_IDENTIFIER);
@@ -134,20 +132,30 @@ public class SharedModuleMetadataTest {
 
     @Test(expected = BadRequestException.class)
     public void testCreateWithoutSchema() throws Exception {
-        String failedSchemaId = "failed-schema-id-" + RandomStringUtils.randomAlphabetic(4);
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
+                .schemaId(schemaId).schemaRevision(SCHEMA_REV);
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
+
+        String failedSchemaId = "failed-schema-id-" + RandomStringUtils.randomAlphabetic(4);
+        SharedModuleMetadata metadataToFail = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
                 .schemaId(failedSchemaId).schemaRevision(SCHEMA_REV);
 
-        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute();
+        sharedDeveloperModulesApi.createMetadata(metadataToFail).execute();
     }
 
     @Test(expected = BadRequestException.class)
     public void testCreateWithoutSurvey() throws Exception {
-        String failedSurveyId = "failed-survey-id-" + RandomStringUtils.randomAlphabetic(4);
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
+                .surveyCreatedOn(surveyCreatedOn.toString()).surveyGuid(surveyGuid);
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
+
+        String failedSurveyId = "failed-survey-id-" + RandomStringUtils.randomAlphabetic(4);
+        SharedModuleMetadata metadataToFail = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
                 .surveyGuid(failedSurveyId).surveyCreatedOn(DateTime.now().toString());
 
-        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute();
+        sharedDeveloperModulesApi.createMetadata(metadataToFail).execute();
     }
 
     @Test(expected = BadRequestException.class)
@@ -156,7 +164,7 @@ public class SharedModuleMetadataTest {
         SharedModuleMetadata metadataToUpdate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
                 .schemaId(failedSchemaId).schemaRevision(SCHEMA_REV);
 
-        sharedDeveloperModulesApi.updateMetadata(moduleId, METADATA_VERSION.intValue(), metadataToUpdate).execute();
+        sharedDeveloperModulesApi.updateMetadata(moduleId, SCHEMA_VERSION.intValue(), metadataToUpdate).execute();
     }
 
     @Test(expected = BadRequestException.class)
@@ -165,7 +173,7 @@ public class SharedModuleMetadataTest {
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
                 .surveyCreatedOn(surveyCreatedOn.toString()).surveyGuid(failedSurveyId);
 
-        sharedDeveloperModulesApi.updateMetadata(moduleId, METADATA_VERSION.intValue(), metadataToCreate).execute();
+        sharedDeveloperModulesApi.updateMetadata(moduleId, SCHEMA_VERSION.intValue(), metadataToCreate).execute();
     }
 
     @Test
