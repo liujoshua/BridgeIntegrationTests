@@ -137,11 +137,6 @@ public class SharedModuleMetadataTest {
 
     @Test(expected = BadRequestException.class)
     public void testCreateWithoutSchema() throws Exception {
-        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
-                .schemaId(schemaId).schemaRevision(SCHEMA_REV);
-        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
-                .body();
-
         String failedSchemaId = "failed-schema-id-" + RandomStringUtils.randomAlphabetic(4);
         SharedModuleMetadata metadataToFail = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
                 .schemaId(failedSchemaId).schemaRevision(SCHEMA_REV);
@@ -151,11 +146,6 @@ public class SharedModuleMetadataTest {
 
     @Test(expected = BadRequestException.class)
     public void testCreateWithoutSurvey() throws Exception {
-        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
-                .surveyCreatedOn(surveyCreatedOn.toString()).surveyGuid(surveyGuid);
-        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
-                .body();
-
         String failedSurveyId = "failed-survey-id-" + RandomStringUtils.randomAlphabetic(4);
         SharedModuleMetadata metadataToFail = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
                 .surveyGuid(failedSurveyId).surveyCreatedOn(DateTime.now().toString());
@@ -164,21 +154,29 @@ public class SharedModuleMetadataTest {
     }
 
     @Test(expected = BadRequestException.class)
-    public void testUpdateWithoutSchema() throws Exception {
+    public void testUpdateWithoutExistSchema() throws Exception {
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME).version(1)
+                .schemaId(schemaId).schemaRevision(SCHEMA_REV);
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute();
+
         String failedSchemaId = "failed-schema-id-" + RandomStringUtils.randomAlphabetic(4);
-        SharedModuleMetadata metadataToUpdate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
+        SharedModuleMetadata metadataToUpdate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME).version(2)
                 .schemaId(failedSchemaId).schemaRevision(SCHEMA_REV);
 
         sharedDeveloperModulesApi.updateMetadata(moduleId, SCHEMA_VERSION.intValue(), metadataToUpdate).execute();
     }
 
     @Test(expected = BadRequestException.class)
-    public void testUpdateWithoutSurvey() throws Exception {
+    public void testUpdateWithoutExistSurvey() throws Exception {
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME).version(1)
+                .surveyCreatedOn(surveyCreatedOn.toString()).surveyGuid(surveyGuid);
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute();
+
         String failedSurveyId = "failed-survey-id-" + RandomStringUtils.randomAlphabetic(4);
-        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
+        SharedModuleMetadata metadataToUpdate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME).version(2)
                 .surveyCreatedOn(surveyCreatedOn.toString()).surveyGuid(failedSurveyId);
 
-        sharedDeveloperModulesApi.updateMetadata(moduleId, SCHEMA_VERSION.intValue(), metadataToCreate).execute();
+        sharedDeveloperModulesApi.updateMetadata(moduleId, SCHEMA_VERSION.intValue(), metadataToUpdate).execute();
     }
 
     @Test
