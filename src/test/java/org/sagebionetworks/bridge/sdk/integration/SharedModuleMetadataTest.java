@@ -160,10 +160,10 @@ public class SharedModuleMetadataTest {
         sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute();
 
         String failedSchemaId = "failed-schema-id-" + RandomStringUtils.randomAlphabetic(4);
-        SharedModuleMetadata metadataToUpdate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME).version(2)
+        SharedModuleMetadata metadataToUpdate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME).version(1)
                 .schemaId(failedSchemaId).schemaRevision(SCHEMA_REV);
 
-        sharedDeveloperModulesApi.updateMetadata(moduleId, SCHEMA_VERSION.intValue(), metadataToUpdate).execute();
+        sharedDeveloperModulesApi.updateMetadata(moduleId, 1, metadataToUpdate).execute();
     }
 
     @Test(expected = BadRequestException.class)
@@ -173,10 +173,10 @@ public class SharedModuleMetadataTest {
         sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute();
 
         String failedSurveyId = "failed-survey-id-" + RandomStringUtils.randomAlphabetic(4);
-        SharedModuleMetadata metadataToUpdate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME).version(2)
+        SharedModuleMetadata metadataToUpdate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME).version(1)
                 .surveyCreatedOn(surveyCreatedOn.toString()).surveyGuid(failedSurveyId);
 
-        sharedDeveloperModulesApi.updateMetadata(moduleId, SCHEMA_VERSION.intValue(), metadataToUpdate).execute();
+        sharedDeveloperModulesApi.updateMetadata(moduleId, 1, metadataToUpdate).execute();
     }
 
     @Test
