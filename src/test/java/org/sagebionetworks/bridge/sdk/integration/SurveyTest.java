@@ -191,7 +191,7 @@ public class SurveyTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            adminSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), false).execute();
+            sharedSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), false).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
