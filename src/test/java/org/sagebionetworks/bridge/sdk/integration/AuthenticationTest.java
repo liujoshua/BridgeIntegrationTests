@@ -11,12 +11,18 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.EmailSignIn;
+import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
+import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.rest.exceptions.LimitExceededException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,23 +30,73 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @Category(IntegrationSmokeTest.class)
 public class AuthenticationTest {
 
     private static TestUser testUser;
+    private static TestUser adminUser;
     private static AuthenticationApi authApi;
+    private static StudiesApi studiesApi;
+    private static StudiesApi adminStudiesApi;
     
     @BeforeClass
     public static void beforeClass() throws IOException {
-        testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
+        testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true, Role.DEVELOPER);
         authApi = testUser.getClient(AuthenticationApi.class);
+        studiesApi = testUser.getClient(StudiesApi.class);
+        
+        adminUser = TestUserHelper.getSignedInAdmin();
+        adminStudiesApi = adminUser.getClient(StudiesApi.class);
     }
     
     @AfterClass
     public static void afterClass() throws Exception {
         testUser.signOutAndDeleteUser();
+    }
+    
+    @Test
+    public void requestEmailSignIn() throws Exception {
+        EmailSignInRequest emailSignInRequest = new EmailSignInRequest()
+                .study(testUser.getStudyId()).email(testUser.getEmail());
+        Study study = studiesApi.getUsersStudy().execute().body();
+        try {
+            // Turn on email-based sign in for test. We can't verify the email was sent... we can verify this call 
+            // works and returns the right error conditions.
+            study.setEmailSignInEnabled(true);
+            
+            // Bug: this call does not return VersionHolder (BRIDGE-1809). Retrieve study again.
+            adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
+            study = studiesApi.getUsersStudy().execute().body();
+            assertTrue(study.getEmailSignInEnabled());
+            
+            authApi.requestEmailSignIn(emailSignInRequest).execute();
+            
+            // Do it again immediately, this should throw a LimitExceededException
+            try {
+                authApi.requestEmailSignIn(emailSignInRequest).execute();
+                fail("Should have thrown exception.");
+            } catch(LimitExceededException e) {
+            }
+        } finally {
+            study.setEmailSignInEnabled(false);
+            adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
+        }
+    }
+    
+    @Test
+    public void emailSignIn() throws Exception {
+        // We can't read the email from the test in order to extract a useful token, but we
+        // can verify this call is made and fails as we'd expect.
+        EmailSignIn emailSignIn = new EmailSignIn()
+                .study(testUser.getStudyId()).email(testUser.getEmail()).token("ABD");
+        try {
+            authApi.signInViaEmail(emailSignIn).execute();
+            fail("Should have thrown exception");
+        } catch(AuthenticationFailedException e) {
+        }
     }
     
     @Test

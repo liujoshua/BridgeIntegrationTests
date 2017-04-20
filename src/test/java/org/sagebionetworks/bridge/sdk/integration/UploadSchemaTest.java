@@ -53,7 +53,6 @@ public class UploadSchemaTest {
     private static ForWorkersApi workerUploadSchemasApi;
     private static SharedModulesApi sharedDeveloperModulesApi;
     private static UploadSchemasApi sharedUploadSchemasApi;
-    private static UploadSchemasApi adminUploadSchemasApi;
     private static String studyIdShared;
 
     private String schemaId;
@@ -70,7 +69,6 @@ public class UploadSchemaTest {
         adminApi = admin.getClient(ForAdminsApi.class);
         devUploadSchemasApi = developer.getClient(UploadSchemasApi.class);
         sharedUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
-        adminUploadSchemasApi = admin.getClient(UploadSchemasApi.class);
         workerUploadSchemasApi = worker.getClient(ForWorkersApi.class);
 
         studyIdShared = sharedDeveloper.getStudyId();
