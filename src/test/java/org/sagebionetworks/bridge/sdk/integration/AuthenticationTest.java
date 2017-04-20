@@ -44,7 +44,7 @@ public class AuthenticationTest {
     
     @BeforeClass
     public static void beforeClass() throws IOException {
-        testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true, Role.DEVELOPER);
+        testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         authApi = testUser.getClient(AuthenticationApi.class);
         studiesApi = testUser.getClient(StudiesApi.class);
         
@@ -61,7 +61,7 @@ public class AuthenticationTest {
     public void requestEmailSignIn() throws Exception {
         EmailSignInRequest emailSignInRequest = new EmailSignInRequest()
                 .study(testUser.getStudyId()).email(testUser.getEmail());
-        Study study = studiesApi.getUsersStudy().execute().body();
+        Study study = adminStudiesApi.getStudy(testUser.getStudyId()).execute().body();
         try {
             // Turn on email-based sign in for test. We can't verify the email was sent... we can verify this call 
             // works and returns the right error conditions.
@@ -69,7 +69,7 @@ public class AuthenticationTest {
             
             // Bug: this call does not return VersionHolder (BRIDGE-1809). Retrieve study again.
             adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
-            study = studiesApi.getUsersStudy().execute().body();
+            study = adminStudiesApi.getStudy(testUser.getStudyId()).execute().body();
             assertTrue(study.getEmailSignInEnabled());
             
             authApi.requestEmailSignIn(emailSignInRequest).execute();
