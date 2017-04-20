@@ -30,7 +30,8 @@ import org.sagebionetworks.bridge.rest.model.Unit;
 import com.google.common.collect.Lists;
 
 public class TestSurvey {
-    
+    public static final String MODULE_ID = "test-survey-module";
+    public static final int MODULE_VERSION = 3;
     public static final String MULTIVALUE_ID = "feeling";
     public static final String STRING_ID = "phone_number";
     public static final String BOOLEAN_ID = "high_bp";
@@ -200,6 +201,10 @@ public class TestSurvey {
         elements.add(timeQuestion);
         elements.add(multiValueQuestion);
         elements.add(stringQuestion);
+
+        // Set optional parameters.
+        survey.setModuleId(MODULE_ID);
+        survey.setModuleVersion(MODULE_VERSION);
 
         return survey;
     }

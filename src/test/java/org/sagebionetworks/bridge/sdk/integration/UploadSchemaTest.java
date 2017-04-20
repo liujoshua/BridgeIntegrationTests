@@ -287,6 +287,8 @@ public class UploadSchemaTest {
         UploadSchema schema = schema("Schema", schemaId, UploadSchemaType.IOS_SURVEY, fieldDefList);
         schema.setMaxAppVersions(maxAppVersionMap);
         schema.setMinAppVersions(minAppVersionMap);
+        schema.setModuleId("test-schema-module");
+        schema.setModuleVersion(3);
         schema.setSurveyGuid("survey");
         schema.setSurveyCreatedOn(surveyCreatedOn);
         schema.setPublished(true);
@@ -296,6 +298,8 @@ public class UploadSchemaTest {
         assertEquals(fieldDefList, createdSchema.getFieldDefinitions());
         assertEquals(maxAppVersionMap, createdSchema.getMaxAppVersions());
         assertEquals(minAppVersionMap, createdSchema.getMinAppVersions());
+        assertEquals("test-schema-module", createdSchema.getModuleId());
+        assertEquals(3, createdSchema.getModuleVersion().intValue());
         assertEquals("Schema", createdSchema.getName());
         assertEquals(1, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
@@ -493,7 +497,10 @@ public class UploadSchemaTest {
             destination = new UploadSchema();
         }
         destination.setFieldDefinitions(source.getFieldDefinitions());
+        destination.setModuleId(source.getModuleId());
+        destination.setModuleVersion(source.getModuleVersion());
         destination.setName(source.getName());
+        destination.setPublished(source.getPublished());
         destination.setRevision(source.getRevision());
         destination.setSchemaId(source.getSchemaId());
         destination.setSchemaType(source.getSchemaType());
