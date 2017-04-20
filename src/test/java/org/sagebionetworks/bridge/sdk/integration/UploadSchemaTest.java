@@ -1,5 +1,19 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -10,32 +24,22 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
+import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConcurrentModificationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaList;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class UploadSchemaTest {
     // We put spaces in the schema ID to test URL encoding.
@@ -47,6 +51,9 @@ public class UploadSchemaTest {
     private static ForAdminsApi adminApi;
     private static UploadSchemasApi devUploadSchemasApi;
     private static ForWorkersApi workerUploadSchemasApi;
+    private static SharedModulesApi sharedDeveloperModulesApi;
+    private static UploadSchemasApi sharedUploadSchemasApi;
+    private static String studyIdShared;
 
     private String schemaId;
 
@@ -56,10 +63,15 @@ public class UploadSchemaTest {
         developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
         worker = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.WORKER);
+        TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
+        sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
 
         adminApi = admin.getClient(ForAdminsApi.class);
         devUploadSchemasApi = developer.getClient(UploadSchemasApi.class);
+        sharedUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
         workerUploadSchemasApi = worker.getClient(ForWorkersApi.class);
+
+        studyIdShared = sharedDeveloper.getStudyId();
     }
 
     @Before
@@ -95,6 +107,36 @@ public class UploadSchemaTest {
         if (worker != null) {
             worker.signOutAndDeleteUser();
         }
+    }
+
+    @Test
+    public void testDeleteWithSharedModule() throws Exception {
+        // create test upload schema and test shared module
+        String moduleId = "integ-test-module-delete" + RandomStringUtils.randomAlphabetic(4);
+        String schemaId = "integ-test-schema-delete" + RandomStringUtils.randomAlphabetic(4);
+
+        UploadSchema uploadSchema = makeSimpleSchema(schemaId, (long) 0, 0L);
+        UploadSchema retSchema = sharedUploadSchemasApi.createUploadSchema(uploadSchema).execute().body();
+
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
+                .name("Integ Test Schema").schemaId(retSchema.getSchemaId()).schemaRevision(retSchema.getRevision().intValue());
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
+
+        // execute delete
+        Exception thrownEx = null;
+        try {
+            adminApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+            fail("expected exception");
+        } catch (BadRequestException e) {
+            thrownEx = e;
+        } finally {
+            // finally delete shared module and uploaded schema
+            sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
+
+            adminApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+        }
+        assertNotNull(thrownEx);
     }
     
     @Test
@@ -243,14 +285,19 @@ public class UploadSchemaTest {
         UploadSchema schema = schema("Schema", schemaId, UploadSchemaType.IOS_SURVEY, fieldDefList);
         schema.setMaxAppVersions(maxAppVersionMap);
         schema.setMinAppVersions(minAppVersionMap);
+        schema.setModuleId("test-schema-module");
+        schema.setModuleVersion(3);
         schema.setSurveyGuid("survey");
         schema.setSurveyCreatedOn(surveyCreatedOn);
+        schema.setPublished(true);
 
         UploadSchema createdSchema = devUploadSchemasApi.createOrUpdateUploadSchema(schema).execute().body();
 
         assertEquals(fieldDefList, createdSchema.getFieldDefinitions());
         assertEquals(maxAppVersionMap, createdSchema.getMaxAppVersions());
         assertEquals(minAppVersionMap, createdSchema.getMinAppVersions());
+        assertEquals("test-schema-module", createdSchema.getModuleId());
+        assertEquals(3, createdSchema.getModuleVersion().intValue());
         assertEquals("Schema", createdSchema.getName());
         assertEquals(1, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
@@ -258,6 +305,7 @@ public class UploadSchemaTest {
         assertNull(createdSchema.getStudyId());
         assertEquals("survey", createdSchema.getSurveyGuid());
         assertEquals(surveyCreatedOnMillis, createdSchema.getSurveyCreatedOn().getMillis());
+        assertTrue(createdSchema.getPublished());
     }
 
     @Test
@@ -302,7 +350,7 @@ public class UploadSchemaTest {
 
     // Helper to make an upload schema with the minimum of attributes. Takes in rev and version to facilitate testing
     // create vs update and handling version conflicts.
-    private static UploadSchema makeSimpleSchema(String schemaId, Long rev, Long version) {
+    static UploadSchema makeSimpleSchema(String schemaId, Long rev, Long version) {
         UploadFieldDefinition fieldDef = new UploadFieldDefinition();
         fieldDef.setName("field");
         fieldDef.setType(UploadFieldType.STRING);
@@ -438,6 +486,7 @@ public class UploadSchemaTest {
         schema.setName(name);
         schema.setSchemaType(type);
         schema.setFieldDefinitions(defs);
+        schema.setPublished(false);
         return schema;
     }
     
@@ -446,7 +495,10 @@ public class UploadSchemaTest {
             destination = new UploadSchema();
         }
         destination.setFieldDefinitions(source.getFieldDefinitions());
+        destination.setModuleId(source.getModuleId());
+        destination.setModuleVersion(source.getModuleVersion());
         destination.setName(source.getName());
+        destination.setPublished(source.getPublished());
         destination.setRevision(source.getRevision());
         destination.setSchemaId(source.getSchemaId());
         destination.setSchemaType(source.getSchemaType());
@@ -454,6 +506,7 @@ public class UploadSchemaTest {
         destination.setSurveyCreatedOn(source.getSurveyCreatedOn());
         destination.setSurveyGuid(source.getSurveyGuid());
         destination.setVersion(source.getVersion());
+        destination.setPublished(source.getPublished());
         Tests.setVariableValueInObject(destination, "type", source.getType());
         return destination;
     }

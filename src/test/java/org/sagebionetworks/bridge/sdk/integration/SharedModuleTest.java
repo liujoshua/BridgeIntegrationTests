@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -116,6 +117,8 @@ public class SharedModuleTest {
         sharedSchema = createSharedSchema();
         module = createModuleForSchema(sharedSchema);
 
+        assertFalse(sharedSchema.getPublished());
+
         // Copy to local study.
         SharedModuleImportStatus importStatus = apiDeveloper.getClient(SharedModulesApi.class)
                 .importModuleByIdAndVersion(module.getId(), module.getVersion()).execute().body();
@@ -123,7 +126,8 @@ public class SharedModuleTest {
         // Get local schema and verify some fields.
         localSchema = apiDeveloper.getClient(UploadSchemasApi.class).getUploadSchema(importStatus.getSchemaId(),
                 importStatus.getSchemaRevision().longValue()).execute().body();
-        assertLocalSchema(sharedSchema, localSchema);
+
+        assertLocalSchema(sharedSchema, localSchema, module);
 
         // import status should say schema
         assertEquals(SharedModuleType.SCHEMA, importStatus.getModuleType());
@@ -142,7 +146,7 @@ public class SharedModuleTest {
         // Get local survey and verify some fields.
         localSurvey = apiDeveloper.getClient(SurveysApi.class).getSurvey(importStatus.getSurveyGuid(),
                 DateTime.parse(importStatus.getSurveyCreatedOn())).execute().body();
-        assertLocalSurvey(sharedSurvey, localSurvey);
+        assertLocalSurvey(sharedSurvey, localSurvey, module);
 
         // import status should say survey
         assertEquals(SharedModuleType.SURVEY, importStatus.getModuleType());
@@ -154,6 +158,8 @@ public class SharedModuleTest {
         sharedSchema = createSharedSchema();
         module = createModuleForSchema(sharedSchema);
 
+        assertFalse(sharedSchema.getPublished());
+
         // Copy to local study.
         SharedModuleImportStatus importStatus = apiDeveloper.getClient(SharedModulesApi.class)
                 .importModuleByIdLatestPublishedVersion(module.getId()).execute().body();
@@ -161,7 +167,8 @@ public class SharedModuleTest {
         // Get local schema and verify some fields.
         localSchema = apiDeveloper.getClient(UploadSchemasApi.class).getUploadSchema(importStatus.getSchemaId(),
                 importStatus.getSchemaRevision().longValue()).execute().body();
-        assertLocalSchema(sharedSchema, localSchema);
+
+        assertLocalSchema(sharedSchema, localSchema, module);
 
         // import status should say schema
         assertEquals(SharedModuleType.SCHEMA, importStatus.getModuleType());
@@ -186,12 +193,18 @@ public class SharedModuleTest {
 
     // Helper method to verify shared schema and local schema match. Because the schemas are in different studies, they
     // might not match completely, but the fields we created should match. (Be sure to test non-index-key fields.)
-    private static void assertLocalSchema(UploadSchema sharedSchema, UploadSchema localSchema) {
+    private static void assertLocalSchema(UploadSchema sharedSchema, UploadSchema localSchema,
+            SharedModuleMetadata module) {
         assertEquals(sharedSchema.getSchemaId(), localSchema.getSchemaId());
         assertEquals(sharedSchema.getRevision(), localSchema.getRevision());
         assertEquals(sharedSchema.getName(), localSchema.getName());
         assertEquals(sharedSchema.getSchemaType(), localSchema.getSchemaType());
         assertEquals(sharedSchema.getFieldDefinitions(), localSchema.getFieldDefinitions());
+
+        assertEquals(module.getId(), localSchema.getModuleId());
+        assertEquals(module.getVersion(), localSchema.getModuleVersion());
+
+        assertTrue(localSchema.getPublished());
     }
 
     // Helper method to create a survey in the shared module library. Returns the created survey.
@@ -212,7 +225,7 @@ public class SharedModuleTest {
     }
 
     // Helper method to verify shared survey and local survey match. Similar to assertLocalSchema().
-    private static void assertLocalSurvey(Survey sharedSurvey, Survey localSurvey) {
+    private static void assertLocalSurvey(Survey sharedSurvey, Survey localSurvey, SharedModuleMetadata module) {
         // Basic fields.
         assertEquals(sharedSurvey.getName(), localSurvey.getName());
         assertEquals(sharedSurvey.getIdentifier(), localSurvey.getIdentifier());
@@ -230,6 +243,10 @@ public class SharedModuleTest {
 
             assertEquals(sharedElement, localElement);
         }
+
+        // Check that we annotated the survey with module ID and version.
+        assertEquals(module.getId(), localSurvey.getModuleId());
+        assertEquals(module.getVersion(), localSurvey.getModuleVersion());
 
         // Also, local survey is published.
         assertTrue(localSurvey.getPublished());

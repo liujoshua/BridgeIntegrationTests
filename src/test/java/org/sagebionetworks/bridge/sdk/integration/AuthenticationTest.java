@@ -37,15 +37,19 @@ import static org.junit.Assert.fail;
 public class AuthenticationTest {
 
     private static TestUser testUser;
+    private static TestUser adminUser;
     private static AuthenticationApi authApi;
     private static StudiesApi studiesApi;
+    private static StudiesApi adminStudiesApi;
     
     @BeforeClass
     public static void beforeClass() throws IOException {
-        // User must be an admin to toggle emailSignInEnabled
-        testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true, Role.DEVELOPER, Role.ADMIN);
+        testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true, Role.DEVELOPER);
         authApi = testUser.getClient(AuthenticationApi.class);
         studiesApi = testUser.getClient(StudiesApi.class);
+        
+        adminUser = TestUserHelper.getSignedInAdmin();
+        adminStudiesApi = adminUser.getClient(StudiesApi.class);
     }
     
     @AfterClass
@@ -62,8 +66,9 @@ public class AuthenticationTest {
             // Turn on email-based sign in for test. We can't verify the email was sent... we can verify this call 
             // works and returns the right error conditions.
             study.setEmailSignInEnabled(true);
+            
             // Bug: this call does not return VersionHolder (BRIDGE-1809). Retrieve study again.
-            studiesApi.updateStudy(study.getIdentifier(), study).execute();
+            adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
             study = studiesApi.getUsersStudy().execute().body();
             assertTrue(study.getEmailSignInEnabled());
             
@@ -77,7 +82,7 @@ public class AuthenticationTest {
             }
         } finally {
             study.setEmailSignInEnabled(false);
-            studiesApi.updateStudy(study.getIdentifier(), study).execute();
+            adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
         }
     }
     
