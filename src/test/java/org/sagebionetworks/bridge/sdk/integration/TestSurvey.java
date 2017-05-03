@@ -30,6 +30,7 @@ import org.sagebionetworks.bridge.rest.model.Unit;
 import com.google.common.collect.Lists;
 
 public class TestSurvey {
+    public static final String COPYRIGHT_NOTICE = "Copyright notice";
     public static final String MODULE_ID = "test-survey-module";
     public static final int MODULE_VERSION = 3;
     public static final String MULTIVALUE_ID = "feeling";
@@ -201,6 +202,8 @@ public class TestSurvey {
         elements.add(timeQuestion);
         elements.add(multiValueQuestion);
         elements.add(stringQuestion);
+
+        survey.setCopyrightNotice(COPYRIGHT_NOTICE);
 
         // Set optional parameters.
         survey.setModuleId(MODULE_ID);
