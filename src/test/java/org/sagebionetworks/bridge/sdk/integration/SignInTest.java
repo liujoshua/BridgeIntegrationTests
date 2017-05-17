@@ -11,6 +11,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.AccountStatus;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
@@ -29,6 +33,7 @@ import java.util.Map;
 
 @Category(IntegrationSmokeTest.class)
 public class SignInTest {
+    private static final String PASSWORD = "P@ssword`1";
 
     private TestUser researcher;
     private TestUser user;
@@ -74,12 +79,14 @@ public class SignInTest {
         Map<String,String> map = Maps.newHashMap();
         map.put("phone", "123-345-5768");
 
+        String email = Tests.makeEmail(SignInTest.class);
+
         SignUp signUp = new SignUp();
         signUp.setStudy(researcher.getStudyId());
         signUp.setFirstName("First Name");
         signUp.setLastName("Last Name");
-        signUp.setEmail(Tests.makeEmail(SignInTest.class));
-        signUp.setPassword("P@ssword`1");
+        signUp.setEmail(email);
+        signUp.setPassword(PASSWORD);
         signUp.setExternalId("external ID");
         signUp.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
         signUp.setNotifyByEmail(true);
@@ -109,5 +116,40 @@ public class SignInTest {
         
         TestUser admin = TestUserHelper.getSignedInAdmin();
         admin.getClient(ForAdminsApi.class).deleteUser(retrieved.getId()).execute();
+    }
+
+    @Test(expected = EntityNotFoundException.class)
+    public void signInNoAccount() throws Exception {
+        // Generate random email, but don't create the account.
+        String email = Tests.makeEmail(SignInTest.class);
+        SignIn signIn = new SignIn().study(Tests.TEST_KEY).email(email).password(PASSWORD);
+
+        ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
+        AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
+        newUserAuthApi.signIn(signIn).execute();
+    }
+
+    @Test(expected = EntityNotFoundException.class)
+    public void signInBadPassword() throws Exception {
+        // To prevent email enumeration attack, this throws a 404 not found.
+        SignIn signIn = new SignIn().study(Tests.TEST_KEY).email(user.getEmail()).password("This is not my password");
+
+        ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
+        AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
+        newUserAuthApi.signIn(signIn).execute();
+    }
+
+    @Test(expected = EntityNotFoundException.class)
+    public void signInAccountUnverified() throws Exception {
+        // Mark account as unverified.
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        StudyParticipant participant = participantsApi.getParticipant(user.getSession().getId()).execute().body();
+        participant.setStatus(AccountStatus.UNVERIFIED);
+        participantsApi.updateParticipant(user.getSession().getId(), participant).execute();
+
+        // Sign in should now fail with a 404 not found.
+        ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(user.getSignIn()).build();
+        AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
+        newUserAuthApi.signIn(user.getSignIn()).execute();
     }
 }

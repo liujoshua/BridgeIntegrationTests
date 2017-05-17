@@ -11,6 +11,7 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualI
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,6 +51,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ParticipantsTest {
     private TestUser admin;
@@ -143,16 +145,16 @@ public class ParticipantsTest {
         assertEquals(researcher.getEmail(), summaries.getEmailFilter());
 
         // Date filter that would not include the newest participant
-        summaries = participantsApi.getParticipants(0, 10, null, null, oldest.plusDays(1)).execute().body();
+        summaries = participantsApi.getParticipants(0, 10, null, null, newest.minusMillis(1)).execute().body();
         assertTrue(summaries.getTotal() < total);
         assertNull(summaries.getStartDate());
-        assertEquals(summaries.getEndDate(), oldest.plusDays(1));
+        assertEquals(summaries.getEndDate(), newest.minusMillis(1));
         doesNotIncludeThisAccountCreatedOn(summaries, newest);
         
         // Date filter that would not include the oldest participant
-        summaries = participantsApi.getParticipants(0, 10, null, newest.minusDays(1), null).execute().body();
+        summaries = participantsApi.getParticipants(0, 10, null, oldest.plusMillis(1), null).execute().body();
         assertTrue(summaries.getTotal() < total);
-        assertEquals(summaries.getStartDate(), newest.minusDays(1));
+        assertEquals(summaries.getStartDate(), oldest.plusMillis(1));
         assertNull(summaries.getEndDate());
         doesNotIncludeThisAccountCreatedOn(summaries, oldest);
     }
@@ -186,7 +188,7 @@ public class ParticipantsTest {
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
         List<String> languages = Lists.newArrayList("en","fr");
         List<String> dataGroups = Lists.newArrayList("sdk-int-1", "sdk-int-2");
-        DateTime createdOn = null;
+        DateTime createdOn;
         
         SignUp participant = new SignUp();
         participant.setFirstName("FirstName");
@@ -366,7 +368,11 @@ public class ParticipantsTest {
         
         SchedulesApi schedulePlanApi = user.getClient(SchedulesApi.class);
         SchedulePlan plan = Tests.getDailyRepeatingSchedulePlan();
-        
+
+        // Set an identifiable label on the activity so we can find the generated activities later.
+        String activityLabel = "activity-" + RandomStringUtils.randomAlphabetic(4);
+        ((SimpleScheduleStrategy) plan.getStrategy()).getSchedule().getActivities().get(0).setLabel(activityLabel);
+
         GuidVersionHolder planKeys = schedulePlanApi.createSchedulePlan(plan).execute().body();
         try {
             String userId = user.getSession().getId();
@@ -375,18 +381,20 @@ public class ParticipantsTest {
             ScheduledActivityList activities = usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
             
             // Verify there is more than one activity
-            int count = activities.getItems().size();
+            List<ScheduledActivity> activityList = findActivitiesByLabel(activities.getItems(), activityLabel);
+            int count = activityList.size();
             assertTrue(count > 1);
 
             // Finish one of them so there is one less in the user's API
-            ScheduledActivity finishMe = activities.getItems().get(0);
+            ScheduledActivity finishMe = activityList.get(0);
             finishMe.setStartedOn(DateTime.now());
             finishMe.setFinishedOn(DateTime.now());
-            usersApi.updateScheduledActivities(activities.getItems()).execute();
+            usersApi.updateScheduledActivities(activityList).execute();
             
             // Finished task is now no longer in the list the user sees
             activities = usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
-            assertTrue(activities.getItems().size() < count);
+            List<ScheduledActivity> activityList2 = findActivitiesByLabel(activities.getItems(), activityLabel);
+            assertTrue(activityList2.size() < count);
             
             plan = schedulePlanApi.getSchedulePlan(planKeys.getGuid()).execute().body();
             String activityGuid = ((SimpleScheduleStrategy)plan.getStrategy()).getSchedule().getActivities().get(0).getGuid();
@@ -396,7 +404,9 @@ public class ParticipantsTest {
             
             ForwardCursorScheduledActivityList resActivities = participantsApi
                     .getParticipantActivityHistory(userId, activityGuid, null, null, null, 50L).execute().body();
-            assertEquals(count, resActivities.getItems().size());
+            List<ScheduledActivity> activityHistoryList = findActivitiesByLabel(resActivities.getItems(),
+                    activityLabel);
+            assertEquals(count, activityHistoryList.size());
             
             // Researcher can delete all the activities as well.
             participantsApi.deleteParticipantActivities(userId).execute();
@@ -405,10 +415,8 @@ public class ParticipantsTest {
                     .getParticipantActivityHistory(userId, activityGuid, null, null, null, 50L).execute().body();
             assertEquals(0, resActivities.getItems().size());
         } finally {
-            if (user != null) {
-                schedulePlanApi.deleteSchedulePlan(planKeys.getGuid()).execute();
-                user.signOutAndDeleteUser();
-            }
+            schedulePlanApi.deleteSchedulePlan(planKeys.getGuid()).execute();
+            user.signOutAndDeleteUser();
         }
     }
 
@@ -446,9 +454,13 @@ public class ParticipantsTest {
             assertEquals(startTime, results.getStartTime());
             assertEquals(endTime, results.getEndTime());
         } finally {
-            if (user != null) {
-                user.signOutAndDeleteUser();
-            }
+            user.signOutAndDeleteUser();
         }
+    }
+
+    private static List<ScheduledActivity> findActivitiesByLabel(List<ScheduledActivity> scheduledActivityList,
+            String label) {
+        return scheduledActivityList.stream().filter(oneScheduledActivity ->
+                label.equals(oneScheduledActivity.getActivity().getLabel())).collect(Collectors.toList());
     }
 }
