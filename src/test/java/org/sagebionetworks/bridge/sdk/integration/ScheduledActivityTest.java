@@ -14,6 +14,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -36,6 +37,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduleStatus;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 
@@ -157,7 +159,7 @@ public class ScheduledActivityTest {
     public void createSchedulePlanGetScheduledActivities() throws Exception {
         // Get scheduled activities. Validate basic properties.
         ScheduledActivityList scheduledActivities = usersApi.getScheduledActivities("+00:00", 4, 0).execute().body();
-        ScheduledActivity schActivity = findActivity1(scheduledActivities);
+        ScheduledActivity schActivity = findActivity1(scheduledActivities.getItems());
         assertNotNull(schActivity);
         assertEquals(ScheduleStatus.SCHEDULED, schActivity.getStatus());
         assertNotNull(schActivity.getScheduledOn());
@@ -203,7 +205,7 @@ public class ScheduledActivityTest {
 
         // Get activities back and validate that it's started.
         scheduledActivities = usersApi.getScheduledActivities("+00:00", 3, null).execute().body();
-        schActivity = findActivity1(scheduledActivities);
+        schActivity = findActivity1(scheduledActivities.getItems());
         assertNotNull(schActivity);
         ClientData clientData = RestUtils.toType(schActivity.getClientData(), ClientData.class);
         assertEquals("Test Name", clientData.getName());
@@ -217,7 +219,7 @@ public class ScheduledActivityTest {
 
         // Get activities back. Verify the activity is not there.
         scheduledActivities = usersApi.getScheduledActivities("+00:00", 3, null).execute().body();
-        schActivity = findActivity1(scheduledActivities);
+        schActivity = findActivity1(scheduledActivities.getItems());
         assertNull(schActivity);
         
         // But the activities continue to be in the history APIs
@@ -232,6 +234,92 @@ public class ScheduledActivityTest {
         assertNotNull(list.getItems().get(0).getFinishedOn());
     }
 
+    @Test
+    public void createSchedulePlanGetScheduledActivitiesV4() throws Exception {
+        // Get scheduled activities. Validate basic properties.
+        DateTimeZone zone = DateTimeZone.forOffsetHours(4);
+        DateTime startsOn = DateTime.now(zone);
+        DateTime endsOn = startsOn.plusDays(4).withZone(zone);
+        
+        ScheduledActivityListV4 scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
+        ScheduledActivity schActivity = findActivity1(scheduledActivities.getItems());
+        assertNotNull(schActivity);
+        assertEquals(ScheduleStatus.SCHEDULED, schActivity.getStatus());
+        assertNotNull(schActivity.getScheduledOn());
+        assertNull(schActivity.getExpiresOn());
+
+        Activity activity = schActivity.getActivity();
+        assertEquals(ActivityType.TASK, activity.getActivityType());
+        assertEquals("Activity 1", activity.getLabel());
+        assertEquals("task:AAA", activity.getTask().getIdentifier());
+
+        // Historical items should come back with the same time zone as get() method, and so activities should
+        // be strictly equal.
+        DateTime startDateTime = DateTime.now(zone).minusDays(10);
+        DateTime endDateTime = DateTime.now(zone).plusDays(10);
+
+        // You can see this activity in history...
+        ForwardCursorScheduledActivityList list = usersApi.getActivityHistory(activity.getGuid(),
+                startDateTime, endDateTime, null, 5L).execute().body();
+
+        ScheduledActivity retrievedFromHistory = list.getItems().get(0);
+        Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
+        assertEquals(schActivity, retrievedFromHistory);
+        
+        // You can see this activity in the researcher API
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
+                startDateTime, endDateTime, null, 5L).execute().body();
+        
+        retrievedFromHistory = list.getItems().get(0);
+        Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
+        assertEquals(schActivity, retrievedFromHistory);
+        assertFalse(list.getHasNext());
+        assertTrue(startDateTime.isEqual(list.getScheduledOnStart()));
+        assertTrue(endDateTime.isEqual(list.getScheduledOnEnd()));
+        
+        // If we ask for a date range that doesn't include it, it is not returned.
+        list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
+                DateTime.now().plusDays(10), DateTime.now().plusDays(12), null, 5L).execute().body();
+        assertTrue(list.getItems().isEmpty());
+        
+        // Start the activity.
+        schActivity.setStartedOn(DateTime.now());
+        schActivity.setClientData(new ClientData("Test Name", true, 100));
+        usersApi.updateScheduledActivities(scheduledActivities.getItems()).execute();
+
+        // Get activities back and validate that it's started.
+        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, startsOn.plusDays(3)).execute().body();
+        schActivity = findActivity1(scheduledActivities.getItems());
+        assertNotNull(schActivity);
+        ClientData clientData = RestUtils.toType(schActivity.getClientData(), ClientData.class);
+        assertEquals("Test Name", clientData.getName());
+        assertTrue(clientData.getEnabled());
+        assertEquals(100, clientData.getCount());
+        assertEquals(ScheduleStatus.STARTED, schActivity.getStatus());
+
+        // Finish the activity, save some data
+        schActivity.setFinishedOn(DateTime.now());
+        usersApi.updateScheduledActivities(scheduledActivities.getItems()).execute();
+
+        // Get activities back. Verify the activity is there and it is finished
+        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, startsOn.plusDays(3)).execute().body();
+        schActivity = findActivity1(scheduledActivities.getItems());
+        assertNotNull(schActivity.getStartedOn());
+        assertNotNull(schActivity.getFinishedOn());
+        
+        // The activities also continue to be in the history APIs
+        list = usersApi.getActivityHistory(activity.getGuid(),
+                startDateTime, endDateTime, null, 5L).execute().body();
+        assertFalse(list.getItems().isEmpty());
+        assertNotNull(list.getItems().get(0).getFinishedOn());
+        
+        list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
+                startDateTime, endDateTime, null, 5L).execute().body();
+        assertFalse(list.getItems().isEmpty());
+        assertNotNull(list.getItems().get(0).getFinishedOn());
+    }
+    
     @Test
     public void getScheduledActivitiesWithMinimumActivityValue() throws Exception {
         ScheduledActivityList scheduledActivities = usersApi.getScheduledActivities("+00:00", 4, 2).execute().body();
@@ -253,13 +341,12 @@ public class ScheduledActivityTest {
 
     // api study may have other schedule plans in it with other scheduled activities. To prevent tests from
     // conflicting, look for the activity with label "Activity 1".
-    private static ScheduledActivity findActivity1(ScheduledActivityList scheduledActivityList) {
-        for (ScheduledActivity oneScheduledActivity : scheduledActivityList.getItems()) {
+    private static ScheduledActivity findActivity1(List<ScheduledActivity> scheduledActivityList) {
+        for (ScheduledActivity oneScheduledActivity : scheduledActivityList) {
             if ("Activity 1".equals(oneScheduledActivity.getActivity().getLabel())) {
                 return oneScheduledActivity;
             }
         }
-
         // It doesn't exist. Return null and let the test deal with it.
         return null;
     }

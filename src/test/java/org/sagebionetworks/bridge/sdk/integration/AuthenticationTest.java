@@ -17,7 +17,6 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.EmailSignIn;
 import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
-import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
@@ -39,14 +38,12 @@ public class AuthenticationTest {
     private static TestUser testUser;
     private static TestUser adminUser;
     private static AuthenticationApi authApi;
-    private static StudiesApi studiesApi;
     private static StudiesApi adminStudiesApi;
     
     @BeforeClass
     public static void beforeClass() throws IOException {
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         authApi = testUser.getClient(AuthenticationApi.class);
-        studiesApi = testUser.getClient(StudiesApi.class);
         
         adminUser = TestUserHelper.getSignedInAdmin();
         adminStudiesApi = adminUser.getClient(StudiesApi.class);
