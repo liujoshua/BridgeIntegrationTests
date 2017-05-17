@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -167,8 +168,8 @@ public class ScheduledActivityTest {
         assertEquals("Activity 1", activity.getLabel());
         assertEquals("task:AAA", activity.getTask().getIdentifier());
 
-        DateTime startDateTime = DateTime.now().minusDays(10);
-        DateTime endDateTime = DateTime.now().plusDays(10);
+        DateTime startDateTime = DateTime.now(DateTimeZone.UTC).minusDays(10);
+        DateTime endDateTime = DateTime.now(DateTimeZone.UTC).plusDays(10);
 
         // You can see this activity in history...
         ForwardCursorScheduledActivityList list = usersApi.getActivityHistory(activity.getGuid(),

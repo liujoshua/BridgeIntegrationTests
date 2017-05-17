@@ -7,6 +7,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
@@ -50,7 +54,21 @@ public class UserManagementTest {
         
         UserSessionInfo userSession = adminApi.createUser(signUp).execute().body();
         assertNotNull(userSession.getId());
-        
+
+        // Can sign in with this user.
+        SignIn signIn = new SignIn().study(admin.getStudyId()).email(email).password(password);
+        ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
+        AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
+        newUserAuthApi.signIn(signIn).execute();
+
+        // Creating the user again throws an EntityAlreadyExists.
+        try {
+            adminApi.createUser(signUp).execute();
+            fail("expected exception");
+        } catch (EntityAlreadyExistsException ex) {
+            // expected exception
+        }
+
         adminApi.deleteUser(userSession.getId()).execute();
 
         try {
@@ -58,7 +76,7 @@ public class UserManagementTest {
             participantsApi.getParticipant(userSession.getId()).execute();
             fail("Should have thrown an exception");
         } catch(EntityNotFoundException e) {
-            
+            // expected exception
         }
     }
 
