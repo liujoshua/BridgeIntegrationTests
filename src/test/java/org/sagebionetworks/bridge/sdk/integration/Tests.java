@@ -198,6 +198,7 @@ public class Tests {
         study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
         study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
         study.setEmailSignInTemplate(Tests.TEST_EMAIL_SIGNIN_TEMPLATE);
+        study.setEmailVerificationEnabled(true);
         study.setEmailSignInEnabled(true);
         study.setHealthCodeExportEnabled(true);
         study.setDisableExport(true);

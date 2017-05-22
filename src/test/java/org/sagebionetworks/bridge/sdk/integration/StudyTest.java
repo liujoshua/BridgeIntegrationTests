@@ -240,11 +240,10 @@ public class StudyTest {
         assertEquals("iOS push ARN should be equal", study.getPushNotificationARNs().get("iPhone OS"),
                 newStudy.getPushNotificationARNs().get("iPhone OS"));        
         
-        // This was set to true even though we didn't set it.
         assertTrue("strictUploadValidationEnabled should be true", newStudy.getStrictUploadValidationEnabled());
         assertTrue("healthCodeExportEnabled should be true", newStudy.getHealthCodeExportEnabled());
         assertTrue("emailVerificationEnabled should be true", newStudy.getEmailVerificationEnabled());
-        assertFalse("emailSignInEnabled should be false", newStudy.getEmailSignInEnabled());
+        assertTrue("emailSignInEnabled should be true", newStudy.getEmailSignInEnabled());
 
         // assert disable study
         assertTrue(newStudy.getDisableExport());

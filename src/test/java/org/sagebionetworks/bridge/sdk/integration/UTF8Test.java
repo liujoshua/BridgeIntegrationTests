@@ -30,6 +30,7 @@ public class UTF8Test {
         study.setConsentNotificationEmail("bridge-testing+consent@sagebase.org");
         study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
         study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
+        study.setEmailVerificationEnabled(true);
 
         // create study
         studiesApi.createStudy(study).execute();
