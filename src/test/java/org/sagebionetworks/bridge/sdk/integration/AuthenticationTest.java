@@ -17,7 +17,6 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.EmailSignIn;
 import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
-import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
@@ -39,14 +38,12 @@ public class AuthenticationTest {
     private static TestUser testUser;
     private static TestUser adminUser;
     private static AuthenticationApi authApi;
-    private static StudiesApi studiesApi;
     private static StudiesApi adminStudiesApi;
     
     @BeforeClass
     public static void beforeClass() throws IOException {
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         authApi = testUser.getClient(AuthenticationApi.class);
-        studiesApi = testUser.getClient(StudiesApi.class);
         
         adminUser = TestUserHelper.getSignedInAdmin();
         adminStudiesApi = adminUser.getClient(StudiesApi.class);
@@ -139,6 +136,7 @@ public class AuthenticationTest {
             study.setTechnicalEmail("bridge-testing+technical@sagebase.org");
             study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
             study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
+            study.setEmailVerificationEnabled(true);
             
             adminsApi.createStudy(study).execute();
 
@@ -168,10 +166,10 @@ public class AuthenticationTest {
             .Post(hostUrl + "/api/v1/auth/verifyEmail?study=api")
             .body(new StringEntity("{\"sptoken\":\"testtoken\",\"study\":\"api\"}"))
             .execute().returnResponse();
-        assertEquals(404, response.getStatusLine().getStatusCode());
+        assertEquals(400, response.getStatusLine().getStatusCode());
         
         JsonNode node = new ObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
-        assertEquals("Account not found.", node.get("message").asText());
+        assertEquals("Email verification token has expired (or already been used).", node.get("message").asText());
     }
     
     // Should not be able to tell from the sign up response if an email is enrolled in the study or not.
