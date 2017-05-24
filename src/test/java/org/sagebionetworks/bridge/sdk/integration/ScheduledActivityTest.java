@@ -246,9 +246,9 @@ public class ScheduledActivityTest {
     @Test
     public void createSchedulePlanGetScheduledActivitiesV4() throws Exception {
         // Get scheduled activities. Validate basic properties.
-        DateTimeZone zone = DateTimeZone.forOffsetHours(4);
+        DateTimeZone zone = DateTimeZone.UTC; // forOffsetHours(4);
         DateTime startsOn = DateTime.now(zone);
-        DateTime endsOn = startsOn.plusDays(4).withZone(zone);
+        DateTime endsOn = startsOn.plusDays(4);
         
         ScheduledActivityListV4 scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
         ScheduledActivity schActivity = findActivity1(scheduledActivities.getItems());
@@ -264,8 +264,8 @@ public class ScheduledActivityTest {
 
         // Historical items should come back with the same time zone as get() method, and so activities should
         // be strictly equal.
-        DateTime startDateTime = DateTime.now(zone).minusDays(10);
-        DateTime endDateTime = DateTime.now(zone).plusDays(10);
+        DateTime startDateTime = startsOn.minusDays(10);
+        DateTime endDateTime = startsOn.plusDays(10);
 
         // You can see this activity in history...
         ForwardCursorScheduledActivityList list = usersApi.getActivityHistory(activity.getGuid(),
@@ -299,7 +299,7 @@ public class ScheduledActivityTest {
 
         // Get activities back and validate that it's started.
         // It's delayed by three days, so ask for four
-        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, startsOn.plusDays(4)).execute().body();
+        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
         schActivity = findActivity1(scheduledActivities.getItems());
         assertNotNull(schActivity);
         ClientData clientData = RestUtils.toType(schActivity.getClientData(), ClientData.class);
@@ -313,7 +313,7 @@ public class ScheduledActivityTest {
         usersApi.updateScheduledActivities(scheduledActivities.getItems()).execute();
 
         // Get activities back. Verify the activity is there and it is finished
-        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, startsOn.plusDays(4)).execute().body();
+        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
         schActivity = findActivity1(scheduledActivities.getItems());
         assertNotNull(schActivity.getStartedOn());
         assertNotNull(schActivity.getFinishedOn());
