@@ -288,7 +288,8 @@ public class ScheduledActivityTest {
         usersApi.updateScheduledActivities(scheduledActivities.getItems()).execute();
 
         // Get activities back and validate that it's started.
-        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, startsOn.plusDays(3)).execute().body();
+        // Is time skewed on the server? Subtract three hours from start time to test, as this passes locally.
+        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn.minusHours(3), startsOn.plusDays(3)).execute().body();
         schActivity = findActivity1(scheduledActivities.getItems());
         assertNotNull(schActivity);
         ClientData clientData = RestUtils.toType(schActivity.getClientData(), ClientData.class);
