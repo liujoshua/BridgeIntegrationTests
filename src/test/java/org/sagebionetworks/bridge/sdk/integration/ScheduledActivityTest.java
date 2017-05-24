@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -81,6 +82,43 @@ public class ScheduledActivityTest {
         schedulePlansApi = developer.getClient(SchedulesApi.class);
         usersApi = user.getClient(ForConsentedUsersApi.class);
         
+        String planGuid = oneTimeScheduleAfter3Days();
+        schedulePlanGuidList.add(planGuid);
+        
+        planGuid = monthlyAfterOneMonthSchedule();
+        schedulePlanGuidList.add(planGuid);
+    }
+
+    private String monthlyAfterOneMonthSchedule() throws IOException {
+        String planGuid;
+        Schedule schedule = new Schedule();
+        schedule.setLabel("Schedule 2");
+        schedule.setDelay("P1M");
+        schedule.setInterval("P1M");
+        schedule.setExpires("P3W");
+        schedule.setScheduleType(ScheduleType.RECURRING);
+        schedule.setTimes(Lists.newArrayList("10:00"));
+        
+        TaskReference taskReference = new TaskReference();
+        taskReference.setIdentifier("task:BBB");
+        
+        Activity activity = new Activity();
+        activity.setLabel("Activity 2");
+        activity.setTask(taskReference);
+        schedule.setActivities(Lists.newArrayList(activity));
+        
+        SimpleScheduleStrategy strategy = new SimpleScheduleStrategy();
+        strategy.setSchedule(schedule);
+        strategy.setType("SimpleScheduleStrategy");
+        
+        SchedulePlan plan = new SchedulePlan();
+        plan.setLabel("Schedule plan 2");
+        plan.setStrategy(strategy);
+        planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
+        return planGuid;
+    }
+
+    private String oneTimeScheduleAfter3Days() throws IOException {
         Schedule schedule = new Schedule();
         schedule.setLabel("Schedule 1");
         schedule.setDelay("P3D");
@@ -104,35 +142,7 @@ public class ScheduledActivityTest {
         plan.setLabel("Schedule plan 1");
         plan.setStrategy(strategy);
         String planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
-        schedulePlanGuidList.add(planGuid);
-        
-        // Add a schedule plan in the future... this should not effect any tests, *until* we request
-        // a minimum number of tasks, which will retrieve this.
-        schedule = new Schedule();
-        schedule.setLabel("Schedule 2");
-        schedule.setDelay("P1M");
-        schedule.setInterval("P1M");
-        schedule.setExpires("P3W");
-        schedule.setScheduleType(ScheduleType.RECURRING);
-        schedule.setTimes(Lists.newArrayList("10:00"));
-        
-        taskReference = new TaskReference();
-        taskReference.setIdentifier("task:BBB");
-        
-        activity = new Activity();
-        activity.setLabel("Activity 2");
-        activity.setTask(taskReference);
-        schedule.setActivities(Lists.newArrayList(activity));
-        
-        strategy = new SimpleScheduleStrategy();
-        strategy.setSchedule(schedule);
-        strategy.setType("SimpleScheduleStrategy");
-        
-        plan = new SchedulePlan();
-        plan.setLabel("Schedule plan 2");
-        plan.setStrategy(strategy);
-        planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
-        schedulePlanGuidList.add(planGuid);
+        return planGuid;
     }
 
     @After
@@ -236,9 +246,9 @@ public class ScheduledActivityTest {
     @Test
     public void createSchedulePlanGetScheduledActivitiesV4() throws Exception {
         // Get scheduled activities. Validate basic properties.
-        DateTimeZone zone = DateTimeZone.forOffsetHours(4);
+        DateTimeZone zone = DateTimeZone.UTC; // forOffsetHours(4);
         DateTime startsOn = DateTime.now(zone);
-        DateTime endsOn = startsOn.plusDays(4).withZone(zone);
+        DateTime endsOn = startsOn.plusDays(4);
         
         ScheduledActivityListV4 scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
         ScheduledActivity schActivity = findActivity1(scheduledActivities.getItems());
@@ -254,8 +264,8 @@ public class ScheduledActivityTest {
 
         // Historical items should come back with the same time zone as get() method, and so activities should
         // be strictly equal.
-        DateTime startDateTime = DateTime.now(zone).minusDays(10);
-        DateTime endDateTime = DateTime.now(zone).plusDays(10);
+        DateTime startDateTime = startsOn.minusDays(10);
+        DateTime endDateTime = startsOn.plusDays(10);
 
         // You can see this activity in history...
         ForwardCursorScheduledActivityList list = usersApi.getActivityHistory(activity.getGuid(),
@@ -288,8 +298,8 @@ public class ScheduledActivityTest {
         usersApi.updateScheduledActivities(scheduledActivities.getItems()).execute();
 
         // Get activities back and validate that it's started.
-        // Is time skewed on the server? Subtract three hours from start time to test, as this passes locally.
-        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn.minusHours(3), startsOn.plusDays(3)).execute().body();
+        // It's delayed by three days, so ask for four
+        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
         schActivity = findActivity1(scheduledActivities.getItems());
         assertNotNull(schActivity);
         ClientData clientData = RestUtils.toType(schActivity.getClientData(), ClientData.class);
@@ -303,14 +313,13 @@ public class ScheduledActivityTest {
         usersApi.updateScheduledActivities(scheduledActivities.getItems()).execute();
 
         // Get activities back. Verify the activity is there and it is finished
-        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, startsOn.plusDays(3)).execute().body();
+        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
         schActivity = findActivity1(scheduledActivities.getItems());
         assertNotNull(schActivity.getStartedOn());
         assertNotNull(schActivity.getFinishedOn());
         
         // The activities also continue to be in the history APIs
-        list = usersApi.getActivityHistory(activity.getGuid(),
-                startDateTime, endDateTime, null, 5L).execute().body();
+        list = usersApi.getActivityHistory(activity.getGuid(), startDateTime, endDateTime, null, 5L).execute().body();
         assertFalse(list.getItems().isEmpty());
         assertNotNull(list.getItems().get(0).getFinishedOn());
         
