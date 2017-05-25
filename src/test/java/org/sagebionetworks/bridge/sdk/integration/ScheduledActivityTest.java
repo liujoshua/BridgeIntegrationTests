@@ -246,7 +246,7 @@ public class ScheduledActivityTest {
     @Test
     public void createSchedulePlanGetScheduledActivitiesV4() throws Exception {
         // Get scheduled activities. Validate basic properties.
-        DateTimeZone zone = DateTimeZone.UTC; // forOffsetHours(4);
+        DateTimeZone zone = DateTimeZone.forOffsetHours(4);
         DateTime startsOn = DateTime.now(zone);
         DateTime endsOn = startsOn.plusDays(4);
         
