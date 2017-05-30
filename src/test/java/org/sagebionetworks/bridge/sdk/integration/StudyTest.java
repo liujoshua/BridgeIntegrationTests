@@ -77,7 +77,7 @@ public class StudyTest {
     private static final String DEFAULT_CONFIG_FILE = CONFIG_FILE;
     private static final String USER_CONFIG_FILE = System.getProperty("user.home") + "/" + CONFIG_FILE;
 
-    private static final long MAX_PAGE_SIZE = 100L;
+    private static final int MAX_PAGE_SIZE = 100;
     
     @Before
     public void before() throws IOException {
@@ -430,7 +430,7 @@ public class StudyTest {
 
             // then test pagination by setting max pagesize to 1
             // There are at least 2 uploads, so we know there are at least 2 pages.
-            UploadList pagedResults = studiesApi.getUploads(startTime, endTime, 1L, null).execute().body();
+            UploadList pagedResults = studiesApi.getUploads(startTime, endTime, 1, null).execute().body();
             assertEquals(startTime, pagedResults.getStartTime());
             assertEquals(endTime, pagedResults.getEndTime());
 
@@ -439,7 +439,7 @@ public class StudyTest {
             assertNotNull(pagedResults.getOffsetKey());
 
             // then getupload again with offsetkey from session1
-            UploadList secondPagedResults = studiesApi.getUploads(startTime, endTime, 1L, pagedResults.getOffsetKey()).execute().body();
+            UploadList secondPagedResults = studiesApi.getUploads(startTime, endTime, 1, pagedResults.getOffsetKey()).execute().body();
             assertEquals(startTime, secondPagedResults.getStartTime());
             assertEquals(endTime, secondPagedResults.getEndTime());
 

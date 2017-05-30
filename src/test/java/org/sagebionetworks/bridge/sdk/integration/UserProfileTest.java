@@ -27,12 +27,12 @@ import okhttp3.Response;
 public class UserProfileTest {
     
     TestUser testUser;
-    
+
     @Before
     public void before() throws Exception {
         testUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
     }
-    
+
     @After
     public void after() throws Exception {
         if (testUser != null) {
