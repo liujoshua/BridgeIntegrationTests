@@ -403,7 +403,7 @@ public class ParticipantsTest {
             ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
             
             ForwardCursorScheduledActivityList resActivities = participantsApi
-                    .getParticipantActivityHistory(userId, activityGuid, null, null, null, 50L).execute().body();
+                    .getParticipantActivityHistory(userId, activityGuid, null, null, null, 50).execute().body();
             List<ScheduledActivity> activityHistoryList = findActivitiesByLabel(resActivities.getItems(),
                     activityLabel);
             assertEquals(count, activityHistoryList.size());
@@ -412,7 +412,7 @@ public class ParticipantsTest {
             participantsApi.deleteParticipantActivities(userId).execute();
             
             resActivities = participantsApi
-                    .getParticipantActivityHistory(userId, activityGuid, null, null, null, 50L).execute().body();
+                    .getParticipantActivityHistory(userId, activityGuid, null, null, null, 50).execute().body();
             assertEquals(0, resActivities.getItems().size());
         } finally {
             schedulePlanApi.deleteSchedulePlan(planKeys.getGuid()).execute();

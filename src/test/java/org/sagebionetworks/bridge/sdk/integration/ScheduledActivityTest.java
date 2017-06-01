@@ -184,7 +184,7 @@ public class ScheduledActivityTest {
 
         // You can see this activity in history...
         ForwardCursorScheduledActivityList list = usersApi.getActivityHistory(activity.getGuid(),
-                startDateTime, endDateTime, null, 5L).execute().body();
+                startDateTime, endDateTime, null, 5).execute().body();
 
         ScheduledActivity retrievedFromHistory = list.getItems().get(0);
         Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
@@ -193,7 +193,7 @@ public class ScheduledActivityTest {
         // You can see this activity in the researcher API
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
-                startDateTime, endDateTime, null, 5L).execute().body();
+                startDateTime, endDateTime, null, 5).execute().body();
         
         retrievedFromHistory = list.getItems().get(0);
         Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
@@ -204,7 +204,7 @@ public class ScheduledActivityTest {
         
         // If we ask for a date range that doesn't include it, it is not returned.
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
-                DateTime.now().plusDays(10), DateTime.now().plusDays(12), null, 5L).execute().body();
+                DateTime.now().plusDays(10), DateTime.now().plusDays(12), null, 5).execute().body();
         assertTrue(list.getItems().isEmpty());
         
         // Start the activity.
@@ -233,12 +233,12 @@ public class ScheduledActivityTest {
         
         // But the activities continue to be in the history APIs
         list = usersApi.getActivityHistory(activity.getGuid(),
-                startDateTime, endDateTime, null, 5L).execute().body();
+                startDateTime, endDateTime, null, 5).execute().body();
         assertFalse(list.getItems().isEmpty());
         assertNotNull(list.getItems().get(0).getFinishedOn());
         
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
-                startDateTime, endDateTime, null, 5L).execute().body();
+                startDateTime, endDateTime, null, 5).execute().body();
         assertFalse(list.getItems().isEmpty());
         assertNotNull(list.getItems().get(0).getFinishedOn());
     }
@@ -269,7 +269,7 @@ public class ScheduledActivityTest {
 
         // You can see this activity in history...
         ForwardCursorScheduledActivityList list = usersApi.getActivityHistory(activity.getGuid(),
-                startDateTime, endDateTime, null, 5L).execute().body();
+                startDateTime, endDateTime, null, 5).execute().body();
 
         ScheduledActivity retrievedFromHistory = list.getItems().get(0);
         Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
@@ -278,7 +278,7 @@ public class ScheduledActivityTest {
         // You can see this activity in the researcher API
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
-                startDateTime, endDateTime, null, 5L).execute().body();
+                startDateTime, endDateTime, null, 5).execute().body();
         
         retrievedFromHistory = list.getItems().get(0);
         Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
@@ -289,7 +289,7 @@ public class ScheduledActivityTest {
         
         // If we ask for a date range that doesn't include it, it is not returned.
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
-                DateTime.now().plusDays(10), DateTime.now().plusDays(12), null, 5L).execute().body();
+                DateTime.now().plusDays(10), DateTime.now().plusDays(12), null, 5).execute().body();
         assertTrue(list.getItems().isEmpty());
         
         // Start the activity.
@@ -319,12 +319,12 @@ public class ScheduledActivityTest {
         assertNotNull(schActivity.getFinishedOn());
         
         // The activities also continue to be in the history APIs
-        list = usersApi.getActivityHistory(activity.getGuid(), startDateTime, endDateTime, null, 5L).execute().body();
+        list = usersApi.getActivityHistory(activity.getGuid(), startDateTime, endDateTime, null, 5).execute().body();
         assertFalse(list.getItems().isEmpty());
         assertNotNull(list.getItems().get(0).getFinishedOn());
         
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
-                startDateTime, endDateTime, null, 5L).execute().body();
+                startDateTime, endDateTime, null, 5).execute().body();
         assertFalse(list.getItems().isEmpty());
         assertNotNull(list.getItems().get(0).getFinishedOn());
     }
