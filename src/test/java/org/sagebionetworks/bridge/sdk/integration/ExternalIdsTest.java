@@ -55,35 +55,33 @@ public class ExternalIdsTest {
             ExternalIdentifierList page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, prefix, null)
                     .execute().body();
             assertEquals(PAGE_SIZE, page1.getItems().size());
-            assertEquals(LIST_SIZE, page1.getTotal().intValue());
-            assertNotNull(page1.getOffsetKey());
+            assertNotNull(page1.getOffsetBy());
             
-            String offsetKey = page1.getOffsetKey();    
+            String offsetKey = page1.getOffsetBy();
             ExternalIdentifierList page2 = externalIdsClient
                     .getExternalIds(offsetKey, PAGE_SIZE, prefix, null).execute().body();
             assertEquals(PAGE_SIZE, page2.getItems().size());
-            assertEquals(LIST_SIZE, page2.getTotal().intValue());
-            assertNull(page2.getOffsetKey()); // no more pages
+            assertNull(page2.getOffsetBy()); // no more pages
             
             // pageKey test. two pages should have no members in common;
             assertTrue(Collections.disjoint(page1.getItems(), page2.getItems()));
             
             // assignment filter test
             page1 = externalIdsClient.getExternalIds(null, null, prefix, Boolean.FALSE).execute().body();
-            assertEquals(LIST_SIZE, page1.getTotal().intValue());
-            
+            assertEquals(LIST_SIZE, page1.getItems().size());
+
             page1 = externalIdsClient.getExternalIds(null, null, prefix, Boolean.TRUE).execute().body();
-            assertEquals(0, page1.getTotal().intValue());
+            assertEquals(0, page1.getItems().size());
             
             // different idFilter test (than the use of idFilter in all the tests. This time nothing should match.
             page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, RandomStringUtils.randomAlphabetic(5), null)
                     .execute().body();
-            assertEquals(0, page1.getTotal().intValue());
+            assertEquals(0, page1.getItems().size());
         } finally {
             externalIdsClient.deleteExternalIds(identifiers).execute();
         }
         ExternalIdentifierList page = externalIdsClient.getExternalIds(null, null, prefix, null).execute().body();
-        assertEquals(0, page.getTotal().intValue());
+        assertEquals(0, page.getItems().size());
     }
     
 }
