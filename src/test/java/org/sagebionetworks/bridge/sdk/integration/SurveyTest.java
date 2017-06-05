@@ -7,14 +7,17 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.BLOODPRESSURE_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.BOOLEAN_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DATETIME_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DATE_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DECIMAL_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DURATION_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.HEIGHT_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.INTEGER_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.MULTIVALUE_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.TIME_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.WEIGHT_ID;
 
 import java.util.HashSet;
 import java.util.List;
@@ -332,6 +335,9 @@ public class SurveyTest {
         assertEquals("Has a rule of type SurveyRule", SurveyRule.class, intCon.getRules().get(0).getClass());
         assertEquals("Type is DurationConstraints", DataType.DURATION, getConstraints(survey, DURATION_ID).getDataType());
         assertEquals("Type is TimeConstraints", DataType.TIME, getConstraints(survey, TIME_ID).getDataType());
+        assertEquals("Type is BloodPressureConstraints", DataType.BLOODPRESSURE, getConstraints(survey, BLOODPRESSURE_ID).getDataType());
+        assertEquals("Type is HeightConstraints", DataType.HEIGHT, getConstraints(survey, HEIGHT_ID).getDataType());
+        assertEquals("Type is WeightConstraints", DataType.WEIGHT, getConstraints(survey, WEIGHT_ID).getDataType());
         MultiValueConstraints multiCon = (MultiValueConstraints)getConstraints(survey, MULTIVALUE_ID);
         assertTrue("Type is MultiValueConstraints", multiCon.getAllowMultiple());
         assertEquals("Type is SurveyQuestionOption", SurveyQuestionOption.class, multiCon.getEnumeration().get(0).getClass());
