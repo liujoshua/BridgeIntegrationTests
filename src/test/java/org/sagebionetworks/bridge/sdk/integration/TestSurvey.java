@@ -7,12 +7,14 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 
+import org.sagebionetworks.bridge.rest.model.BloodPressureConstraints;
 import org.sagebionetworks.bridge.rest.model.BooleanConstraints;
 import org.sagebionetworks.bridge.rest.model.DataType;
 import org.sagebionetworks.bridge.rest.model.DateConstraints;
 import org.sagebionetworks.bridge.rest.model.DateTimeConstraints;
 import org.sagebionetworks.bridge.rest.model.DecimalConstraints;
 import org.sagebionetworks.bridge.rest.model.DurationConstraints;
+import org.sagebionetworks.bridge.rest.model.HeightConstraints;
 import org.sagebionetworks.bridge.rest.model.Image;
 import org.sagebionetworks.bridge.rest.model.IntegerConstraints;
 import org.sagebionetworks.bridge.rest.model.MultiValueConstraints;
@@ -26,6 +28,7 @@ import org.sagebionetworks.bridge.rest.model.SurveyRule;
 import org.sagebionetworks.bridge.rest.model.TimeConstraints;
 import org.sagebionetworks.bridge.rest.model.UIHint;
 import org.sagebionetworks.bridge.rest.model.Unit;
+import org.sagebionetworks.bridge.rest.model.WeightConstraints;
 
 import com.google.common.collect.Lists;
 
@@ -42,7 +45,10 @@ public class TestSurvey {
     public static final String DURATION_ID = "time_for_appt";
     public static final String INTEGER_ID = "BP X DAY";
     public static final String TIME_ID = "deleuterium_x_day";
-    
+    public static final String BLOODPRESSURE_ID = "bloodpressure";
+    public static final String HEIGHT_ID = "height";
+    public static final String WEIGHT_ID = "weight";
+
     private static Image image(String url, int width, int height) {
         Image image = new Image();
         image.setSource(url);
@@ -110,11 +116,11 @@ public class TestSurvey {
         stringQuestion.setType("SurveyQuestion");
         
         SurveyQuestion booleanQuestion = new SurveyQuestion();
-        BooleanConstraints c9 = new BooleanConstraints();
-        c9.setDataType(DataType.BOOLEAN);
+        BooleanConstraints c1 = new BooleanConstraints();
+        c1.setDataType(DataType.BOOLEAN);
         booleanQuestion.setPrompt("Do you have high blood pressure?");
         booleanQuestion.setIdentifier(BOOLEAN_ID);
-        booleanQuestion.setConstraints(c9);
+        booleanQuestion.setConstraints(c1);
         booleanQuestion.setUiHint(UIHint.CHECKBOX);
         booleanQuestion.setType("SurveyQuestion");
         
@@ -189,6 +195,33 @@ public class TestSurvey {
         timeQuestion.setConstraints(c7);
         timeQuestion.setUiHint(UIHint.TIMEPICKER);
         timeQuestion.setType("SurveyQuestion");
+
+        SurveyQuestion bloodpressureQuestion = new SurveyQuestion();
+        BloodPressureConstraints c8 = new BloodPressureConstraints();
+        c8.setDataType(DataType.BLOODPRESSURE);
+        bloodpressureQuestion.setConstraints(c8);
+        bloodpressureQuestion.setPrompt("What is your blood pressure?");
+        bloodpressureQuestion.setIdentifier(BLOODPRESSURE_ID);
+        bloodpressureQuestion.setUiHint(UIHint.BLOODPRESSURE);
+        bloodpressureQuestion.setType("SurveyQuestion");
+
+        SurveyQuestion heightQuestion = new SurveyQuestion();
+        HeightConstraints c9 = new HeightConstraints();
+        c9.setDataType(DataType.HEIGHT);
+        heightQuestion.setConstraints(c9);
+        heightQuestion.setPrompt("What is your height?");
+        heightQuestion.setIdentifier(HEIGHT_ID);
+        heightQuestion.setUiHint(UIHint.HEIGHT);
+        heightQuestion.setType("SurveyQuestion");
+
+        SurveyQuestion weightQuestion = new SurveyQuestion();
+        WeightConstraints c10 = new WeightConstraints();
+        c10.setDataType(DataType.WEIGHT);
+        weightQuestion.setConstraints(c10);
+        weightQuestion.setPrompt("What is your weight?");
+        weightQuestion.setIdentifier(WEIGHT_ID);
+        weightQuestion.setUiHint(UIHint.WEIGHT);
+        weightQuestion.setType("SurveyQuestion");
         
         survey.setName("General Blood Pressure Survey");
         survey.setIdentifier(Tests.randomIdentifier(cls));
@@ -202,6 +235,9 @@ public class TestSurvey {
         elements.add(timeQuestion);
         elements.add(multiValueQuestion);
         elements.add(stringQuestion);
+        elements.add(bloodpressureQuestion);
+        elements.add(heightQuestion);
+        elements.add(weightQuestion);
 
         survey.setCopyrightNotice(COPYRIGHT_NOTICE);
 
