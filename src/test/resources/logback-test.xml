@@ -8,7 +8,7 @@
   </appender>
 
   <logger name="org.sagebionetworks.bridge.rest" level="warn" />
-  <logger name="org.sagebionetworks.bridge.rest.LoggingInterceptor" level="debug" />
+
   <root level="info">
     <appender-ref ref="STDOUT" />
   </root>
