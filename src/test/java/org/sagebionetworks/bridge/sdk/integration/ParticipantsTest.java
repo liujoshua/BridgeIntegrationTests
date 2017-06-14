@@ -269,7 +269,7 @@ public class ParticipantsTest {
             assertListsEqualIgnoringOrder(newLanguages, retrieved.getLanguages());
             assertEquals(id, retrieved.getId());
             assertEquals(newAttributes.get("phone"), retrieved.getAttributes().get("phone"));
-            assertEquals(AccountStatus.ENABLED, retrieved.getStatus()); // user was enabled
+            assertEquals(AccountStatus.UNVERIFIED, retrieved.getStatus()); // researchers cannot enable users
             assertEquals(createdOn, retrieved.getCreatedOn()); // hasn't been changed, still exists
         } finally {
             if (id != null) {

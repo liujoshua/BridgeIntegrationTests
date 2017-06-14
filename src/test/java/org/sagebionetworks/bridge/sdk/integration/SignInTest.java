@@ -142,7 +142,8 @@ public class SignInTest {
     @Test(expected = EntityNotFoundException.class)
     public void signInAccountUnverified() throws Exception {
         // Mark account as unverified.
-        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        TestUser admin = TestUserHelper.getSignedInAdmin();
+        ParticipantsApi participantsApi = admin.getClient(ParticipantsApi.class);
         StudyParticipant participant = participantsApi.getParticipant(user.getSession().getId()).execute().body();
         participant.setStatus(AccountStatus.UNVERIFIED);
         participantsApi.updateParticipant(user.getSession().getId(), participant).execute();
