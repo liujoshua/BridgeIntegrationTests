@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
@@ -64,6 +65,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyElement;
 import org.sagebionetworks.bridge.rest.model.SurveyInfoScreen;
@@ -332,7 +334,8 @@ public class SurveyTest {
         assertEquals("Type is DecimalConstraints", DataType.DECIMAL, getConstraints(survey, DECIMAL_ID).getDataType());
         Constraints intCon = getConstraints(survey, INTEGER_ID);
         assertEquals("Type is IntegerConstraints", DataType.INTEGER, intCon.getDataType());
-        assertEquals("Has a rule of type SurveyRule", SurveyRule.class, intCon.getRules().get(0).getClass());
+        SurveyElement intElement = getSurveyElement(survey, INTEGER_ID);
+        assertEquals("Has a rule of type SurveyRule", SurveyRule.class, intElement.getRules().get(0).getClass());
         assertEquals("Type is DurationConstraints", DataType.DURATION, getConstraints(survey, DURATION_ID).getDataType());
         assertEquals("Type is TimeConstraints", DataType.TIME, getConstraints(survey, TIME_ID).getDataType());
         assertEquals("Type is BloodPressureConstraints", DataType.BLOODPRESSURE, getConstraints(survey, BLOODPRESSURE_ID).getDataType());
@@ -548,7 +551,6 @@ public class SurveyTest {
         
         StringConstraints constraints = new StringConstraints();
         constraints.setDataType(DataType.STRING);
-        constraints.getRules().add(rule); // end survey
 
         SurveyQuestion question = new SurveyQuestion();
         question.setIdentifier("bar");
@@ -556,12 +558,13 @@ public class SurveyTest {
         question.setUiHint(UIHint.TEXTFIELD);
         question.setConstraints(constraints);
         question.setType("SurveyQuestion");
+        question.getRules().add(rule); // end survey
         survey.getElements().add(question);
         
         GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, survey);
         
         Survey retrieved = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
-        SurveyRule retrievedRule = getConstraints(retrieved, "bar").getRules().get(0);
+        SurveyRule retrievedRule = getSurveyElement(retrieved, "bar").getRules().get(0);
         
         assertEquals(Boolean.TRUE, retrievedRule.getEndSurvey());
         assertEquals("true", retrievedRule.getValue());
@@ -631,6 +634,48 @@ public class SurveyTest {
         }
     }
     
+    @Test
+    public void canCreateAndSaveVariousKindsOfRules() throws Exception {
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        Study study = studiesApi.getStudy(admin.getStudyId()).execute().body();
+        String dataGroup = study.getDataGroups().get(0);
+
+        Survey survey = TestSurvey.getSurvey(SurveyTest.class);
+        SurveyElement element = survey.getElements().get(0);
+        SurveyElement skipToTarget = survey.getElements().get(1);
+        // Trim the survey to one element
+        survey.setElements(Lists.newArrayList(element,skipToTarget));
+        
+        SurveyRule endSurvey = new SurveyRule().endSurvey(true).operator(Operator.ALWAYS);
+        SurveyRule skipTo = new SurveyRule().skipTo(skipToTarget.getIdentifier()).operator(Operator.EQ).value("2010-10-10");
+        SurveyRule assignGroup = new SurveyRule().assignDataGroup(dataGroup).operator(Operator.DE);
+        
+        element.setRules(Lists.newArrayList(endSurvey, skipTo, assignGroup));
+        
+        SurveysApi devSurveysApi = developer.getClient(SurveysApi.class);
+        
+        GuidCreatedOnVersionHolder keys = devSurveysApi.createSurvey(survey).execute().body();
+        Survey created = devSurveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+        
+        List<SurveyRule> createdRules = created.getElements().get(0).getRules();
+        // These aren't set locally and will cause equality to fail. Set them.
+        Tests.setVariableValueInObject(endSurvey, "type", "SurveyRule");
+        Tests.setVariableValueInObject(skipTo, "type", "SurveyRule");
+        Tests.setVariableValueInObject(assignGroup, "type", "SurveyRule");
+        
+        assertEquals(endSurvey, createdRules.get(0));
+        assertEquals(skipTo, createdRules.get(1));
+        assertEquals(assignGroup, createdRules.get(2));
+        
+        // Verify they can all be deleted as well.
+        created.getElements().get(0).setRules(Lists.newArrayList());
+        
+        keys = devSurveysApi.updateSurvey(created.getGuid(), created.getCreatedOn(), created).execute().body();
+        Survey updated = devSurveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+        
+        assertTrue(updated.getElements().get(0).getRules().isEmpty());
+    }
+    
     private SchedulePlan createSchedulePlanTo(GuidCreatedOnVersionHolder keys) {
         SurveyReference surveyReference = new SurveyReference().guid(keys.getGuid()).createdOn(keys.getCreatedOn());
         
@@ -644,13 +689,18 @@ public class SurveyTest {
         return new SchedulePlan().label("Plan").strategy(strategy);
     }
     
-    private Constraints getConstraints(Survey survey, String id) {
+    private SurveyElement getSurveyElement(Survey survey, String id) {
         for (SurveyElement element : survey.getElements()) {
             if (element.getIdentifier().equals(id)) {
-                return ((SurveyQuestion)element).getConstraints();
+                return element;
             }
         }
         return null;
+    }
+    
+    private Constraints getConstraints(Survey survey, String id) {
+        SurveyElement el = getSurveyElement(survey, id);
+        return (el == null) ? null : ((SurveyQuestion)el).getConstraints();
     }
 
     private void containsAll(List<Survey> surveys, GuidCreatedOnVersionHolder... keys) {
