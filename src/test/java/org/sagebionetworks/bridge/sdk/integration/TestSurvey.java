@@ -179,13 +179,13 @@ public class TestSurvey {
         IntegerConstraints c6 = new IntegerConstraints();
         c6.setMinValue(0);
         c6.setMaxValue(8);
-        c6.setRules(Lists.newArrayList(rule1, rule2));
         c6.setDataType(DataType.INTEGER);
         integerQuestion.setPrompt("How many times a day do you take your blood pressure?");
         integerQuestion.setIdentifier(INTEGER_ID);
         integerQuestion.setConstraints(c6);
         integerQuestion.setUiHint(UIHint.NUMBERFIELD);
         integerQuestion.setType("SurveyQuestion");
+        integerQuestion.setRules(Lists.newArrayList(rule1, rule2));
         
         SurveyQuestion timeQuestion = new SurveyQuestion();
         TimeConstraints c7 = new TimeConstraints();
