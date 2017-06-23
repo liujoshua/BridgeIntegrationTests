@@ -185,7 +185,7 @@ public class TestSurvey {
         integerQuestion.setConstraints(c6);
         integerQuestion.setUiHint(UIHint.NUMBERFIELD);
         integerQuestion.setType("SurveyQuestion");
-        integerQuestion.setRules(Lists.newArrayList(rule1, rule2));
+        integerQuestion.setAfterRules(Lists.newArrayList(rule1, rule2));
         
         SurveyQuestion timeQuestion = new SurveyQuestion();
         TimeConstraints c7 = new TimeConstraints();
