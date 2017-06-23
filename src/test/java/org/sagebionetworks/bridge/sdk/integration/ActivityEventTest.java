@@ -12,6 +12,7 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -61,11 +62,11 @@ public class ActivityEventTest {
 
         StudyParticipant participant = usersApi.getUsersParticipantRecord().execute().body();
 
-        long timestamp = DateTime.now().getMillis();
+        DateTime timestamp = DateTime.now(DateTimeZone.UTC);
         usersApi.createCustomActivityEvent(
                 new CustomActivityEventRequest()
                         .eventKey(EVENT_KEY)
-                        .timestamp(DateTime.now().getMillis()))
+                        .timestamp(DateTime.now()))
                 .execute();
 
         activityEventList = usersApi.getSelfActivityEvents().execute().body();
@@ -81,7 +82,7 @@ public class ActivityEventTest {
 
         ActivityEvent event = eventOptional.get();
 
-        assertEquals(timestamp, event.getTimestamp().longValue());
+        assertEquals(timestamp, event.getTimestamp());
 
         activityEventList = researchersApi.getActivityEvents(participant.getId()).execute().body();
 
