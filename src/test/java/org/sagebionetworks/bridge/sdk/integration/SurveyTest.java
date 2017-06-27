@@ -649,8 +649,11 @@ public class SurveyTest {
         SurveyRule endSurvey = new SurveyRule().endSurvey(true).operator(Operator.ALWAYS);
         SurveyRule skipTo = new SurveyRule().skipTo(skipToTarget.getIdentifier()).operator(Operator.EQ).value("2010-10-10");
         SurveyRule assignGroup = new SurveyRule().assignDataGroup(dataGroup).operator(Operator.DE);
+        SurveyRule displayIf = new SurveyRule().displayIf(true).operator(Operator.ANY).addDataGroupsItem(dataGroup);
+        SurveyRule displayUnless = new SurveyRule().displayUnless(true).operator(Operator.ALL)
+                .addDataGroupsItem(dataGroup);
         
-        element.setBeforeRules(Lists.newArrayList(endSurvey, skipTo, assignGroup));
+        element.setBeforeRules(Lists.newArrayList(endSurvey, skipTo, assignGroup, displayIf, displayUnless));
         
         SurveysApi devSurveysApi = developer.getClient(SurveysApi.class);
         
@@ -662,6 +665,8 @@ public class SurveyTest {
         Tests.setVariableValueInObject(endSurvey, "type", "SurveyRule");
         Tests.setVariableValueInObject(skipTo, "type", "SurveyRule");
         Tests.setVariableValueInObject(assignGroup, "type", "SurveyRule");
+        Tests.setVariableValueInObject(displayIf, "type", "SurveyRule");
+        Tests.setVariableValueInObject(displayUnless, "type", "SurveyRule");
         
         assertEquals(endSurvey, createdRules.get(0));
         assertEquals(skipTo, createdRules.get(1));
@@ -689,7 +694,8 @@ public class SurveyTest {
         survey.setElements(Lists.newArrayList(element,skipToTarget));
         
         SurveyRule endSurvey = new SurveyRule().endSurvey(true).operator(Operator.ALWAYS);
-        SurveyRule skipTo = new SurveyRule().skipTo(skipToTarget.getIdentifier()).operator(Operator.EQ).value("2010-10-10");
+        SurveyRule skipTo = new SurveyRule().skipTo(skipToTarget.getIdentifier()).operator(Operator.EQ)
+                .value("2010-10-10");
         SurveyRule assignGroup = new SurveyRule().assignDataGroup(dataGroup).operator(Operator.DE);
         
         element.setAfterRules(Lists.newArrayList(endSurvey, skipTo, assignGroup));
@@ -716,6 +722,38 @@ public class SurveyTest {
         Survey updated = devSurveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
         
         assertTrue(updated.getElements().get(0).getAfterRules().isEmpty());
+    }
+    
+    @Test
+    public void displayActionsInAfterRulesValidated() throws Exception {
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        Study study = studiesApi.getStudy(admin.getStudyId()).execute().body();
+        String dataGroup = study.getDataGroups().get(0);
+
+        Survey survey = TestSurvey.getSurvey(SurveyTest.class);
+        SurveyElement element = survey.getElements().get(0);
+        SurveyElement skipToTarget = survey.getElements().get(1);
+        // Trim the survey to one element
+        survey.setElements(Lists.newArrayList(element,skipToTarget));
+        
+        SurveyRule displayIf = new SurveyRule().displayIf(true).operator(Operator.ANY).addDataGroupsItem(dataGroup);
+        SurveyRule displayUnless = new SurveyRule().displayUnless(true).operator(Operator.ALL)
+                .addDataGroupsItem(dataGroup);
+        Tests.setVariableValueInObject(displayIf, "type", "SurveyRule");
+        Tests.setVariableValueInObject(displayUnless, "type", "SurveyRule");
+        
+        element.setAfterRules(Lists.newArrayList(displayIf, displayUnless));
+        
+        SurveysApi devSurveysApi = developer.getClient(SurveysApi.class);
+        
+        try {
+            devSurveysApi.createSurvey(survey).execute().body();    
+        } catch(InvalidEntityException e) {
+            assertEquals("elements[0].afterRules[0] specifies display after screen has been shown",
+                    e.getErrors().get("elements[0].afterRules[0]").get(0));
+            assertEquals("elements[0].afterRules[1] specifies display after screen has been shown",
+                    e.getErrors().get("elements[0].afterRules[1]").get(0));
+        }
     }
     
     private SchedulePlan createSchedulePlanTo(GuidCreatedOnVersionHolder keys) {
