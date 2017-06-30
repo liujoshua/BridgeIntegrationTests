@@ -671,6 +671,8 @@ public class SurveyTest {
         assertEquals(endSurvey, createdRules.get(0));
         assertEquals(skipTo, createdRules.get(1));
         assertEquals(assignGroup, createdRules.get(2));
+        assertEquals(displayIf, createdRules.get(3));
+        assertEquals(displayUnless, createdRules.get(4));
         
         // Verify they can all be deleted as well.
         created.getElements().get(0).setBeforeRules(Lists.newArrayList());
@@ -749,10 +751,10 @@ public class SurveyTest {
         try {
             devSurveysApi.createSurvey(survey).execute().body();    
         } catch(InvalidEntityException e) {
-            assertEquals("elements[0].afterRules[0] specifies display after screen has been shown",
-                    e.getErrors().get("elements[0].afterRules[0]").get(0));
-            assertEquals("elements[0].afterRules[1] specifies display after screen has been shown",
-                    e.getErrors().get("elements[0].afterRules[1]").get(0));
+            assertEquals("elements[0].afterRules[0].displayIf specifies display after screen has been shown",
+                    e.getErrors().get("elements[0].afterRules[0].displayIf").get(0));
+            assertEquals("elements[0].afterRules[1].displayUnless specifies display after screen has been shown",
+                    e.getErrors().get("elements[0].afterRules[1].displayUnless").get(0));
         }
     }
     
