@@ -220,6 +220,7 @@ public class StudyTest {
         assertNotNull("verify email template should not be null", newStudy.getVerifyEmailTemplate());
         assertNotNull("password reset template should not be null", newStudy.getResetPasswordTemplate());
         assertNotNull("email sign in template should not be null", newStudy.getEmailSignInTemplate());
+        assertNotNull("account exists template should not be null", newStudy.getAccountExistsTemplate());
         assertEquals("name should be equal", study.getName(), newStudy.getName());
         assertEquals("minAgeOfConsent should be equal", study.getMinAgeOfConsent(), newStudy.getMinAgeOfConsent());
         assertEquals("sponsorName should be equal", study.getSponsorName(), newStudy.getSponsorName());
@@ -263,6 +264,13 @@ public class StudyTest {
         assertEquals("body ${token}", newerStudy.getEmailSignInTemplate().getBody());
         assertEquals(MimeType.TEXT_HTML, newerStudy.getEmailSignInTemplate().getMimeType());
 
+        assertEquals("Your ${studyName} account", newerStudy.getAccountExistsTemplate().getSubject());
+        assertEquals("<p>${url}</p>", newerStudy.getAccountExistsTemplate().getBody());
+        assertEquals(MimeType.TEXT_HTML, newerStudy.getAccountExistsTemplate().getMimeType());
+        
+        newerStudy.setAccountExistsTemplate(new EmailTemplate().subject("Updated subject").body("Updated ${url} body")
+                .mimeType(MimeType.TEXT_HTML));        
+        
         // Set stuff that only an admin can set.
         newerStudy.setEmailSignInEnabled(true);
         studiesApi.updateStudy(newerStudy.getIdentifier(), newerStudy).execute().body();
@@ -280,7 +288,12 @@ public class StudyTest {
         studiesApi.updateStudy(retStudy.getIdentifier(), retStudy).execute().body();
         Study retRenewedStudy = studiesApi.getStudy(retStudy.getIdentifier()).execute().body();
         assertEquals("renewed-sponsor-name", retRenewedStudy.getSponsorName());
-
+        
+        // Verify updates occur
+        assertEquals("Updated subject", retRenewedStudy.getAccountExistsTemplate().getSubject());
+        assertEquals("Updated ${url} body", retRenewedStudy.getAccountExistsTemplate().getBody());
+        assertEquals(MimeType.TEXT_HTML, retRenewedStudy.getAccountExistsTemplate().getMimeType());
+        
         studiesApi.deleteStudy(studyId, true).execute();
         try {
             studiesApi.getStudy(studyId).execute();
