@@ -38,6 +38,8 @@ public class Tests {
         .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
     public static final EmailTemplate TEST_EMAIL_SIGNIN_TEMPLATE = new EmailTemplate().subject("${studyName} sign in link")
             .body("<p>${host}/${token}</p>").mimeType(MimeType.TEXT_HTML);
+    public static final EmailTemplate TEST_ACCOUNT_EXISTS_TEMPLATE = new EmailTemplate().subject("Your ${studyName} account")
+            .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
 
     public static ClientInfo getClientInfoWithVersion(String osName, int version) {
         return new ClientInfo().appName(APP_NAME).appVersion(version).deviceName(APP_NAME).osName(osName)
@@ -198,6 +200,7 @@ public class Tests {
         study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
         study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
         study.setEmailSignInTemplate(Tests.TEST_EMAIL_SIGNIN_TEMPLATE);
+        study.setAccountExistsTemplate(Tests.TEST_ACCOUNT_EXISTS_TEMPLATE);
         study.setEmailVerificationEnabled(true);
         study.setEmailSignInEnabled(true);
         study.setHealthCodeExportEnabled(true);
