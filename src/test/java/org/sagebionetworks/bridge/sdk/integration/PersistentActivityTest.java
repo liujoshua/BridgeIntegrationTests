@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.joda.time.DateTime;
 import org.junit.After;
@@ -77,15 +78,17 @@ public class PersistentActivityTest {
         
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         ScheduledActivityList activities = usersApi.getScheduledActivities("-07:00", 2, null).execute().body();
-        assertEquals(new Integer(1), activities.getTotal());
+        List<ScheduledActivity> filteredActivityList = findActivities(activities, activityLabel1);
+        assertEquals(1, filteredActivityList.size());
         
-        ScheduledActivity activity = activities.getItems().get(0);
+        ScheduledActivity activity = filteredActivityList.get(0);
         activity.setStartedOn(DateTime.now());
         activity.setFinishedOn(DateTime.now());
         
-        usersApi.updateScheduledActivities(activities.getItems()).execute();
+        usersApi.updateScheduledActivities(filteredActivityList).execute();
         activities = usersApi.getScheduledActivities("-07:00", 2, null).execute().body();
-        assertEquals(new Integer(1), activities.getTotal());
+        filteredActivityList = findActivities(activities, activityLabel1);
+        assertEquals(1, filteredActivityList.size());
     }
     
     private List<Activity> taskActivity(String label, String taskIdentifier) {
@@ -96,5 +99,11 @@ public class PersistentActivityTest {
         activity.setLabel(label);
         activity.setTask(ref);
         return Lists.newArrayList(activity);
+    }
+
+    private List<ScheduledActivity> findActivities(ScheduledActivityList allActivityList, String label) {
+        return allActivityList.getItems().stream()
+                .filter(oneActivity -> label.equals(oneActivity.getActivity().getLabel()))
+                .collect(Collectors.toList());
     }
 }
