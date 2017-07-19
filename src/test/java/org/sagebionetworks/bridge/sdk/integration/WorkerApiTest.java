@@ -1,7 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.After;
@@ -45,7 +45,7 @@ public class WorkerApiTest {
                 .body();
         
         assertEquals(testUser.getEmail(), participant.getEmail());
-        assertNull(participant.getHealthCode());
+        assertNotNull(participant.getHealthCode());
     }
     
 }
