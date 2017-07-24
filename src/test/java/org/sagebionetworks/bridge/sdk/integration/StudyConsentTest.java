@@ -89,7 +89,7 @@ public class StudyConsentTest {
 
         StudyConsentList studyConsents = studyConsentsApi.getAllConsents(subpopGuid).execute().body();
 
-        assertEquals((Integer)2, studyConsents.getTotal());
+        assertEquals(2, studyConsents.getItems().size());
 
         StudyConsent current = studyConsentsApi.getConsent(subpopGuid, studyConsents.getItems().get(0).getCreatedOn())
                 .execute().body();
@@ -108,7 +108,7 @@ public class StudyConsentTest {
         assertTrue(newOne.getCreatedOn().isAfter(published.getCreatedOn()));
         
         StudyConsentList studyConsents2 = studyConsentsApi.getAllConsents(subpopGuid).execute().body();
-        assertEquals((Integer)3, studyConsents2.getTotal());
+        assertEquals(3, studyConsents2.getItems().size());
     }
 
 }

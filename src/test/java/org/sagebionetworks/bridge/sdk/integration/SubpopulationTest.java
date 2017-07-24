@@ -52,7 +52,7 @@ public class SubpopulationTest {
         
         // Study has a default subpopulation
         SubpopulationList subpops = subpopulationsApi.getSubpopulations().execute().body();
-        int initialCount = subpops.getTotal();
+        int initialCount = subpops.getItems().size();
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));
         
         Criteria criteria = new Criteria();
@@ -83,14 +83,14 @@ public class SubpopulationTest {
         
         // Verify it is available in the list
         subpops = subpopulationsApi.getSubpopulations().execute().body();
-        assertEquals((Integer)(initialCount+1), subpops.getTotal());
+        assertEquals((initialCount+1), subpops.getItems().size());
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));
         assertNotNull(findByName(subpops.getItems(), "Later Consent Group"));
 
         // Delete it
         SubpopulationsApi adminSubpopApi = admin.getClient(SubpopulationsApi.class);
         adminSubpopApi.deleteSubpopulation(retrieved.getGuid(), true).execute();
-        assertEquals((Integer)initialCount, subpopulationsApi.getSubpopulations().execute().body().getTotal());
+        assertEquals(initialCount, subpopulationsApi.getSubpopulations().execute().body().getItems().size());
         
         // Cannot delete the default, however:
         try {
