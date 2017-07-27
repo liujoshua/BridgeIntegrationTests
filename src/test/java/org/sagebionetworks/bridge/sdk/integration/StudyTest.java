@@ -434,8 +434,8 @@ public class StudyTest {
 
             UploadList results = studiesApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body();
           
-            assertEquals(startTime.toString(), results.getRequestParams().get("startTime"));
-            assertEquals(endTime.toString(), results.getRequestParams().get("endTime"));
+            assertEquals(startTime, results.getRequestParams().getStartTime());
+            assertEquals(endTime, results.getRequestParams().getEndTime());
 
             assertEquals(count+2, results.getItems().size());
             assertNotNull(getUpload(results, uploadSession.getId()));
@@ -444,26 +444,26 @@ public class StudyTest {
             // then test pagination by setting max pagesize to 1
             // There are at least 2 uploads, so we know there are at least 2 pages.
             UploadList pagedResults = studiesApi.getUploads(startTime, endTime, 1, null).execute().body();
-            assertEquals(startTime.toString(), pagedResults.getRequestParams().get("startTime"));
-            assertEquals(endTime.toString(), pagedResults.getRequestParams().get("endTime"));
+            assertEquals(startTime, pagedResults.getRequestParams().getStartTime());
+            assertEquals(endTime, pagedResults.getRequestParams().getEndTime());
 
             assertEquals(1, pagedResults.getItems().size());
-            assertEquals(1, pagedResults.getRequestParams().get("pageSize"));
-            assertNotNull(pagedResults.getOffsetKey());
+            assertEquals(1, pagedResults.getRequestParams().getPageSize().intValue());
+            assertNotNull(pagedResults.getNextPageOffsetKey());
 
             // then getupload again with offsetkey from session1
-            UploadList secondPagedResults = studiesApi.getUploads(startTime, endTime, 1, pagedResults.getOffsetKey()).execute().body();
-            assertEquals(startTime.toString(), secondPagedResults.getRequestParams().get("startTime"));
-            assertEquals(endTime.toString(), secondPagedResults.getRequestParams().get("endTime"));
+            UploadList secondPagedResults = studiesApi.getUploads(startTime, endTime, 1, pagedResults.getNextPageOffsetKey()).execute().body();
+            assertEquals(startTime, secondPagedResults.getRequestParams().getStartTime());
+            assertEquals(endTime, secondPagedResults.getRequestParams().getEndTime());
 
             assertEquals(1, secondPagedResults.getItems().size());
-            assertEquals(1, secondPagedResults.getRequestParams().get("pageSize"));
+            assertEquals(1, secondPagedResults.getRequestParams().getPageSize().intValue());
 
             // then check if will set default page size if not given by user
             UploadList nullPageSizeResults = studiesApi.getUploads(startTime, endTime, null, null).execute().body();
-            assertEquals(startTime.toString(), nullPageSizeResults.getRequestParams().get("startTime"));
-            assertEquals(endTime.toString(), nullPageSizeResults.getRequestParams().get("endTime"));
-            assertNotNull(nullPageSizeResults.getRequestParams().get("pageSize"));
+            assertEquals(startTime, nullPageSizeResults.getRequestParams().getStartTime());
+            assertEquals(endTime, nullPageSizeResults.getRequestParams().getEndTime());
+            assertNotNull(nullPageSizeResults.getRequestParams().getPageSize());
             assertEquals(count+2, nullPageSizeResults.getItems().size());
             assertNotNull(getUpload(nullPageSizeResults, uploadSession.getId()));
             assertNotNull(getUpload(nullPageSizeResults, uploadSession2.getId()));
