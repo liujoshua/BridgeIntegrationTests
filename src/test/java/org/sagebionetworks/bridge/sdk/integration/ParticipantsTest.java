@@ -445,7 +445,7 @@ public class ParticipantsTest {
             DateTime endTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
             DateTime startTime = endTime.minusDays(1).minusHours(21);
 
-            UploadList results = participantsApi.getParticipantUploads(userId, startTime, endTime, 0, null).execute().body();
+            UploadList results = participantsApi.getParticipantUploads(userId, startTime, endTime, null, null).execute().body();
             
             String uploadId = results.getItems().get(0).getUploadId();
 
