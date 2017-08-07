@@ -99,7 +99,6 @@ public class ReportTest {
             results = usersApi
                     .getParticipantReportRecords(reportId, SEARCH_START_DATE.plusDays(30), SEARCH_END_DATE.plusDays(30))
                     .execute().body();
-            assertEquals(0, (int)results.getItems().size());
             assertEquals(0, results.getItems().size());
 
             // We should see indices for this participant report
@@ -178,7 +177,6 @@ public class ReportTest {
                     .getParticipantReportRecords(reportId, SEARCH_START_DATE.plusDays(30), SEARCH_END_DATE.plusDays(30))
                     .execute().body();
             assertEquals(0, results.getItems().size());
-            assertEquals(0, results.getItems().size());
 
             // delete. Must be done by developer
             ReportsApi developerReportsApi = developer.getClient(ReportsApi.class);
@@ -186,7 +184,6 @@ public class ReportTest {
 
             results = userReportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute()
                     .body();
-            assertEquals(0, results.getItems().size());
             assertEquals(0, results.getItems().size());
         } finally {
             study.setHealthCodeExportEnabled(false);
@@ -218,7 +215,6 @@ public class ReportTest {
             results = devReportClient.getParticipantReportRecords(reportId, SEARCH_START_DATE.minusDays(30),
                     SEARCH_END_DATE.minusDays(30)).execute().body();
             assertEquals(0, results.getItems().size());
-            assertEquals(0, results.getItems().size());
 
             // We should see indices for this study report
             ReportIndexList indices = devReportClient.getReportIndices("study").execute().body();
@@ -233,7 +229,6 @@ public class ReportTest {
             developer.getClient(ReportsApi.class).deleteAllStudyReportRecords(reportId).execute();
             results = devReportClient.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE)
                     .execute().body();
-            assertEquals(0, results.getItems().size());
             assertEquals(0, results.getItems().size());
         } finally {
             developer.signOutAndDeleteUser();
