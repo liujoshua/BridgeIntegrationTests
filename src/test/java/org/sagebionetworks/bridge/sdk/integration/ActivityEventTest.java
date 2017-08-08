@@ -57,7 +57,7 @@ public class ActivityEventTest {
 
     @Test
     public void canCreateAndGetCustomEvent() throws IOException {
-        ActivityEventList activityEventList = usersApi.getSelfActivityEvents().execute().body();
+        ActivityEventList activityEventList = usersApi.getActivityEvents().execute().body();
         List<ActivityEvent> activityEvents = activityEventList.getItems();
 
         StudyParticipant participant = usersApi.getUsersParticipantRecord().execute().body();
@@ -69,7 +69,7 @@ public class ActivityEventTest {
                         .timestamp(DateTime.now()))
                 .execute();
 
-        activityEventList = usersApi.getSelfActivityEvents().execute().body();
+        activityEventList = usersApi.getActivityEvents().execute().body();
         List<ActivityEvent> updatedActivityEvents = activityEventList.getItems();
 
         assertNotEquals(activityEvents, updatedActivityEvents);
