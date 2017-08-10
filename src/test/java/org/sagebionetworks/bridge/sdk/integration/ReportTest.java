@@ -91,26 +91,25 @@ public class ReportTest {
 
             ReportDataList results = usersApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE)
                     .execute().body();
-            assertEquals((Integer) 3, results.getTotal());
-            assertEquals(SEARCH_START_DATE, results.getStartDate());
-            assertEquals(SEARCH_END_DATE, results.getEndDate());
+            assertEquals(3, results.getItems().size());
+            assertEquals(SEARCH_START_DATE, results.getRequestParams().getStartDate());
+            assertEquals(SEARCH_END_DATE, results.getRequestParams().getEndDate());
 
             // This search is out of range, and should return no results.
             results = usersApi
                     .getParticipantReportRecords(reportId, SEARCH_START_DATE.plusDays(30), SEARCH_END_DATE.plusDays(30))
                     .execute().body();
-            assertEquals((Integer) 0, results.getTotal());
             assertEquals(0, results.getItems().size());
 
             // We should see indices for this participant report
             ReportIndexList indices = reportsApi.getReportIndices("participant").execute().body();
             assertTrue(containsThisIdentifier(indices, reportId));
-            assertEquals(ReportType.PARTICIPANT, indices.getReportType());
+            assertEquals(ReportType.PARTICIPANT, indices.getRequestParams().getReportType());
 
             // but not if we ask for study reports
             indices = reportsApi.getReportIndices("study").execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
-            assertEquals(ReportType.STUDY, indices.getReportType());
+            assertEquals(ReportType.STUDY, indices.getRequestParams().getReportType());
 
             // delete
             reportsApi.deleteAllParticipantReportRecords(userId, reportId).execute();
@@ -169,15 +168,14 @@ public class ReportTest {
             ReportDataList results = userReportsApi
                     .getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
 
-            assertEquals((Integer) 3, results.getTotal());
-            assertEquals(SEARCH_START_DATE, results.getStartDate());
-            assertEquals(SEARCH_END_DATE, results.getEndDate());
+            assertEquals(3, results.getItems().size());
+            assertEquals(SEARCH_START_DATE, results.getRequestParams().getStartDate());
+            assertEquals(SEARCH_END_DATE, results.getRequestParams().getEndDate());
 
             // This search is out of range, and should return no results.
             results = userReportsApi
                     .getParticipantReportRecords(reportId, SEARCH_START_DATE.plusDays(30), SEARCH_END_DATE.plusDays(30))
                     .execute().body();
-            assertEquals((Integer) 0, results.getTotal());
             assertEquals(0, results.getItems().size());
 
             // delete. Must be done by developer
@@ -186,7 +184,6 @@ public class ReportTest {
 
             results = userReportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute()
                     .body();
-            assertEquals((Integer) 0, results.getTotal());
             assertEquals(0, results.getItems().size());
         } finally {
             study.setHealthCodeExportEnabled(false);
@@ -210,30 +207,28 @@ public class ReportTest {
 
             ReportDataList results = devReportClient.getStudyReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE)
                     .execute().body();
-            assertEquals((Integer) 3, results.getTotal());
-            assertEquals(SEARCH_START_DATE, results.getStartDate());
-            assertEquals(SEARCH_END_DATE, results.getEndDate());
+            assertEquals(3, results.getItems().size());
+            assertEquals(SEARCH_START_DATE, results.getRequestParams().getStartDate());
+            assertEquals(SEARCH_END_DATE, results.getRequestParams().getEndDate());
 
             // This search is out of range, and should return no results.
             results = devReportClient.getParticipantReportRecords(reportId, SEARCH_START_DATE.minusDays(30),
                     SEARCH_END_DATE.minusDays(30)).execute().body();
-            assertEquals((Integer) 0, results.getTotal());
             assertEquals(0, results.getItems().size());
 
             // We should see indices for this study report
             ReportIndexList indices = devReportClient.getReportIndices("study").execute().body();
             assertTrue(containsThisIdentifier(indices, reportId));
-            assertEquals(ReportType.STUDY, indices.getReportType());
+            assertEquals(ReportType.STUDY, indices.getRequestParams().getReportType());
 
             // but not if we use the other type
             indices = devReportClient.getReportIndices("participant").execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
-            assertEquals(ReportType.PARTICIPANT, indices.getReportType());
+            assertEquals(ReportType.PARTICIPANT, indices.getRequestParams().getReportType());
 
             developer.getClient(ReportsApi.class).deleteAllStudyReportRecords(reportId).execute();
             results = devReportClient.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE)
                     .execute().body();
-            assertEquals((Integer) 0, results.getTotal());
             assertEquals(0, results.getItems().size());
         } finally {
             developer.signOutAndDeleteUser();
@@ -267,7 +262,7 @@ public class ReportTest {
             ReportDataList report = devReportClient
                     .getPublicStudyReportRecords(developer.getStudyId(), reportId, SEARCH_START_DATE, SEARCH_END_DATE)
                     .execute().body();
-            assertEquals((Integer) 3, report.getTotal());
+            assertEquals(3, report.getItems().size());
 
         } finally {
             ReportsApi devReportClient = developer.getClient(ReportsApi.class);

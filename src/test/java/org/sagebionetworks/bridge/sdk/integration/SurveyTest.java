@@ -284,7 +284,7 @@ public class SurveyTest {
         GuidCreatedOnVersionHolder key = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
         key = versionSurvey(surveysApi, key);
         
-        int count = surveysApi.getAllVersionsOfSurvey(key.getGuid()).execute().body().getTotal();
+        int count = surveysApi.getAllVersionsOfSurvey(key.getGuid()).execute().body().getItems().size();
         assertEquals("Two versions for this survey.", 2, count);
     }
 
@@ -426,7 +426,7 @@ public class SurveyTest {
         surveysToDelete.add(new MutableHolder(keys));
 
         SurveyList allRevisions = surveysApi.getAllVersionsOfSurvey(keys.getGuid()).execute().body();
-        assertEquals("There are now two versions", (Integer)2, allRevisions.getTotal());
+        assertEquals("There are now two versions", 2, allRevisions.getItems().size());
 
         Survey mostRecent = surveysApi.getPublishedSurveyVersion(existingSurvey.getGuid()).execute().body();
         assertEquals(mostRecent.getGuid(), keys.getGuid());

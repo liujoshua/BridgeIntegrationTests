@@ -127,8 +127,8 @@ public class ParticipantsTest {
         DateTime newest = summaries.getItems().get(summaries.getItems().size()-1).getCreatedOn();
         
         // Well we know there's at least two accounts... the admin and the researcher.
-        assertEquals((Long)0L, summaries.getOffsetBy());
-        assertEquals((Integer)10, summaries.getPageSize());
+        assertEquals(0, summaries.getRequestParams().getOffsetBy().intValue());
+        assertEquals(10, summaries.getRequestParams().getPageSize().intValue());
         assertTrue(summaries.getItems().size() <= summaries.getTotal());
         assertTrue(summaries.getItems().size() > 2);
         
@@ -142,20 +142,20 @@ public class ParticipantsTest {
         summaries = participantsApi.getParticipants(0, 10, researcher.getEmail(), null, null).execute().body();
         assertEquals(1, summaries.getItems().size());
         assertEquals(researcher.getEmail(), summaries.getItems().get(0).getEmail());
-        assertEquals(researcher.getEmail(), summaries.getEmailFilter());
+        assertEquals(researcher.getEmail(), summaries.getRequestParams().getEmailFilter());
 
         // Date filter that would not include the newest participant
         summaries = participantsApi.getParticipants(0, 10, null, null, newest.minusMillis(1)).execute().body();
         assertTrue(summaries.getTotal() < total);
-        assertNull(summaries.getStartDate());
-        assertEquals(summaries.getEndDate(), newest.minusMillis(1));
+        assertNull(summaries.getRequestParams().getStartTime());
+        assertEquals(summaries.getRequestParams().getEndTime(), newest.minusMillis(1));
         doesNotIncludeThisAccountCreatedOn(summaries, newest);
         
         // Date filter that would not include the oldest participant
         summaries = participantsApi.getParticipants(0, 10, null, oldest.plusMillis(1), null).execute().body();
         assertTrue(summaries.getTotal() < total);
-        assertEquals(summaries.getStartDate(), oldest.plusMillis(1));
-        assertNull(summaries.getEndDate());
+        assertEquals(summaries.getRequestParams().getStartTime(), oldest.plusMillis(1));
+        assertNull(summaries.getRequestParams().getEndTime());
         doesNotIncludeThisAccountCreatedOn(summaries, oldest);
     }
     
@@ -451,8 +451,8 @@ public class ParticipantsTest {
 
             assertEquals(uploadSession.getId(), uploadId);
             assertTrue(results.getItems().get(0).getContentLength() > 0);
-            assertEquals(startTime, results.getStartTime());
-            assertEquals(endTime, results.getEndTime());
+            assertEquals(startTime, results.getRequestParams().getStartTime());
+            assertEquals(endTime, results.getRequestParams().getEndTime());
         } finally {
             user.signOutAndDeleteUser();
         }
