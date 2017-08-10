@@ -199,8 +199,8 @@ public class ScheduledActivityTest {
         Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
         assertEquals(schActivity, retrievedFromHistory);
         assertFalse(list.getHasNext());
-        assertTrue(startDateTime.isEqual(list.getScheduledOnStart()));
-        assertTrue(endDateTime.isEqual(list.getScheduledOnEnd()));
+        assertEquals(startDateTime, list.getRequestParams().getScheduledOnStart());
+        assertEquals(endDateTime, list.getRequestParams().getScheduledOnEnd());
         
         // If we ask for a date range that doesn't include it, it is not returned.
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
@@ -284,8 +284,8 @@ public class ScheduledActivityTest {
         Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
         assertEquals(schActivity, retrievedFromHistory);
         assertFalse(list.getHasNext());
-        assertTrue(startDateTime.isEqual(list.getScheduledOnStart()));
-        assertTrue(endDateTime.isEqual(list.getScheduledOnEnd()));
+        assertEquals(startDateTime, list.getRequestParams().getScheduledOnStart());
+        assertEquals(endDateTime, list.getRequestParams().getScheduledOnEnd());
         
         // If we ask for a date range that doesn't include it, it is not returned.
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),

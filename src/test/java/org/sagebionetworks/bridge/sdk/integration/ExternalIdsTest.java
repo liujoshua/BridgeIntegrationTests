@@ -55,13 +55,13 @@ public class ExternalIdsTest {
             ExternalIdentifierList page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, prefix, null)
                     .execute().body();
             assertEquals(PAGE_SIZE, page1.getItems().size());
-            assertNotNull(page1.getOffsetKey());
+            assertNotNull(page1.getNextPageOffsetKey());
             
-            String offsetKey = page1.getOffsetKey();
+            String offsetKey = page1.getNextPageOffsetKey();
             ExternalIdentifierList page2 = externalIdsClient
                     .getExternalIds(offsetKey, PAGE_SIZE, prefix, null).execute().body();
             assertEquals(PAGE_SIZE, page2.getItems().size());
-            assertNull(page2.getOffsetKey()); // no more pages
+            assertNull(page2.getNextPageOffsetKey()); // no more pages
             
             // pageKey test. two pages should have no members in common;
             assertTrue(Collections.disjoint(page1.getItems(), page2.getItems()));
