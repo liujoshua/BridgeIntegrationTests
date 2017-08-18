@@ -13,6 +13,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -29,6 +30,7 @@ import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 public class ActivityEventTest {
     private static final String EVENT_KEY = "event1";
 
+    private static TestUserHelper.TestUser developer;
     private static TestUserHelper.TestUser researcher;
     private static TestUserHelper.TestUser user;
     private static ForConsentedUsersApi usersApi;
@@ -36,14 +38,13 @@ public class ActivityEventTest {
 
     @BeforeClass
     public static void beforeAll() throws Exception {
-        researcher = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Role.RESEARCHER);
+        researcher = TestUserHelper.createAndSignInUser(ActivityEventTest.class, true, Role.RESEARCHER);
         researchersApi = researcher.getClient(ForResearchersApi.class);
 
-        user = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true);
+        user = TestUserHelper.createAndSignInUser(ActivityEventTest.class, true);
         usersApi = user.getClient(ForConsentedUsersApi.class);
 
-
-        TestUserHelper.TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(ActivityEventTest.class, false, Role.DEVELOPER);
         ForDevelopersApi developersApi = developer.getClient(ForDevelopersApi.class);
 
         Study study = developersApi.getUsersStudy().execute().body();
@@ -53,6 +54,27 @@ public class ActivityEventTest {
         study.setActivityEventKeys(Lists.newArrayList(activityEventKeys));
 
         developersApi.updateUsersStudy(study).execute();
+    }
+
+    @AfterClass
+    public static void deleteDeveloper() throws Exception {
+        if (developer != null) {
+            developer.signOutAndDeleteUser();
+        }
+    }
+
+    @AfterClass
+    public static void deleteResearcher() throws Exception {
+        if (researcher != null) {
+            researcher.signOutAndDeleteUser();
+        }
+    }
+
+    @AfterClass
+    public static void deleteUser() throws Exception {
+        if (user != null) {
+            user.signOutAndDeleteUser();
+        }
     }
 
     @Test
@@ -66,7 +88,7 @@ public class ActivityEventTest {
         usersApi.createCustomActivityEvent(
                 new CustomActivityEventRequest()
                         .eventKey(EVENT_KEY)
-                        .timestamp(DateTime.now()))
+                        .timestamp(timestamp))
                 .execute();
 
         activityEventList = usersApi.getActivityEvents().execute().body();
