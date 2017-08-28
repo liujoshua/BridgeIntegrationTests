@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.joda.time.DateTime;
@@ -21,6 +22,7 @@ import org.junit.experimental.categories.Category;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Sets;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.RestUtils;
@@ -81,15 +83,9 @@ public class ScheduledActivityTest {
 
         schedulePlansApi = developer.getClient(SchedulesApi.class);
         usersApi = user.getClient(ForConsentedUsersApi.class);
-        
-        String planGuid = oneTimeScheduleAfter3Days();
-        schedulePlanGuidList.add(planGuid);
-        
-        planGuid = monthlyAfterOneMonthSchedule();
-        schedulePlanGuidList.add(planGuid);
     }
 
-    private String monthlyAfterOneMonthSchedule() throws IOException {
+    private void monthlyAfterOneMonthSchedule() throws IOException {
         String planGuid;
         Schedule schedule = new Schedule();
         schedule.setLabel("Schedule 2");
@@ -115,10 +111,10 @@ public class ScheduledActivityTest {
         plan.setLabel("Schedule plan 2");
         plan.setStrategy(strategy);
         planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
-        return planGuid;
+        schedulePlanGuidList.add(planGuid);
     }
 
-    private String oneTimeScheduleAfter3Days() throws IOException {
+    private void oneTimeScheduleAfter3Days() throws IOException {
         Schedule schedule = new Schedule();
         schedule.setLabel("Schedule 1");
         schedule.setDelay("P3D");
@@ -142,7 +138,35 @@ public class ScheduledActivityTest {
         plan.setLabel("Schedule plan 1");
         plan.setStrategy(strategy);
         String planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
-        return planGuid;
+        schedulePlanGuidList.add(planGuid);
+    }
+    
+    private void dailyTaskAt4Times() throws IOException {
+        Schedule schedule = new Schedule();
+        schedule.setLabel("Daily Task at 4 times");
+        schedule.setExpires("P1D");
+        schedule.setInterval("P1D");
+        schedule.setScheduleType(ScheduleType.RECURRING);
+        schedule.setTimes(Lists.newArrayList("06:00", "10:00", "14:00", "18:00"));
+        
+        TaskReference taskReference = new TaskReference();
+        taskReference.setIdentifier("task:AAA");
+        
+        Activity activity = new Activity();
+        activity.setLabel("task:AAA activity");
+        activity.setTask(taskReference);
+        
+        schedule.setActivities(Lists.newArrayList(activity));
+
+        SimpleScheduleStrategy strategy = new SimpleScheduleStrategy();
+        strategy.setSchedule(schedule);
+        strategy.setType("SimpleScheduleStrategy");
+        
+        SchedulePlan plan = new SchedulePlan();
+        plan.setLabel("Daily task schedule plan");
+        plan.setStrategy(strategy);
+        String planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
+        schedulePlanGuidList.add(planGuid);
     }
 
     @After
@@ -165,7 +189,44 @@ public class ScheduledActivityTest {
     }
     
     @Test
+    public void getScheduledActivityHistoryV4() throws IOException {
+        dailyTaskAt4Times();
+        
+        DateTime startTime = DateTime.now();
+        DateTime endTime = DateTime.now().plusDays(4);
+        
+        usersApi.getScheduledActivitiesByDateRange(startTime, endTime).execute().body();
+        
+        // Now we should see those in the latest API:
+        ForwardCursorScheduledActivityList list = usersApi.getTaskHistory("task:AAA", startTime, endTime, null, 10)
+                .execute().body();
+        
+        // Joda DateTime equality is only object instance equality, use strings to compare
+        assertNotNull(list.getNextPageOffsetKey()); 
+        assertEquals(startTime.toString(), list.getRequestParams().getScheduledOnStart().toString());
+        assertEquals(endTime.toString(), list.getRequestParams().getScheduledOnEnd().toString());
+        assertEquals(10, list.getRequestParams().getPageSize().intValue());
+        assertNull(list.getRequestParams().getOffsetKey());
+        
+        Set<String> guids = Sets.newHashSet();
+        
+        int pageOneCount = list.getItems().size();
+        list.getItems().stream().map(ScheduledActivity::getGuid).forEach(guid -> guids.add(guid));
+        
+        list = usersApi.getTaskHistory("task:AAA", startTime, endTime, list.getNextPageOffsetKey(), 10).execute()
+                .body();
+        int pageTwoCount = list.getItems().size();
+        list.getItems().stream().map(ScheduledActivity::getGuid).forEach(guid -> guids.add(guid));
+        
+        assertEquals(pageOneCount+pageTwoCount, guids.size());
+        assertNull(list.getNextPageOffsetKey());
+    }
+    
+    @Test
     public void createSchedulePlanGetScheduledActivities() throws Exception {
+        oneTimeScheduleAfter3Days();
+        monthlyAfterOneMonthSchedule();
+        
         // Get scheduled activities. Validate basic properties.
         ScheduledActivityList scheduledActivities = usersApi.getScheduledActivities("+00:00", 4, 0).execute().body();
         ScheduledActivity schActivity = findActivity1(scheduledActivities.getItems());
@@ -245,6 +306,9 @@ public class ScheduledActivityTest {
 
     @Test
     public void createSchedulePlanGetScheduledActivitiesV4() throws Exception {
+        oneTimeScheduleAfter3Days();
+        monthlyAfterOneMonthSchedule();
+        
         // Get scheduled activities. Validate basic properties.
         DateTimeZone zone = DateTimeZone.forOffsetHours(4);
         DateTime startsOn = DateTime.now(zone);
@@ -331,6 +395,9 @@ public class ScheduledActivityTest {
     
     @Test
     public void getScheduledActivitiesWithMinimumActivityValue() throws Exception {
+        oneTimeScheduleAfter3Days();
+        monthlyAfterOneMonthSchedule();
+        
         ScheduledActivityList scheduledActivities = usersApi.getScheduledActivities("+00:00", 4, 2).execute().body();
         
         Multiset<String> idCounts = getTaskIdsFromTaskReferences(scheduledActivities);

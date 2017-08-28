@@ -27,6 +27,7 @@ import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
+import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
@@ -418,6 +419,52 @@ public class ParticipantsTest {
             schedulePlanApi.deleteSchedulePlan(planKeys.getGuid()).execute();
             user.signOutAndDeleteUser();
         }
+    }
+    
+    @Test
+    public void getActivityHistoryV4() throws Exception {
+        TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.DEVELOPER);
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+        
+        SchedulesApi schedulePlanApi = user.getClient(SchedulesApi.class);
+        SchedulePlan plan = Tests.getDailyRepeatingSchedulePlan();
+
+        // Set an identifiable label on the activity so we can find the generated activities later.
+        String activityLabel = "activity-" + RandomStringUtils.randomAlphabetic(4);
+        
+        Activity oneActivity = ((SimpleScheduleStrategy) plan.getStrategy()).getSchedule().getActivities().get(0);
+        
+        String taskReferentGuid = oneActivity.getTask().getIdentifier();
+        oneActivity.setLabel(activityLabel);
+        
+        
+        GuidVersionHolder planKeys = schedulePlanApi.createSchedulePlan(plan).execute().body();
+        try {
+            String userId = user.getSession().getId();
+            DateTime startsOn = DateTime.now();
+            DateTime endsOn = DateTime.now().plusDays(2);
+            
+            usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
+            ParticipantsApi api = researcher.getClient(ParticipantsApi.class);
+            
+            ForwardCursorScheduledActivityList list = api
+                    .getParticipantTaskHistory(userId, taskReferentGuid, startsOn, endsOn, null, 100).execute().body();            
+            
+            // There should be activities...
+            assertFalse(list.getItems().isEmpty());
+            
+            // These other calls return nothing though
+            list = api.getParticipantSurveyHistory(userId, taskReferentGuid, startsOn, endsOn, null, 100).execute()
+                    .body();
+            assertTrue(list.getItems().isEmpty());
+            
+            list = api.getParticipantCompoundActivityHistory(userId, taskReferentGuid, startsOn, endsOn, null, 100)
+                    .execute().body();
+            assertTrue(list.getItems().isEmpty());
+        } finally {
+            schedulePlanApi.deleteSchedulePlan(planKeys.getGuid()).execute();
+            user.signOutAndDeleteUser();
+        }        
     }
 
     @Test
