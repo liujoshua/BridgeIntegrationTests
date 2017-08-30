@@ -89,7 +89,7 @@ public class ScheduledActivityTest {
         usersApi = user.getClient(ForConsentedUsersApi.class);
     }
 
-    private String monthlyAfterOneMonthSchedule() throws IOException {
+    private void monthlyAfterOneMonthSchedule() throws IOException {
         monthlyActivityLabel = "monthly-activity-" + RandomStringUtils.randomAlphabetic(4);
 
         String planGuid;
@@ -120,7 +120,7 @@ public class ScheduledActivityTest {
         schedulePlanGuidList.add(planGuid);
     }
 
-    private String oneTimeScheduleAfter3Days() throws IOException {
+    private void oneTimeScheduleAfter3Days() throws IOException {
         oneTimeActivityLabel = "one-time-activity-" + RandomStringUtils.randomAlphabetic(4);
 
         Schedule schedule = new Schedule();
@@ -219,12 +219,12 @@ public class ScheduledActivityTest {
         Set<String> guids = Sets.newHashSet();
         
         int pageOneCount = list.getItems().size();
-        list.getItems().stream().map(ScheduledActivity::getGuid).forEach(guid -> guids.add(guid));
+        list.getItems().stream().map(ScheduledActivity::getGuid).forEach(guids::add);
         
         list = usersApi.getTaskHistory("task:AAA", startTime, endTime, list.getNextPageOffsetKey(), 10).execute()
                 .body();
         int pageTwoCount = list.getItems().size();
-        list.getItems().stream().map(ScheduledActivity::getGuid).forEach(guid -> guids.add(guid));
+        list.getItems().stream().map(ScheduledActivity::getGuid).forEach(guids::add);
         
         assertEquals(pageOneCount+pageTwoCount, guids.size());
         assertNull(list.getNextPageOffsetKey());
