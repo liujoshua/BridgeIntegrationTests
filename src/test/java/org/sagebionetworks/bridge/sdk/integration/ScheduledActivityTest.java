@@ -94,7 +94,7 @@ public class ScheduledActivityTest {
 
         String planGuid;
         Schedule schedule = new Schedule();
-        schedule.setLabel("Schedule 2");
+        schedule.setLabel(monthlyActivityLabel);
         schedule.setDelay("P1M");
         schedule.setInterval("P1M");
         schedule.setExpires("P3W");
@@ -118,13 +118,14 @@ public class ScheduledActivityTest {
         plan.setStrategy(strategy);
         planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
         schedulePlanGuidList.add(planGuid);
+        return planGuid;
     }
 
     private String oneTimeScheduleAfter3Days() throws IOException {
         oneTimeActivityLabel = "one-time-activity-" + RandomStringUtils.randomAlphabetic(4);
 
         Schedule schedule = new Schedule();
-        schedule.setLabel("Schedule 1");
+        schedule.setLabel(oneTimeActivityLabel);
         schedule.setDelay("P3D");
         schedule.setScheduleType(ScheduleType.ONCE);
         schedule.setTimes(Lists.newArrayList("10:00"));
@@ -147,6 +148,7 @@ public class ScheduledActivityTest {
         plan.setStrategy(strategy);
         String planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
         schedulePlanGuidList.add(planGuid);
+        return planGuid;
     }
     
     private void dailyTaskAt4Times() throws IOException {
