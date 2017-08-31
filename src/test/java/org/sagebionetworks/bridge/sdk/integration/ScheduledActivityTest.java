@@ -118,7 +118,6 @@ public class ScheduledActivityTest {
         plan.setStrategy(strategy);
         planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
         schedulePlanGuidList.add(planGuid);
-        return planGuid;
     }
 
     private void oneTimeScheduleAfter3Days() throws IOException {
@@ -148,7 +147,6 @@ public class ScheduledActivityTest {
         plan.setStrategy(strategy);
         String planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
         schedulePlanGuidList.add(planGuid);
-        return planGuid;
     }
     
     private void dailyTaskAt4Times() throws IOException {
