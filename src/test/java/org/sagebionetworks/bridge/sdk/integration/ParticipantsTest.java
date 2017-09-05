@@ -48,6 +48,7 @@ import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -72,6 +73,7 @@ public class ParticipantsTest {
     }
 
     // Note: A very similar test exists in UserParticipantTest
+    @SuppressWarnings("unchecked")
     @Test
     public void canGetAndUpdateSelf() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
@@ -90,6 +92,12 @@ public class ParticipantsTest {
             self.setDataGroups(Lists.newArrayList("group1"));
             self.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
             self.setNotifyByEmail(null); // BRIDGE-1604: should use default value: true
+            
+            List<String> clientData = new ArrayList<>();
+            clientData.add("A");
+            clientData.add("B");
+            clientData.add("C");
+            self.setClientData(clientData);
 
             userApi.updateUsersParticipantRecord(self).execute();
             
@@ -97,6 +105,11 @@ public class ParticipantsTest {
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
             assertEquals(Lists.newArrayList("group1"), self.getDataGroups());
             assertTrue(self.getNotifyByEmail());  // BRIDGE-1604: true value returned
+            
+            List<String> deserClientData = (List<String>)RestUtils.toType(self.getClientData(), List.class);
+            assertEquals("A", deserClientData.get(0));
+            assertEquals("B", deserClientData.get(1));
+            assertEquals("C", deserClientData.get(2));
             
             // also language, but this hasn't been added to the session object yet.
         } finally {
@@ -464,7 +477,7 @@ public class ParticipantsTest {
         } finally {
             schedulePlanApi.deleteSchedulePlan(planKeys.getGuid()).execute();
             user.signOutAndDeleteUser();
-        }        
+        }
     }
 
     @Test
