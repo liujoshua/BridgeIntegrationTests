@@ -187,6 +187,8 @@ public class UploadTest {
         HealthDataRecord record = status.getRecord();
         assertEquals(uploadId, record.getUploadId());
         assertNotNull(record.getId());
+        assertEquals("version 1.0.0, build 1", record.getAppVersion());
+        assertEquals("Integration Tests", record.getPhoneInfo());
 
         // For createdOn and createdOnTimeZone, these exist in the test files, but are kind of all over the place. For
         // now, just verify that the createdOn exists and that createdOnTimeZone can be parsed as a timezone as part of
