@@ -372,6 +372,26 @@ public class ReportTest {
         assertEquals(DATETIME2.toString(), results.getItems().get(1).getDateTime().toString());
         assertEquals(DATETIME3.toString(), results.getItems().get(2).getDateTime().toString());
         
+        // This is okay, it just doesn't return results
+        results = userApi
+                .getParticipantReportRecordsV4("bar", SEARCH_START_TIME, SEARCH_END_TIME, 20, null).execute().body();
+        assertTrue(results.getItems().isEmpty());
+        
+        // But this is an invalid parameter.
+        try {
+            results = userApi
+                    .getParticipantReportRecordsV4("foo", SEARCH_START_TIME, SEARCH_END_TIME, 20, "junkkey").execute().body();
+            fail("Should have thrown an exception");
+        } catch(BadRequestException e) {
+        }
+        // so is this
+        try {
+            results = userApi
+                    .getParticipantReportRecordsV4("foo", SEARCH_END_TIME, SEARCH_START_TIME, 20, null).execute().body();
+            fail("Should have thrown an exception");
+        } catch(BadRequestException e) {
+        }
+        
         TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, false, Role.DEVELOPER);
         try {
             ReportsApi reportsApi = developer.getClient(ReportsApi.class);
