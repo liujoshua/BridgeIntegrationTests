@@ -1,6 +1,8 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import com.google.gson.JsonObject;
+
+import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.After;
 import org.junit.Before;
@@ -9,8 +11,11 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.ReportsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.api.StudyReportsApi;
+import org.sagebionetworks.bridge.rest.api.UsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.ForwardCursorReportDataList;
 import org.sagebionetworks.bridge.rest.model.ReportData;
 import org.sagebionetworks.bridge.rest.model.ReportDataForWorker;
 import org.sagebionetworks.bridge.rest.model.ReportDataList;
@@ -25,19 +30,26 @@ import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class ReportTest {
 
-    private static final LocalDate SEARCH_END_DATE = LocalDate.parse("2016-02-20");
-
     private static final LocalDate SEARCH_START_DATE = LocalDate.parse("2016-02-01");
-
+    private static final LocalDate SEARCH_END_DATE = LocalDate.parse("2016-02-20");
+    
+    private static final DateTime SEARCH_START_TIME = DateTime.parse("2016-02-01T10:00:00.000-07:00");
+    private static final DateTime SEARCH_END_TIME = DateTime.parse("2016-02-05T00:00:00.00-07:00");
+    
     private static LocalDate TIME1 = LocalDate.parse("2016-02-02");
     private static LocalDate TIME2 = LocalDate.parse("2016-02-03");
     private static LocalDate TIME3 = LocalDate.parse("2016-02-04");
 
+    private static DateTime DATETIME1 = DateTime.parse("2016-02-02T10:00:02.000-07:00");
+    private static DateTime DATETIME2 = DateTime.parse("2016-02-03T14:34:02.123-07:00");
+    private static DateTime DATETIME3 = DateTime.parse("2016-02-04T23:56:16.937-07:00");
+    
     private static JsonObject DATA1 = new JsonObject();
     private static JsonObject DATA2 = new JsonObject();
     private static JsonObject DATA3 = new JsonObject();
@@ -55,13 +67,13 @@ public class ReportTest {
     @Before
     public void before() throws Exception {
         REPORT1 = new ReportData();
-        REPORT1.setDate(TIME1);
+        REPORT1.setLocalDate(TIME1);
         REPORT1.setData(DATA1);
         REPORT2 = new ReportData();
-        REPORT2.setDate(TIME2);
+        REPORT2.setLocalDate(TIME2);
         REPORT2.setData(DATA2);
         REPORT3 = new ReportData();
-        REPORT3.setDate(TIME3);
+        REPORT3.setLocalDate(TIME3);
         REPORT3.setData(DATA3);
 
         this.admin = TestUserHelper.getSignedInAdmin();
@@ -102,12 +114,12 @@ public class ReportTest {
             assertEquals(0, results.getItems().size());
 
             // We should see indices for this participant report
-            ReportIndexList indices = reportsApi.getReportIndices("participant").execute().body();
+            ReportIndexList indices = reportsApi.getParticipantReportIndices().execute().body();
             assertTrue(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.PARTICIPANT, indices.getRequestParams().getReportType());
 
             // but not if we ask for study reports
-            indices = reportsApi.getReportIndices("study").execute().body();
+            indices = reportsApi.getStudyReportIndices().execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.STUDY, indices.getRequestParams().getReportType());
 
@@ -217,12 +229,12 @@ public class ReportTest {
             assertEquals(0, results.getItems().size());
 
             // We should see indices for this study report
-            ReportIndexList indices = devReportClient.getReportIndices("study").execute().body();
+            ReportIndexList indices = devReportClient.getStudyReportIndices().execute().body();
             assertTrue(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.STUDY, indices.getRequestParams().getReportType());
 
             // but not if we use the other type
-            indices = devReportClient.getReportIndices("participant").execute().body();
+            indices = devReportClient.getParticipantReportIndices().execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.PARTICIPANT, indices.getRequestParams().getReportType());
 
@@ -281,12 +293,12 @@ public class ReportTest {
         TestUser developer = TestUserHelper.createAndSignInUser(this.getClass(), false, Role.DEVELOPER);
         try {
             // Create reports with different IDs.
-            ReportsApi devReportClient = developer.getClient(ReportsApi.class);
+            StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
             devReportClient.addStudyReportRecord(reportId + 1, REPORT1).execute();
             devReportClient.addStudyReportRecord(reportId + 2, REPORT2).execute();
 
             // We should see indices for both reports.
-            ReportIndexList indices = devReportClient.getReportIndices("study").execute().body();
+            ReportIndexList indices = devReportClient.getStudyReportIndices().execute().body();
             assertTrue(containsThisIdentifier(indices, reportId + 1));
             assertTrue(containsThisIdentifier(indices, reportId + 2));
 
@@ -332,6 +344,49 @@ public class ReportTest {
         } finally {
             developer.signOutAndDeleteUser();
         }
+    }
+    
+    @Test
+    public void userCanCRUDSelfReports() throws Exception {
+        UsersApi userApi = user.getClient(UsersApi.class);
+
+        setDateTime(REPORT1, DATETIME1);
+        setDateTime(REPORT2, DATETIME2);
+        setDateTime(REPORT3, DATETIME3);
+
+        userApi.saveParticipantReportRecordsV4("foo", REPORT1).execute();
+        userApi.saveParticipantReportRecordsV4("foo", REPORT2).execute();
+        userApi.saveParticipantReportRecordsV4("foo", REPORT3).execute();
+        
+        ForwardCursorReportDataList results = userApi
+                .getParticipantReportRecordsV4("foo", SEARCH_START_TIME, SEARCH_END_TIME, 20, null).execute().body();
+        
+        assertEquals(3, results.getItems().size());
+        assertNull(results.getNextPageOffsetKey());
+        assertEquals(DATETIME1.toString(), results.getItems().get(0).getDate());
+        assertEquals(DATETIME2.toString(), results.getItems().get(1).getDate());
+        assertEquals(DATETIME3.toString(), results.getItems().get(2).getDate());
+        
+        // Time zone has been restored
+        assertEquals(DATETIME1.toString(), results.getItems().get(0).getDateTime().toString());
+        assertEquals(DATETIME2.toString(), results.getItems().get(1).getDateTime().toString());
+        assertEquals(DATETIME3.toString(), results.getItems().get(2).getDateTime().toString());
+        
+        TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, false, Role.DEVELOPER);
+        try {
+            ReportsApi reportsApi = developer.getClient(ReportsApi.class);
+            reportsApi.deleteAllParticipantReportRecords(user.getSession().getId(), "foo").execute();
+        } catch(Throwable t) {
+            developer.signOutAndDeleteUser();
+        }
+        results = userApi
+                .getParticipantReportRecordsV4("foo", SEARCH_START_TIME, SEARCH_END_TIME, 20, null).execute().body();
+        assertTrue(results.getItems().isEmpty());
+    }
+    
+    private void setDateTime(ReportData report, DateTime dateTime) {
+        report.setLocalDate(null);
+        report.setDateTime(dateTime);
     }
 
     private boolean containsThisIdentifier(ReportIndexList indices, String identifier) {
