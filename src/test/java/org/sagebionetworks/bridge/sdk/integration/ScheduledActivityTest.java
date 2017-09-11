@@ -197,14 +197,17 @@ public class ScheduledActivityTest {
     }
     
     @Test
-    public void getScheduledActivityHistoryV4() throws IOException {
+    public void getScheduledActivityHistoryV4() throws InterruptedException, IOException {
         dailyTaskAt4Times();
         
         DateTime startTime = DateTime.now();
         DateTime endTime = DateTime.now().plusDays(4);
         
         usersApi.getScheduledActivitiesByDateRange(startTime, endTime).execute().body();
-        
+
+        // getTaskHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index is consistent.
+        Thread.sleep(2000);
+
         // Now we should see those in the latest API:
         ForwardCursorScheduledActivityList list = usersApi.getTaskHistory("task:AAA", startTime, endTime, null, 10)
                 .execute().body();
