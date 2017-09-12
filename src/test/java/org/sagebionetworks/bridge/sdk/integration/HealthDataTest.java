@@ -19,12 +19,19 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.HealthDataApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.DataType;
+import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.HealthDataSubmission;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.StringConstraints;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.Survey;
+import org.sagebionetworks.bridge.rest.model.SurveyQuestion;
+import org.sagebionetworks.bridge.rest.model.UIHint;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
@@ -39,14 +46,18 @@ public class HealthDataTest {
     private static final String PHONE_INFO = "Integration Tests";
     private static final String SCHEMA_ID = "health-data-integ-test-schema";
     private static final long SCHEMA_REV = 1L;
+    private static final String SURVEY_ID = "health-data-integ-test-survey";
 
     private static String externalId;
+    private static DateTime surveyCreatedOn;
+    private static String surveyGuid;
     private static TestUserHelper.TestUser user;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        // Ensure schema exists, so we have something to submit against.
         TestUserHelper.TestUser developer = TestUserHelper.getSignedInApiDeveloper();
+
+        // Ensure schema exists, so we have something to submit against.
         UploadSchemasApi uploadSchemasApi = developer.getClient(UploadSchemasApi.class);
         UploadSchema schema = null;
         try {
@@ -75,6 +86,41 @@ public class HealthDataTest {
             uploadSchemasApi.createUploadSchema(schema).execute();
         }
 
+        // Also ensure survey exists. We can't get survey by identifier, so the next best thing is to get the schema
+        // by ID, and if it doesn't exist, we know to create the survey.
+        UploadSchema surveySchema = null;
+        try {
+            surveySchema = uploadSchemasApi.getMostRecentUploadSchema(SURVEY_ID).execute().body();
+            surveyGuid = surveySchema.getSurveyGuid();
+            surveyCreatedOn = surveySchema.getSurveyCreatedOn();
+        } catch (EntityNotFoundException ex) {
+            // no op
+        }
+        if (surveySchema == null) {
+            // Make a simple survey with one text answer.
+            StringConstraints constraints = new StringConstraints();
+            constraints.setDataType(DataType.STRING);
+            constraints.setMaxLength(24);
+
+            SurveyQuestion question = new SurveyQuestion();
+            question.setIdentifier("answer-me");
+            question.setConstraints(constraints);
+            question.setPrompt("Answer me:");
+            question.setUiHint(UIHint.TEXTFIELD);
+
+            Survey survey = new Survey().name("Health Data Integ Test Survey").identifier(SURVEY_ID)
+                    .addElementsItem(question);
+
+            // Create and publish the survey and get its guid/createdOn.
+            SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+            GuidCreatedOnVersionHolder surveyKeys = surveysApi.createSurvey(survey).execute().body();
+            surveyGuid = surveyKeys.getGuid();
+            surveyCreatedOn = surveyKeys.getCreatedOn();
+            surveysApi.publishSurvey(surveyGuid, surveyCreatedOn, null).execute();
+        }
+        assertNotNull(surveyGuid);
+        assertNotNull(surveyCreatedOn);
+
         // Set up user with data groups, external ID, and sharing scope.
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true);
         externalId = RandomStringUtils.randomAlphabetic(4);
@@ -95,7 +141,7 @@ public class HealthDataTest {
     }
 
     @Test
-    public void test() throws Exception {
+    public void submitBySchema() throws Exception {
         // make health data to submit - Use a map instead of a Jackson JSON node, because mixing JSON libraries causes
         // bad things to happen.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value")
@@ -132,5 +178,24 @@ public class HealthDataTest {
         assertEquals(2, returnedMetadataMap.size());
         assertEquals(APP_VERSION, returnedMetadataMap.get("appVersion"));
         assertEquals(PHONE_INFO, returnedMetadataMap.get("phoneInfo"));
+    }
+
+    @Test
+    public void submitBySurvey() throws Exception {
+        // make health data to submit - Use a map instead of a Jackson JSON node, because mixing JSON libraries causes
+        // bad things to happen.
+        Map<String, String> data = ImmutableMap.<String, String>builder().put("answer-me", "C").build();
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
+                .data(data).phoneInfo(PHONE_INFO).surveyGuid(surveyGuid).surveyCreatedOn(surveyCreatedOn);
+
+        // submit and validate - Most of the record attributes are already validated in the previous test. Just
+        // validate survey ID was set properly as the schema ID and that the data is correct.
+        HealthDataRecord record = user.getClient(HealthDataApi.class).submitHealthData(submission).execute().body();
+        assertEquals(SURVEY_ID, record.getSchemaId());
+        assertNotNull(record.getSchemaRevision());
+
+        Map<String, String> returnedDataMap = RestUtils.toType(record.getData(), Map.class);
+        assertEquals(1, returnedDataMap.size());
+        assertEquals("C", returnedDataMap.get("answer-me"));
     }
 }
