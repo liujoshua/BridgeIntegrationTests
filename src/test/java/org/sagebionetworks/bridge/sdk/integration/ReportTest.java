@@ -1,16 +1,21 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import com.google.gson.JsonObject;
+
+import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantReportsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.ReportsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.api.StudyReportsApi;
+import org.sagebionetworks.bridge.rest.api.UsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.ForwardCursorReportDataList;
 import org.sagebionetworks.bridge.rest.model.ReportData;
 import org.sagebionetworks.bridge.rest.model.ReportDataForWorker;
 import org.sagebionetworks.bridge.rest.model.ReportDataList;
@@ -25,19 +30,26 @@ import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class ReportTest {
 
-    private static final LocalDate SEARCH_END_DATE = LocalDate.parse("2016-02-20");
-
     private static final LocalDate SEARCH_START_DATE = LocalDate.parse("2016-02-01");
-
+    private static final LocalDate SEARCH_END_DATE = LocalDate.parse("2016-02-20");
+    
+    private static final DateTime SEARCH_START_TIME = DateTime.parse("2016-02-01T10:00:00.000-07:00");
+    private static final DateTime SEARCH_END_TIME = DateTime.parse("2016-02-05T00:00:00.00-07:00");
+    
     private static LocalDate TIME1 = LocalDate.parse("2016-02-02");
     private static LocalDate TIME2 = LocalDate.parse("2016-02-03");
     private static LocalDate TIME3 = LocalDate.parse("2016-02-04");
 
+    private static DateTime DATETIME1 = DateTime.parse("2016-02-02T10:00:02.000-07:00");
+    private static DateTime DATETIME2 = DateTime.parse("2016-02-03T14:34:02.123-07:00");
+    private static DateTime DATETIME3 = DateTime.parse("2016-02-04T23:56:16.937-07:00");
+    
     private static JsonObject DATA1 = new JsonObject();
     private static JsonObject DATA2 = new JsonObject();
     private static JsonObject DATA3 = new JsonObject();
@@ -55,13 +67,13 @@ public class ReportTest {
     @Before
     public void before() throws Exception {
         REPORT1 = new ReportData();
-        REPORT1.setDate(TIME1);
+        REPORT1.setLocalDate(TIME1);
         REPORT1.setData(DATA1);
         REPORT2 = new ReportData();
-        REPORT2.setDate(TIME2);
+        REPORT2.setLocalDate(TIME2);
         REPORT2.setData(DATA2);
         REPORT3 = new ReportData();
-        REPORT3.setDate(TIME3);
+        REPORT3.setLocalDate(TIME3);
         REPORT3.setData(DATA3);
 
         this.admin = TestUserHelper.getSignedInAdmin();
@@ -81,7 +93,7 @@ public class ReportTest {
         TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Role.DEVELOPER);
         String userId = user.getSession().getId();
         try {
-            ReportsApi reportsApi = developer.getClient(ReportsApi.class);
+        		ParticipantReportsApi reportsApi = developer.getClient(ParticipantReportsApi.class);
 
             reportsApi.addParticipantReportRecord(userId, reportId, REPORT1).execute();
             reportsApi.addParticipantReportRecord(userId, reportId, REPORT2).execute();
@@ -102,12 +114,13 @@ public class ReportTest {
             assertEquals(0, results.getItems().size());
 
             // We should see indices for this participant report
-            ReportIndexList indices = reportsApi.getReportIndices("participant").execute().body();
+            ReportIndexList indices = reportsApi.getParticipantReportIndices().execute().body();
             assertTrue(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.PARTICIPANT, indices.getRequestParams().getReportType());
 
             // but not if we ask for study reports
-            indices = reportsApi.getReportIndices("study").execute().body();
+            StudyReportsApi studyReportsApi = developer.getClient(StudyReportsApi.class);
+            indices = studyReportsApi.getStudyReportIndices().execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.STUDY, indices.getRequestParams().getReportType());
 
@@ -119,7 +132,7 @@ public class ReportTest {
         } finally {
             developer.signOutAndDeleteUser();
 
-            ReportsApi reportsApi = admin.getClient(ReportsApi.class);
+            ParticipantReportsApi reportsApi = admin.getClient(ParticipantReportsApi.class);
             reportsApi.deleteParticipantReportIndex(reportId).execute();
         }
     }
@@ -159,12 +172,12 @@ public class ReportTest {
             report2.setHealthCode(healthCode);
             report3.setHealthCode(healthCode);
 
-            ReportsApi workerReportsApi = worker.getClient(ReportsApi.class);
+            ParticipantReportsApi workerReportsApi = worker.getClient(ParticipantReportsApi.class);
             workerReportsApi.addParticipantReportRecordForWorker(reportId, report1).execute();
             workerReportsApi.addParticipantReportRecordForWorker(reportId, report2).execute();
             workerReportsApi.addParticipantReportRecordForWorker(reportId, report3).execute();
 
-            ReportsApi userReportsApi = user.getClient(ReportsApi.class);
+            ParticipantReportsApi userReportsApi = user.getClient(ParticipantReportsApi.class);
             ReportDataList results = userReportsApi
                     .getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
 
@@ -179,7 +192,7 @@ public class ReportTest {
             assertEquals(0, results.getItems().size());
 
             // delete. Must be done by developer
-            ReportsApi developerReportsApi = developer.getClient(ReportsApi.class);
+            ParticipantReportsApi developerReportsApi = developer.getClient(ParticipantReportsApi.class);
             developerReportsApi.deleteAllParticipantReportRecords(userId, reportId).execute();
 
             results = userReportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute()
@@ -192,7 +205,7 @@ public class ReportTest {
             worker.signOutAndDeleteUser();
             developer.signOutAndDeleteUser();
 
-            admin.getClient(ReportsApi.class).deleteParticipantReportIndex(reportId).execute();
+            admin.getClient(ParticipantReportsApi.class).deleteParticipantReportIndex(reportId).execute();
         }
     }
 
@@ -200,7 +213,7 @@ public class ReportTest {
     public void canCrudStudyReport() throws Exception {
         TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Role.DEVELOPER);
         try {
-            ReportsApi devReportClient = developer.getClient(ReportsApi.class);
+            StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
             devReportClient.addStudyReportRecord(reportId, REPORT1).execute();
             devReportClient.addStudyReportRecord(reportId, REPORT2).execute();
             devReportClient.addStudyReportRecord(reportId, REPORT3).execute();
@@ -212,22 +225,23 @@ public class ReportTest {
             assertEquals(SEARCH_END_DATE, results.getRequestParams().getEndDate());
 
             // This search is out of range, and should return no results.
-            results = devReportClient.getParticipantReportRecords(reportId, SEARCH_START_DATE.minusDays(30),
+            ParticipantReportsApi participantReportsApi = developer.getClient(ParticipantReportsApi.class);
+            results = participantReportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE.minusDays(30),
                     SEARCH_END_DATE.minusDays(30)).execute().body();
             assertEquals(0, results.getItems().size());
 
             // We should see indices for this study report
-            ReportIndexList indices = devReportClient.getReportIndices("study").execute().body();
+            ReportIndexList indices = devReportClient.getStudyReportIndices().execute().body();
             assertTrue(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.STUDY, indices.getRequestParams().getReportType());
 
             // but not if we use the other type
-            indices = devReportClient.getReportIndices("participant").execute().body();
+            indices = participantReportsApi.getParticipantReportIndices().execute().body();
             assertFalse(containsThisIdentifier(indices, reportId));
             assertEquals(ReportType.PARTICIPANT, indices.getRequestParams().getReportType());
 
-            developer.getClient(ReportsApi.class).deleteAllStudyReportRecords(reportId).execute();
-            results = devReportClient.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE)
+            developer.getClient(StudyReportsApi.class).deleteAllStudyReportRecords(reportId).execute();
+            results = participantReportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE)
                     .execute().body();
             assertEquals(0, results.getItems().size());
         } finally {
@@ -239,7 +253,7 @@ public class ReportTest {
     public void canMakeStudyReportPublic() throws Exception {
         TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Role.DEVELOPER);
         try {
-            ReportsApi devReportClient = developer.getClient(ReportsApi.class);
+            StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
             devReportClient.addStudyReportRecord(reportId, REPORT1).execute();
             devReportClient.addStudyReportRecord(reportId, REPORT2).execute();
             devReportClient.addStudyReportRecord(reportId, REPORT3).execute();
@@ -265,7 +279,7 @@ public class ReportTest {
             assertEquals(3, report.getItems().size());
 
         } finally {
-            ReportsApi devReportClient = developer.getClient(ReportsApi.class);
+            StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
             devReportClient.deleteAllStudyReportRecords(reportId).execute();
             developer.signOutAndDeleteUser();
         }
@@ -281,17 +295,18 @@ public class ReportTest {
         TestUser developer = TestUserHelper.createAndSignInUser(this.getClass(), false, Role.DEVELOPER);
         try {
             // Create reports with different IDs.
-            ReportsApi devReportClient = developer.getClient(ReportsApi.class);
+            StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
             devReportClient.addStudyReportRecord(reportId + 1, REPORT1).execute();
             devReportClient.addStudyReportRecord(reportId + 2, REPORT2).execute();
 
             // We should see indices for both reports.
-            ReportIndexList indices = devReportClient.getReportIndices("study").execute().body();
+            ReportIndexList indices = devReportClient.getStudyReportIndices().execute().body();
             assertTrue(containsThisIdentifier(indices, reportId + 1));
             assertTrue(containsThisIdentifier(indices, reportId + 2));
 
-            developer.getClient(ReportsApi.class).deleteAllStudyReportRecords(reportId + 1).execute();
-            developer.getClient(ReportsApi.class).deleteAllStudyReportRecords(reportId + 2).execute();
+            StudyReportsApi studyReportsApi = developer.getClient(StudyReportsApi.class);
+            studyReportsApi.deleteAllStudyReportRecords(reportId + 1).execute();
+            studyReportsApi.deleteAllStudyReportRecords(reportId + 2).execute();
         } finally {
             developer.signOutAndDeleteUser();
         }
@@ -301,7 +316,7 @@ public class ReportTest {
     public void correctExceptionsOnBadRequest() throws Exception {
         TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Role.DEVELOPER);
         try {
-            ReportsApi devReportClient = developer.getClient(ReportsApi.class);
+            StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
             try {
                 devReportClient
                         .getStudyReportRecords(reportId, LocalDate.parse("2010-10-10"), LocalDate.parse("2012-10-10"))
@@ -316,8 +331,9 @@ public class ReportTest {
             } catch (BadRequestException e) {
                 assertEquals("Start date 2016-02-20 can't be after end date 2016-02-01", e.getMessage());
             }
+            ParticipantReportsApi participantReportsApi = developer.getClient(ParticipantReportsApi.class);
             try {
-                devReportClient.getParticipantReportRecords(reportId, LocalDate.parse("2010-10-10"),
+            		participantReportsApi.getParticipantReportRecords(reportId, LocalDate.parse("2010-10-10"),
                         LocalDate.parse("2012-10-10")).execute();
                 fail("Should have thrown an exception");
             } catch (BadRequestException e) {
@@ -325,13 +341,77 @@ public class ReportTest {
                         e.getMessage());
             }
             try {
-                devReportClient.getParticipantReportRecords(reportId, SEARCH_END_DATE, SEARCH_START_DATE).execute();
+				participantReportsApi.getParticipantReportRecords(reportId, SEARCH_END_DATE, SEARCH_START_DATE)
+						.execute();
             } catch (BadRequestException e) {
                 assertEquals("Start date 2016-02-20 can't be after end date 2016-02-01", e.getMessage());
             }
         } finally {
             developer.signOutAndDeleteUser();
         }
+    }
+    
+    @Test
+    public void userCanCRUDSelfReports() throws Exception {
+        UsersApi userApi = user.getClient(UsersApi.class);
+
+        setDateTime(REPORT1, DATETIME1);
+        setDateTime(REPORT2, DATETIME2);
+        setDateTime(REPORT3, DATETIME3);
+
+        userApi.saveParticipantReportRecordsV4("foo", REPORT1).execute();
+        userApi.saveParticipantReportRecordsV4("foo", REPORT2).execute();
+        userApi.saveParticipantReportRecordsV4("foo", REPORT3).execute();
+        
+        ForwardCursorReportDataList results = userApi
+                .getParticipantReportRecordsV4("foo", SEARCH_START_TIME, SEARCH_END_TIME, 20, null).execute().body();
+        
+        assertEquals(3, results.getItems().size());
+        assertNull(results.getNextPageOffsetKey());
+        assertEquals(DATETIME1.toString(), results.getItems().get(0).getDate());
+        assertEquals(DATETIME2.toString(), results.getItems().get(1).getDate());
+        assertEquals(DATETIME3.toString(), results.getItems().get(2).getDate());
+        
+        // Time zone has been restored
+        assertEquals(DATETIME1.toString(), results.getItems().get(0).getDateTime().toString());
+        assertEquals(DATETIME2.toString(), results.getItems().get(1).getDateTime().toString());
+        assertEquals(DATETIME3.toString(), results.getItems().get(2).getDateTime().toString());
+        
+        // This is okay, it just doesn't return results
+        results = userApi
+                .getParticipantReportRecordsV4("bar", SEARCH_START_TIME, SEARCH_END_TIME, 20, null).execute().body();
+        assertTrue(results.getItems().isEmpty());
+        
+        // But this is an invalid parameter.
+        try {
+            results = userApi
+                    .getParticipantReportRecordsV4("foo", SEARCH_START_TIME, SEARCH_END_TIME, 20, "junkkey").execute().body();
+            fail("Should have thrown an exception");
+        } catch(BadRequestException e) {
+        }
+        // so is this
+        try {
+            results = userApi
+                    .getParticipantReportRecordsV4("foo", SEARCH_END_TIME, SEARCH_START_TIME, 20, null).execute().body();
+            fail("Should have thrown an exception");
+        } catch(BadRequestException e) {
+        }
+        
+        TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, false, Role.DEVELOPER);
+        try {
+            ParticipantReportsApi reportsApi = developer.getClient(ParticipantReportsApi.class);
+            reportsApi.deleteAllParticipantReportRecords(user.getSession().getId(), "foo").execute();
+        } catch(Throwable t) {
+            developer.signOutAndDeleteUser();
+        }
+        results = userApi
+                .getParticipantReportRecordsV4("foo", SEARCH_START_TIME, SEARCH_END_TIME, 20, null).execute().body();
+        assertTrue(results.getItems().isEmpty());
+    }
+    
+    private void setDateTime(ReportData report, DateTime dateTime) {
+        report.setLocalDate(null);
+        report.setDateTime(dateTime);
     }
 
     private boolean containsThisIdentifier(ReportIndexList indices, String identifier) {
