@@ -190,6 +190,8 @@ public class Tests {
         study.setMinAgeOfConsent(18);
         study.setName("Test Study [SDK]");
         study.setSponsorName("The Test Study Folks [SDK]");
+        study.setStrictUploadValidationEnabled(true);
+        study.setStudyIdExcludedInExport(true);
         study.setSupportEmail("test@test.com");
         study.setConsentNotificationEmail("test2@test.com");
         study.setTechnicalEmail("test3@test.com");
