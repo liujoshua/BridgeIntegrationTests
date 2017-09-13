@@ -209,8 +209,8 @@ public class StudyTest {
         assertNull("study version should be null", study.getVersion());
 
         // Set these flags to false to verify that studies are always created with these flags set to true.
-        study.setExcludeStudyIdInExport(false);
         study.setStrictUploadValidationEnabled(false);
+        study.setStudyIdExcludedInExport(false);
 
         VersionHolder holder = studiesApi.createStudy(study).execute().body();
         assertNotNull(holder.getVersion());
@@ -245,8 +245,8 @@ public class StudyTest {
         assertEquals("iOS push ARN should be equal", study.getPushNotificationARNs().get("iPhone OS"),
                 newStudy.getPushNotificationARNs().get("iPhone OS"));        
 
-        assertTrue("excludeStudyIdInExport should be true", newStudy.getExcludeStudyIdInExport());
         assertTrue("strictUploadValidationEnabled should be true", newStudy.getStrictUploadValidationEnabled());
+        assertTrue("studyIdExcludedInExport should be true", newStudy.getStudyIdExcludedInExport());
         assertTrue("healthCodeExportEnabled should be true", newStudy.getHealthCodeExportEnabled());
         assertTrue("emailVerificationEnabled should be true", newStudy.getEmailVerificationEnabled());
         assertTrue("emailSignInEnabled should be true", newStudy.getEmailSignInEnabled());
@@ -278,15 +278,15 @@ public class StudyTest {
         
         // Set stuff that only an admin can set.
         newerStudy.setEmailSignInEnabled(false);
-        newerStudy.setExcludeStudyIdInExport(false);
         newerStudy.setStrictUploadValidationEnabled(false);
+        newerStudy.setStudyIdExcludedInExport(false);
         studiesApi.updateStudy(newerStudy.getIdentifier(), newerStudy).execute().body();
         Study newestStudy = studiesApi.getStudy(newStudy.getIdentifier()).execute().body();
 
         assertFalse("emailSignInEnabled should be false after update", newestStudy.getEmailSignInEnabled());
-        assertFalse("excludeStudyIdInExport should be false after update", newestStudy.getExcludeStudyIdInExport());
         assertFalse("strictValidationEnabled should be false after update", newestStudy
                 .getStrictUploadValidationEnabled());
+        assertFalse("studyIdExcludedInExport should be false after update", newestStudy.getStudyIdExcludedInExport());
 
         // logically delete a study by admin
         studiesApi.deleteStudy(studyId, false).execute();
@@ -354,17 +354,17 @@ public class StudyTest {
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
 
             Study study = studiesApi.getUsersStudy().execute().body();
-            study.setExcludeStudyIdInExport(false);
             study.setHealthCodeExportEnabled(true);
             study.setEmailVerificationEnabled(false);
             study.setStrictUploadValidationEnabled(false);
+            study.setStudyIdExcludedInExport(false);
             studiesApi.updateUsersStudy(study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
-            assertTrue("excludeStudyIdInExport should be true", study.getExcludeStudyIdInExport());
             assertFalse("healthCodeExportEnabled should be false", study.getHealthCodeExportEnabled());
             assertTrue("emailVersificationEnabled should be true", study.getEmailVerificationEnabled());
             assertTrue("strictValidationEnabled should be true", study.getStrictUploadValidationEnabled());
+            assertTrue("studyIdExcludedInExport should be true", study.getStudyIdExcludedInExport());
         } finally {
             developer.signOutAndDeleteUser();
         }
