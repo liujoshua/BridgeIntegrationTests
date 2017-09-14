@@ -8,7 +8,6 @@ import java.util.List;
 import org.joda.time.LocalDate;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
@@ -101,7 +100,6 @@ public class ScheduleTest {
     }
     
     @Test
-    @Ignore
     public void schedulePlanIsCorrect() throws Exception {
         SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
         planGuid = schedulesApi.createSchedulePlan(Tests.getSimpleSchedulePlan()).execute().body().getGuid();
@@ -127,7 +125,6 @@ public class ScheduleTest {
     }
 
     @Test
-    @Ignore
     public void canRetrieveSchedulesForAUser() throws Exception {
         // Make a schedule plan. Stick a probabilistically unique label on it so we can find it again later.
         // Note: We stick the label on the *schedule*, not the schedule *plan*. This is because the end user only ever
@@ -154,7 +151,6 @@ public class ScheduleTest {
     }
     
     @Test
-    @Ignore
     public void persistentSchedulePlanMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getPersistentSchedulePlan();
         SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
@@ -168,7 +164,6 @@ public class ScheduleTest {
     }
     
     @Test
-    @Ignore
     public void simpleSchedulePlanNotMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getSimpleSchedulePlan();
         SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
@@ -182,7 +177,6 @@ public class ScheduleTest {
     }
     
     @Test
-    @Ignore
     public void criteriaBasedScheduleIsFilteredForUser() throws Exception {
         SchedulePlan plan = new SchedulePlan();
         plan.setLabel("Criteria plan");
