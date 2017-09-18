@@ -83,7 +83,7 @@ public class ScheduleTest {
         schedule.setScheduleType(ScheduleType.RECURRING);
         schedule.setInterval("P1D");
         schedule.setExpires("P1D");
-        //schedule.setSequencePeriod("P3D");
+        schedule.setSequencePeriod("P3D");
         schedule.setTimes(Lists.newArrayList("14:00"));
         schedule.setActivities(taggedActivities);
         strategy.setSchedule(schedule);
