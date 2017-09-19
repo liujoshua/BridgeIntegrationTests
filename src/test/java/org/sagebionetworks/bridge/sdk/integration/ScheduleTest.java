@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import org.joda.time.LocalDate;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,6 +24,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduleCriteria;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 
 import com.google.common.collect.ImmutableMap;
@@ -63,6 +65,46 @@ public class ScheduleTest {
         }
     }
     
+    @Test
+    public void canScheduleASequence() throws Exception {
+        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        
+        SchedulePlan plan = Tests.getSimpleSchedulePlan();
+        plan.setLabel("This is a sequenced recurring schedule");
+        SimpleScheduleStrategy strategy = (SimpleScheduleStrategy)plan.getStrategy();
+        
+        List<Activity> acts = strategy.getSchedule().getActivities();
+        String randomLabel = Tests.randomIdentifier(ScheduleTest.class);
+        List<Activity> taggedActivities = Tests.labelActivities(acts, randomLabel);
+        
+        // I've made this shorter so we can verify it without paging, etc.
+        Schedule schedule = new Schedule();
+        schedule.setLabel("This is a squence schedule");
+        schedule.setScheduleType(ScheduleType.RECURRING);
+        schedule.setInterval("P1D");
+        schedule.setExpires("P1D");
+        schedule.setSequencePeriod("P3D");
+        schedule.setTimes(Lists.newArrayList("14:00"));
+        schedule.setActivities(taggedActivities);
+        strategy.setSchedule(schedule);
+
+        planGuid = schedulesApi.createSchedulePlan(plan).execute().body().getGuid();
+        
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+        
+        String scheduledOn1 = LocalDate.now().toString() + "T14:00:00.000Z";
+        String scheduledOn2 = LocalDate.now().plusDays(1).toString() + "T14:00:00.000Z";
+        String scheduledOn3 = LocalDate.now().plusDays(2).toString() + "T14:00:00.000Z";
+        
+        ScheduledActivityList scheduledActivityList = usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
+        List<ScheduledActivity> list = Tests.filterActivitiesForLabel(scheduledActivityList.getItems(), randomLabel);
+        
+        assertEquals(3, list.size());
+        assertEquals(scheduledOn1, list.get(0).getScheduledOn().toString());
+        assertEquals(scheduledOn2, list.get(1).getScheduledOn().toString());
+        assertEquals(scheduledOn3, list.get(2).getScheduledOn().toString());
+    }
+
     @Test
     public void schedulePlanIsCorrect() throws Exception {
         SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
@@ -115,7 +157,6 @@ public class ScheduleTest {
     }
     
     @Test
-    @SuppressWarnings("deprecation")
     public void persistentSchedulePlanMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getPersistentSchedulePlan();
         SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
@@ -129,7 +170,6 @@ public class ScheduleTest {
     }
     
     @Test
-    @SuppressWarnings("deprecation")
     public void simpleSchedulePlanNotMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getSimpleSchedulePlan();
         SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);

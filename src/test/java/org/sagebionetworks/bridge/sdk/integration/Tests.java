@@ -22,6 +22,7 @@ import org.sagebionetworks.bridge.rest.model.MimeType;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
@@ -55,6 +56,25 @@ public class Tests {
         String clsPart = cls.getSimpleName();
         String rndPart = RandomStringUtils.randomAlphabetic(4);
         return String.format("bridge-testing+%s-%s-%s@sagebase.org", devName, clsPart, rndPart);
+    }
+    
+    public static List<Activity> labelActivities(List<Activity> activities, String randomLabel) {
+        List<Activity> taggedActivities = Lists.newArrayList();
+        for (Activity activity : activities) {
+            activity.setLabel(randomLabel);
+            taggedActivities.add(activity);
+        }
+        return taggedActivities;
+    }
+    
+    public static List<ScheduledActivity> filterActivitiesForLabel(List<ScheduledActivity> activities, String label) {
+        List<ScheduledActivity> filtered = Lists.newArrayList();
+        for (ScheduledActivity activity : activities) {
+            if (label.equals(activity.getActivity().getLabel())) {
+                filtered.add(activity);
+            }
+        }
+        return filtered;
     }
     
     private static void setTaskActivity(Schedule schedule, String taskIdentifier) {
