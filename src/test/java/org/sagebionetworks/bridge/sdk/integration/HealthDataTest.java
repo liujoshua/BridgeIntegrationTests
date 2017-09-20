@@ -146,8 +146,10 @@ public class HealthDataTest {
         // bad things to happen.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value")
                 .put("bar", "This is an attachment").build();
+        Map<String, Object> metadata = ImmutableMap.<String, Object>builder().put("taskRunId", "test-task-guid")
+                .put("lastMedicationHoursAgo", 3).build();
         HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
-                .data(data).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
+                .data(data).metadata(metadata).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
 
         // submit and validate
         HealthDataRecord record = user.getClient(HealthDataApi.class).submitHealthData(submission).execute().body();
@@ -178,6 +180,13 @@ public class HealthDataTest {
         assertEquals(2, returnedMetadataMap.size());
         assertEquals(APP_VERSION, returnedMetadataMap.get("appVersion"));
         assertEquals(PHONE_INFO, returnedMetadataMap.get("phoneInfo"));
+
+        // UserMetadata contains user-submitted metadata.
+        // For whatever reason, GSON converts our int into a double.
+        Map<String, Object> returnedUserMetadataMap = RestUtils.toType(record.getUserMetadata(), Map.class);
+        assertEquals(2, returnedUserMetadataMap.size());
+        assertEquals("test-task-guid", returnedUserMetadataMap.get("taskRunId"));
+        assertEquals(3.0, (double) returnedUserMetadataMap.get("lastMedicationHoursAgo"), 0.001);
     }
 
     @Test
