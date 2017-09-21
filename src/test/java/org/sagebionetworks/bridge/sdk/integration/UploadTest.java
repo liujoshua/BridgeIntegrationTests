@@ -6,7 +6,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import org.joda.time.DateTime;
@@ -35,6 +37,7 @@ import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 import com.google.common.collect.Lists;
 
 @Category(IntegrationSmokeTest.class)
+@SuppressWarnings("unchecked")
 public class UploadTest {
 
     // On a cold server, validation could take up to 8 seconds (most of this is downloading and caching the encryption
@@ -144,15 +147,32 @@ public class UploadTest {
 
     @Test
     public void legacySurvey() throws Exception {
-        testUpload("legacy-survey-encrypted");
+        Map<String, Object> data = testUpload("legacy-survey-encrypted");
+        assertEquals(2, data.size());
+        assertEquals("Yes", data.get("AAA"));
+
+        List<String> bbbAnswerList = RestUtils.toType(data.get("BBB"), List.class);
+        assertEquals(3, bbbAnswerList.size());
+        assertEquals("fencing", bbbAnswerList.get(0));
+        assertEquals("running", bbbAnswerList.get(1));
+        assertEquals("3", bbbAnswerList.get(2));
     }
 
     @Test
     public void legacyNonSurvey() throws Exception {
-        testUpload("legacy-non-survey-encrypted");
+        Map<String, Object> data = testUpload("legacy-non-survey-encrypted");
+        assertEquals(5, data.size());
+
+        assertEquals("1337", data.get("record.json.PPP"));
+        assertEquals("19:21:35.378", data.get("record.json.QQQ"));
+
+        // CCC, FFF, and HHH are attachments, and the value of the data is a guid. Just verify that they exist.
+        assertTrue(data.containsKey("CCC.txt"));
+        assertTrue(data.containsKey("FFF.json"));
+        assertTrue(data.containsKey("record.json.HHH"));
     }
 
-    private static void testUpload(String fileLeafName) throws Exception {
+    private static Map<String, Object> testUpload(String fileLeafName) throws Exception {
         // set up request
         String filePath = resolveFilePath(fileLeafName);
         File file = new File(filePath);
@@ -196,6 +216,12 @@ public class UploadTest {
         assertNotNull(record.getCreatedOn());
         assertNotNull(DateTime.parse("2017-01-25T16:36" + record.getCreatedOnTimeZone()));
 
+        // Verify metadata. This is the same in all test cases to make things simple.
+        Map<String, Object> userMetadata = RestUtils.toType(record.getUserMetadata(), Map.class);
+        assertEquals(2, userMetadata.size());
+        assertEquals("test-task-guid", userMetadata.get("taskRunId"));
+        assertEquals(3.0, (double) userMetadata.get("lastMedicationHoursAgo"), 0.001);
+
         // check for update record export status, no need to activate exporter in testing
         RecordExportStatusRequest statusRequest = new RecordExportStatusRequest();
         statusRequest.setRecordIds(ImmutableList.of(record.getId()));
@@ -204,6 +230,9 @@ public class UploadTest {
 
         status = usersApi.getUploadStatus(session.getId()).execute().body();
         assertEquals(SynapseExporterStatus.NOT_EXPORTED, status.getRecord().getSynapseExporterStatus());
+
+        // Return data, so individual tests can validate.
+        return RestUtils.toType(record.getData(), Map.class);
     }
 
     // returns the path relative to the root of the project

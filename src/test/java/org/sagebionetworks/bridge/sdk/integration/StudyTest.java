@@ -11,11 +11,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
@@ -49,6 +52,8 @@ import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.Upload;
+import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
+import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadList;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
@@ -367,6 +372,119 @@ public class StudyTest {
             assertTrue("studyIdExcludedInExport should be true", study.getStudyIdExcludedInExport());
         } finally {
             developer.signOutAndDeleteUser();
+        }
+    }
+
+    @Test
+    public void uploadMetadataFieldDefinitions() throws Exception {
+        StudiesApi adminApi = admin.getClient(StudiesApi.class);
+
+        // Random field name, so they don't conflict.
+        String fieldName = "test-field-" + RandomStringUtils.randomAlphabetic(4);
+        UploadFieldDefinition originalField = new UploadFieldDefinition().name(fieldName).type(
+                UploadFieldType.BOOLEAN);
+        UploadFieldDefinition modifiedField = new UploadFieldDefinition().name(fieldName).type(
+                UploadFieldType.INT);
+
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
+        try {
+            StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+            Study study = studiesApi.getUsersStudy().execute().body();
+
+            // Append the field to the study's metadata.
+            appendToStudy(study, originalField);
+            studiesApi.updateUsersStudy(study).execute();
+
+            study = studiesApi.getUsersStudy().execute().body();
+            UploadFieldDefinition returnedFieldDef = getFieldDefByName(fieldName, study);
+            assertEqualFieldDefs(originalField, returnedFieldDef);
+
+            // Non-admin can't modify the field.
+            try {
+                removeFieldDefByName(fieldName, study);
+                appendToStudy(study, modifiedField);
+                studiesApi.updateUsersStudy(study).execute();
+                fail("expected exception");
+            } catch (UnauthorizedException ex) {
+                // Verify that the error message tells us about the field we can't modify.
+                assertTrue(ex.getMessage().contains(fieldName));
+            }
+            study = studiesApi.getUsersStudy().execute().body();
+            returnedFieldDef = getFieldDefByName(fieldName, study);
+            assertEqualFieldDefs(originalField, returnedFieldDef);
+
+            // Non-admin can't remove the field.
+            try {
+                removeFieldDefByName(fieldName, study);
+                studiesApi.updateUsersStudy(study).execute();
+                fail("expected exception");
+            } catch (UnauthorizedException ex) {
+                // Verify that the error message tells us about the field we can't modify.
+                assertTrue(ex.getMessage().contains(fieldName));
+            }
+            study = studiesApi.getUsersStudy().execute().body();
+            returnedFieldDef = getFieldDefByName(fieldName, study);
+            assertEqualFieldDefs(originalField, returnedFieldDef);
+
+            // Admin can modify field.
+            removeFieldDefByName(fieldName, study);
+            appendToStudy(study, modifiedField);
+            adminApi.updateStudy(Tests.TEST_KEY, study).execute();
+
+            study = studiesApi.getUsersStudy().execute().body();
+            returnedFieldDef = getFieldDefByName(fieldName, study);
+            assertEqualFieldDefs(modifiedField, returnedFieldDef);
+
+            // Admin can delete field.
+            removeFieldDefByName(fieldName, study);
+            adminApi.updateStudy(Tests.TEST_KEY, study).execute();
+
+            study = studiesApi.getUsersStudy().execute().body();
+            returnedFieldDef = getFieldDefByName(fieldName, study);
+            assertNull(returnedFieldDef);
+        } finally {
+            developer.signOutAndDeleteUser();
+        }
+    }
+
+    // Helper method to append a field def to a study. Encapsulates null checks and creating the initial list.
+    private static void appendToStudy(Study study, UploadFieldDefinition fieldDef) {
+        if (study.getUploadMetadataFieldDefinitions() == null) {
+            study.setUploadMetadataFieldDefinitions(new ArrayList<>());
+        }
+        study.addUploadMetadataFieldDefinitionsItem(fieldDef);
+    }
+
+    // Helper method to get a field def from a study by name. Returns null if not present.
+    private static UploadFieldDefinition getFieldDefByName(String fieldName, Study study) {
+        if (study.getUploadMetadataFieldDefinitions() == null) {
+            return null;
+        }
+
+        for (UploadFieldDefinition oneFieldDef : study.getUploadMetadataFieldDefinitions()) {
+            if (oneFieldDef.getName().equals(fieldName)) {
+                return oneFieldDef;
+            }
+        }
+        return null;
+    }
+
+    // Helper method to verify that the field is the same (name and type). Other defaults are set server side, and we
+    // don't want to have to deal with that.
+    private static void assertEqualFieldDefs(UploadFieldDefinition expected, UploadFieldDefinition actual) {
+        assertEquals(expected.getName(), actual.getName());
+        assertEquals(expected.getType(), actual.getType());
+    }
+
+    // Helper method to remove a field def from a study by name.
+    private static void removeFieldDefByName(String fieldName, Study study) {
+        Iterator<UploadFieldDefinition> fieldDefIter = study.getUploadMetadataFieldDefinitions().iterator();
+        while (fieldDefIter.hasNext()) {
+            UploadFieldDefinition oneFieldDef = fieldDefIter.next();
+            if (oneFieldDef.getName().equals(fieldName)) {
+                fieldDefIter.remove();
+                break;
+            }
         }
     }
 
