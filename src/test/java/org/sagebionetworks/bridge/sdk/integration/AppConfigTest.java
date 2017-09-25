@@ -138,13 +138,10 @@ public class AppConfigTest {
         
         // Create a second app config
         devApi.createAppConfig(appConfig).execute().body();
-        // Now this will generate an error...
-        try {
-            userApi.getUsersAppConfig().execute();
-            fail("Should have thrown an exception");
-        } catch(ConstraintViolationException e) {
-            
-        }
+        appConfig = devApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
+        
+        AppConfig shouldBeFirstOne = userApi.getUsersAppConfig().execute().body();
+        assertEquals(appConfig.getCreatedOn().toString(), shouldBeFirstOne.getCreatedOn().toString());
 
         StudyParticipant usersParticipant = userApi.getUsersParticipantRecord().execute().body();
         usersParticipant.setDataGroups(Lists.newArrayList(study.getDataGroups())); // this won't match.
