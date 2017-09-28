@@ -147,7 +147,16 @@ public class UploadTest {
 
     @Test
     public void legacySurvey() throws Exception {
-        Map<String, Object> data = testUpload("legacy-survey-encrypted");
+        testSurvey("legacy-survey-encrypted");
+    }
+
+    @Test
+    public void genericSurvey() throws Exception {
+        testSurvey("generic-survey-encrypted");
+    }
+
+    private static void testSurvey(String fileLeafName) throws Exception {
+        Map<String, Object> data = testUpload(fileLeafName);
         assertEquals(2, data.size());
         assertEquals("Yes", data.get("AAA"));
 
@@ -160,7 +169,16 @@ public class UploadTest {
 
     @Test
     public void legacyNonSurvey() throws Exception {
-        Map<String, Object> data = testUpload("legacy-non-survey-encrypted");
+        testNonSurvey("legacy-non-survey-encrypted");
+    }
+
+    @Test
+    public void genericNonSurvey() throws Exception {
+        testNonSurvey("generic-non-survey-encrypted");
+    }
+
+    private static void testNonSurvey(String fileLeafName) throws Exception {
+        Map<String, Object> data = testUpload(fileLeafName);
         assertEquals(5, data.size());
 
         assertEquals("1337", data.get("record.json.PPP"));
