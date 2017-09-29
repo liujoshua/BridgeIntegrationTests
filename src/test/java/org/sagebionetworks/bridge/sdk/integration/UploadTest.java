@@ -28,6 +28,7 @@ import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SynapseExporterStatus;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
+import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
@@ -192,8 +193,7 @@ public class UploadTest {
 
     private static Map<String, Object> testUpload(String fileLeafName) throws Exception {
         // set up request
-        String filePath = resolveFilePath(fileLeafName);
-        File file = new File(filePath);
+        File file = resolveFilePath(fileLeafName);
         
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         UploadSession session = RestUtils.upload(usersApi, file);
@@ -215,8 +215,61 @@ public class UploadTest {
         }
         // userClient.upload marks the download complete
         // marking an already completed download as complete again should succeed (and be a no-op)
-        worker.getClient(ForWorkersApi.class).completeUploadSession(session.getId());
+        worker.getClient(ForWorkersApi.class).completeUploadSession(session.getId(), false).execute();
 
+        validateUploadValidationStatus(uploadId, status);
+
+        // check for update record export status, no need to activate exporter in testing
+        HealthDataRecord record = status.getRecord();
+        RecordExportStatusRequest statusRequest = new RecordExportStatusRequest();
+        statusRequest.setRecordIds(ImmutableList.of(record.getId()));
+        statusRequest.setSynapseExporterStatus(SynapseExporterStatus.NOT_EXPORTED);
+        worker.getClient(ForWorkersApi.class).updateRecordExportStatuses(statusRequest).execute();
+
+        status = usersApi.getUploadStatus(session.getId()).execute().body();
+        assertEquals(SynapseExporterStatus.NOT_EXPORTED, status.getRecord().getSynapseExporterStatus());
+
+        // Return data, so individual tests can validate.
+        return RestUtils.toType(record.getData(), Map.class);
+    }
+
+    @Test
+    public void synchronousMode() throws Exception {
+        // use V2 Generic Survey, since that's the most straightforward to parse and validate.
+        File file = resolveFilePath("generic-survey-encrypted");
+
+        // Upload the file.
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+        UploadRequest request = RestUtils.makeUploadRequestForFile(file);
+        UploadSession session = usersApi.requestUploadSession(request).execute().body();
+        RestUtils.uploadToS3(file, session.getUrl());
+        String uploadId = session.getId();
+
+        // Complete upload in synchronous mode.
+        UploadValidationStatus status = usersApi.completeUploadSession(uploadId, true).execute().body();
+        validateUploadValidationStatus(uploadId, status);
+
+        // Validate the record data.
+        HealthDataRecord record = status.getRecord();
+        Map<String, Object> data = RestUtils.toType(record.getData(), Map.class);
+        assertEquals(2, data.size());
+        assertEquals("Yes", data.get("AAA"));
+
+        List<String> bbbAnswerList = RestUtils.toType(data.get("BBB"), List.class);
+        assertEquals(3, bbbAnswerList.size());
+        assertEquals("fencing", bbbAnswerList.get(0));
+        assertEquals("running", bbbAnswerList.get(1));
+        assertEquals("3", bbbAnswerList.get(2));
+    }
+
+    // returns the path relative to the root of the project
+    private static File resolveFilePath(String fileLeafName) {
+        String envName = user.getClientManager().getConfig().getEnvironment().name().toLowerCase(Locale.ENGLISH);
+        String filePath = "src/test/resources/upload-test/" + envName + "/" + fileLeafName;
+        return new File(filePath);
+    }
+
+    private static void validateUploadValidationStatus(String uploadId, UploadValidationStatus status) {
         assertNotNull("Upload status is not null, UploadId=" + uploadId, status);
         assertEquals("Upload succeeded, UploadId=" + uploadId, UploadStatus.SUCCEEDED, status.getStatus());
         assertTrue("Upload has no validation messages, UploadId=" + uploadId, status.getMessageList().isEmpty());
@@ -239,23 +292,5 @@ public class UploadTest {
         assertEquals(2, userMetadata.size());
         assertEquals("test-task-guid", userMetadata.get("taskRunId"));
         assertEquals(3.0, (double) userMetadata.get("lastMedicationHoursAgo"), 0.001);
-
-        // check for update record export status, no need to activate exporter in testing
-        RecordExportStatusRequest statusRequest = new RecordExportStatusRequest();
-        statusRequest.setRecordIds(ImmutableList.of(record.getId()));
-        statusRequest.setSynapseExporterStatus(SynapseExporterStatus.NOT_EXPORTED);
-        worker.getClient(ForWorkersApi.class).updateRecordExportStatuses(statusRequest).execute();
-
-        status = usersApi.getUploadStatus(session.getId()).execute().body();
-        assertEquals(SynapseExporterStatus.NOT_EXPORTED, status.getRecord().getSynapseExporterStatus());
-
-        // Return data, so individual tests can validate.
-        return RestUtils.toType(record.getData(), Map.class);
-    }
-
-    // returns the path relative to the root of the project
-    private static String resolveFilePath(String fileLeafName) {
-        String envName = user.getClientManager().getConfig().getEnvironment().name().toLowerCase(Locale.ENGLISH);
-        return "src/test/resources/upload-test/" + envName + "/" + fileLeafName;
     }
 }
