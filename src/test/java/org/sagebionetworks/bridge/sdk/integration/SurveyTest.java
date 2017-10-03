@@ -584,7 +584,12 @@ public class SurveyTest {
             surveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
             fail("Should have thrown exception");
         } catch(PublishedSurveyException e) {
+            // expected exception
         }
+
+        // getPublishedSurveys() uses a secondary global index. Sleep for 2 seconds to help make sure the index is consistent.
+        Thread.sleep(2000);
+
         // you can still retrieve the survey in lists
         SurveyList list = surveysApi.getPublishedSurveys().execute().body();
         assertTrue(list.getItems().stream()
