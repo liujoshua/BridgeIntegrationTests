@@ -289,7 +289,6 @@ public class UploadSchemaTest {
         schema.setModuleVersion(3);
         schema.setSurveyGuid("survey");
         schema.setSurveyCreatedOn(surveyCreatedOn);
-        schema.setPublished(true);
 
         UploadSchema createdSchema = devUploadSchemasApi.createOrUpdateUploadSchema(schema).execute().body();
 
@@ -305,7 +304,6 @@ public class UploadSchemaTest {
         assertNull(createdSchema.getStudyId());
         assertEquals("survey", createdSchema.getSurveyGuid());
         assertEquals(surveyCreatedOnMillis, createdSchema.getSurveyCreatedOn().getMillis());
-        assertTrue(createdSchema.getPublished());
     }
 
     @Test
@@ -486,7 +484,6 @@ public class UploadSchemaTest {
         schema.setName(name);
         schema.setSchemaType(type);
         schema.setFieldDefinitions(defs);
-        schema.setPublished(false);
         return schema;
     }
     
@@ -498,7 +495,6 @@ public class UploadSchemaTest {
         destination.setModuleId(source.getModuleId());
         destination.setModuleVersion(source.getModuleVersion());
         destination.setName(source.getName());
-        destination.setPublished(source.getPublished());
         destination.setRevision(source.getRevision());
         destination.setSchemaId(source.getSchemaId());
         destination.setSchemaType(source.getSchemaType());
@@ -506,7 +502,6 @@ public class UploadSchemaTest {
         destination.setSurveyCreatedOn(source.getSurveyCreatedOn());
         destination.setSurveyGuid(source.getSurveyGuid());
         destination.setVersion(source.getVersion());
-        destination.setPublished(source.getPublished());
         Tests.setVariableValueInObject(destination, "type", source.getType());
         return destination;
     }
