@@ -1,8 +1,8 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.SharedModuleImportStatus;
@@ -117,8 +118,6 @@ public class SharedModuleTest {
         sharedSchema = createSharedSchema();
         module = createModuleForSchema(sharedSchema);
 
-        assertFalse(sharedSchema.getPublished());
-
         // Copy to local study.
         SharedModuleImportStatus importStatus = apiDeveloper.getClient(SharedModulesApi.class)
                 .importModuleByIdAndVersion(module.getId(), module.getVersion()).execute().body();
@@ -158,8 +157,6 @@ public class SharedModuleTest {
         sharedSchema = createSharedSchema();
         module = createModuleForSchema(sharedSchema);
 
-        assertFalse(sharedSchema.getPublished());
-
         // Copy to local study.
         SharedModuleImportStatus importStatus = apiDeveloper.getClient(SharedModulesApi.class)
                 .importModuleByIdLatestPublishedVersion(module.getId()).execute().body();
@@ -194,7 +191,7 @@ public class SharedModuleTest {
     // Helper method to verify shared schema and local schema match. Because the schemas are in different studies, they
     // might not match completely, but the fields we created should match. (Be sure to test non-index-key fields.)
     private static void assertLocalSchema(UploadSchema sharedSchema, UploadSchema localSchema,
-            SharedModuleMetadata module) {
+            SharedModuleMetadata module) throws Exception {
         assertEquals(sharedSchema.getSchemaId(), localSchema.getSchemaId());
         assertEquals(sharedSchema.getRevision(), localSchema.getRevision());
         assertEquals(sharedSchema.getName(), localSchema.getName());
@@ -204,7 +201,15 @@ public class SharedModuleTest {
         assertEquals(module.getId(), localSchema.getModuleId());
         assertEquals(module.getVersion(), localSchema.getModuleVersion());
 
-        assertTrue(localSchema.getPublished());
+        // imported schemas can't be updated
+        try {
+            apiDeveloper.getClient(UploadSchemasApi.class).updateUploadSchema(localSchema.getSchemaId(),
+                    localSchema.getRevision(), localSchema).execute();
+            fail("expected exception");
+        } catch (BadRequestException ex) {
+            assertEquals("Schema " + localSchema.getSchemaId() + " was imported from a shared module and cannot be " +
+                    "modified.", ex.getMessage());
+        }
     }
 
     // Helper method to create a survey in the shared module library. Returns the created survey.
