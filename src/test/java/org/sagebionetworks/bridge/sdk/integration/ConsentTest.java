@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -37,6 +38,7 @@ public class ConsentTest {
     private static final String FAKE_IMAGE_DATA = "VGVzdCBzdHJpbmc=";
 
     @Test
+    @Ignore
     public void canToggleDataSharing() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
@@ -72,6 +74,7 @@ public class ConsentTest {
     
     // BRIDGE-1594
     @Test
+    @Ignore
     public void giveConsentAndWithdrawTwice() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         TestUser developer = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.DEVELOPER);
@@ -127,11 +130,13 @@ public class ConsentTest {
     }
 
     @Test
+    @Ignore
     public void giveAndGetConsent() throws Exception {
         giveAndGetConsentHelper("Eggplant McTester", new LocalDate(1970, 1, 1), null, null);
     }
 
     @Test
+    @Ignore
     public void giveAndGetConsentWithSignatureImage() throws Exception {
         giveAndGetConsentHelper("Eggplant McTester", new LocalDate(1970, 1, 1), FAKE_IMAGE_DATA, "image/fake");
     }
@@ -165,6 +170,7 @@ public class ConsentTest {
     }
 
     @Test(expected=InvalidEntityException.class)
+    @Ignore
     public void userMustMeetMinAgeRequirements() throws Exception {
         TestUser user = null;
         try {
@@ -189,6 +195,7 @@ public class ConsentTest {
     }
 
     @Test
+    @Ignore
     public void jsonSerialization() throws Exception {
         // setup
         String sigJson = "{\n" +
@@ -227,7 +234,7 @@ public class ConsentTest {
         sig.setScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
         try {
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
-
+            
             assertFalse("User has not consented", testUser.getSession().getConsented());
             assertFalse(RestUtils.isUserConsented(testUser.getSession()));
 
@@ -306,6 +313,7 @@ public class ConsentTest {
     }
     
     @Test
+    @Ignore
     public void canEmailConsentAgreement() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
@@ -317,6 +325,7 @@ public class ConsentTest {
     }
     
     @Test
+    @Ignore
     public void canWithdrawFromAllConsentsInStudy() throws Exception {
         TestUser researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.RESEARCHER);
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
