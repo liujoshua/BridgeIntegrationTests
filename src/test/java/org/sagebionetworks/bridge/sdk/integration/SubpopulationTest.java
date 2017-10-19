@@ -110,7 +110,7 @@ public class SubpopulationTest {
         Subpopulation subpop2 = null;
         
         TestUser user = TestUserHelper.createAndSignInUser(SubpopulationTest.class, false);
-        user.signOut();        
+        user.signOut();
         try {
             Criteria criteria1 = new Criteria();
             criteria1.getMinAppVersions().put("Android", 0);
@@ -143,8 +143,10 @@ public class SubpopulationTest {
                 assertNull(statuses.get(subpop2.getGuid()));
             }
             try {
-                user.signOut();
-                ClientManager manager = clientManager(user.getSignIn(), getClientInfoWithVersion("Android", 12));
+                user.signOut();    
+                
+                ClientManager manager = null;
+                manager = clientManager(user.getSignIn(), getClientInfoWithVersion("Android", 12));    
                 manager.getClient(AuthenticationApi.class).signIn(user.getSignIn()).execute();
                 fail("Should have thrown exception");
             } catch(ConsentRequiredException e) {

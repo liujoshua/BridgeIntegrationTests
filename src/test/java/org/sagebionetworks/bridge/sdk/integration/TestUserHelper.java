@@ -39,7 +39,7 @@ public class TestUserHelper {
     public static class TestUser {
         private SignIn signIn;
         private ClientManager manager;
-        private UserSessionInfo userSession;
+        private String userId; // try and hold onto this for the sake of cleaning up tests
 
         public TestUser(SignIn signIn, ClientManager manager) {
             checkNotNull(signIn.getStudy());
@@ -50,7 +50,7 @@ public class TestUserHelper {
             this.manager = manager;
         }
         public UserSessionInfo getSession() {
-            return userSession;
+            return manager.getSessionOfClients();
         }
         public String getEmail() {
             return signIn.getEmail();
@@ -59,7 +59,7 @@ public class TestUserHelper {
             return signIn.getPassword();
         }
         public List<Role> getRoles() {
-            return userSession.getRoles();
+            return (getSession() == null) ? null : getSession().getRoles();
         }
         public String getDefaultSubpopulation() {
             return signIn.getStudy();
@@ -73,27 +73,28 @@ public class TestUserHelper {
         public UserSessionInfo signInAgain() {
             AuthenticationApi authApi = manager.getClient(AuthenticationApi.class);
             try {
-                userSession = authApi.signIn(getSignIn()).execute().body();
-            } catch (ConsentRequiredException e) {
-                userSession = e.getSession();
-                throw e;
+                UserSessionInfo session = authApi.signIn(getSignIn()).execute().body();
+                userId = session.getId();
+                return manager.getSessionOfClients();
             } catch(IOException ioe) {
                 throw new BridgeSDKException(ioe.getMessage(), ioe);
             }
-            return userSession;
         }
         public void signOut() throws IOException {
             AuthenticationApi authApi = manager.getClient(AuthenticationApi.class);
             authApi.signOut().execute();
-            userSession.setAuthenticated(false);
         }
         public void signOutAndDeleteUser() throws IOException {
-            this.signOut();
-
-            ClientManager adminManager = new ClientManager.Builder().withSignIn(CONFIG.getAdminSignIn())
-                    .withConfig(CONFIG).withClientInfo(manager.getClientInfo()).withAcceptLanguage(LANGUAGES).build();
-            ForAdminsApi adminsApi = adminManager.getClient(ForAdminsApi.class);
-            adminsApi.deleteUser(userSession.getId()).execute();
+            if (getSession() != null) {
+                this.signOut();
+            }
+            if (userId != null) {
+                // This should sign the admin manager in automatically.
+                ClientManager adminManager = new ClientManager.Builder().withSignIn(CONFIG.getAdminSignIn())
+                        .withConfig(CONFIG).withClientInfo(manager.getClientInfo()).withAcceptLanguage(LANGUAGES).build();
+                ForAdminsApi adminsApi = adminManager.getClient(ForAdminsApi.class);
+                adminsApi.deleteUser(userId).execute();
+            }
         }
         public SignIn getSignIn() {
             return signIn;
@@ -144,7 +145,6 @@ public class TestUserHelper {
         return user;
     }
 
-    // return an non-auth user
     public static <T> T getNonAuthClient(Class<T> service) {
         ApiClientProvider provider = new ApiClientProvider(ClientManager.getUrl(CONFIG.getEnvironment()), RestUtils.getUserAgent(CLIENT_INFO), RestUtils.getAcceptLanguage(LANGUAGES));
 
@@ -227,26 +227,22 @@ public class TestUserHelper {
             ClientManager manager = new ClientManager.Builder().withConfig(admin.getConfig()).withSignIn(signIn)
                     .withClientInfo(clientInfo).withAcceptLanguage(LANGUAGES).build();
             TestUser testUser = new TestUser(signIn, manager);
-
-            UserSessionInfo userSession = null;
+            
             try {
-                try {
-                    userSession = testUser.signInAgain();
-                } catch (ConsentRequiredException e) {
-                    userSession = e.getSession();
-                    if (consentUser) {
-                        // If there's no consent but we're expecting one, that's an error.
-                        throw e;
-                    }
+                testUser.signInAgain();
+            } catch (ConsentRequiredException e) {
+                if (consentUser) {
+                    // If there's no consent but we're expecting one, that's an error.
+                    throw e;
                 }
-                return testUser;
             } catch (RuntimeException ex) {
                 // Clean up the account, so we don't end up with a bunch of leftover accounts.
-                if (userSession != null) {
-                    adminsApi.deleteUser(userSession.getId()).execute();
+                if (testUser.getSession() != null) {
+                    adminsApi.deleteUser(testUser.getSession().getId()).execute();
                 }
                 throw new BridgeSDKException(ex.getMessage(), ex);
             }
+            return testUser;
         }
     }
 }

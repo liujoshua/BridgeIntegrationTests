@@ -227,7 +227,7 @@ public class ConsentTest {
         sig.setScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
         try {
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
-
+            
             assertFalse("User has not consented", testUser.getSession().getConsented());
             assertFalse(RestUtils.isUserConsented(testUser.getSession()));
 
