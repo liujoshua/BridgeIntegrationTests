@@ -3,7 +3,9 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Map;
 
@@ -19,8 +21,10 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.HealthDataApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.DataType;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
@@ -28,6 +32,7 @@ import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.HealthDataSubmission;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyQuestion;
@@ -36,6 +41,7 @@ import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
+import org.sagebionetworks.bridge.rest.model.UploadValidationStrictness;
 
 @Category(IntegrationSmokeTest.class)
 @SuppressWarnings("unchecked")
@@ -49,6 +55,7 @@ public class HealthDataTest {
     private static final String SURVEY_ID = "health-data-integ-test-survey";
 
     private static String externalId;
+    private static StudiesApi studiesApi;
     private static DateTime surveyCreatedOn;
     private static String surveyGuid;
     private static TestUserHelper.TestUser user;
@@ -56,6 +63,7 @@ public class HealthDataTest {
     @BeforeClass
     public static void beforeClass() throws Exception {
         TestUserHelper.TestUser developer = TestUserHelper.getSignedInApiDeveloper();
+        studiesApi = developer.getClient(StudiesApi.class);
 
         // Ensure schema exists, so we have something to submit against.
         UploadSchemasApi uploadSchemasApi = developer.getClient(UploadSchemasApi.class);
@@ -66,16 +74,19 @@ public class HealthDataTest {
             // no-op
         }
         if (schema == null) {
+            // Set both fields to explicitly true, to test validation.
             UploadFieldDefinition fooField = new UploadFieldDefinition();
             fooField.setName("foo");
             fooField.setType(UploadFieldType.STRING);
             fooField.setMaxLength(24);
+            fooField.setRequired(true);
 
             UploadFieldDefinition barField = new UploadFieldDefinition();
             barField.setName("bar");
             barField.setType(UploadFieldType.ATTACHMENT_V2);
             barField.setMimeType("text/json");
             barField.setFileExtension(".json");
+            barField.setRequired(true);
 
             schema = new UploadSchema();
             schema.setSchemaId(SCHEMA_ID);
@@ -140,8 +151,23 @@ public class HealthDataTest {
         }
     }
 
+    @AfterClass
+    public static void resetUploadValidationStrictness() throws Exception {
+        // Some of these tests change the strictness for the test. Reset it to REPORT.
+        setUploadValidationStrictness(UploadValidationStrictness.REPORT);
+    }
+
+    private static void setUploadValidationStrictness(UploadValidationStrictness strictness) throws Exception {
+        Study study = studiesApi.getUsersStudy().execute().body();
+        study.setUploadValidationStrictness(strictness);
+        studiesApi.updateUsersStudy(study).execute();
+    }
+
     @Test
     public void submitBySchema() throws Exception {
+        // Set study to strict validation, so we throw if validation fails.
+        setUploadValidationStrictness(UploadValidationStrictness.STRICT);
+
         // make health data to submit - Use a map instead of a Jackson JSON node, because mixing JSON libraries causes
         // bad things to happen.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value")
@@ -206,5 +232,61 @@ public class HealthDataTest {
         Map<String, String> returnedDataMap = RestUtils.toType(record.getData(), Map.class);
         assertEquals(1, returnedDataMap.size());
         assertEquals("C", returnedDataMap.get("answer-me"));
+    }
+
+    @Test
+    public void strictValidationThrows() throws Exception {
+        setUploadValidationStrictness(UploadValidationStrictness.STRICT);
+
+        // Make health data. This submission has foo, but not bar. Since bar is required, this trips Strict Validation.
+        Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value").build();
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
+                .data(data).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
+
+        // submit and catch exception
+        try {
+            user.getClient(HealthDataApi.class).submitHealthData(submission).execute().body();
+            fail("expected exception");
+        } catch (BadRequestException ex) {
+            assertTrue(ex.getMessage().contains("Required attachment field bar missing"));
+        }
+    }
+
+    @Test
+    public void reportStrictnessHasErrorMessage() throws Exception {
+        setUploadValidationStrictness(UploadValidationStrictness.REPORT);
+
+        // Make health data. This submission has foo, but not bar. Since bar is required, this trips Strict Validation.
+        Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value").build();
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
+                .data(data).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
+
+        // submit and validate - Most of the record attributes are already validated in the previous test. Just
+        // validate data and validationErrors.
+        HealthDataRecord record = user.getClient(HealthDataApi.class).submitHealthData(submission).execute().body();
+        assertTrue(record.getValidationErrors().contains("Required attachment field bar missing"));
+
+        Map<String, String> returnedDataMap = RestUtils.toType(record.getData(), Map.class);
+        assertEquals(1, returnedDataMap.size());
+        assertEquals("foo value", returnedDataMap.get("foo"));
+    }
+
+    @Test
+    public void warningStrictnessHasNoExceptionNorErrorMessage() throws Exception {
+        setUploadValidationStrictness(UploadValidationStrictness.WARNING);
+
+        // Make health data. This submission has foo, but not bar. Since bar is required, this trips Strict Validation.
+        Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value").build();
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
+                .data(data).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
+
+        // submit and validate - Most of the record attributes are already validated in the previous test. Just
+        // validate data and validate that it has no validationErrors.
+        HealthDataRecord record = user.getClient(HealthDataApi.class).submitHealthData(submission).execute().body();
+        assertNull(record.getValidationErrors());
+
+        Map<String, String> returnedDataMap = RestUtils.toType(record.getData(), Map.class);
+        assertEquals(1, returnedDataMap.size());
+        assertEquals("foo value", returnedDataMap.get("foo"));
     }
 }
