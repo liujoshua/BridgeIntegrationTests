@@ -32,6 +32,7 @@ import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
+import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
@@ -199,7 +200,7 @@ public class ParticipantsTest {
     @Test
     public void crudParticipant() throws Exception {
         String email = Tests.makeEmail(ParticipantsTest.class);
-        Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("phone","123-456-7890").build();
+        Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("can_be_recontacted","true").build();
         List<String> languages = Lists.newArrayList("en","fr");
         List<String> dataGroups = Lists.newArrayList("sdk-int-1", "sdk-int-2");
         DateTime createdOn;
@@ -209,6 +210,8 @@ public class ParticipantsTest {
         participant.setLastName("LastName");
         participant.setPassword("P@ssword1!");
         participant.setEmail(email);
+        Phone phone = new Phone().number("4082588569").regionCode("US");
+        participant.setPhone(phone);
         participant.setExternalId("externalID");
         participant.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
         // BRIDGE-1604: leave notifyByEmail to its default value (should be true)
@@ -242,14 +245,20 @@ public class ParticipantsTest {
             assertTrue(retrieved.getNotifyByEmail());
             assertListsEqualIgnoringOrder(dataGroups, retrieved.getDataGroups());
             assertListsEqualIgnoringOrder(languages, retrieved.getLanguages());
-            assertEquals(attributes.get("phone"), retrieved.getAttributes().get("phone"));
+            assertEquals(attributes.get("can_be_recontacted"), retrieved.getAttributes().get("can_be_recontacted"));
             assertEquals(AccountStatus.UNVERIFIED, retrieved.getStatus());
             assertNotNull(retrieved.getCreatedOn());
             assertNotNull(retrieved.getId());
+            Phone retrievedPhone = retrieved.getPhone();
+            assertEquals("+14082588569", retrievedPhone.getNumber());
+            assertEquals("(408) 258-8569", retrievedPhone.getNationalFormat());
+            assertEquals("US", retrievedPhone.getRegionCode());
+            assertFalse(retrieved.getEmailVerified());
+            assertFalse(retrieved.getPhoneVerified());
             createdOn = retrieved.getCreatedOn();
             
             // Update the user. Identified by the email address
-            Map<String,String> newAttributes = new ImmutableMap.Builder<String,String>().put("phone","206-555-1212").build();
+            Map<String,String> newAttributes = new ImmutableMap.Builder<String,String>().put("can_be_recontacted","206-555-1212").build();
             List<String> newLanguages = Lists.newArrayList("de","sw");
             List<String> newDataGroups = Lists.newArrayList("group1");
             
@@ -264,6 +273,11 @@ public class ParticipantsTest {
             newParticipant.setLanguages(newLanguages);
             newParticipant.setAttributes(newAttributes);
             newParticipant.setStatus(AccountStatus.ENABLED);
+            // This should not work.
+            newParticipant.setEmailVerified(Boolean.TRUE);
+            newParticipant.setPhoneVerified(Boolean.TRUE);
+            Phone newPhone = new Phone().number("4152588569").regionCode("CA");
+            newParticipant.setPhone(newPhone);
             
             participantsApi.updateParticipant(id, newParticipant).execute();
             
@@ -275,6 +289,12 @@ public class ParticipantsTest {
             assertEquals("FirstName2", retrieved.getFirstName());
             assertEquals("LastName2", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail());
+            retrievedPhone = retrieved.getPhone();
+            assertEquals("+14082588569", retrievedPhone.getNumber());
+            assertEquals("US", retrievedPhone.getRegionCode());
+            assertEquals("(408) 258-8569", retrievedPhone.getNationalFormat());
+            assertFalse(retrieved.getEmailVerified());
+            assertFalse(retrieved.getPhoneVerified());
             assertEquals("externalID2", retrieved.getExternalId());
             assertEquals(SharingScope.NO_SHARING, retrieved.getSharingScope());
             // BRIDGE-1604: should still be true, even though it was not sent to the server. Through participants API 
@@ -282,7 +302,7 @@ public class ParticipantsTest {
             assertListsEqualIgnoringOrder(newDataGroups, retrieved.getDataGroups());
             assertListsEqualIgnoringOrder(newLanguages, retrieved.getLanguages());
             assertEquals(id, retrieved.getId());
-            assertEquals(newAttributes.get("phone"), retrieved.getAttributes().get("phone"));
+            assertEquals(newAttributes.get("can_be_recontacted"), retrieved.getAttributes().get("can_be_recontacted"));
             assertEquals(AccountStatus.UNVERIFIED, retrieved.getStatus()); // researchers cannot enable users
             assertEquals(createdOn, retrieved.getCreatedOn()); // hasn't been changed, still exists
         } finally {

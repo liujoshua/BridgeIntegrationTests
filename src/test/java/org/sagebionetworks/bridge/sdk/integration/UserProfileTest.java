@@ -48,7 +48,7 @@ public class UserProfileTest {
         newParticipant.setNotifyByEmail(null);
         
         JsonElement node = new Gson().toJsonTree(newParticipant);
-        node.getAsJsonObject().addProperty("phone", "206-555-1212");
+        node.getAsJsonObject().addProperty("can_be_recontacted", "true");
         String json = new Gson().toJson(node);
         
         Request request = new Request.Builder().url(testUser.getClientManager().getHostUrl() + "/v3/users/self")
@@ -67,7 +67,7 @@ public class UserProfileTest {
         assertEquals("FirstName2", participant.getFirstName());
         assertEquals("LastName2", participant.getLastName());
         assertTrue(participant.getNotifyByEmail()); // NOT CHANGED
-        assertEquals("206-555-1212", participant.getAttributes().get("phone"));
+        assertEquals("true", participant.getAttributes().get("can_be_recontacted"));
     }
     
 }
