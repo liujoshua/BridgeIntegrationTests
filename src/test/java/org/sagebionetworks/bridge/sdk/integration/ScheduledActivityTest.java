@@ -364,7 +364,8 @@ public class ScheduledActivityTest {
         
         // If we ask for a date range that doesn't include it, it is not returned.
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
-                DateTime.now().plusDays(10), DateTime.now().plusDays(12), null, 5).execute().body();
+                DateTime.now(DateTimeZone.UTC).plusDays(10), DateTime.now(DateTimeZone.UTC).plusDays(12), null, 5)
+                .execute().body();
         assertTrue(list.getItems().isEmpty());
         
         // Start the activity.
