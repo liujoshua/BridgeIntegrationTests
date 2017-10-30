@@ -48,6 +48,8 @@ import org.sagebionetworks.bridge.rest.model.TaskReference;
 @SuppressWarnings("ConstantConditions")
 public class ScheduledActivityTest {
     
+    private static final DateTimeZone EST = DateTimeZone.forOffsetHours(-5);
+    
     public static class ClientData {
         final String name;
         final boolean enabled;
@@ -239,7 +241,7 @@ public class ScheduledActivityTest {
         monthlyAfterOneMonthSchedule();
         
         // Get scheduled activities. Validate basic properties.
-        ScheduledActivityList scheduledActivities = usersApi.getScheduledActivities("+00:00", 4, 0).execute().body();
+        ScheduledActivityList scheduledActivities = usersApi.getScheduledActivities("-05:00", 4, 0).execute().body();
         ScheduledActivity schActivity = findOneTimeActivity(scheduledActivities.getItems());
         assertNotNull(schActivity);
         assertEquals(ScheduleStatus.SCHEDULED, schActivity.getStatus());
@@ -251,8 +253,8 @@ public class ScheduledActivityTest {
         assertEquals(oneTimeActivityLabel, activity.getLabel());
         assertEquals("task:AAA", activity.getTask().getIdentifier());
 
-        DateTime startDateTime = DateTime.now(DateTimeZone.UTC).minusDays(10);
-        DateTime endDateTime = DateTime.now(DateTimeZone.UTC).plusDays(10);
+        DateTime startDateTime = DateTime.now(EST).minusDays(10);
+        DateTime endDateTime = DateTime.now(EST).plusDays(10);
 
         // You can see this activity in history...
         ForwardCursorScheduledActivityList list = usersApi.getActivityHistory(activity.getGuid(),
@@ -276,7 +278,7 @@ public class ScheduledActivityTest {
         
         // If we ask for a date range that doesn't include it, it is not returned.
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
-                DateTime.now().plusDays(10), DateTime.now().plusDays(12), null, 5).execute().body();
+                DateTime.now(EST).plusDays(10), DateTime.now(EST).plusDays(12), null, 5).execute().body();
         assertTrue(list.getItems().isEmpty());
         
         // Start the activity.
@@ -321,8 +323,7 @@ public class ScheduledActivityTest {
         monthlyAfterOneMonthSchedule();
         
         // Get scheduled activities. Validate basic properties.
-        DateTimeZone zone = DateTimeZone.forOffsetHours(4);
-        DateTime startsOn = DateTime.now(zone);
+        DateTime startsOn = DateTime.now(EST);
         DateTime endsOn = startsOn.plusDays(4);
         
         ScheduledActivityListV4 scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
@@ -363,8 +364,10 @@ public class ScheduledActivityTest {
         assertEquals(endDateTime, list.getRequestParams().getScheduledOnEnd());
         
         // If we ask for a date range that doesn't include it, it is not returned.
+        // This started failing around the time zone shift, we have to fix the time zone or we'll get a server error.
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
-                DateTime.now().plusDays(10), DateTime.now().plusDays(12), null, 5).execute().body();
+                DateTime.now(DateTimeZone.UTC).plusDays(10), DateTime.now(DateTimeZone.UTC).plusDays(12), null, 5)
+                .execute().body();
         assertTrue(list.getItems().isEmpty());
         
         // Start the activity.

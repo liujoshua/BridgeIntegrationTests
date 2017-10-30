@@ -77,7 +77,7 @@ public class SignInTest {
         AuthenticationApi authApi = researcher.getClient(AuthenticationApi.class);
         
         Map<String,String> map = Maps.newHashMap();
-        map.put("phone", "123-345-5768");
+        map.put("can_be_recontacted", "true");
 
         String email = Tests.makeEmail(SignInTest.class);
 
@@ -112,7 +112,7 @@ public class SignInTest {
         assertTrue(retrieved.getNotifyByEmail());
         assertEquals(Lists.newArrayList("group1"), retrieved.getDataGroups());
         assertEquals(Lists.newArrayList("en"), retrieved.getLanguages());
-        assertEquals("123-345-5768", retrieved.getAttributes().get("phone"));
+        assertEquals("true", retrieved.getAttributes().get("can_be_recontacted"));
         
         TestUser admin = TestUserHelper.getSignedInAdmin();
         admin.getClient(ForAdminsApi.class).deleteUser(retrieved.getId()).execute();
