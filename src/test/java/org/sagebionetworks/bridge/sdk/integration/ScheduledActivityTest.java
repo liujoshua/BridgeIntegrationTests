@@ -17,7 +17,6 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -198,7 +197,6 @@ public class ScheduledActivityTest {
     }
     
     @Test
-    @Ignore
     public void getScheduledActivityHistoryV4() throws InterruptedException, IOException {
         dailyTaskAt4Times();
         
@@ -236,7 +234,6 @@ public class ScheduledActivityTest {
     }
     
     @Test
-    @Ignore
     public void createSchedulePlanGetScheduledActivities() throws Exception {
         oneTimeScheduleAfter3Days();
         monthlyAfterOneMonthSchedule();
@@ -410,7 +407,6 @@ public class ScheduledActivityTest {
     }
     
     @Test
-    @Ignore
     public void getScheduledActivitiesWithMinimumActivityValue() throws Exception {
         oneTimeScheduleAfter3Days();
         monthlyAfterOneMonthSchedule();
