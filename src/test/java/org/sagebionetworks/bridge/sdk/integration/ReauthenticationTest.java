@@ -75,8 +75,7 @@ public class ReauthenticationTest {
         // You can re-authenticate.
         String oldSessionToken = session.getSessionToken();
         String reauthToken = session.getReauthToken();
-        ReauthenticateRequest request = new ReauthenticateRequest().study(user.getStudyId())
-                .email(user.getSession().getEmail()).reauthToken(reauthToken);
+        ReauthenticateRequest request = new ReauthenticateRequest().reauthToken(reauthToken);
         
         AuthenticationApi authApi = user.getClient(AuthenticationApi.class);
         UserSessionInfo newSession = authApi.reauthenticate(request).execute().body();

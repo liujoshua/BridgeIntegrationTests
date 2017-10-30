@@ -15,13 +15,11 @@ import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Email;
-import org.sagebionetworks.bridge.rest.model.EmailSignIn;
 import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.rest.exceptions.LimitExceededException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -70,13 +68,6 @@ public class AuthenticationTest {
             assertTrue(study.getEmailSignInEnabled());
             
             authApi.requestEmailSignIn(emailSignInRequest).execute();
-            
-            // Do it again immediately, this should throw a LimitExceededException
-            try {
-                authApi.requestEmailSignIn(emailSignInRequest).execute();
-                fail("Should have thrown exception.");
-            } catch(LimitExceededException e) {
-            }
         } finally {
             study.setEmailSignInEnabled(false);
             adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
@@ -87,8 +78,7 @@ public class AuthenticationTest {
     public void emailSignIn() throws Exception {
         // We can't read the email from the test in order to extract a useful token, but we
         // can verify this call is made and fails as we'd expect.
-        EmailSignIn emailSignIn = new EmailSignIn()
-                .study(testUser.getStudyId()).email(testUser.getEmail()).token("ABD");
+        SignIn emailSignIn = new SignIn().token("ABD");
         try {
             authApi.signInViaEmail(emailSignIn).execute();
             fail("Should have thrown exception");
