@@ -14,7 +14,9 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.LimitExceededException;
 import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.EmailSignIn;
 import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -68,6 +70,13 @@ public class AuthenticationTest {
             assertTrue(study.getEmailSignInEnabled());
             
             authApi.requestEmailSignIn(emailSignInRequest).execute();
+            
+            // Do it again immediately, this should throw a LimitExceededException
+            try {
+                authApi.requestEmailSignIn(emailSignInRequest).execute();
+                fail("Should have thrown exception.");
+            } catch(LimitExceededException e) {
+            }            
         } finally {
             study.setEmailSignInEnabled(false);
             adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
@@ -78,7 +87,8 @@ public class AuthenticationTest {
     public void emailSignIn() throws Exception {
         // We can't read the email from the test in order to extract a useful token, but we
         // can verify this call is made and fails as we'd expect.
-        SignIn emailSignIn = new SignIn().token("ABD");
+        EmailSignIn emailSignIn = new EmailSignIn()
+                .study(testUser.getStudyId()).email(testUser.getEmail()).token("ABD");
         try {
             authApi.signInViaEmail(emailSignIn).execute();
             fail("Should have thrown exception");
