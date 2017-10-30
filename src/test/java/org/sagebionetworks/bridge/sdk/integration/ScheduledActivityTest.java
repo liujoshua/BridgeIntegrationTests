@@ -364,8 +364,9 @@ public class ScheduledActivityTest {
         assertEquals(endDateTime, list.getRequestParams().getScheduledOnEnd());
         
         // If we ask for a date range that doesn't include it, it is not returned.
+        // This started failing around the time zone shift, we have to fix the time zone or we'll get a server error.
         list = participantsApi.getParticipantActivityHistory(user.getSession().getId(), activity.getGuid(),
-                DateTime.now(EST).plusDays(10), DateTime.now(EST).plusDays(12), null, 5)
+                DateTime.now(DateTimeZone.UTC).plusDays(10), DateTime.now(DateTimeZone.UTC).plusDays(12), null, 5)
                 .execute().body();
         assertTrue(list.getItems().isEmpty());
         
