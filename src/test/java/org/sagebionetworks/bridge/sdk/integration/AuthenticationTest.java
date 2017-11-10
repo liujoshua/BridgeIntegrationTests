@@ -15,12 +15,10 @@ import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
-import org.sagebionetworks.bridge.rest.exceptions.LimitExceededException;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.EmailSignIn;
 import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
 import org.sagebionetworks.bridge.rest.model.Message;
-import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.PhoneSignIn;
 import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
 import org.sagebionetworks.bridge.rest.model.SignIn;
@@ -42,8 +40,6 @@ import static org.junit.Assert.fail;
 @Category(IntegrationSmokeTest.class)
 public class AuthenticationTest {
 
-    public static final Phone PHONE = new Phone().number("9174267643").regionCode("US");
-
     private static TestUser testUser;
     private static TestUser adminUser;
     private static TestUser phoneOnlyTestUser;
@@ -53,7 +49,7 @@ public class AuthenticationTest {
     @BeforeClass
     public static void beforeClass() throws IOException {
         // Make a test user with a phone number.
-        SignUp phoneOnlyUser = new SignUp().study(Tests.TEST_KEY).consent(true).phone(PHONE);
+        SignUp phoneOnlyUser = new SignUp().study(Tests.TEST_KEY).consent(true).phone(Tests.PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(AuthenticationTest.class).withConsentUser(true)
                 .withSignUp(phoneOnlyUser).withSetPassword(false).createUser();
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
@@ -216,7 +212,7 @@ public class AuthenticationTest {
     public void requestPhoneSignInWithPhone() throws Exception {
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
 
-        PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().phone(PHONE).study(phoneOnlyTestUser.getStudyId());
+        PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().phone(Tests.PHONE).study(phoneOnlyTestUser.getStudyId());
 
         Response<Message> response = authApi.requestPhoneSignIn(phoneSignIn).execute();
         assertEquals(202, response.code());
@@ -226,7 +222,7 @@ public class AuthenticationTest {
     public void phoneSignInThrows() throws Exception {
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
 
-        PhoneSignIn phoneSignIn = new PhoneSignIn().phone(PHONE).study(phoneOnlyTestUser.getStudyId()).token("test-token");
+        PhoneSignIn phoneSignIn = new PhoneSignIn().phone(Tests.PHONE).study(phoneOnlyTestUser.getStudyId()).token("test-token");
 
         authApi.signInViaPhone(phoneSignIn).execute();
     }

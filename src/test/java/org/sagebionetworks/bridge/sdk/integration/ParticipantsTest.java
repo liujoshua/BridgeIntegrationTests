@@ -8,15 +8,16 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -210,8 +211,7 @@ public class ParticipantsTest {
         participant.setLastName("LastName");
         participant.setPassword("P@ssword1!");
         participant.setEmail(email);
-        Phone phone = new Phone().number("4082588569").regionCode("US");
-        participant.setPhone(phone);
+        participant.setPhone(Tests.PHONE);
         participant.setExternalId("externalID");
         participant.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
         // BRIDGE-1604: leave notifyByEmail to its default value (should be true)
@@ -250,8 +250,8 @@ public class ParticipantsTest {
             assertNotNull(retrieved.getCreatedOn());
             assertNotNull(retrieved.getId());
             Phone retrievedPhone = retrieved.getPhone();
-            assertEquals("+14082588569", retrievedPhone.getNumber());
-            assertEquals("(408) 258-8569", retrievedPhone.getNationalFormat());
+            assertEquals(Tests.PHONE.getNumber(), retrievedPhone.getNumber());
+            assertEquals(Tests.PHONE.getNationalFormat(), retrievedPhone.getNationalFormat());
             assertEquals("US", retrievedPhone.getRegionCode());
             assertFalse(retrieved.getEmailVerified());
             assertFalse(retrieved.getPhoneVerified());
@@ -290,9 +290,9 @@ public class ParticipantsTest {
             assertEquals("LastName2", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail());
             retrievedPhone = retrieved.getPhone();
-            assertEquals("+14082588569", retrievedPhone.getNumber());
+            assertEquals(Tests.PHONE.getNumber(), retrievedPhone.getNumber());
             assertEquals("US", retrievedPhone.getRegionCode());
-            assertEquals("(408) 258-8569", retrievedPhone.getNationalFormat());
+            assertEquals(Tests.PHONE.getNationalFormat(), retrievedPhone.getNationalFormat());
             assertFalse(retrieved.getEmailVerified());
             assertFalse(retrieved.getPhoneVerified());
             assertEquals("externalID2", retrieved.getExternalId());
