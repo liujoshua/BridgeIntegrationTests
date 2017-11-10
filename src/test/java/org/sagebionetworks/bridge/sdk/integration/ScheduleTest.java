@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 import org.junit.After;
 import org.junit.Before;
@@ -92,9 +93,9 @@ public class ScheduleTest {
         
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         
-        String scheduledOn1 = LocalDate.now().toString() + "T14:00:00.000Z";
-        String scheduledOn2 = LocalDate.now().plusDays(1).toString() + "T14:00:00.000Z";
-        String scheduledOn3 = LocalDate.now().plusDays(2).toString() + "T14:00:00.000Z";
+        String scheduledOn1 = LocalDate.now(DateTimeZone.UTC).toString() + "T14:00:00.000Z";
+        String scheduledOn2 = LocalDate.now(DateTimeZone.UTC).plusDays(1).toString() + "T14:00:00.000Z";
+        String scheduledOn3 = LocalDate.now(DateTimeZone.UTC).plusDays(2).toString() + "T14:00:00.000Z";
         
         ScheduledActivityList scheduledActivityList = usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
         List<ScheduledActivity> list = Tests.filterActivitiesForLabel(scheduledActivityList.getItems(), randomLabel);

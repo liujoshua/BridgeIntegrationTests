@@ -41,13 +41,12 @@ public class TestUserHelper {
         private ClientManager manager;
         private String userId; // try and hold onto this for the sake of cleaning up tests
 
-        public TestUser(SignIn signIn, ClientManager manager) {
+        public TestUser(SignIn signIn, ClientManager manager, String userId) {
             checkNotNull(signIn.getStudy());
-            checkNotNull(signIn.getEmail());
-            checkNotNull(signIn.getPassword());
             checkNotNull(manager);
             this.signIn = signIn;
             this.manager = manager;
+            this.userId = userId; // if this is null, we will try and get it on a sign in
         }
         public UserSessionInfo getSession() {
             return manager.getSessionOfClients();
@@ -140,7 +139,7 @@ public class TestUserHelper {
     public static TestUser getSignedInUser(SignIn signIn) {
         ClientManager manager = new ClientManager.Builder().withSignIn(signIn).withConfig(CONFIG)
                 .withClientInfo(CLIENT_INFO).withAcceptLanguage(LANGUAGES).build();
-        TestUser user = new TestUser(signIn, manager);
+        TestUser user = new TestUser(signIn, manager, null);
         user.signInAgain();
         return user;
     }
@@ -162,6 +161,7 @@ public class TestUserHelper {
         private Class<?> cls;
         private boolean consentUser;
         private SignUp signUp;
+        private boolean setPassword = true;
         private ClientInfo clientInfo;
         private Set<Role> roles = new HashSet<>();
         
@@ -183,13 +183,17 @@ public class TestUserHelper {
             }
             return this;
         }
-        
+        public Builder withSetPassword(boolean setPassword) {
+            this.setPassword = setPassword;
+            return this;
+        }
+
         public Builder(Class<?> cls) {
             checkNotNull(cls);
             this.cls = cls;
         }
         
-        public TestUser createAndSignInUser() throws IOException {
+        public TestUser createUser() throws IOException {
             if (clientInfo == null) {
                 clientInfo = CLIENT_INFO;
             }
@@ -212,21 +216,28 @@ public class TestUserHelper {
             if (signUp == null) {
                 signUp = new SignUp();
             }
-            if (signUp.getEmail() == null) {
+            // If we haven't specified either identifier, provide an email address.
+            if (signUp.getEmail() == null && signUp.getPhone() == null) {
                 signUp.email(emailAddress);
+            }
+            if (setPassword) {
+                signUp.setPassword(PASSWORD);    
             }
             signUp.setStudy(Tests.TEST_KEY);
             signUp.setRoles(new ArrayList<>(rolesList));
-            signUp.setPassword(PASSWORD);
             signUp.setConsent(consentUser);
-            adminsApi.createUser(signUp).execute().body();    
+            UserSessionInfo info = adminsApi.createUser(signUp).execute().body();
 
-            SignIn signIn = new SignIn().study(signUp.getStudy()).email(signUp.getEmail())
+            SignIn signIn = new SignIn().study(signUp.getStudy()).phone(signUp.getPhone()).email(signUp.getEmail())
                     .password(signUp.getPassword());
             
             ClientManager manager = new ClientManager.Builder().withConfig(admin.getConfig()).withSignIn(signIn)
                     .withClientInfo(clientInfo).withAcceptLanguage(LANGUAGES).build();
-            TestUser testUser = new TestUser(signIn, manager);
+            return new TestUser(signIn, manager, info.getId());
+        }
+        
+        public TestUser createAndSignInUser() throws IOException {
+            TestUser testUser = createUser();
             
             try {
                 testUser.signInAgain();
@@ -238,6 +249,9 @@ public class TestUserHelper {
             } catch (RuntimeException ex) {
                 // Clean up the account, so we don't end up with a bunch of leftover accounts.
                 if (testUser.getSession() != null) {
+                    TestUser admin = getSignedInAdmin();
+                    ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+                    
                     adminsApi.deleteUser(testUser.getSession().getId()).execute();
                 }
                 throw new BridgeSDKException(ex.getMessage(), ex);
