@@ -33,7 +33,7 @@ public class Tests {
     private static final Config CONFIG = new Config();
     public static final String APP_NAME = "Integration Tests";
     public static final String TEST_KEY = "api";
-    public static final Phone PHONE = new Phone().number("9712486796").regionCode("US");
+    public static final Phone PHONE = new Phone().number("+19712486796").regionCode("US");
     
     public static final EmailTemplate TEST_RESET_PASSWORD_TEMPLATE = new EmailTemplate().subject("Reset your password")
         .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
