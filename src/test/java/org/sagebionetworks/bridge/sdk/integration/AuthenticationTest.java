@@ -144,7 +144,7 @@ public class AuthenticationTest {
             study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
             study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
             study.setEmailVerificationEnabled(true);
-
+            
             adminsApi.createStudy(study).execute();
 
             // Can we sign in to secondstudy? No.
@@ -173,7 +173,7 @@ public class AuthenticationTest {
         HttpResponse response = Request.Post(hostUrl + "/api/v1/auth/verifyEmail?study=api")
                 .body(new StringEntity("{\"sptoken\":\"testtoken\",\"study\":\"api\"}")).execute().returnResponse();
         assertEquals(400, response.getStatusLine().getStatusCode());
-
+        
         JsonNode node = new ObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
         assertEquals("Email verification token has expired (or already been used).", node.get("message").asText());
     }
@@ -185,15 +185,15 @@ public class AuthenticationTest {
         TestUser testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         try {
             testUser.signOut();
-
+            
             // Now create the same user in terms of a sign up (same email).
             SignUp signUp = new SignUp().study(testUser.getStudyId()).email(testUser.getEmail())
                     .password(testUser.getPassword());
-
+            
             // This should not throw an exception.
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             authApi.signUp(signUp).execute();
-
+            
         } finally {
             testUser.signOutAndDeleteUser();
         }
