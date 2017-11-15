@@ -251,7 +251,8 @@ public class ParticipantsTest {
             assertNotNull(retrieved.getId());
             Phone retrievedPhone = retrieved.getPhone();
             assertEquals(Tests.PHONE.getNumber(), retrievedPhone.getNumber());
-            assertEquals(Tests.PHONE.getNationalFormat(), retrievedPhone.getNationalFormat());
+            // Tests.PHONE.getNationalFormat() isn't formatted on the client, so we have to hard-code it.
+            assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
             assertEquals("US", retrievedPhone.getRegionCode());
             assertFalse(retrieved.getEmailVerified());
             assertFalse(retrieved.getPhoneVerified());
