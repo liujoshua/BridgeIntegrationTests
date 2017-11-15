@@ -293,7 +293,7 @@ public class ParticipantsTest {
             retrievedPhone = retrieved.getPhone();
             assertEquals(Tests.PHONE.getNumber(), retrievedPhone.getNumber());
             assertEquals("US", retrievedPhone.getRegionCode());
-            assertEquals(Tests.PHONE.getNationalFormat(), retrievedPhone.getNationalFormat());
+            assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
             assertFalse(retrieved.getEmailVerified());
             assertFalse(retrieved.getPhoneVerified());
             assertEquals("externalID2", retrieved.getExternalId());
