@@ -24,6 +24,7 @@ import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,7 +46,7 @@ public class AuthenticationTest {
     private static TestUser phoneOnlyTestUser;
     private static AuthenticationApi authApi;
     private static StudiesApi adminStudiesApi;
-
+    
     @BeforeClass
     public static void beforeClass() throws IOException {
         // Make a test user with a phone number.
@@ -54,11 +55,11 @@ public class AuthenticationTest {
                 .withSignUp(phoneOnlyUser).withSetPassword(false).createUser();
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         authApi = testUser.getClient(AuthenticationApi.class);
-
+        
         adminUser = TestUserHelper.getSignedInAdmin();
         adminStudiesApi = adminUser.getClient(StudiesApi.class);
     }
-
+    
     @AfterClass
     public static void afterClass() throws Exception {
         try {
@@ -67,7 +68,7 @@ public class AuthenticationTest {
             phoneOnlyTestUser.signOutAndDeleteUser();
         }
     }
-
+    
     @Test
     public void requestEmailSignIn() throws Exception {
         EmailSignInRequest emailSignInRequest = new EmailSignInRequest().study(testUser.getStudyId())
@@ -77,19 +78,19 @@ public class AuthenticationTest {
             // Turn on email-based sign in for test. We can't verify the email was sent... we can verify this call
             // works and returns the right error conditions.
             study.setEmailSignInEnabled(true);
-
+            
             // Bug: this call does not return VersionHolder (BRIDGE-1809). Retrieve study again.
             adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
             study = adminStudiesApi.getStudy(testUser.getStudyId()).execute().body();
             assertTrue(study.getEmailSignInEnabled());
-
+            
             authApi.requestEmailSignIn(emailSignInRequest).execute();
         } finally {
             study.setEmailSignInEnabled(false);
             adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
         }
     }
-
+    
     @Test
     public void emailSignIn() throws Exception {
         // We can't read the email from the test in order to extract a useful token, but we
@@ -102,28 +103,28 @@ public class AuthenticationTest {
         } catch (AuthenticationFailedException e) {
         }
     }
-
+    
     @Test
     public void canResendEmailVerification() throws IOException {
         Email email = new Email().study(testUser.getSignIn().getStudy()).email(testUser.getSignIn().getEmail());
 
         authApi.resendEmailVerification(email).execute();
     }
-
+    
     @Test
     public void resendingEmailVerificationToUnknownEmailDoesNotThrowException() throws Exception {
         Email email = new Email().study(testUser.getStudyId()).email("bridge-testing@sagebase.org");
-
+        
         authApi.resendEmailVerification(email).execute();
     }
-
+    
     @Test
     public void requestingResetPasswordForUnknownEmailDoesNotThrowException() throws Exception {
         Email email = new Email().study(testUser.getStudyId()).email("fooboo-sagebridge@antwerp.com");
-
+        
         authApi.requestResetPassword(email).execute();
     }
-
+    
     @Test
     public void accountWithOneStudySeparateFromAccountWithSecondStudy() throws IOException {
         TestUser adminUser = TestUserHelper.getSignedInAdmin();
@@ -151,9 +152,9 @@ public class AuthenticationTest {
                 SignIn otherStudySignIn = new SignIn().study(studyId).email(testUser.getEmail())
                         .password(testUser.getPassword());
                 ClientManager otherStudyManager = new ClientManager.Builder().withSignIn(otherStudySignIn).build();
-
+                
                 AuthenticationApi authClient = otherStudyManager.getClient(AuthenticationApi.class);
-
+                
                 authClient.signIn(otherStudySignIn).execute();
                 fail("Should not have allowed sign in");
             } catch (EntityNotFoundException e) {
@@ -163,7 +164,7 @@ public class AuthenticationTest {
             adminsApi.deleteStudy(studyId, true).execute();
         }
     }
-
+    
     // BRIDGE-465. We can at least verify that it gets processed as an error.
     @Test
     public void emailVerificationThrowsTheCorrectError() throws Exception {
@@ -197,7 +198,7 @@ public class AuthenticationTest {
             testUser.signOutAndDeleteUser();
         }
     }
-
+    
     @Test(expected = InvalidEntityException.class)
     public void requestPhoneSignInWithoutPhone() throws Exception {
         AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
@@ -211,8 +212,9 @@ public class AuthenticationTest {
     @Test
     public void requestPhoneSignInWithPhone() throws Exception {
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
-
-        PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().phone(Tests.PHONE).study(phoneOnlyTestUser.getStudyId());
+        
+        PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().phone(Tests.PHONE)
+                .study(phoneOnlyTestUser.getStudyId());
 
         Response<Message> response = authApi.requestPhoneSignIn(phoneSignIn).execute();
         assertEquals(202, response.code());
