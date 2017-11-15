@@ -4,6 +4,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.Email;
@@ -69,7 +70,7 @@ public class SignUpTest {
         }
     }
     
-    @Test(expected = EntityNotFoundException.class)
+    @Test(expected = BadRequestException.class)
     public void badEmailCredentialsReturnsException() throws IOException {
         TestUser testUser = TestUserHelper.createAndSignInUser(SignUpTest.class, true);
         try {
