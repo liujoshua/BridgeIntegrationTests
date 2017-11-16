@@ -45,6 +45,8 @@ import org.sagebionetworks.bridge.rest.api.UploadsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.exceptions.UnsupportedVersionException;
+import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
+import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.EmailTemplate;
 import org.sagebionetworks.bridge.rest.model.MimeType;
@@ -261,6 +263,20 @@ public class StudyTest {
         assertTrue("healthCodeExportEnabled should be true", newStudy.getHealthCodeExportEnabled());
         assertTrue("emailVerificationEnabled should be true", newStudy.getEmailVerificationEnabled());
         assertTrue("emailSignInEnabled should be true", newStudy.getEmailSignInEnabled());
+        
+        assertEquals(1, newStudy.getAndroidAppLinks().size());
+        AndroidAppLink androidAppLink = newStudy.getAndroidAppLinks().get(0);
+        assertEquals(Tests.PACKAGE, androidAppLink.getNamespace());
+        assertEquals(Tests.MOBILE_APP_NAME, androidAppLink.getPackageName());
+        assertEquals(1, androidAppLink.getSha256CertFingerprints().size());
+        assertEquals(Tests.FINGERPRINT, androidAppLink.getSha256CertFingerprints().get(0));
+        
+        assertEquals(1, newStudy.getAppleAppLinks().size());
+        AppleAppLink appleAppLink = newStudy.getAppleAppLinks().get(0);
+        assertEquals(Tests.APP_ID, appleAppLink.getAppID());
+        assertEquals(1, appleAppLink.getPaths().size());
+        String path = "/" + newStudy.getIdentifier() + "/*";
+        assertEquals(path, appleAppLink.getPaths().get(0));
 
         // assert disable study
         assertTrue(newStudy.getDisableExport());
@@ -288,6 +304,9 @@ public class StudyTest {
         
         newerStudy.setAccountExistsTemplate(new EmailTemplate().subject("Updated subject").body("Updated ${url} body")
                 .mimeType(MimeType.TEXT_HTML));        
+        
+        assertTrue(newerStudy.getAppleAppLinks().isEmpty());
+        assertTrue(newerStudy.getAndroidAppLinks().isEmpty());
         
         // Set stuff that only an admin can set.
         newerStudy.setEmailSignInEnabled(false);
@@ -630,7 +649,9 @@ public class StudyTest {
         study.setSupportEmail("test3@test.com");
         study.setUploadValidationStrictness(UploadValidationStrictness.WARNING);
         study.setConsentNotificationEmail("test4@test.com");
-
+        study.setAppleAppLinks(null);
+        study.setAndroidAppLinks(null);
+        
         EmailTemplate template = new EmailTemplate().subject("subject").body("body ${token}").mimeType(MimeType.TEXT_HTML);
         study.setEmailSignInTemplate(template);
     }
