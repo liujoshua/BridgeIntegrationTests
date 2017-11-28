@@ -48,6 +48,7 @@ import org.sagebionetworks.bridge.rest.exceptions.UnsupportedVersionException;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.EmailTemplate;
 import org.sagebionetworks.bridge.rest.model.MimeType;
+import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
@@ -252,7 +253,16 @@ public class StudyTest {
         assertEquals("android push ARN should be equal", study.getPushNotificationARNs().get("Android"),
                 newStudy.getPushNotificationARNs().get("Android"));        
         assertEquals("iOS push ARN should be equal", study.getPushNotificationARNs().get("iPhone OS"),
-                newStudy.getPushNotificationARNs().get("iPhone OS"));        
+                newStudy.getPushNotificationARNs().get("iPhone OS"));   
+        
+        // Verify OAuth providers
+        OAuthProvider myProvider = newStudy.getOauthProviders().get("myProvider");
+        System.out.println(myProvider);
+        assertEquals("OAuth provider should have clientId", "clientId", myProvider.getClientId());
+        assertEquals("OAuth provider should have secret", "secret", myProvider.getSecret());
+        assertEquals("OAuth provider should have endpoint", "https://www.server.com/", myProvider.getEndpoint());
+        assertEquals("OAuth provider should have callbackUrl", "https://client.callback.com/",
+                myProvider.getCallbackUrl());
 
         // Verify other defaults
         assertTrue("studyIdExcludedInExport should be true", newStudy.getStudyIdExcludedInExport());
@@ -285,6 +295,9 @@ public class StudyTest {
         assertEquals("Your ${studyName} account", newerStudy.getAccountExistsTemplate().getSubject());
         assertEquals("<p>${url}</p>", newerStudy.getAccountExistsTemplate().getBody());
         assertEquals(MimeType.TEXT_HTML, newerStudy.getAccountExistsTemplate().getMimeType());
+        
+        assertEquals("endpoint2", newerStudy.getOauthProviders().get("myProvider").getEndpoint());
+        assertEquals("callbackUrl2", newerStudy.getOauthProviders().get("myProvider").getCallbackUrl());
         
         newerStudy.setAccountExistsTemplate(new EmailTemplate().subject("Updated subject").body("Updated ${url} body")
                 .mimeType(MimeType.TEXT_HTML));        
@@ -630,6 +643,10 @@ public class StudyTest {
         study.setSupportEmail("test3@test.com");
         study.setUploadValidationStrictness(UploadValidationStrictness.WARNING);
         study.setConsentNotificationEmail("test4@test.com");
+        
+        OAuthProvider provider = study.getOauthProviders().get("myProvider");
+        provider.endpoint("endpoint2");
+        provider.callbackUrl("callbackUrl2");
 
         EmailTemplate template = new EmailTemplate().subject("subject").body("body ${token}").mimeType(MimeType.TEXT_HTML);
         study.setEmailSignInTemplate(template);

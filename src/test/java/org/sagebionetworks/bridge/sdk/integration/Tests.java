@@ -19,6 +19,7 @@ import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.EmailTemplate;
 import org.sagebionetworks.bridge.rest.model.MimeType;
+import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
@@ -239,6 +240,12 @@ public class Tests {
         platformMap.put("Android", "arn:android:"+identifier);
         platformMap.put("iPhone OS", "arn:ios:"+identifier);
         study.setPushNotificationARNs(platformMap);
+        
+        OAuthProvider oauthProvider = new OAuthProvider().clientId("clientId").secret("secret")
+                .endpoint("https://www.server.com/").callbackUrl("https://client.callback.com/");
+        Map<String,OAuthProvider> oauthProviders = new HashMap<>();
+        oauthProviders.put("myProvider", oauthProvider);
+        study.setOauthProviders(oauthProviders);
         
         if (version != null) {
             study.setVersion(version);
