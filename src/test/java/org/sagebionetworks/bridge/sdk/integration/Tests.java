@@ -22,6 +22,7 @@ import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.EmailTemplate;
 import org.sagebionetworks.bridge.rest.model.MimeType;
+import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
@@ -247,6 +248,12 @@ public class Tests {
         platformMap.put("iPhone OS", "arn:ios:"+identifier);
         study.setPushNotificationARNs(platformMap);
         
+        OAuthProvider oauthProvider = new OAuthProvider().clientId("clientId").secret("secret")
+                .endpoint("https://www.server.com/").callbackUrl("https://client.callback.com/");
+        Map<String,OAuthProvider> oauthProviders = new HashMap<>();
+        oauthProviders.put("myProvider", oauthProvider);
+        study.setOauthProviders(oauthProviders);
+
         List<AndroidAppLink> androidAppLinks = new ArrayList<>();
         androidAppLinks.add(new AndroidAppLink().namespace(PACKAGE).packageName(MOBILE_APP_NAME)
                 .addSha256CertFingerprintsItem(FINGERPRINT));
