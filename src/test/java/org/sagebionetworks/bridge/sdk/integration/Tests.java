@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,8 @@ import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.model.ABTestGroup;
 import org.sagebionetworks.bridge.rest.model.ABTestScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
+import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.EmailTemplate;
 import org.sagebionetworks.bridge.rest.model.MimeType;
@@ -31,6 +34,10 @@ import org.sagebionetworks.bridge.rest.model.TaskReference;
 public class Tests {
     
     private static final Config CONFIG = new Config();
+    public static final String PACKAGE = "org.sagebionetworks.bridge";
+    public static final String MOBILE_APP_NAME = "DummyApp";
+    public static final String APP_ID = PACKAGE + "." + MOBILE_APP_NAME;
+    public static final String FINGERPRINT = "14:6D:E9:83:C5:73:06:50:D8:EE:B9:95:2F:34:FC:64:16:A0:83:42:E6:1D:BE:A8:8A:04:96:B2:3F:CF:44:E5";
     public static final String APP_NAME = "Integration Tests";
     public static final String TEST_KEY = "api";
     public static final Phone PHONE = new Phone().number("+19712486796").regionCode("US");
@@ -239,6 +246,15 @@ public class Tests {
         platformMap.put("Android", "arn:android:"+identifier);
         platformMap.put("iPhone OS", "arn:ios:"+identifier);
         study.setPushNotificationARNs(platformMap);
+        
+        List<AndroidAppLink> androidAppLinks = new ArrayList<>();
+        androidAppLinks.add(new AndroidAppLink().namespace(PACKAGE).packageName(MOBILE_APP_NAME)
+                .addSha256CertFingerprintsItem(FINGERPRINT));
+        study.setAndroidAppLinks(androidAppLinks);
+        
+        List<AppleAppLink> appleAppLinks = new ArrayList<>();
+        appleAppLinks.add(new AppleAppLink().appID(APP_ID).addPathsItem("/" + identifier + "/*"));
+        study.setAppleAppLinks(appleAppLinks);
         
         if (version != null) {
             study.setVersion(version);
