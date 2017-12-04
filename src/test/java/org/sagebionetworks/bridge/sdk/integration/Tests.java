@@ -252,7 +252,7 @@ public class Tests {
                 .endpoint("https://www.server.com/").callbackUrl("https://client.callback.com/");
         Map<String,OAuthProvider> oauthProviders = new HashMap<>();
         oauthProviders.put("myProvider", oauthProvider);
-        study.setOauthProviders(oauthProviders);
+        study.setOAuthProviders(oauthProviders);
 
         List<AndroidAppLink> androidAppLinks = new ArrayList<>();
         androidAppLinks.add(new AndroidAppLink().namespace(PACKAGE).packageName(MOBILE_APP_NAME)
