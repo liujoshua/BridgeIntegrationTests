@@ -24,6 +24,7 @@ import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,6 +35,7 @@ import retrofit2.Response;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -226,5 +228,14 @@ public class AuthenticationTest {
         PhoneSignIn phoneSignIn = new PhoneSignIn().phone(Tests.PHONE).study(phoneOnlyTestUser.getStudyId()).token("test-token");
 
         authApi.signInViaPhone(phoneSignIn).execute();
+    }
+    
+    @Test
+    public void signInAndReauthenticateV4() throws IOException {
+        AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
+        authApi.signOut().execute();
+        
+        UserSessionInfo session = authApi.signInV4(testUser.getSignIn()).execute().body();
+        assertNotNull(session);
     }
 }

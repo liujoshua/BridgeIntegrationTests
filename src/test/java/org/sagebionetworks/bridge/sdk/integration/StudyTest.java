@@ -259,7 +259,6 @@ public class StudyTest {
         
         // Verify OAuth providers
         OAuthProvider myProvider = newStudy.getOAuthProviders().get("myProvider");
-        System.out.println(myProvider);
         assertEquals("OAuth provider should have clientId", "clientId", myProvider.getClientId());
         assertEquals("OAuth provider should have secret", "secret", myProvider.getSecret());
         assertEquals("OAuth provider should have endpoint", "https://www.server.com/", myProvider.getEndpoint());
