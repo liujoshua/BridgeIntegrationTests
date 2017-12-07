@@ -258,8 +258,7 @@ public class StudyTest {
                 newStudy.getPushNotificationARNs().get("iPhone OS"));   
         
         // Verify OAuth providers
-        OAuthProvider myProvider = newStudy.getOauthProviders().get("myProvider");
-        System.out.println(myProvider);
+        OAuthProvider myProvider = newStudy.getOAuthProviders().get("myProvider");
         assertEquals("OAuth provider should have clientId", "clientId", myProvider.getClientId());
         assertEquals("OAuth provider should have secret", "secret", myProvider.getSecret());
         assertEquals("OAuth provider should have endpoint", "https://www.server.com/", myProvider.getEndpoint());
@@ -312,8 +311,8 @@ public class StudyTest {
         assertEquals("<p>${url}</p>", newerStudy.getAccountExistsTemplate().getBody());
         assertEquals(MimeType.TEXT_HTML, newerStudy.getAccountExistsTemplate().getMimeType());
         
-        assertEquals("endpoint2", newerStudy.getOauthProviders().get("myProvider").getEndpoint());
-        assertEquals("callbackUrl2", newerStudy.getOauthProviders().get("myProvider").getCallbackUrl());
+        assertEquals("endpoint2", newerStudy.getOAuthProviders().get("myProvider").getEndpoint());
+        assertEquals("callbackUrl2", newerStudy.getOAuthProviders().get("myProvider").getCallbackUrl());
         
         newerStudy.setAccountExistsTemplate(new EmailTemplate().subject("Updated subject").body("Updated ${url} body")
                 .mimeType(MimeType.TEXT_HTML));        
@@ -663,7 +662,7 @@ public class StudyTest {
         study.setUploadValidationStrictness(UploadValidationStrictness.WARNING);
         study.setConsentNotificationEmail("test4@test.com");
         
-        OAuthProvider provider = study.getOauthProviders().get("myProvider");
+        OAuthProvider provider = study.getOAuthProviders().get("myProvider");
         provider.endpoint("endpoint2");
         provider.callbackUrl("callbackUrl2");
 

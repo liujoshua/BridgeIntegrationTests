@@ -21,7 +21,6 @@ import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.PhoneSignIn;
 import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
-import org.sagebionetworks.bridge.rest.model.ReauthenticateRequest;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
@@ -36,7 +35,6 @@ import retrofit2.Response;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -239,11 +237,5 @@ public class AuthenticationTest {
         
         UserSessionInfo session = authApi.signInV4(testUser.getSignIn()).execute().body();
         assertNotNull(session);
-        
-        ReauthenticateRequest reauthRequest = new ReauthenticateRequest().email(session.getEmail()).study(testUser.getStudyId()).reauthToken(session.getReauthToken());
-        
-        UserSessionInfo session2 = authApi.reauthenticateV4(reauthRequest).execute().body();
-        assertNotNull(session2);
-        assertNotEquals(session.getSessionToken(), session2.getSessionToken());
     }
 }
