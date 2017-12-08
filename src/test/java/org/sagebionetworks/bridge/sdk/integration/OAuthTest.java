@@ -56,7 +56,7 @@ public class OAuthTest {
         ForWorkersApi workersApi = worker.getClient(ForWorkersApi.class);
         
         try {
-            workersApi.getHealthCodesGrantingOAuthAccess(worker.getStudyId(), "fitbit").execute().body();
+            workersApi.getHealthCodesGrantingOAuthAccess(worker.getStudyId(), "fitbit", null, null).execute().body();
             fail("Should have thrown exception.");
         } catch(EntityNotFoundException e) {
             assertEquals("OAuthProvider not found.", e.getMessage());
@@ -77,7 +77,7 @@ public class OAuthTest {
             VersionHolder version = studiesApi.updateStudy(study.getIdentifier(), study).execute().body();
             study.setVersion(version.getVersion()); 
             
-            ForwardCursorStringList list = workersApi.getHealthCodesGrantingOAuthAccess(worker.getStudyId(), "bridge").execute().body();
+            ForwardCursorStringList list = workersApi.getHealthCodesGrantingOAuthAccess(worker.getStudyId(), "bridge", null, null).execute().body();
             assertTrue(list.getItems().isEmpty());
             try {
                 workersApi.getOAuthAccessToken(worker.getStudyId(), "bridge", "ABC-DEF-GHI").execute();
