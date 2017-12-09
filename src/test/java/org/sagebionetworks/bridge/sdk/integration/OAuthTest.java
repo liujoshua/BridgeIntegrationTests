@@ -12,7 +12,6 @@ import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorStringList;
-import org.sagebionetworks.bridge.rest.model.OAuthAccessToken;
 import org.sagebionetworks.bridge.rest.model.OAuthAuthorizationToken;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Role;
