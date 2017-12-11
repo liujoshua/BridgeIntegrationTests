@@ -223,7 +223,7 @@ public class TestUserHelper {
             if (setPassword) {
                 signUp.setPassword(PASSWORD);    
             }
-            signUp.setStudy(Tests.TEST_KEY);
+            signUp.setStudy(Tests.STUDY_ID);
             signUp.setRoles(new ArrayList<>(rolesList));
             signUp.setConsent(consentUser);
             UserSessionInfo info = adminsApi.createUser(signUp).execute().body();

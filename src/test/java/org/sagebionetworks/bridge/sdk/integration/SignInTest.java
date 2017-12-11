@@ -122,7 +122,7 @@ public class SignInTest {
     public void signInNoAccount() throws Exception {
         // Generate random email, but don't create the account.
         String email = Tests.makeEmail(SignInTest.class);
-        SignIn signIn = new SignIn().study(Tests.TEST_KEY).email(email).password(PASSWORD);
+        SignIn signIn = new SignIn().study(Tests.STUDY_ID).email(email).password(PASSWORD);
 
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
@@ -132,7 +132,7 @@ public class SignInTest {
     @Test(expected = EntityNotFoundException.class)
     public void signInBadPassword() throws Exception {
         // To prevent email enumeration attack, this throws a 404 not found.
-        SignIn signIn = new SignIn().study(Tests.TEST_KEY).email(user.getEmail()).password("This is not my password");
+        SignIn signIn = new SignIn().study(Tests.STUDY_ID).email(user.getEmail()).password("This is not my password");
 
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);

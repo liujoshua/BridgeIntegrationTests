@@ -532,7 +532,7 @@ public class SurveyTest {
         assertKeysEqual(survey1aKeys, survey1aAgain);
 
         // We only expect the most recently published versions, namely 1b and 2b.
-        SurveyList surveyResourceList = workerSurveyClient.getAllPublishedSurveysInStudy(Tests.TEST_KEY).execute().body();
+        SurveyList surveyResourceList = workerSurveyClient.getAllPublishedSurveysInStudy(Tests.STUDY_ID).execute().body();
         containsAll(surveyResourceList.getItems(), new MutableHolder(survey1b), new MutableHolder(survey2b));
     }
 

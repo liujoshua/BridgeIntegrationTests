@@ -88,7 +88,7 @@ public class SurveySchemaTest {
     public void deleteSchemas() throws Exception {
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         try {
-            adminApi.deleteAllRevisionsOfUploadSchema(Tests.TEST_KEY, surveyId).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(Tests.STUDY_ID, surveyId).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
         }
