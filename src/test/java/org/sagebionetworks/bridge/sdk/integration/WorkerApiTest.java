@@ -11,40 +11,61 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
 public class WorkerApiTest {
     
-    TestUser testUser;
+    TestUser worker;
+    TestUser phoneUser;
     ForWorkersApi workersApi;
 
     @Before
     public void before() throws Exception {
-        testUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.WORKER);
-        workersApi = testUser.getClient(ForWorkersApi.class);
+        worker = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, Role.WORKER);
+        workersApi = worker.getClient(ForWorkersApi.class);
     }
 
     @After
     public void after() throws Exception {
-        if (testUser != null) {
-            testUser.signOutAndDeleteUser();
+        if (worker != null) {
+            worker.signOutAndDeleteUser();
+        }
+        if (phoneUser != null) {
+            phoneUser.signOutAndDeleteUser();
         }
     }
     
     @Test
     public void retrieveUsers() throws Exception {
-        AccountSummaryList list = workersApi.getParticipantsInStudy("api", 0, 5, "", null, null).execute().body();
+        AccountSummaryList list = workersApi.getParticipantsInStudy("api", 0, 5, "", null, null, null).execute().body();
         assertTrue(list.getTotal() > 0);
         
-        list = workersApi.getParticipantsInStudy("api", 0, 5, testUser.getEmail(), null, null).execute().body();
+        list = workersApi.getParticipantsInStudy("api", 0, 5, worker.getEmail(), null, null, null).execute().body();
         assertEquals(1, list.getItems().size());
-        assertEquals(testUser.getEmail(), list.getItems().get(0).getEmail());
+        assertEquals(worker.getEmail(), list.getItems().get(0).getEmail());
         
-        StudyParticipant participant = workersApi.getParticipantInStudy("api", testUser.getSession().getId()).execute()
+        StudyParticipant participant = workersApi.getParticipantInStudy("api", worker.getSession().getId()).execute()
                 .body();
         
-        assertEquals(testUser.getEmail(), participant.getEmail());
+        assertEquals(worker.getEmail(), participant.getEmail());
+        assertNotNull(participant.getHealthCode());
+    }
+    
+    @Test
+    public void retrieveUsersWithPhone() throws Exception {
+        SignUp signUp = new SignUp().phone(Tests.PHONE).password("P@ssword`1");
+        phoneUser = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, signUp);
+        
+        AccountSummaryList list = workersApi.getParticipantsInStudy("api", 0, 5, null, "248-6796", null, null).execute().body();
+        assertEquals(1, list.getItems().size());
+        assertEquals(phoneUser.getPhone().getNumber(), list.getItems().get(0).getPhone().getNumber());
+        
+        String userId = list.getItems().get(0).getId();
+        StudyParticipant participant = workersApi.getParticipantInStudy("api", userId).execute().body();
+        
+        assertEquals(phoneUser.getPhone().getNumber(), participant.getPhone().getNumber());
         assertNotNull(participant.getHealthCode());
     }
     
