@@ -103,6 +103,14 @@ public class ParticipantsTest {
 
             userApi.updateUsersParticipantRecord(self).execute();
             
+            // Session should reflect these updates, right now.
+            List<String> capturedDataGroups = user.getSession().getDataGroups();
+            assertTrue(capturedDataGroups.contains("group1"));
+            List<String> capturedData = RestUtils.toType(user.getSession().getClientData(), List.class);
+            assertEquals("A", capturedData.get(0));
+            assertEquals("B", capturedData.get(1));
+            assertEquals("C", capturedData.get(2));
+            
             self = userApi.getUsersParticipantRecord().execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
             assertEquals(Lists.newArrayList("group1"), self.getDataGroups());
