@@ -20,6 +20,7 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
+import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -53,6 +54,9 @@ public class TestUserHelper {
         }
         public String getEmail() {
             return signIn.getEmail();
+        }
+        public Phone getPhone() {
+            return signIn.getPhone();
         }
         public String getPassword() {
             return signIn.getPassword();
@@ -216,7 +220,7 @@ public class TestUserHelper {
             if (signUp == null) {
                 signUp = new SignUp();
             }
-            // If we haven't specified either identifier, provide an email address.
+            // If we haven't specified either identifier, provide both.
             if (signUp.getEmail() == null && signUp.getPhone() == null) {
                 signUp.email(emailAddress);
             }
