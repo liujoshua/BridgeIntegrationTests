@@ -32,6 +32,8 @@ public class SubpopulationTest {
 
     private TestUser admin;
     private TestUser developer;
+    private Subpopulation subpop1;
+    private Subpopulation subpop2;
     
     @Before
     public void before() throws Exception {
@@ -43,6 +45,20 @@ public class SubpopulationTest {
     public void after() throws Exception {
         if (developer != null) {
             developer.signOutAndDeleteUser();    
+        }
+    }
+    
+    @After
+    public void deleteSubpop1() throws Exception {
+        if (subpop1 != null) {
+            admin.getClient(ForAdminsApi.class).deleteSubpopulation(subpop1.getGuid(), true).execute();
+        }
+    }
+    
+    @After
+    public void deleteSubpop2() throws Exception {
+        if (subpop2 != null) {
+            admin.getClient(ForAdminsApi.class).deleteSubpopulation(subpop2.getGuid(), true).execute();
         }
     }
     
@@ -59,15 +75,15 @@ public class SubpopulationTest {
         criteria.getMinAppVersions().put("Android", 10);
         
         // Create a new one
-        Subpopulation subpop = new Subpopulation();
-        subpop.setName("Later Consent Group");
-        subpop.setCriteria(criteria);
-        GuidVersionHolder keys = subpopulationsApi.createSubpopulation(subpop).execute().body();
-        subpop.setGuid(keys.getGuid());
-        subpop.setVersion(keys.getVersion());
+        subpop1 = new Subpopulation();
+        subpop1.setName("Later Consent Group");
+        subpop1.setCriteria(criteria);
+        GuidVersionHolder keys = subpopulationsApi.createSubpopulation(subpop1).execute().body();
+        subpop1.setGuid(keys.getGuid());
+        subpop1.setVersion(keys.getVersion());
         
         // Read it back
-        Subpopulation retrieved = subpopulationsApi.getSubpopulation(subpop.getGuid()).execute().body();
+        Subpopulation retrieved = subpopulationsApi.getSubpopulation(subpop1.getGuid()).execute().body();
         assertEquals("Later Consent Group", retrieved.getName());
         Tests.setVariableValueInObject(criteria, "type", "Criteria");
         assertEquals(criteria, retrieved.getCriteria());
@@ -91,6 +107,7 @@ public class SubpopulationTest {
         SubpopulationsApi adminSubpopApi = admin.getClient(SubpopulationsApi.class);
         adminSubpopApi.deleteSubpopulation(retrieved.getGuid(), true).execute();
         assertEquals(initialCount, subpopulationsApi.getSubpopulations().execute().body().getItems().size());
+        subpop1 = null;
         
         // Cannot delete the default, however:
         try {
@@ -106,8 +123,6 @@ public class SubpopulationTest {
     @Test
     public void createSubpopulationsWithCriteriaAndVerifyFiltering() throws Exception {
         SubpopulationsApi subpopulationsApi = developer.getClient(SubpopulationsApi.class);
-        Subpopulation subpop1 = null;
-        Subpopulation subpop2 = null;
         
         TestUser user = TestUserHelper.createAndSignInUser(SubpopulationTest.class, false);
         user.signOut();
@@ -167,13 +182,6 @@ public class SubpopulationTest {
             }
         } finally {
             user.signOutAndDeleteUser();
-            ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-            if (subpop1 != null) {
-                adminApi.deleteSubpopulation(subpop1.getGuid(), true).execute();
-            }
-            if (subpop2 != null) {
-                adminApi.deleteSubpopulation(subpop2.getGuid(), true).execute();
-            }
         }
     }
     
