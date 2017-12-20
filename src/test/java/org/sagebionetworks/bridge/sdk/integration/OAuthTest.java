@@ -55,13 +55,13 @@ public class OAuthTest {
         ForWorkersApi workersApi = worker.getClient(ForWorkersApi.class);
         
         try {
-            workersApi.getHealthCodesGrantingOAuthAccess(worker.getStudyId(), "fitbit", null, null).execute().body();
+            workersApi.getHealthCodesGrantingOAuthAccess(worker.getStudyId(), "unused-vendor-id", null, null).execute().body();
             fail("Should have thrown exception.");
         } catch(EntityNotFoundException e) {
             assertEquals("OAuthProvider not found.", e.getMessage());
         }
         try {
-            workersApi.getOAuthAccessToken(worker.getStudyId(), "fitbit", "ABC-DEF-GHI").execute().body();
+            workersApi.getOAuthAccessToken(worker.getStudyId(), "unused-vendor-id", "ABC-DEF-GHI").execute().body();
             fail("Should have thrown exception.");
         } catch(EntityNotFoundException e) {
             assertEquals("OAuthProvider not found.", e.getMessage());
