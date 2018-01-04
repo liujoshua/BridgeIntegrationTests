@@ -60,6 +60,7 @@ import java.util.stream.Collectors;
 public class ParticipantsTest {
     private TestUser admin;
     private TestUser researcher;
+    private TestUser phoneUser;
     
     @Before
     public void before() throws Exception {
@@ -71,6 +72,9 @@ public class ParticipantsTest {
     public void after() throws Exception {
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
+        }
+        if (phoneUser != null) {
+            phoneUser.signOutAndDeleteUser();
         }
     }
 
@@ -102,6 +106,14 @@ public class ParticipantsTest {
             self.setClientData(clientData);
 
             userApi.updateUsersParticipantRecord(self).execute();
+            
+            // Session should reflect these updates, right now.
+            List<String> capturedDataGroups = user.getSession().getDataGroups();
+            assertTrue(capturedDataGroups.contains("group1"));
+            List<String> capturedData = RestUtils.toType(user.getSession().getClientData(), List.class);
+            assertEquals("A", capturedData.get(0));
+            assertEquals("B", capturedData.get(1));
+            assertEquals("C", capturedData.get(2));
             
             self = userApi.getUsersParticipantRecord().execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
@@ -135,7 +147,7 @@ public class ParticipantsTest {
     public void canRetrieveAndPageThroughParticipants() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        AccountSummaryList summaries = participantsApi.getParticipants(0, 10, null, null, null).execute().body();
+        AccountSummaryList summaries = participantsApi.getParticipants(0, 10, null, null, null, null).execute().body();
 
         int total = summaries.getTotal();
         Collections.sort(summaries.getItems(), Comparator.comparing(AccountSummary::getCreatedOn));
@@ -155,20 +167,20 @@ public class ParticipantsTest {
         assertNotNull(summary.getId());
         
         // Filter to only the researcher
-        summaries = participantsApi.getParticipants(0, 10, researcher.getEmail(), null, null).execute().body();
+        summaries = participantsApi.getParticipants(0, 10, researcher.getEmail(), null, null, null).execute().body();
         assertEquals(1, summaries.getItems().size());
         assertEquals(researcher.getEmail(), summaries.getItems().get(0).getEmail());
         assertEquals(researcher.getEmail(), summaries.getRequestParams().getEmailFilter());
 
         // Date filter that would not include the newest participant
-        summaries = participantsApi.getParticipants(0, 10, null, null, newest.minusMillis(1)).execute().body();
+        summaries = participantsApi.getParticipants(0, 10, null, null, null, newest.minusMillis(1)).execute().body();
         assertTrue(summaries.getTotal() < total);
         assertNull(summaries.getRequestParams().getStartTime());
         assertEquals(summaries.getRequestParams().getEndTime(), newest.minusMillis(1));
         doesNotIncludeThisAccountCreatedOn(summaries, newest);
         
         // Date filter that would not include the oldest participant
-        summaries = participantsApi.getParticipants(0, 10, null, oldest.plusMillis(1), null).execute().body();
+        summaries = participantsApi.getParticipants(0, 10, null, null, oldest.plusMillis(1), null).execute().body();
         assertTrue(summaries.getTotal() < total);
         assertEquals(summaries.getRequestParams().getStartTime(), oldest.plusMillis(1));
         assertNull(summaries.getRequestParams().getEndTime());
@@ -188,14 +200,14 @@ public class ParticipantsTest {
     public void cannotSetBadOffset() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        participantsApi.getParticipants(-1, 10, null, null, null).execute();
+        participantsApi.getParticipants(-1, 10, null, null, null, null).execute();
     }
     
     @Test(expected = BadRequestException.class)
     public void cannotSetBadPageSize() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        participantsApi.getParticipants(0, 4, null, null, null).execute();
+        participantsApi.getParticipants(0, 4, null, null, null, null).execute();
     }
     
     @Test
@@ -228,7 +240,7 @@ public class ParticipantsTest {
             // It has been persisted. Right now we don't get the ID back so we have to conduct a 
             // search by email to get this user.
             // Can be found through paged results
-            AccountSummaryList search = participantsApi.getParticipants(0, 10, email, null, null).execute().body();
+            AccountSummaryList search = participantsApi.getParticipants(0, 10, email, null, null, null).execute().body();
             assertEquals((Integer)1, search.getTotal());
             AccountSummary summary = search.getItems().get(0);
             assertEquals("FirstName", summary.getFirstName());
@@ -541,10 +553,29 @@ public class ParticipantsTest {
             user.signOutAndDeleteUser();
         }
     }
+    
+    @Test
+    public void crudUsersWithPhone() throws Exception {
+        SignUp signUp = new SignUp().phone(Tests.PHONE).password("P@ssword`1");
+        phoneUser = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, signUp);
+        
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        
+        AccountSummaryList list = participantsApi.getParticipants(0, 5, null, "248-6796", null, null).execute().body();
+        assertEquals(1, list.getItems().size());
+        assertEquals(phoneUser.getPhone().getNumber(), list.getItems().get(0).getPhone().getNumber());
+        
+        String userId = list.getItems().get(0).getId();
+        StudyParticipant participant = participantsApi.getParticipant(userId).execute().body();
+        
+        assertEquals(phoneUser.getPhone().getNumber(), participant.getPhone().getNumber());
+        assertEquals(userId, participant.getId());
+    }
 
     private static List<ScheduledActivity> findActivitiesByLabel(List<ScheduledActivity> scheduledActivityList,
             String label) {
-        return scheduledActivityList.stream().filter(oneScheduledActivity ->
-                label.equals(oneScheduledActivity.getActivity().getLabel())).collect(Collectors.toList());
+        return scheduledActivityList.stream()
+                .filter(oneScheduledActivity -> label.equals(oneScheduledActivity.getActivity().getLabel()))
+                .collect(Collectors.toList());
     }
 }

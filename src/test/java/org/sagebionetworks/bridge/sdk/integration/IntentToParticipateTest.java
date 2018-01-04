@@ -57,7 +57,7 @@ public class IntentToParticipateTest {
         
         IntentToParticipate intent = new IntentToParticipate()
                 .phone(Tests.PHONE)
-                .study(Tests.STUDY_ID)
+                .studyId(Tests.STUDY_ID)
                 .subpopGuid(Tests.STUDY_ID)
                 .osName("iPhone")
                 .consentSignature(sig);
@@ -92,7 +92,7 @@ public class IntentToParticipateTest {
         
         // We need to enable the user without verifying the phone, so the next part of the test works.
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-        AccountSummaryList list = participantsApi.getParticipants(0, 5, email, null, null).execute().body();
+        AccountSummaryList list = participantsApi.getParticipants(0, 5, email, null, null, null).execute().body();
         StudyParticipant participant = participantsApi.getParticipant(list.getItems().get(0).getId()).execute().body();
         
         participant.setStatus(AccountStatus.ENABLED);

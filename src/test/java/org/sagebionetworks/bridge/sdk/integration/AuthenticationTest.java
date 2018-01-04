@@ -214,7 +214,7 @@ public class AuthenticationTest {
     public void requestPhoneSignInWithPhone() throws Exception {
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
         
-        PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().phone(Tests.PHONE)
+        PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().phone(phoneOnlyTestUser.getPhone())
                 .study(phoneOnlyTestUser.getStudyId());
 
         Response<Message> response = authApi.requestPhoneSignIn(phoneSignIn).execute();
