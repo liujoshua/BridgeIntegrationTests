@@ -40,7 +40,8 @@ public class Tests {
     public static final String APP_ID = PACKAGE + "." + MOBILE_APP_NAME;
     public static final String FINGERPRINT = "14:6D:E9:83:C5:73:06:50:D8:EE:B9:95:2F:34:FC:64:16:A0:83:42:E6:1D:BE:A8:8A:04:96:B2:3F:CF:44:E5";
     public static final String APP_NAME = "Integration Tests";
-    public static final String TEST_KEY = "api";
+    public static final String STUDY_ID = "api";
+    public static final String PASSWORD = "P@ssword`1";
     public static final Phone PHONE = new Phone().number("+19712486796").regionCode("US");
     
     public static final EmailTemplate TEST_RESET_PASSWORD_TEMPLATE = new EmailTemplate().subject("Reset your password")
