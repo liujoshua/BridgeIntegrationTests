@@ -51,7 +51,7 @@ public class AuthenticationTest {
     @BeforeClass
     public static void beforeClass() throws IOException {
         // Make a test user with a phone number.
-        SignUp phoneOnlyUser = new SignUp().study(Tests.TEST_KEY).consent(true).phone(Tests.PHONE);
+        SignUp phoneOnlyUser = new SignUp().study(Tests.STUDY_ID).consent(true).phone(Tests.PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(AuthenticationTest.class).withConsentUser(true)
                 .withSignUp(phoneOnlyUser).withSetPassword(false).createUser();
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
@@ -214,7 +214,7 @@ public class AuthenticationTest {
     public void requestPhoneSignInWithPhone() throws Exception {
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
         
-        PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().phone(Tests.PHONE)
+        PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().phone(phoneOnlyTestUser.getPhone())
                 .study(phoneOnlyTestUser.getStudyId());
 
         Response<Message> response = authApi.requestPhoneSignIn(phoneSignIn).execute();
