@@ -59,7 +59,7 @@ public class UserManagementTest {
         SignIn signIn = new SignIn().study(admin.getStudyId()).email(email).password(password);
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
-        newUserAuthApi.signIn(signIn).execute();
+        newUserAuthApi.signInV4(signIn).execute();
 
         // Creating the user again throws an EntityAlreadyExists.
         try {

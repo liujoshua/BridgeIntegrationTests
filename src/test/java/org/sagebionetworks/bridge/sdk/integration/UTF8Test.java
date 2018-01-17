@@ -61,7 +61,7 @@ public class UTF8Test {
             // Force a refresh of the Redis session cache.
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             authApi.signOut().execute();
-            UserSessionInfo session = authApi.signIn(testUser.getSignIn()).execute().body();
+            UserSessionInfo session = authApi.signInV4(testUser.getSignIn()).execute().body();
 
             assertEquals("☃", session.getFirstName());
             assertEquals("지구상의　３대　극지라　불리는", session.getLastName());
