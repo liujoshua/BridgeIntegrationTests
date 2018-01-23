@@ -82,7 +82,7 @@ public class UploadSchemaTest {
     @After
     public void deleteSchemas() throws Exception {
         try {
-            adminApi.deleteAllRevisionsOfUploadSchema(Tests.TEST_KEY, schemaId).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(Tests.STUDY_ID, schemaId).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
         }
@@ -163,8 +163,8 @@ public class UploadSchemaTest {
 
         // Step 3b: Worker client can also get schemas, and can get schemas by study, schema, and rev.
         // This schema should be identical to updatedSchemaV2, except it also has the study ID.
-        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevisionInStudy(Tests.TEST_KEY, schemaId, 2L).execute().body();
-        assertEquals(Tests.TEST_KEY, workerSchemaV2.getStudyId());
+        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevisionInStudy(Tests.STUDY_ID, schemaId, 2L).execute().body();
+        assertEquals(Tests.STUDY_ID, workerSchemaV2.getStudyId());
         assertSchemaFilledIn(workerSchemaV2);
 
         UploadSchema workerSchemaV2MinusStudyId = copy(null, workerSchemaV2);
@@ -188,7 +188,7 @@ public class UploadSchemaTest {
         assertTrue(foundRevSet.contains(3L));
 
         // Step 5: Delete all schemas with the test schema ID
-        adminApi.deleteAllRevisionsOfUploadSchema(Tests.TEST_KEY, schemaId).execute();
+        adminApi.deleteAllRevisionsOfUploadSchema(Tests.STUDY_ID, schemaId).execute();
 
         // Step 5a: Get API should throw
         Exception thrownEx = null;

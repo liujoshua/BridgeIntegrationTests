@@ -463,7 +463,7 @@ public class StudyTest {
             // Admin can modify field.
             removeFieldDefByName(fieldName, study);
             appendToStudy(study, modifiedField);
-            adminApi.updateStudy(Tests.TEST_KEY, study).execute();
+            adminApi.updateStudy(Tests.STUDY_ID, study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
             returnedFieldDef = getFieldDefByName(fieldName, study);
@@ -471,7 +471,7 @@ public class StudyTest {
 
             // Admin can delete field.
             removeFieldDefByName(fieldName, study);
-            adminApi.updateStudy(Tests.TEST_KEY, study).execute();
+            adminApi.updateStudy(Tests.STUDY_ID, study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
             returnedFieldDef = getFieldDefByName(fieldName, study);
@@ -533,11 +533,11 @@ public class StudyTest {
     @Test
     public void userCannotAccessApisWithDeprecatedClient() throws Exception {
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        Study study = studiesApi.getStudy(Tests.TEST_KEY).execute().body();
+        Study study = studiesApi.getStudy(Tests.STUDY_ID).execute().body();
         // Set a minimum value that should not any other tests
         if (study.getMinSupportedAppVersions().get("Android") == null) {
             study.getMinSupportedAppVersions().put("Android", 1);
-            studiesApi.updateStudy(Tests.TEST_KEY, study).execute();
+            studiesApi.updateStudy(Tests.STUDY_ID, study).execute();
         }
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
         try {
