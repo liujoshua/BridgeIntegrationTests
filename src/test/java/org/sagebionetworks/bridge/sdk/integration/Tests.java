@@ -218,6 +218,7 @@ public class Tests {
     public static Study getStudy(String identifier, Long version) {
         Study study = new Study();
         study.setIdentifier(identifier);
+        study.setAutoVerificationEmailSuppressed(true);
         study.setMinAgeOfConsent(18);
         study.setName("Test Study [SDK]");
         study.setSponsorName("The Test Study Folks [SDK]");

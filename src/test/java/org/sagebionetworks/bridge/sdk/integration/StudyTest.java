@@ -231,6 +231,8 @@ public class StudyTest {
         study.addDataGroupsItem("test_user"); // added by the server, required for equality of dataGroups.
 
         // Verify study has password/email templates
+        assertTrue("autoVerificationEmailSuppressed should be true",
+                newStudy.getAutoVerificationEmailSuppressed());
         assertNotNull("password policy should not be null", newStudy.getPasswordPolicy());
         assertNotNull("verify email template should not be null", newStudy.getVerifyEmailTemplate());
         assertNotNull("password reset template should not be null", newStudy.getResetPasswordTemplate());
@@ -297,6 +299,7 @@ public class StudyTest {
         Study newerStudy = studiesApi.getStudy(newStudy.getIdentifier()).execute().body();
         assertTrue(newerStudy.getVersion() > oldVersion);
 
+        assertFalse(newerStudy.getAutoVerificationEmailSuppressed());
         assertEquals("Altered Test Study [SDK]", newerStudy.getName());
         assertFalse(newerStudy.getStrictUploadValidationEnabled());
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
@@ -656,6 +659,7 @@ public class StudyTest {
     }
 
     private void alterStudy(Study study) {
+        study.setAutoVerificationEmailSuppressed(false);
         study.setName("Altered Test Study [SDK]");
         study.setStrictUploadValidationEnabled(false);
         study.setSupportEmail("test3@test.com");
