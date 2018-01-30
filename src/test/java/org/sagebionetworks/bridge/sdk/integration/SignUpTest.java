@@ -47,7 +47,7 @@ public class SignUpTest {
             authApi.signOut().execute();
             
             SignIn signIn = testUser.getSignIn();
-            UserSessionInfo session = authApi.signIn(signIn).execute().body();
+            UserSessionInfo session = authApi.signInV4(signIn).execute().body();
             
             assertTrue(session.getAuthenticated());
 

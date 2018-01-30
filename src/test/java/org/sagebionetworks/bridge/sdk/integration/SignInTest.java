@@ -126,7 +126,7 @@ public class SignInTest {
 
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
-        newUserAuthApi.signIn(signIn).execute();
+        newUserAuthApi.signInV4(signIn).execute();
     }
 
     @Test(expected = EntityNotFoundException.class)
@@ -136,7 +136,7 @@ public class SignInTest {
 
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
-        newUserAuthApi.signIn(signIn).execute();
+        newUserAuthApi.signInV4(signIn).execute();
     }
 
     @Test(expected = EntityNotFoundException.class)
@@ -151,6 +151,6 @@ public class SignInTest {
         // Sign in should now fail with a 404 not found.
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(user.getSignIn()).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
-        newUserAuthApi.signIn(user.getSignIn()).execute();
+        newUserAuthApi.signInV4(user.getSignIn()).execute();
     }
 }

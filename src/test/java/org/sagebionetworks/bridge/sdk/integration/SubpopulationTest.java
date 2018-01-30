@@ -149,7 +149,7 @@ public class SubpopulationTest {
             // required subpopulations
             try {
                 ClientManager manager = clientManager(user.getSignIn(), getClientInfoWithVersion("Android", 2));
-                manager.getClient(AuthenticationApi.class).signIn(user.getSignIn()).execute();
+                manager.getClient(AuthenticationApi.class).signInV4(user.getSignIn()).execute();
                 fail("Should have thrown exception");
             } catch(ConsentRequiredException e) {
                 Map<String,ConsentStatus> statuses = e.getSession().getConsentStatuses();
@@ -162,7 +162,7 @@ public class SubpopulationTest {
                 
                 ClientManager manager = null;
                 manager = clientManager(user.getSignIn(), getClientInfoWithVersion("Android", 12));    
-                manager.getClient(AuthenticationApi.class).signIn(user.getSignIn()).execute();
+                manager.getClient(AuthenticationApi.class).signInV4(user.getSignIn()).execute();
                 fail("Should have thrown exception");
             } catch(ConsentRequiredException e) {
                 Map<String,ConsentStatus> statuses = e.getSession().getConsentStatuses();
@@ -173,7 +173,7 @@ public class SubpopulationTest {
             try {
                 user.signOut();
                 ClientManager manager = clientManager(user.getSignIn(), getClientInfoWithVersion("iPhone OS", 12));
-                manager.getClient(AuthenticationApi.class).signIn(user.getSignIn()).execute();
+                manager.getClient(AuthenticationApi.class).signInV4(user.getSignIn()).execute();
                 fail("Should have thrown exception");
             } catch(ConsentRequiredException e) {
                 Map<String,ConsentStatus> statuses = e.getSession().getConsentStatuses();

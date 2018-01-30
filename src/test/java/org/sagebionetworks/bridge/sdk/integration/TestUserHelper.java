@@ -76,7 +76,7 @@ public class TestUserHelper {
         public UserSessionInfo signInAgain() {
             AuthenticationApi authApi = manager.getClient(AuthenticationApi.class);
             try {
-                UserSessionInfo session = authApi.signIn(getSignIn()).execute().body();
+                UserSessionInfo session = authApi.signInV4(getSignIn()).execute().body();
                 userId = session.getId();
                 return manager.getSessionOfClients();
             } catch(IOException ioe) {

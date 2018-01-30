@@ -99,7 +99,7 @@ public class IntentToParticipateTest {
         participant.setPhoneVerified(true);
         participantsApi.updateParticipant(participant.getId(), participant).execute();
         
-        session = authApi.signIn(signIn).execute().body();
+        session = authApi.signInV4(signIn).execute().body();
         assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
     }
     

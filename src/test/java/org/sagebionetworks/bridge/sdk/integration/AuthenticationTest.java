@@ -156,7 +156,7 @@ public class AuthenticationTest {
                 
                 AuthenticationApi authClient = otherStudyManager.getClient(AuthenticationApi.class);
                 
-                authClient.signIn(otherStudySignIn).execute();
+                authClient.signInV4(otherStudySignIn).execute();
                 fail("Should not have allowed sign in");
             } catch (EntityNotFoundException e) {
                 assertEquals(404, e.getStatusCode());
