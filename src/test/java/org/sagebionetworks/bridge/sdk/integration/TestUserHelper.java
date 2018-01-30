@@ -149,7 +149,9 @@ public class TestUserHelper {
     }
 
     public static <T> T getNonAuthClient(Class<T> service) {
-        ApiClientProvider provider = new ApiClientProvider(ClientManager.getUrl(CONFIG.getEnvironment()), RestUtils.getUserAgent(CLIENT_INFO), RestUtils.getAcceptLanguage(LANGUAGES));
+        ApiClientProvider provider = new ApiClientProvider(ClientManager.getUrl(CONFIG.getEnvironment()),
+                RestUtils.getUserAgent(CLIENT_INFO), RestUtils.getAcceptLanguage(LANGUAGES),
+                getSignedInAdmin().getStudyId());
 
         return provider.getClient(service);
     }

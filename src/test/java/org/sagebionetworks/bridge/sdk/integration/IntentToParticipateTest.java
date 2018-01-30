@@ -67,7 +67,7 @@ public class IntentToParticipateTest {
         String clientInfo = RestUtils.getUserAgent(admin.getClientManager().getClientInfo());
         String lang = RestUtils.getAcceptLanguage(admin.getClientManager().getAcceptedLanguages());
         
-        ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang);
+        ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang, Tests.STUDY_ID);
         
         IntentToParticipateApi intentApi = provider.getClient(IntentToParticipateApi.class);
         
