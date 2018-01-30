@@ -13,6 +13,7 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
@@ -139,9 +140,9 @@ public class SignInTest {
         newUserAuthApi.signInV4(signIn).execute();
     }
 
-    @Test(expected = EntityNotFoundException.class)
+    @Test(expected = UnauthorizedException.class)
     public void signInAccountUnverified() throws Exception {
-        // Mark account as unverified.
+        // Mark account as unverified. In the v4 API, if sign in is first successful, we throw unauthorized exception
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ParticipantsApi participantsApi = admin.getClient(ParticipantsApi.class);
         StudyParticipant participant = participantsApi.getParticipant(user.getSession().getId()).execute().body();
