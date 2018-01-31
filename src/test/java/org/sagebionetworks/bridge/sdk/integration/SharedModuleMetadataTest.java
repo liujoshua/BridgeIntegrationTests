@@ -73,7 +73,7 @@ public class SharedModuleMetadataTest {
         apiDeveloperModulesApi = apiDeveloper.getClient(SharedModulesApi.class);
         TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
-        nonAuthSharedModulesApi = TestUserHelper.getNonAuthClient(SharedModulesApi.class);
+        nonAuthSharedModulesApi = TestUserHelper.getNonAuthClient(SharedModulesApi.class, Tests.STUDY_ID);
         devUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
         devSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
         studyId = sharedDeveloper.getStudyId();
