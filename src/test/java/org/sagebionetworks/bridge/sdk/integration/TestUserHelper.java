@@ -148,10 +148,9 @@ public class TestUserHelper {
         return user;
     }
 
-    public static <T> T getNonAuthClient(Class<T> service) {
+    public static <T> T getNonAuthClient(Class<T> service, String studyId) {
         ApiClientProvider provider = new ApiClientProvider(ClientManager.getUrl(CONFIG.getEnvironment()),
-                RestUtils.getUserAgent(CLIENT_INFO), RestUtils.getAcceptLanguage(LANGUAGES),
-                getSignedInAdmin().getStudyId());
+                RestUtils.getUserAgent(CLIENT_INFO), RestUtils.getAcceptLanguage(LANGUAGES), studyId);
 
         return provider.getClient(service);
     }
@@ -222,7 +221,7 @@ public class TestUserHelper {
             if (signUp == null) {
                 signUp = new SignUp();
             }
-            // If we haven't specified either identifier, provide both.
+            // If we haven't specified either identifier, provide an email address
             if (signUp.getEmail() == null && signUp.getPhone() == null) {
                 signUp.email(emailAddress);
             }
