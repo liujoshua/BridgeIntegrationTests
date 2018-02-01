@@ -33,18 +33,21 @@ import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
+import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
 import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UploadList;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
 
 import org.joda.time.DateTime;
@@ -557,7 +560,7 @@ public class ParticipantsTest {
     @Test
     public void crudUsersWithPhone() throws Exception {
         SignUp signUp = new SignUp().phone(Tests.PHONE).password("P@ssword`1");
-        phoneUser = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, signUp);
+        phoneUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
@@ -570,6 +573,32 @@ public class ParticipantsTest {
         
         assertEquals(phoneUser.getPhone().getNumber(), participant.getPhone().getNumber());
         assertEquals(userId, participant.getId());
+    }
+    
+    @Test
+    public void addEmailToPhoneUser() throws Exception {
+        SignUp signUp = new SignUp().phone(Tests.PHONE).password("P@ssword`1").study(Tests.STUDY_ID);
+        phoneUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
+        
+        SignIn signIn = new SignIn().phone(signUp.getPhone()).password(signUp.getPassword()).study(Tests.STUDY_ID);
+
+        String email = Tests.makeEmail(ParticipantsTest.class);
+        IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(email);
+        
+        ForConsentedUsersApi usersApi = phoneUser.getClient(ForConsentedUsersApi.class);
+        UserSessionInfo info = usersApi.updateIdentifiers(identifierUpdate).execute().body();
+        assertEquals(email, info.getEmail());
+        
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        StudyParticipant retrieved = participantsApi.getParticipant(phoneUser.getSession().getId()).execute().body();
+        assertEquals(email, retrieved.getEmail());
+        
+        // But if you do it again, it should not work
+        String newEmail = Tests.makeEmail(ParticipantsTest.class);
+        identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(newEmail);
+        
+        info = usersApi.updateIdentifiers(identifierUpdate).execute().body();
+        assertEquals(email, info.getEmail()); // unchanged
     }
 
     private static List<ScheduledActivity> findActivitiesByLabel(List<ScheduledActivity> scheduledActivityList,
