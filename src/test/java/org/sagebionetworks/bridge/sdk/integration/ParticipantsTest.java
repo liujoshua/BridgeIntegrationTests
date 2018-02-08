@@ -64,6 +64,7 @@ public class ParticipantsTest {
     private TestUser admin;
     private TestUser researcher;
     private TestUser phoneUser;
+    private TestUser emailUser;
     
     @Before
     public void before() throws Exception {
@@ -78,6 +79,9 @@ public class ParticipantsTest {
         }
         if (phoneUser != null) {
             phoneUser.signOutAndDeleteUser();
+        }
+        if (emailUser != null) {
+            emailUser.signOutAndDeleteUser();
         }
     }
 
@@ -586,7 +590,7 @@ public class ParticipantsTest {
         IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(email);
         
         ForConsentedUsersApi usersApi = phoneUser.getClient(ForConsentedUsersApi.class);
-        UserSessionInfo info = usersApi.updateIdentifiers(identifierUpdate).execute().body();
+        UserSessionInfo info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
         assertEquals(email, info.getEmail());
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
@@ -597,10 +601,36 @@ public class ParticipantsTest {
         String newEmail = Tests.makeEmail(ParticipantsTest.class);
         identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(newEmail);
         
-        info = usersApi.updateIdentifiers(identifierUpdate).execute().body();
+        info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
         assertEquals(email, info.getEmail()); // unchanged
     }
 
+    @Test
+    public void addPhoneToEmailUser() throws Exception {
+        String email = Tests.makeEmail(ParticipantsTest.class);
+        SignUp signUp = new SignUp().email(email).password("P@ssword`1").study(Tests.STUDY_ID);
+        emailUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
+        
+        SignIn signIn = new SignIn().email(signUp.getEmail()).password(signUp.getPassword()).study(Tests.STUDY_ID);
+
+        IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(Tests.PHONE);
+        
+        ForConsentedUsersApi usersApi = emailUser.getClient(ForConsentedUsersApi.class);
+        UserSessionInfo info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
+        assertEquals(Tests.PHONE.getNumber(), info.getPhone().getNumber());
+        
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        StudyParticipant retrieved = participantsApi.getParticipant(emailUser.getSession().getId()).execute().body();
+        assertEquals(Tests.PHONE.getNumber(), retrieved.getPhone().getNumber());
+        
+        // But if you do it again, it should not work
+        Phone otherPhone = new Phone().number("4082588569").regionCode("US");
+        identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(otherPhone);
+        
+        info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
+        assertEquals(Tests.PHONE.getNumber(), info.getPhone().getNumber()); // unchanged
+    }
+    
     private static List<ScheduledActivity> findActivitiesByLabel(List<ScheduledActivity> scheduledActivityList,
             String label) {
         return scheduledActivityList.stream()
