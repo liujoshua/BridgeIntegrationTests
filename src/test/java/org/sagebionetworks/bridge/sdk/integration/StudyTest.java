@@ -23,6 +23,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.sagebionetworks.client.SynapseAdminClientImpl;
@@ -87,6 +88,18 @@ public class StudyTest {
     private static final String USER_CONFIG_FILE = System.getProperty("user.home") + "/" + CONFIG_FILE;
 
     private static final int MAX_PAGE_SIZE = 100;
+    
+    @BeforeClass
+    public static void ensureReauthenticationIsDisabled() throws Exception {
+        TestUser admin = TestUserHelper.getSignedInAdmin();
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        
+        Study study = studiesApi.getStudy("api").execute().body();
+        if (study.getReauthenticationEnabled()) {
+            study.setReauthenticationEnabled(false);
+            studiesApi.updateStudy("api", study).execute();
+        }
+    }
     
     @Before
     public void before() throws IOException {
@@ -401,12 +414,14 @@ public class StudyTest {
             study.setHealthCodeExportEnabled(true);
             study.setEmailVerificationEnabled(false);
             study.setStudyIdExcludedInExport(false);
+            study.setReauthenticationEnabled(true);
             studiesApi.updateUsersStudy(study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
             assertFalse("healthCodeExportEnabled should be false", study.getHealthCodeExportEnabled());
             assertTrue("emailVersificationEnabled should be true", study.getEmailVerificationEnabled());
             assertTrue("studyIdExcludedInExport should be true", study.getStudyIdExcludedInExport());
+            assertFalse("reauthenticationEnabled should be false", study.getReauthenticationEnabled());
         } finally {
             developer.signOutAndDeleteUser();
         }
