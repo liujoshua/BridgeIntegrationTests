@@ -573,27 +573,21 @@ public class SurveyTest {
     }
     
     @Test
-    public void cannotLogicallyDeletePublishedSurvey() throws Exception {
+    public void canLogicallyDeletePublishedSurvey() throws Exception {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
 
         GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
         
         surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
         
-        try {
-            surveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
-            fail("Should have thrown exception");
-        } catch(PublishedSurveyException e) {
-            // expected exception
-        }
+        surveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
 
         // getPublishedSurveys() uses a secondary global index. Sleep for 2 seconds to help make sure the index is consistent.
         Thread.sleep(2000);
 
         // you can still retrieve the survey in lists
         SurveyList list = surveysApi.getPublishedSurveys().execute().body();
-        assertTrue(list.getItems().stream()
-                .anyMatch(survey -> survey.getGuid().equals(keys.getGuid())));
+        assertFalse(list.getItems().stream().anyMatch(survey -> survey.getGuid().equals(keys.getGuid())));
     }
     
     @Test
