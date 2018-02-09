@@ -11,7 +11,7 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.rest.model.ReauthenticateRequest;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
@@ -75,7 +75,7 @@ public class ReauthenticationTest {
         // You can re-authenticate.
         String oldSessionToken = session.getSessionToken();
         String reauthToken = session.getReauthToken();
-        ReauthenticateRequest request = new ReauthenticateRequest().study(user.getStudyId())
+        SignIn request = new SignIn().study(user.getStudyId())
                 .email(user.getSession().getEmail()).reauthToken(reauthToken);
         
         AuthenticationApi authApi = user.getClient(AuthenticationApi.class);
@@ -99,7 +99,7 @@ public class ReauthenticationTest {
         user.signOut();
         
         try {
-            request = new ReauthenticateRequest().study(user.getStudyId()).email(newSession.getEmail())
+            request = new SignIn().study(user.getStudyId()).email(newSession.getEmail())
                     .reauthToken(newSession.getReauthToken());
             authApi.reauthenticate(request).execute().body();
             fail("Should have thrown exception.");
