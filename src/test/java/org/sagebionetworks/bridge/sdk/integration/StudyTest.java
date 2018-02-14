@@ -37,12 +37,14 @@ import org.sagebionetworks.repo.model.Project;
 import org.sagebionetworks.repo.model.ResourceAccess;
 import org.sagebionetworks.repo.model.Team;
 import org.sagebionetworks.repo.model.util.ModelConstants;
+import retrofit2.Response;
 
 import org.sagebionetworks.bridge.config.PropertiesConfig;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.UploadsApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.exceptions.UnsupportedVersionException;
@@ -50,6 +52,8 @@ import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
 import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.EmailTemplate;
+import org.sagebionetworks.bridge.rest.model.EmailVerification;
+import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.MimeType;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -230,7 +234,9 @@ public class StudyTest {
         Study study = Tests.getStudy(studyId, null);
         assertNull("study version should be null", study.getVersion());
 
-        // Set these flags to false to verify that studies are always created with these flags set to true.
+        // Set these flags to the non-default value to verify that studies are always created with these flags set to
+        // the default value.
+        study.setConsentNotificationEmailVerified(true);
         study.setStudyIdExcludedInExport(false);
 
         // Set validation strictness to null, to verify the default.
@@ -281,6 +287,8 @@ public class StudyTest {
                 myProvider.getCallbackUrl());
 
         // Verify other defaults
+        assertFalse("consentNotificationEmailVerified should be false", newStudy
+                .getConsentNotificationEmailVerified());
         assertTrue("studyIdExcludedInExport should be true", newStudy.getStudyIdExcludedInExport());
         assertEquals("uploadValidationStrictness should be REPORT", UploadValidationStrictness.REPORT,
                 newStudy.getUploadValidationStrictness());
@@ -339,11 +347,17 @@ public class StudyTest {
         // Set stuff that only an admin can set.
         newerStudy.setEmailSignInEnabled(false);
         newerStudy.setStudyIdExcludedInExport(false);
+
+        // ConsentNotificationEmailVerified cannot be set by the update API.
+        newerStudy.setConsentNotificationEmailVerified(true);
+
         studiesApi.updateStudy(newerStudy.getIdentifier(), newerStudy).execute().body();
         Study newestStudy = studiesApi.getStudy(newStudy.getIdentifier()).execute().body();
 
         assertFalse("emailSignInEnabled should be false after update", newestStudy.getEmailSignInEnabled());
         assertFalse("studyIdExcludedInExport should be false after update", newestStudy.getStudyIdExcludedInExport());
+        assertFalse("consentNotificationEmailVerified should be false after update", newestStudy.
+                getConsentNotificationEmailVerified());
 
         // logically delete a study by admin
         studiesApi.deleteStudy(studyId, false).execute();
@@ -424,6 +438,32 @@ public class StudyTest {
             assertFalse("reauthenticationEnabled should be false", study.getReauthenticationEnabled());
         } finally {
             developer.signOutAndDeleteUser();
+        }
+    }
+
+    @Test
+    public void resendVerifyConsentNotificationEmail() throws Exception {
+        // We currently can't check an email address as part of a test. Just verify that the call succeeds.
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
+        try {
+            StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+            Response<Message> response = studiesApi.resendVerifyConsentNotificationEmail().execute();
+            assertEquals(200, response.code());
+        } finally {
+            developer.signOutAndDeleteUser();
+        }
+    }
+
+    @Test
+    public void verifyConsentNotificationEmail() throws Exception {
+        // We can't currently check an email address to get a real verification token. This test is mainly to make sure
+        // that our Java SDK is set up correctly.
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        try {
+            studiesApi.verifyConsentNotificationEmail(new EmailVerification().sptoken("dummy-token")).execute();
+            fail("expected exception");
+        } catch (BadRequestException ex) {
+            assertTrue(ex.getMessage().contains("Email verification token has expired (or already been used)."));
         }
     }
 
