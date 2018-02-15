@@ -52,7 +52,6 @@ import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
 import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.EmailTemplate;
-import org.sagebionetworks.bridge.rest.model.EmailVerification;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.MimeType;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
@@ -325,7 +324,7 @@ public class StudyTest {
         assertFalse(newerStudy.getStrictUploadValidationEnabled());
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals(UploadValidationStrictness.WARNING, newerStudy.getUploadValidationStrictness());
-        assertEquals("test4@test.com", newerStudy.getConsentNotificationEmail());
+        assertEquals("bridge-testing+test4@sagebase.org", newerStudy.getConsentNotificationEmail());
 
         assertEquals("subject", newerStudy.getEmailSignInTemplate().getSubject());
         assertEquals("body ${token}", newerStudy.getEmailSignInTemplate().getBody());
@@ -447,7 +446,7 @@ public class StudyTest {
         TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
         try {
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-            Response<Message> response = studiesApi.resendVerifyConsentNotificationEmail().execute();
+            Response<Message> response = studiesApi.resendVerifyEmail("CONSENT_NOTIFICATION").execute();
             assertEquals(200, response.code());
         } finally {
             developer.signOutAndDeleteUser();
@@ -460,7 +459,7 @@ public class StudyTest {
         // that our Java SDK is set up correctly.
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         try {
-            studiesApi.verifyConsentNotificationEmail(new EmailVerification().sptoken("dummy-token")).execute();
+            studiesApi.verifyEmail(Tests.STUDY_ID, "dummy-token", "CONSENT_NOTIFICATION").execute();
             fail("expected exception");
         } catch (BadRequestException ex) {
             assertTrue(ex.getMessage().contains("Email verification token has expired (or already been used)."));
@@ -719,7 +718,7 @@ public class StudyTest {
         study.setStrictUploadValidationEnabled(false);
         study.setSupportEmail("test3@test.com");
         study.setUploadValidationStrictness(UploadValidationStrictness.WARNING);
-        study.setConsentNotificationEmail("test4@test.com");
+        study.setConsentNotificationEmail("bridge-testing+test4@sagebase.org");
         
         OAuthProvider provider = study.getOAuthProviders().get("myProvider");
         provider.endpoint("endpoint2");
