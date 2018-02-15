@@ -446,7 +446,7 @@ public class StudyTest {
         TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
         try {
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-            Response<Message> response = studiesApi.resendVerifyEmail("CONSENT_NOTIFICATION").execute();
+            Response<Message> response = studiesApi.resendVerifyEmail("consent_notification").execute();
             assertEquals(200, response.code());
         } finally {
             developer.signOutAndDeleteUser();
@@ -459,7 +459,7 @@ public class StudyTest {
         // that our Java SDK is set up correctly.
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         try {
-            studiesApi.verifyEmail(Tests.STUDY_ID, "dummy-token", "CONSENT_NOTIFICATION").execute();
+            studiesApi.verifyEmail(Tests.STUDY_ID, "dummy-token", "consent_notification").execute();
             fail("expected exception");
         } catch (BadRequestException ex) {
             assertTrue(ex.getMessage().contains("Email verification token has expired (or already been used)."));
