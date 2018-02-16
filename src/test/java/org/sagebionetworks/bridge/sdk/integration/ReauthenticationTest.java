@@ -151,20 +151,24 @@ public class ReauthenticationTest {
     @Test
     public void reauthenticationWorksAfterAccountUpdate() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ReauthenticationTest.class, true);
-        String reauthToken = testUser.getSession().getReauthToken();
-        
-        ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
-        StudyParticipant participant = userApi.getUsersParticipantRecord().execute().body();
-        participant.setFirstName("Lacy");
-        participant.setLastName("Loo");
-        
-        userApi.updateUsersParticipantRecord(participant).execute().body();
-        
-        // Cannot sign out, it destroys the token... but this will still reauth and rotate the token.
-        
-        SignIn signIn = new SignIn().study(testUser.getStudyId()).email(testUser.getEmail()).reauthToken(reauthToken);
-        AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
-        UserSessionInfo newSession = authApi.reauthenticate(signIn).execute().body();
-        assertNotEquals(reauthToken, newSession.getReauthToken());
+        try {
+            String reauthToken = testUser.getSession().getReauthToken();
+            
+            ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
+            StudyParticipant participant = userApi.getUsersParticipantRecord().execute().body();
+            participant.setFirstName("Lacy");
+            participant.setLastName("Loo");
+            
+            userApi.updateUsersParticipantRecord(participant).execute().body();
+            
+            // Cannot sign out, it destroys the token... but this will still reauth and rotate the token.
+            
+            SignIn signIn = new SignIn().study(testUser.getStudyId()).email(testUser.getEmail()).reauthToken(reauthToken);
+            AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
+            UserSessionInfo newSession = authApi.reauthenticate(signIn).execute().body();
+            assertNotEquals(reauthToken, newSession.getReauthToken());
+        } finally {
+            testUser.signOutAndDeleteUser();
+        }
     }
 }
