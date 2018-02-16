@@ -225,7 +225,7 @@ public class Tests {
         study.setStrictUploadValidationEnabled(true);
         study.setStudyIdExcludedInExport(true);
         study.setSupportEmail("test@test.com");
-        study.setConsentNotificationEmail("test2@test.com");
+        study.setConsentNotificationEmail("bridge-testing+test2@sagebase.org");
         study.setTechnicalEmail("test3@test.com");
         study.setUsesCustomExportSchedule(true);
         study.getUserProfileAttributes().add("new_profile_attribute");
