@@ -43,4 +43,17 @@ public class SessionRefreshTest {
             // this is expected
         }
     }
+
+    @Test
+    public void testReauthenticationAcrossStudies() throws Exception {
+        // Use developer from the Shared study to test across studies. Initial call succeeds.
+        TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
+        sharedDeveloper.getClient(ParticipantsApi.class).getUsersParticipantRecord().execute();
+
+        // Sign user out.
+        sharedDeveloper.signOut();
+
+        // Call should succeed again. Sign-in happens again behind the scenes
+        sharedDeveloper.getClient(ParticipantsApi.class).getUsersParticipantRecord().execute();
+    }
 }
