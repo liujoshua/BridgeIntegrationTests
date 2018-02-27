@@ -13,6 +13,7 @@ import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -20,11 +21,11 @@ import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 import org.sagebionetworks.bridge.rest.model.AppConfigList;
+import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
@@ -37,11 +38,8 @@ public class AppConfigTest {
     private TestUser developer;
     private TestUser admin;
 
-    private ForConsentedUsersApi userApi;
     private AppConfigsApi adminApi;
     private AppConfigsApi devApi;
-    
-    private Study study;
     
     @Before
     public void before() throws IOException {
@@ -49,11 +47,8 @@ public class AppConfigTest {
         developer = TestUserHelper.createAndSignInUser(ExternalIdsTest.class, false, Role.DEVELOPER);
         admin = TestUserHelper.getSignedInAdmin();
         
-        userApi = user.getClient(ForConsentedUsersApi.class);
         adminApi = admin.getClient(AppConfigsApi.class);
         devApi = developer.getClient(AppConfigsApi.class);
-        
-        study = developer.getClient(StudiesApi.class).getUsersStudy().execute().body();
     }
     
     @After
@@ -74,6 +69,8 @@ public class AppConfigTest {
     
     @Test
     public void crudAppConfig() throws Exception {
+        StudiesApi studiesApi = user.getClient(StudiesApi.class);
+        
         SchemaReference schemaRef1 = new SchemaReference().id("boo").revision(2L);
         Tests.setVariableValueInObject(schemaRef1, "type", "SchemaReference");
         List<SchemaReference> schemaReferences = Lists.newArrayList();
@@ -88,7 +85,7 @@ public class AppConfigTest {
         participant.setExternalId("externalId");
         
         Criteria criteria = new Criteria();
-        criteria.noneOfGroups(study.getDataGroups());
+        criteria.getMaxAppVersions().put("Android", 10);
         
         AppConfig appConfig = new AppConfig();
         appConfig.setLabel(Tests.randomIdentifier(AppConfigTest.class));
@@ -118,7 +115,7 @@ public class AppConfigTest {
         appConfig.setGuid(holder.getGuid());
         appConfig.setVersion(holder.getVersion());
         
-        // Update it. This
+        // Update it.
         holder = devApi.updateAppConfig(appConfig.getGuid(), appConfig).execute().body();
         appConfig.setGuid(holder.getGuid());
         appConfig.setVersion(holder.getVersion());
@@ -132,32 +129,39 @@ public class AppConfigTest {
         assertNotEquals(secondOneRetrieved.getModifiedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
         
         // You can get it as the user (there's only one)
-        AppConfig userAppConfig = userApi.getUsersAppConfig().execute().body();
+        AppConfig userAppConfig = studiesApi.getAppConfig(user.getStudyId()).execute().body();
         assertNotNull(userAppConfig);
         
         // Create a second app config
         devApi.createAppConfig(appConfig).execute().body();
         appConfig = devApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
         
-        AppConfig shouldBeFirstOne = userApi.getUsersAppConfig().execute().body();
+        AppConfig shouldBeFirstOne = studiesApi.getAppConfig(user.getStudyId()).execute().body();
         assertEquals(appConfig.getCreatedOn().toString(), shouldBeFirstOne.getCreatedOn().toString());
 
-        StudyParticipant usersParticipant = userApi.getUsersParticipantRecord().execute().body();
-        usersParticipant.setDataGroups(Lists.newArrayList(study.getDataGroups())); // this won't match.
-        userApi.updateUsersParticipantRecord(usersParticipant).execute();
-
+        ClientInfo clientInfo = new ClientInfo();
+        clientInfo.appName("Integration Tests");
+        clientInfo.appVersion(20);
+        clientInfo.osName("Android");
+        clientInfo.osVersion("0.0.0");
+        
+        ClientManager manager = new ClientManager.Builder()
+                .withSignIn(user.getSignIn())
+                .withClientInfo(clientInfo).build();
+        ForConsentedUsersApi newUserApi = manager.getClient(ForConsentedUsersApi.class);
+        
         try {
-            userApi.getUsersAppConfig().execute();
+            newUserApi.getAppConfig(user.getStudyId()).execute().body();
             fail("Should have thrown an exception");
         } catch(EntityNotFoundException e) {
             // None have matched
         }
         
-        appConfig.getCriteria().setNoneOfGroups(null);
+        appConfig.getCriteria().getMaxAppVersions().remove("Android");
         devApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
         
         // Finally... we have one, it will be returned
-        AppConfig config = userApi.getUsersAppConfig().execute().body();
+        AppConfig config = newUserApi.getAppConfig(user.getStudyId()).execute().body();
         assertEquals(appConfig.getGuid(), config.getGuid());
     }
 }
