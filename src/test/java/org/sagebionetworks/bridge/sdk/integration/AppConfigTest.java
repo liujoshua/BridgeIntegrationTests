@@ -13,10 +13,12 @@ import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.PublicApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
@@ -34,7 +36,7 @@ import com.google.common.collect.Lists;
 
 public class AppConfigTest {
     
-    private TestUser user;
+    //private TestUser user;
     private TestUser developer;
     private TestUser admin;
 
@@ -43,7 +45,7 @@ public class AppConfigTest {
     
     @Before
     public void before() throws IOException {
-        user = TestUserHelper.createAndSignInUser(ActivityEventTest.class, true);
+        //user = TestUserHelper.createAndSignInUser(ActivityEventTest.class, true);
         developer = TestUserHelper.createAndSignInUser(ExternalIdsTest.class, false, Role.DEVELOPER);
         admin = TestUserHelper.getSignedInAdmin();
         
@@ -57,10 +59,12 @@ public class AppConfigTest {
         for (AppConfig config : list.getItems()) {
             adminApi.deleteAppConfig(config.getGuid()).execute();
         }
+        /*
         try {
             user.signOutAndDeleteUser();    
         } catch(Throwable throwable) {
         }
+        */
         try {
             developer.signOutAndDeleteUser();    
         } catch(Throwable throwable) {
@@ -69,7 +73,7 @@ public class AppConfigTest {
     
     @Test
     public void crudAppConfig() throws Exception {
-        StudiesApi studiesApi = user.getClient(StudiesApi.class);
+        StudiesApi studiesApi = developer.getClient(StudiesApi.class);
         
         SchemaReference schemaRef1 = new SchemaReference().id("boo").revision(2L);
         Tests.setVariableValueInObject(schemaRef1, "type", "SchemaReference");
@@ -129,29 +133,31 @@ public class AppConfigTest {
         assertNotEquals(secondOneRetrieved.getModifiedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
         
         // You can get it as the user (there's only one)
-        AppConfig userAppConfig = studiesApi.getAppConfig(user.getStudyId()).execute().body();
+        AppConfig userAppConfig = studiesApi.getAppConfig(developer.getStudyId()).execute().body();
         assertNotNull(userAppConfig);
         
         // Create a second app config
         devApi.createAppConfig(appConfig).execute().body();
         appConfig = devApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
         
-        AppConfig shouldBeFirstOne = studiesApi.getAppConfig(user.getStudyId()).execute().body();
+        AppConfig shouldBeFirstOne = studiesApi.getAppConfig(developer.getStudyId()).execute().body();
         assertEquals(appConfig.getCreatedOn().toString(), shouldBeFirstOne.getCreatedOn().toString());
 
         ClientInfo clientInfo = new ClientInfo();
         clientInfo.appName("Integration Tests");
         clientInfo.appVersion(20);
+        clientInfo.deviceName("Java");
         clientInfo.osName("Android");
         clientInfo.osVersion("0.0.0");
+        clientInfo.sdkName(developer.getClientManager().getClientInfo().getSdkName());
+        clientInfo.sdkVersion(developer.getClientManager().getClientInfo().getSdkVersion());
+        String ua = RestUtils.getUserAgent(clientInfo);
         
-        ClientManager manager = new ClientManager.Builder()
-                .withSignIn(user.getSignIn())
-                .withClientInfo(clientInfo).build();
-        ForConsentedUsersApi newUserApi = manager.getClient(ForConsentedUsersApi.class);
+        // Use the public (non-authenticated) call to verify you don't need to be signed in for this to work.
+        PublicApi publicApi = getPublicClient(PublicApi.class, ua);
         
         try {
-            newUserApi.getAppConfig(user.getStudyId()).execute().body();
+            publicApi.getAppConfig(developer.getStudyId()).execute().body();
             fail("Should have thrown an exception");
         } catch(EntityNotFoundException e) {
             // None have matched
@@ -161,7 +167,17 @@ public class AppConfigTest {
         devApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
         
         // Finally... we have one, it will be returned
-        AppConfig config = newUserApi.getAppConfig(user.getStudyId()).execute().body();
+        AppConfig config = publicApi.getAppConfig(developer.getStudyId()).execute().body();
         assertEquals(appConfig.getGuid(), config.getGuid());
+    }
+    
+    public <T> T getPublicClient(Class<T> clazz, String ua) {
+        String baseUrl = developer.getClientManager().getHostUrl();
+        String userAgent = ua;
+        String acceptLanguage = "en";
+        String study = developer.getStudyId();
+        
+        ApiClientProvider provider = new ApiClientProvider(baseUrl, userAgent, acceptLanguage, study);
+        return provider.getClient(clazz);
     }
 }
