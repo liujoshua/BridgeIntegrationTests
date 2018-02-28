@@ -14,10 +14,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
-import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
-import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.PublicApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -36,7 +34,6 @@ import com.google.common.collect.Lists;
 
 public class AppConfigTest {
     
-    //private TestUser user;
     private TestUser developer;
     private TestUser admin;
 
@@ -45,7 +42,6 @@ public class AppConfigTest {
     
     @Before
     public void before() throws IOException {
-        //user = TestUserHelper.createAndSignInUser(ActivityEventTest.class, true);
         developer = TestUserHelper.createAndSignInUser(ExternalIdsTest.class, false, Role.DEVELOPER);
         admin = TestUserHelper.getSignedInAdmin();
         
@@ -59,12 +55,6 @@ public class AppConfigTest {
         for (AppConfig config : list.getItems()) {
             adminApi.deleteAppConfig(config.getGuid()).execute();
         }
-        /*
-        try {
-            user.signOutAndDeleteUser();    
-        } catch(Throwable throwable) {
-        }
-        */
         try {
             developer.signOutAndDeleteUser();    
         } catch(Throwable throwable) {
