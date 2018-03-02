@@ -93,7 +93,7 @@ public class IntentToParticipateTest {
         // We need to enable the user without verifying the phone, so the next part of the test works.
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         AccountSummaryList list = participantsApi.getParticipants(0, 5, email, null, null, null).execute().body();
-        StudyParticipant participant = participantsApi.getParticipant(list.getItems().get(0).getId()).execute().body();
+        StudyParticipant participant = participantsApi.getParticipantById(list.getItems().get(0).getId(), false).execute().body();
         
         participant.setStatus(AccountStatus.ENABLED);
         participant.setPhoneVerified(true);

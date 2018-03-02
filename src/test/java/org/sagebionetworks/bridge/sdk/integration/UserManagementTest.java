@@ -73,7 +73,7 @@ public class UserManagementTest {
 
         try {
             ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-            participantsApi.getParticipant(userSession.getId()).execute();
+            participantsApi.getParticipantById(userSession.getId(), false).execute();
             fail("Should have thrown an exception");
         } catch(EntityNotFoundException e) {
             // expected exception

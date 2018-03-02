@@ -75,7 +75,7 @@ public class SessionTest {
 
             ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
 
-            StudyParticipant participant = participantsApi.getParticipant(researcher.getSession().getId()).execute().body();
+            StudyParticipant participant = participantsApi.getParticipantById(researcher.getSession().getId(), false).execute().body();
             participant.setFirstName("TestFirstName");
             participant.setLastName("TestLastName");
             participant.setLanguages(languages);

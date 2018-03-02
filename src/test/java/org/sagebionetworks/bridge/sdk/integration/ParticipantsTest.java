@@ -23,6 +23,7 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
@@ -43,11 +44,13 @@ import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UploadList;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
 
 import org.joda.time.DateTime;
@@ -141,19 +144,43 @@ public class ParticipantsTest {
     @Test
     public void retrieveParticipant() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-        
-        StudyParticipant participant = participantsApi.getParticipant(researcher.getSession().getId()).execute().body();
-        // Verify that what we know about this test user exists in the record
-        assertEquals(researcher.getEmail(), participant.getEmail());
-        assertEquals(researcher.getSession().getId(), participant.getId());
-        assertTrue(participant.getRoles().contains(Role.RESEARCHER));
-        assertFalse(participant.getConsentHistories().get("api").isEmpty());
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        Study study = studiesApi.getStudy(admin.getStudyId()).execute().body();
+        try {
+            study.setHealthCodeExportEnabled(true);
+            VersionHolder version = studiesApi.updateStudy(study.getIdentifier(), study).execute().body();
+            study.version(version.getVersion());
+            
+            StudyParticipant participant = participantsApi.getParticipantById(researcher.getSession().getId(), true).execute().body();
+            // Verify that what we know about this test user exists in the record
+            assertEquals(researcher.getEmail(), participant.getEmail());
+            assertEquals(researcher.getSession().getId(), participant.getId());
+            assertTrue(participant.getRoles().contains(Role.RESEARCHER));
+            assertFalse(participant.getConsentHistories().get("api").isEmpty());
+            
+            StudyParticipant participant2 = participantsApi.getParticipantByHealthCode(participant.getHealthCode(), false).execute().body();
+            assertEquals(participant.getId(), participant2.getId());
+            assertNull(participant2.getConsentHistories().get("api"));
+            
+            // Get this participant using an external ID
+            String extId = Tests.randomIdentifier(ParticipantsTest.class);
+            participant2.externalId(extId);
+            participantsApi.updateParticipant(participant2.getId(), participant2).execute();
+            
+            StudyParticipant participant3 = participantsApi.getParticipantByExternalId(extId, false).execute().body();
+            assertEquals(participant.getId(), participant3.getId());
+            assertNull(participant3.getConsentHistories().get("api"));
+        } finally {
+            study.setHealthCodeExportEnabled(false);
+            VersionHolder version = studiesApi.updateStudy(study.getIdentifier(), study).execute().body();
+            study.version(version.getVersion());
+        }
     }
     
     @Test
     public void canRetrieveAndPageThroughParticipants() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-        
+
         AccountSummaryList summaries = participantsApi.getParticipants(0, 10, null, null, null, null).execute().body();
 
         int total = summaries.getTotal();
@@ -255,7 +282,7 @@ public class ParticipantsTest {
             assertEquals(email, summary.getEmail());
             
             // Can also get by the ID
-            StudyParticipant retrieved = participantsApi.getParticipant(id).execute().body();
+            StudyParticipant retrieved = participantsApi.getParticipantById(id, true).execute().body();
             assertEquals("FirstName", retrieved.getFirstName());
             assertEquals("LastName", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail());
@@ -305,7 +332,7 @@ public class ParticipantsTest {
             Thread.sleep(300);
             
             // Get it again, verify it has been updated
-            retrieved = participantsApi.getParticipant(id).execute().body();
+            retrieved = participantsApi.getParticipantById(id, true).execute().body();
             assertEquals("FirstName2", retrieved.getFirstName());
             assertEquals("LastName2", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail());
@@ -573,7 +600,7 @@ public class ParticipantsTest {
         assertEquals(phoneUser.getPhone().getNumber(), list.getItems().get(0).getPhone().getNumber());
         
         String userId = list.getItems().get(0).getId();
-        StudyParticipant participant = participantsApi.getParticipant(userId).execute().body();
+        StudyParticipant participant = participantsApi.getParticipantById(userId, true).execute().body();
         
         assertEquals(phoneUser.getPhone().getNumber(), participant.getPhone().getNumber());
         assertEquals(userId, participant.getId());
@@ -594,7 +621,7 @@ public class ParticipantsTest {
         assertEquals(email, info.getEmail());
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-        StudyParticipant retrieved = participantsApi.getParticipant(phoneUser.getSession().getId()).execute().body();
+        StudyParticipant retrieved = participantsApi.getParticipantById(phoneUser.getSession().getId(), true).execute().body();
         assertEquals(email, retrieved.getEmail());
         
         // But if you do it again, it should not work
@@ -620,7 +647,7 @@ public class ParticipantsTest {
         assertEquals(Tests.PHONE.getNumber(), info.getPhone().getNumber());
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-        StudyParticipant retrieved = participantsApi.getParticipant(emailUser.getSession().getId()).execute().body();
+        StudyParticipant retrieved = participantsApi.getParticipantById(emailUser.getSession().getId(), true).execute().body();
         assertEquals(Tests.PHONE.getNumber(), retrieved.getPhone().getNumber());
         
         // But if you do it again, it should not work

@@ -104,7 +104,7 @@ public class SignInTest {
         assertEquals(1, summaries.getItems().size());
         
         AccountSummary summary = summaries.getItems().get(0);
-        StudyParticipant retrieved = participantsApi.getParticipant(summary.getId()).execute().body();
+        StudyParticipant retrieved = participantsApi.getParticipantById(summary.getId(), false).execute().body();
         assertEquals("First Name", retrieved.getFirstName());
         assertEquals("Last Name", retrieved.getLastName());
         assertEquals("external ID", retrieved.getExternalId());
@@ -145,7 +145,7 @@ public class SignInTest {
         // Mark account as unverified. In the v4 API, if sign in is first successful, we throw unauthorized exception
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ParticipantsApi participantsApi = admin.getClient(ParticipantsApi.class);
-        StudyParticipant participant = participantsApi.getParticipant(user.getSession().getId()).execute().body();
+        StudyParticipant participant = participantsApi.getParticipantById(user.getSession().getId(), false).execute().body();
         participant.setStatus(AccountStatus.UNVERIFIED);
         participantsApi.updateParticipant(user.getSession().getId(), participant).execute();
 
