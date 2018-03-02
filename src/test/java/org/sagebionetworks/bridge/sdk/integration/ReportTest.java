@@ -162,7 +162,7 @@ public class ReportTest {
 
         TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, false, Role.DEVELOPER);
 
-        String healthCode = worker.getClient(ParticipantsApi.class).getParticipant(user.getSession().getId()).execute()
+        String healthCode = worker.getClient(ParticipantsApi.class).getParticipantById(user.getSession().getId(), false).execute()
                 .body().getHealthCode();
         assertNotNull(healthCode);
 
