@@ -526,12 +526,12 @@ public class ParticipantsTest {
             
             usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
             ParticipantsApi api = researcher.getClient(ParticipantsApi.class);
-            
-            ForwardCursorScheduledActivityList list = api
-                    .getParticipantTaskHistory(userId, taskReferentGuid, startsOn, endsOn, null, 100).execute().body();
 
             // getTaskHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index is consistent.
             Thread.sleep(2000);
+
+            ForwardCursorScheduledActivityList list = api
+                    .getParticipantTaskHistory(userId, taskReferentGuid, startsOn, endsOn, null, 100).execute().body();
 
             // There should be activities...
             assertFalse(list.getItems().isEmpty());
