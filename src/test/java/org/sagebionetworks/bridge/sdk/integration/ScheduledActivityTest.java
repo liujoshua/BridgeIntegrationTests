@@ -202,8 +202,8 @@ public class ScheduledActivityTest {
     public void getScheduledActivityHistoryV4() throws InterruptedException, IOException {
         dailyTaskAt4Times();
         
-        DateTime startTime = DateTime.now();
-        DateTime endTime = DateTime.now().plusDays(4);
+        DateTime startTime = DateTime.now(EST);
+        DateTime endTime = DateTime.now(EST).plusDays(4);
         
         usersApi.getScheduledActivitiesByDateRange(startTime, endTime).execute().body();
 
