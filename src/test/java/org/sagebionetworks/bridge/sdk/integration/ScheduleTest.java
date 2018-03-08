@@ -276,11 +276,8 @@ public class ScheduleTest {
     
     private ClientInfo getClientInfoWithVersion(String osName, Integer version) {
         ClientInfo info = new ClientInfo();
-        info.setAppName("app");
         info.setAppVersion(version);
         info.setOsName(osName);
-        info.setDeviceName("Integrate Tests");
-        info.setOsVersion("2.0.0");
         return info;
     }    
 }
