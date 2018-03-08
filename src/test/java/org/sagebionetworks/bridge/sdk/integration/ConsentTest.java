@@ -222,9 +222,8 @@ public class ConsentTest {
             String imageMimeType) throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
         
-        ConsentSignature sig = new ConsentSignature().name(name).birthdate(birthdate)
-                .imageData(imageData) .imageMimeType(imageMimeType);
-        sig.setScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
+        ConsentSignature sig = new ConsentSignature().name(name).birthdate(birthdate).imageData(imageData)
+                .imageMimeType(imageMimeType).scope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
         try {
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
             
@@ -242,11 +241,12 @@ public class ConsentTest {
             // give consent
             UserSessionInfo session = userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute().body();
             
+            // Session should be updated to reflect this consent.
             ConsentStatus status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
             assertTrue(status.getConsented());
             assertTrue(status.getSignedMostRecentConsent());
             
-            // Participant record shows sharing scope has been set
+            // Participant record includes the sharing scope that was set
             StudyParticipant participant = userApi.getUsersParticipantRecord().execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, participant.getSharingScope());
             
@@ -256,10 +256,8 @@ public class ConsentTest {
             
             // get consent and validate that it's the same consent
             ConsentSignature sigFromServer = userApi.getConsentSignature(testUser.getDefaultSubpopulation()).execute().body();
-            
             assertEquals("name matches", name, sigFromServer.getName());
             assertEquals("birthdate matches", birthdate, sigFromServer.getBirthdate());
-
             assertEquals("imageData matches", imageData, sigFromServer.getImageData());
             assertEquals("imageMimeType matches", imageMimeType, sigFromServer.getImageMimeType());
             
@@ -289,6 +287,7 @@ public class ConsentTest {
             session = userApi.withdrawConsentFromSubpopulation(testUser.getDefaultSubpopulation(), withdrawal).execute()
                     .body();
             
+            // Session should reflect the withdrawal of consent
             status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
             assertFalse(status.getConsented());
             assertFalse(status.getSignedMostRecentConsent());
