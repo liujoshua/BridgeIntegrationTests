@@ -92,6 +92,7 @@ public class SchedulePlanTest {
     @Test
     public void crudSchedulePlan() throws Exception {
         ClientInfo clientInfo = new ClientInfo();
+        clientInfo.appName("Integration Tests");
         clientInfo.setAppName(Tests.APP_NAME);
         clientInfo.setAppVersion(3);
         // We want a version that will return the schedule plan. Zero doesn't do it.

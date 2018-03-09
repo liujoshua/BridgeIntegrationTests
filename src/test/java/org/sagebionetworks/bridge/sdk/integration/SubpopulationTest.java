@@ -199,6 +199,7 @@ public class SubpopulationTest {
     
     private ClientInfo getClientInfoWithVersion(String osName, Integer version) {
         ClientInfo info = new ClientInfo();
+        info.appName("Integration Tests");
         info.setAppVersion(version);
         info.setOsName(osName);
         return info;

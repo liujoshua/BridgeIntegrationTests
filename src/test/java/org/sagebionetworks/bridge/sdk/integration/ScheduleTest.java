@@ -243,9 +243,9 @@ public class ScheduleTest {
     
     private ClientInfo getClientInfo(String appName, Integer appVersion) {
         ClientInfo info = new ClientInfo();
+        info.appName("Integration Tests");
         info.setAppName(appName);
         info.setAppVersion(appVersion);
-        info.setDeviceName("Integration Tests");
         return info;
     }
     
@@ -276,6 +276,7 @@ public class ScheduleTest {
     
     private ClientInfo getClientInfoWithVersion(String osName, Integer version) {
         ClientInfo info = new ClientInfo();
+        info.appName("Integration Tests");
         info.setAppVersion(version);
         info.setOsName(osName);
         return info;

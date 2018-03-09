@@ -134,6 +134,7 @@ public class AppConfigTest {
         assertEquals(appConfig.getCreatedOn().toString(), shouldBeFirstOne.getCreatedOn().toString());
 
         ClientInfo clientInfo = new ClientInfo();
+        clientInfo.appName("Integration Tests");
         clientInfo.osName("Android");
         clientInfo.appVersion(20);
         clientInfo.sdkName(developer.getClientManager().getClientInfo().getSdkName());
