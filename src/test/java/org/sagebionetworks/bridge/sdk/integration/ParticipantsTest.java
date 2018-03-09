@@ -73,6 +73,7 @@ public class ParticipantsTest {
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         researcher = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.RESEARCHER);
+        Tests.deletePhoneUser(researcher);
     }
     
     @After

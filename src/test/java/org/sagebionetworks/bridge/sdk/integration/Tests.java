@@ -1,7 +1,9 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,8 +16,11 @@ import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import org.sagebionetworks.bridge.rest.Config;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.model.ABTestGroup;
 import org.sagebionetworks.bridge.rest.model.ABTestScheduleStrategy;
+import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
 import org.sagebionetworks.bridge.rest.model.AppleAppLink;
@@ -24,6 +29,7 @@ import org.sagebionetworks.bridge.rest.model.EmailTemplate;
 import org.sagebionetworks.bridge.rest.model.MimeType;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Phone;
+import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
@@ -31,6 +37,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
+import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
 public class Tests {
     
@@ -53,6 +60,19 @@ public class Tests {
     public static final EmailTemplate TEST_ACCOUNT_EXISTS_TEMPLATE = new EmailTemplate().subject("Your ${studyName} account")
             .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
 
+    public static void deletePhoneUser(TestUser researcher) throws IOException {
+        checkArgument(researcher.getRoles().contains(Role.RESEARCHER));
+        
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        AccountSummaryList list = participantsApi.getParticipants(
+                0, 5, null, PHONE.getNumber(), null, null).execute().body();
+        if (!list.getItems().isEmpty()) {
+            TestUser admin = TestUserHelper.getSignedInAdmin();
+            ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+            adminsApi.deleteUser(list.getItems().get(0).getId()).execute();
+        }
+    }
+    
     public static ClientInfo getClientInfoWithVersion(String osName, int version) {
         return new ClientInfo().appName(APP_NAME).appVersion(version).deviceName(APP_NAME).osName(osName)
                 .osVersion("2.0.0").sdkName("BridgeJavaSDK").sdkVersion(Integer.parseInt(CONFIG.getSdkVersion()));

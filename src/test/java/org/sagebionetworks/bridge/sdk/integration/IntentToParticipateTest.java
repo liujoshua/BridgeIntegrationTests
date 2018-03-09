@@ -35,13 +35,17 @@ public class IntentToParticipateTest {
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         researcher = TestUserHelper.createAndSignInUser(IntentToParticipateTest.class, false, Role.ADMIN, Role.RESEARCHER);
+        Tests.deletePhoneUser(researcher);
     }
     
     @After
-    public void after() throws Exception {
+    public void deleteResearcher() throws Exception {
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
         }
+    }
+    @After
+    public void deleteUser() throws Exception {
         if (session != null) {
             UsersApi userApi = admin.getClient(UsersApi.class);
             userApi.deleteUser(session.getId()).execute();
