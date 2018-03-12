@@ -56,6 +56,7 @@ import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.MimeType;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SmsTemplate;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.Upload;
@@ -336,6 +337,12 @@ public class StudyTest {
         
         assertEquals("endpoint2", newerStudy.getOAuthProviders().get("myProvider").getEndpoint());
         assertEquals("callbackUrl2", newerStudy.getOAuthProviders().get("myProvider").getCallbackUrl());
+        
+        assertEquals("resetPasswordSmsTemplate ${url}", study.getResetPasswordSmsTemplate().getMessage());
+        assertEquals("phoneSignInSmsTemplate ${token}", study.getPhoneSignInSmsTemplate().getMessage());
+        assertEquals("appInstallLinkSmsTemplate ${url}", study.getAppInstallLinkSmsTemplate().getMessage());
+        assertEquals("verifyPhoneSmsTemplate ${token}", study.getVerifyPhoneSmsTemplate().getMessage());
+        assertEquals("accountExistsSmsTemplate ${token}", study.getAccountExistsSmsTemplate().getMessage());
         
         newerStudy.setAccountExistsTemplate(new EmailTemplate().subject("Updated subject").body("Updated ${url} body")
                 .mimeType(MimeType.TEXT_HTML));        

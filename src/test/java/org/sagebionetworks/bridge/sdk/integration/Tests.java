@@ -12,7 +12,6 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomStringUtils;
-
 import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.model.ABTestGroup;
 import org.sagebionetworks.bridge.rest.model.ABTestScheduleStrategy;
@@ -29,6 +28,7 @@ import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
+import org.sagebionetworks.bridge.rest.model.SmsTemplate;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 
@@ -52,7 +52,12 @@ public class Tests {
             .body("<p>${host}/${token}</p>").mimeType(MimeType.TEXT_HTML);
     public static final EmailTemplate TEST_ACCOUNT_EXISTS_TEMPLATE = new EmailTemplate().subject("Your ${studyName} account")
             .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
-
+    public static final SmsTemplate RESET_PASSWORD_SMS_TEMPLATE = new SmsTemplate().message("resetPasswordSmsTemplate ${url}");
+    public static final SmsTemplate PHONE_SIGNIN_SMS_TEMPLATE = new SmsTemplate().message("phoneSignInSmsTemplate ${token}");
+    public static final SmsTemplate APP_INSTALL_LINK_SMS_TEMPLATE = new SmsTemplate().message("appInstallLinkSmsTemplate ${url}");
+    public static final SmsTemplate VERIFY_PHONE_SMS_TEMPLATE = new SmsTemplate().message("verifyPhoneSmsTemplate ${token}");
+    public static final SmsTemplate ACCOUNT_EXISTS_SMS_TEMPLATE = new SmsTemplate().message("accountExistsSmsTemplate ${token}");
+    
     public static ClientInfo getClientInfoWithVersion(String osName, int version) {
         return new ClientInfo().appName(APP_NAME).appVersion(version).deviceName(APP_NAME).osName(osName)
                 .osVersion("2.0.0").sdkName("BridgeJavaSDK").sdkVersion(Integer.parseInt(CONFIG.getSdkVersion()));
@@ -235,6 +240,11 @@ public class Tests {
         study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
         study.setEmailSignInTemplate(Tests.TEST_EMAIL_SIGNIN_TEMPLATE);
         study.setAccountExistsTemplate(Tests.TEST_ACCOUNT_EXISTS_TEMPLATE);
+        study.setResetPasswordSmsTemplate(RESET_PASSWORD_SMS_TEMPLATE);
+        study.setPhoneSignInSmsTemplate(PHONE_SIGNIN_SMS_TEMPLATE);
+        study.setAppInstallLinkSmsTemplate(APP_INSTALL_LINK_SMS_TEMPLATE);
+        study.setVerifyPhoneSmsTemplate(VERIFY_PHONE_SMS_TEMPLATE);
+        study.setAccountExistsSmsTemplate(ACCOUNT_EXISTS_SMS_TEMPLATE);
         study.setEmailVerificationEnabled(true);
         study.setEmailSignInEnabled(true);
         study.setHealthCodeExportEnabled(true);
