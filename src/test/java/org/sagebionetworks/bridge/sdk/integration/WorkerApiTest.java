@@ -33,16 +33,25 @@ public class WorkerApiTest {
     }
 
     @After
-    public void after() throws Exception {
+    public void deleteWorker() throws Exception {
         if (worker != null) {
             worker.signOutAndDeleteUser();
         }
+    }
+    @After
+    public void deletePhoneUser() throws Exception {
         if (phoneUser != null) {
             phoneUser.signOutAndDeleteUser();
         }
+    }
+    @After
+    public void deleteResearcher() throws Exception {
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
         }
+    }
+    @After
+    public void deleteUser() throws Exception {
         if (user != null) {
             user.signOutAndDeleteUser();
         }
@@ -85,6 +94,8 @@ public class WorkerApiTest {
     
     @Test
     public void retrieveUsersWithPhone() throws Exception {
+        Tests.deletePhoneUser(researcher);
+
         SignUp signUp = new SignUp().phone(Tests.PHONE).password("P@ssword`1");
         phoneUser = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, signUp);
         

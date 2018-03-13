@@ -21,6 +21,7 @@ import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.PhoneSignIn;
 import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
+import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
@@ -41,7 +42,7 @@ import static org.junit.Assert.fail;
 
 @Category(IntegrationSmokeTest.class)
 public class AuthenticationTest {
-
+    private static TestUser researchUser;
     private static TestUser testUser;
     private static TestUser adminUser;
     private static TestUser phoneOnlyTestUser;
@@ -50,6 +51,8 @@ public class AuthenticationTest {
     
     @BeforeClass
     public static void beforeClass() throws IOException {
+        researchUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true, Role.RESEARCHER);
+        
         // Make a test user with a phone number.
         SignUp phoneOnlyUser = new SignUp().study(Tests.STUDY_ID).consent(true).phone(Tests.PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(AuthenticationTest.class).withConsentUser(true)
@@ -62,10 +65,20 @@ public class AuthenticationTest {
     }
     
     @AfterClass
-    public static void afterClass() throws Exception {
-        try {
-            testUser.signOutAndDeleteUser();    
-        } finally {
+    public static void deleteResearcher() throws Exception {
+        if (researchUser != null) {
+            researchUser.signOutAndDeleteUser();
+        }
+    }
+    @AfterClass
+    public static void deleteUser() throws Exception {
+        if (testUser != null) {
+            testUser.signOutAndDeleteUser();
+        }
+    }
+    @AfterClass
+    public static void deletePhoneUser() throws Exception {
+        if (phoneOnlyTestUser != null) {
             phoneOnlyTestUser.signOutAndDeleteUser();
         }
     }
@@ -223,6 +236,8 @@ public class AuthenticationTest {
 
     @Test(expected = AuthenticationFailedException.class)
     public void phoneSignInThrows() throws Exception {
+        Tests.deletePhoneUser(researchUser);
+
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
 
         PhoneSignIn phoneSignIn = new PhoneSignIn().phone(Tests.PHONE).study(phoneOnlyTestUser.getStudyId()).token("test-token");
