@@ -599,12 +599,11 @@ public class StudyTest {
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
         try {
 
-            // This is a version zero client, it should not be accepted
+            // This is a version zero client, note how little information we need to provide
+            // for this test to pass.
             ClientInfo clientInfo = new ClientInfo();
-            clientInfo.setDeviceName("Unknown");
+            clientInfo.appName(Tests.APP_NAME);
             clientInfo.setOsName("Android");
-            clientInfo.setOsVersion("1");
-            clientInfo.setAppName(Tests.APP_NAME);
             clientInfo.setAppVersion(0);
 
             ClientManager manager = new ClientManager.Builder()
