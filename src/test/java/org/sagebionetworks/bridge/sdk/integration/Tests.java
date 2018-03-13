@@ -52,9 +52,9 @@ public class Tests {
             .body("<p>${host}/${token}</p>").mimeType(MimeType.TEXT_HTML);
     public static final EmailTemplate TEST_ACCOUNT_EXISTS_TEMPLATE = new EmailTemplate().subject("Your ${studyName} account")
             .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
-    public static final SmsTemplate RESET_PASSWORD_SMS_TEMPLATE = new SmsTemplate().message("resetPasswordSmsTemplate ${url}");
+    public static final SmsTemplate RESET_PASSWORD_SMS_TEMPLATE = new SmsTemplate().message("resetPasswordSmsTemplate ${resetPasswordUrl}");
     public static final SmsTemplate PHONE_SIGNIN_SMS_TEMPLATE = new SmsTemplate().message("phoneSignInSmsTemplate ${token}");
-    public static final SmsTemplate APP_INSTALL_LINK_SMS_TEMPLATE = new SmsTemplate().message("appInstallLinkSmsTemplate ${url}");
+    public static final SmsTemplate APP_INSTALL_LINK_SMS_TEMPLATE = new SmsTemplate().message("appInstallLinkSmsTemplate ${appInstallUrl}");
     public static final SmsTemplate VERIFY_PHONE_SMS_TEMPLATE = new SmsTemplate().message("verifyPhoneSmsTemplate ${token}");
     public static final SmsTemplate ACCOUNT_EXISTS_SMS_TEMPLATE = new SmsTemplate().message("accountExistsSmsTemplate ${token}");
     
