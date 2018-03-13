@@ -40,8 +40,8 @@ public class ScheduleTest {
     
     @Before
     public void before() throws Exception {
-        ClientInfo clientInfo = getClientInfo(Tests.APP_NAME, 3);
-        
+        ClientInfo clientInfo = new ClientInfo().appName(Tests.APP_NAME).appVersion(3);
+
         user = new TestUserHelper.Builder(ScheduleTest.class).withClientInfo(clientInfo).withConsentUser(true)
                 .createAndSignInUser();
 
@@ -241,14 +241,6 @@ public class ScheduleTest {
         activitiesShouldContainTask(activityLabel1);
     }
     
-    private ClientInfo getClientInfo(String appName, Integer appVersion) {
-        ClientInfo info = new ClientInfo();
-        info.setAppName(appName);
-        info.setAppVersion(appVersion);
-        info.setDeviceName("Integration Tests");
-        return info;
-    }
-    
     private List<Activity> taskActivity(String label, String taskIdentifier) {
         TaskReference ref = new TaskReference();
         ref.setIdentifier(taskIdentifier);
@@ -276,11 +268,9 @@ public class ScheduleTest {
     
     private ClientInfo getClientInfoWithVersion(String osName, Integer version) {
         ClientInfo info = new ClientInfo();
-        info.setAppName("app");
+        info.appName(Tests.APP_NAME);
         info.setAppVersion(version);
         info.setOsName(osName);
-        info.setDeviceName("Integrate Tests");
-        info.setOsVersion("2.0.0");
         return info;
     }    
 }

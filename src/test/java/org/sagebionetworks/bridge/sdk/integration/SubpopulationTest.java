@@ -199,13 +199,9 @@ public class SubpopulationTest {
     
     private ClientInfo getClientInfoWithVersion(String osName, Integer version) {
         ClientInfo info = new ClientInfo();
-        info.setAppName("App");
+        info.appName("Integration Tests");
         info.setAppVersion(version);
-        info.setDeviceName("Integration Tests");
         info.setOsName(osName);
-        info.setOsVersion("2.0.0");
-        info.setSdkName("BridgeJavaSDK");
-        info.setSdkVersion(Integer.parseInt(developer.getClientManager().getConfig().getSdkVersion()));
         return info;
     }
     

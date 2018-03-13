@@ -134,11 +134,9 @@ public class AppConfigTest {
         assertEquals(appConfig.getCreatedOn().toString(), shouldBeFirstOne.getCreatedOn().toString());
 
         ClientInfo clientInfo = new ClientInfo();
-        clientInfo.appName("Integration Tests");
-        clientInfo.appVersion(20);
-        clientInfo.deviceName("Java");
+        clientInfo.appName(Tests.APP_NAME);
         clientInfo.osName("Android");
-        clientInfo.osVersion("0.0.0");
+        clientInfo.appVersion(20);
         clientInfo.sdkName(developer.getClientManager().getClientInfo().getSdkName());
         clientInfo.sdkVersion(developer.getClientManager().getClientInfo().getSdkVersion());
         String ua = RestUtils.getUserAgent(clientInfo);
