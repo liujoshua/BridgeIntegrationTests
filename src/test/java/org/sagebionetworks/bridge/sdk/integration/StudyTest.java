@@ -602,7 +602,7 @@ public class StudyTest {
             // This is a version zero client, note how little information we need to provide
             // for this test to pass.
             ClientInfo clientInfo = new ClientInfo();
-            clientInfo.appName("Integration Tests");
+            clientInfo.appName(Tests.APP_NAME);
             clientInfo.setOsName("Android");
             clientInfo.setAppVersion(0);
 
