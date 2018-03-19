@@ -49,6 +49,7 @@ public class HealthDataTest {
     private static final String APP_VERSION = "version 1.0.0, build 2";
     private static final DateTime CREATED_ON = DateTime.parse("2017-08-24T14:38:57.340+0900");
     private static final String CREATED_ON_TIMEZONE = "+0900";
+    private static final String PHONE_INFO = "Integration Tests";
     private static final String SCHEMA_ID = "health-data-integ-test-schema";
     private static final long SCHEMA_REV = 1L;
     private static final String SURVEY_ID = "health-data-integ-test-survey";
@@ -174,13 +175,13 @@ public class HealthDataTest {
         Map<String, Object> metadata = ImmutableMap.<String, Object>builder().put("taskRunId", "test-task-guid")
                 .put("lastMedicationHoursAgo", 3).build();
         HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
-                .data(data).metadata(metadata).phoneInfo(Tests.APP_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
+                .data(data).metadata(metadata).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
 
         // submit and validate
         HealthDataRecord record = user.getClient(HealthDataApi.class).submitHealthData(submission).execute().body();
         assertEquals(APP_VERSION, record.getAppVersion());
         assertNotNull(record.getId());
-        assertEquals(Tests.APP_NAME, record.getPhoneInfo());
+        assertEquals(PHONE_INFO, record.getPhoneInfo());
         assertEquals(SCHEMA_ID, record.getSchemaId());
         assertEquals(SCHEMA_REV, record.getSchemaRevision().longValue());
         assertNotNull(record.getUploadDate());
@@ -204,7 +205,7 @@ public class HealthDataTest {
         Map<String, String> returnedMetadataMap = RestUtils.toType(record.getMetadata(), Map.class);
         assertEquals(2, returnedMetadataMap.size());
         assertEquals(APP_VERSION, returnedMetadataMap.get("appVersion"));
-        assertEquals(Tests.APP_NAME, returnedMetadataMap.get("phoneInfo"));
+        assertEquals(PHONE_INFO, returnedMetadataMap.get("phoneInfo"));
 
         // UserMetadata contains user-submitted metadata.
         // For whatever reason, GSON converts our int into a double.
@@ -220,7 +221,7 @@ public class HealthDataTest {
         // bad things to happen.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("answer-me", "C").build();
         HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
-                .data(data).phoneInfo(Tests.APP_NAME).surveyGuid(surveyGuid).surveyCreatedOn(surveyCreatedOn);
+                .data(data).phoneInfo(PHONE_INFO).surveyGuid(surveyGuid).surveyCreatedOn(surveyCreatedOn);
 
         // submit and validate - Most of the record attributes are already validated in the previous test. Just
         // validate survey ID was set properly as the schema ID and that the data is correct.
@@ -240,7 +241,7 @@ public class HealthDataTest {
         // Make health data. This submission has foo, but not bar. Since bar is required, this trips Strict Validation.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value").build();
         HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
-                .data(data).phoneInfo(Tests.APP_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
+                .data(data).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
 
         // submit and catch exception
         try {
@@ -258,7 +259,7 @@ public class HealthDataTest {
         // Make health data. This submission has foo, but not bar. Since bar is required, this trips Strict Validation.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value").build();
         HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
-                .data(data).phoneInfo(Tests.APP_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
+                .data(data).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
 
         // submit and validate - Most of the record attributes are already validated in the previous test. Just
         // validate data and validationErrors.
@@ -277,7 +278,7 @@ public class HealthDataTest {
         // Make health data. This submission has foo, but not bar. Since bar is required, this trips Strict Validation.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value").build();
         HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
-                .data(data).phoneInfo(Tests.APP_NAME).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
+                .data(data).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
 
         // submit and validate - Most of the record attributes are already validated in the previous test. Just
         // validate data and validate that it has no validationErrors.

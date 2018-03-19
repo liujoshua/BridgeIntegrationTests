@@ -92,8 +92,8 @@ public class SchedulePlanTest {
     @Test
     public void crudSchedulePlan() throws Exception {
         ClientInfo clientInfo = new ClientInfo();
-        clientInfo.appName(Tests.APP_NAME);
-        clientInfo.appVersion(3);
+        clientInfo.setAppName(Tests.APP_NAME);
+        clientInfo.setAppVersion(3);
         // We want a version that will return the schedule plan. Zero doesn't do it.
         ClientManager manager = new ClientManager.Builder()
                 .withSignIn(developer.getSignIn())
