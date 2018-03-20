@@ -337,6 +337,12 @@ public class StudyTest {
         assertEquals("endpoint2", newerStudy.getOAuthProviders().get("myProvider").getEndpoint());
         assertEquals("callbackUrl2", newerStudy.getOAuthProviders().get("myProvider").getCallbackUrl());
         
+        assertEquals("resetPasswordSmsTemplate ${url}", study.getResetPasswordSmsTemplate().getMessage());
+        assertEquals("phoneSignInSmsTemplate ${token}", study.getPhoneSignInSmsTemplate().getMessage());
+        assertEquals("appInstallLinkSmsTemplate ${url}", study.getAppInstallLinkSmsTemplate().getMessage());
+        assertEquals("verifyPhoneSmsTemplate ${token}", study.getVerifyPhoneSmsTemplate().getMessage());
+        assertEquals("accountExistsSmsTemplate ${token}", study.getAccountExistsSmsTemplate().getMessage());
+        
         newerStudy.setAccountExistsTemplate(new EmailTemplate().subject("Updated subject").body("Updated ${url} body")
                 .mimeType(MimeType.TEXT_HTML));        
         
