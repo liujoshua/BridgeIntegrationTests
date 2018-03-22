@@ -17,6 +17,7 @@ import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
@@ -89,7 +90,11 @@ public class TestUserHelper {
         }
         public void signOutAndDeleteUser() throws IOException {
             if (getSession() != null) {
-                this.signOut();
+                try {
+                    this.signOut();    
+                } catch(BadRequestException e) {
+                    // It's quite possible at the end of some tests, the user isn't signed in.
+                }
             }
             if (userId != null) {
                 // This should sign the admin manager in automatically.

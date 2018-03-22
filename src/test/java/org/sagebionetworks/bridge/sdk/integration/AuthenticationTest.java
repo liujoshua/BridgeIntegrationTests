@@ -15,10 +15,11 @@ import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
-import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.EmailSignIn;
 import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
+import org.sagebionetworks.bridge.rest.model.Identifier;
 import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.PhoneSignIn;
 import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -98,7 +99,8 @@ public class AuthenticationTest {
             study = adminStudiesApi.getStudy(testUser.getStudyId()).execute().body();
             assertTrue(study.getEmailSignInEnabled());
             
-            authApi.requestEmailSignIn(emailSignInRequest).execute();
+            Response<Message> response = authApi.requestEmailSignIn(emailSignInRequest).execute();
+            assertEquals(202, response.code());
         } finally {
             study.setEmailSignInEnabled(false);
             adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
@@ -120,23 +122,53 @@ public class AuthenticationTest {
     
     @Test
     public void canResendEmailVerification() throws IOException {
-        Email email = new Email().study(testUser.getSignIn().getStudy()).email(testUser.getSignIn().getEmail());
+        Identifier email = new Identifier().study(testUser.getSignIn().getStudy()).email(testUser.getSignIn().getEmail());
 
-        authApi.resendEmailVerification(email).execute();
+        Response<Message> response = authApi.resendEmailVerification(email).execute();
+        assertEquals(200, response.code());
     }
     
     @Test
     public void resendingEmailVerificationToUnknownEmailDoesNotThrowException() throws Exception {
-        Email email = new Email().study(testUser.getStudyId()).email("bridge-testing@sagebase.org");
+        Identifier email = new Identifier().study(testUser.getStudyId()).email("bridge-testing@sagebase.org");
         
-        authApi.resendEmailVerification(email).execute();
+        Response<Message> response = authApi.resendEmailVerification(email).execute();
+        assertEquals(200, response.code());
     }
     
     @Test
     public void requestingResetPasswordForUnknownEmailDoesNotThrowException() throws Exception {
-        Email email = new Email().study(testUser.getStudyId()).email("fooboo-sagebridge@antwerp.com");
+        SignIn email = new SignIn().study(testUser.getStudyId()).email("fooboo-sagebridge@antwerp.com");
         
-        authApi.requestResetPassword(email).execute();
+        Response<Message> response = authApi.requestResetPassword(email).execute();
+        assertEquals(200, response.code());
+    }
+    
+    @Test
+    public void requestingResetPasswordForUnknownPhoneDoesNotThrowException() throws Exception {
+        SignIn email = new SignIn().study(testUser.getStudyId())
+                .phone(new Phone().number("4082588569").regionCode("CA"));
+        
+        Response<Message> response = authApi.requestResetPassword(email).execute();
+        assertEquals(200, response.code());
+    }
+
+    @Test
+    public void canResendPhoneVerification() throws IOException {
+        Identifier phone = new Identifier().study(phoneOnlyTestUser.getSignIn().getStudy())
+                .phone(phoneOnlyTestUser.getPhone());
+
+        Response<Message> response = authApi.resendPhoneVerification(phone).execute();
+        assertEquals(200, response.code());
+    }
+    
+    @Test
+    public void resendingPhoneVerificationToUnknownPhoneDoesNotThrowException() throws Exception {
+        Identifier identifier = new Identifier().study(testUser.getStudyId())
+                .phone(new Phone().number("4082588569").regionCode("CA"));
+        
+        Response<Message> response = authApi.resendPhoneVerification(identifier).execute();
+        assertEquals(200, response.code());
     }
     
     @Test
@@ -189,7 +221,7 @@ public class AuthenticationTest {
         assertEquals(400, response.getStatusLine().getStatusCode());
         
         JsonNode node = new ObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
-        assertEquals("Email verification token has expired (or already been used).", node.get("message").asText());
+        assertEquals("Verification token has expired (or already been used).", node.get("message").asText());
     }
 
     // Should not be able to tell from the sign up response if an email is enrolled in the study or not.
