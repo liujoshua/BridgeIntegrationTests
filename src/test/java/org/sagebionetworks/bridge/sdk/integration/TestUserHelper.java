@@ -31,7 +31,11 @@ public class TestUserHelper {
 
     private static final List<String> LANGUAGES = Lists.newArrayList("en");
     private static final String PASSWORD = "P4ssword!";
-    private static final ClientInfo CLIENT_INFO = new ClientInfo().appName(Tests.APP_NAME).appVersion(0);
+    private static final ClientInfo CLIENT_INFO = new ClientInfo();
+    static {
+        CLIENT_INFO.setAppName("Integration Tests");
+        CLIENT_INFO.setAppVersion(0);
+    }
     
     public static class TestUser {
         private SignIn signIn;

@@ -337,6 +337,12 @@ public class StudyTest {
         assertEquals("endpoint2", newerStudy.getOAuthProviders().get("myProvider").getEndpoint());
         assertEquals("callbackUrl2", newerStudy.getOAuthProviders().get("myProvider").getCallbackUrl());
         
+        assertEquals("resetPasswordSmsTemplate ${resetPasswordUrl}", study.getResetPasswordSmsTemplate().getMessage());
+        assertEquals("phoneSignInSmsTemplate ${token}", study.getPhoneSignInSmsTemplate().getMessage());
+        assertEquals("appInstallLinkSmsTemplate ${appInstallUrl}", study.getAppInstallLinkSmsTemplate().getMessage());
+        assertEquals("verifyPhoneSmsTemplate ${token}", study.getVerifyPhoneSmsTemplate().getMessage());
+        assertEquals("accountExistsSmsTemplate ${token}", study.getAccountExistsSmsTemplate().getMessage());
+        
         newerStudy.setAccountExistsTemplate(new EmailTemplate().subject("Updated subject").body("Updated ${url} body")
                 .mimeType(MimeType.TEXT_HTML));        
         
@@ -599,11 +605,12 @@ public class StudyTest {
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
         try {
 
-            // This is a version zero client, note how little information we need to provide
-            // for this test to pass.
+            // This is a version zero client, it should not be accepted
             ClientInfo clientInfo = new ClientInfo();
-            clientInfo.appName(Tests.APP_NAME);
+            clientInfo.setDeviceName("Unknown");
             clientInfo.setOsName("Android");
+            clientInfo.setOsVersion("1");
+            clientInfo.setAppName(Tests.APP_NAME);
             clientInfo.setAppVersion(0);
 
             ClientManager manager = new ClientManager.Builder()
