@@ -18,6 +18,8 @@ import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
+import retrofit2.Response;
+
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -35,6 +37,7 @@ import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
+import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
@@ -74,6 +77,11 @@ public class ParticipantsTest {
         admin = TestUserHelper.getSignedInAdmin();
         researcher = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.RESEARCHER);
         Tests.deletePhoneUser(researcher);
+        
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        Study study = studiesApi.getUsersStudy().execute().body();
+        study.setPhoneVerificationEnabled(true);
+        studiesApi.updateStudy(study.getIdentifier(), study).execute();
     }
     
     @After
@@ -365,7 +373,8 @@ public class ParticipantsTest {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
         // This is sending an email, which is difficult to verify, but this at least should not throw an error.
-        participantsApi.sendParticipantResetPasswordEmail(researcher.getSession().getId()).execute();
+        Response<Message> response = participantsApi.sendParticipantResetPasswordEmail(researcher.getSession().getId()).execute();
+        assertEquals(200, response.code());
     }
     
     @Test
@@ -373,9 +382,19 @@ public class ParticipantsTest {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
         // This is sending an email, which is difficult to verify, but this at least should not throw an error.
-        participantsApi.sendParticipantEmailVerification(researcher.getSession().getId()).execute();
+        Response<Message> response = participantsApi.sendParticipantEmailVerification(researcher.getSession().getId()).execute();
+        assertEquals(200, response.code());
     }
     
+    @Test
+    public void canResendPhoneVerification() throws Exception {
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        
+        // This is sending an email, which is difficult to verify, but this at least should not throw an error.
+        Response<Message> response = participantsApi.sendParticipantPhoneVerification(researcher.getSession().getId()).execute();
+        assertEquals(200, response.code());
+    }
+
     @Test
     public void canResendConsentAgreement() throws Exception {
         String userId =  researcher.getSession().getId();
@@ -383,7 +402,9 @@ public class ParticipantsTest {
         ConsentStatus status = researcher.getSession().getConsentStatuses().values().iterator().next();
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        participantsApi.resendParticipantConsentAgreement(userId, status.getSubpopulationGuid()).execute();
+        Response<Message> response = participantsApi
+                .resendParticipantConsentAgreement(userId, status.getSubpopulationGuid()).execute();
+        assertEquals(200, response.code());
     }
     
     @Test
