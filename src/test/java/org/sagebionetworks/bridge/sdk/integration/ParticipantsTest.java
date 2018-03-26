@@ -80,7 +80,6 @@ public class ParticipantsTest {
         
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         Study study = studiesApi.getUsersStudy().execute().body();
-        study.setPhoneVerificationEnabled(true);
         studiesApi.updateStudy(study.getIdentifier(), study).execute();
     }
     
