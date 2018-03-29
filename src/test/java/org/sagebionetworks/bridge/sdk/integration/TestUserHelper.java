@@ -173,6 +173,7 @@ public class TestUserHelper {
         private SignUp signUp;
         private boolean setPassword = true;
         private ClientInfo clientInfo;
+        private String externalId;
         private Set<Role> roles = new HashSet<>();
         
         public Builder withConsentUser(boolean consentUser) {
@@ -195,6 +196,10 @@ public class TestUserHelper {
         }
         public Builder withSetPassword(boolean setPassword) {
             this.setPassword = setPassword;
+            return this;
+        }
+        public Builder withExternalId(String externalId) {
+            this.externalId = externalId;
             return this;
         }
 
@@ -236,6 +241,9 @@ public class TestUserHelper {
             signUp.setStudy(Tests.STUDY_ID);
             signUp.setRoles(new ArrayList<>(rolesList));
             signUp.setConsent(consentUser);
+            if (externalId != null) {
+                signUp.setExternalId(externalId);
+            }
             UserSessionInfo info = adminsApi.createUser(signUp).execute().body();
 
             SignIn signIn = new SignIn().study(signUp.getStudy()).phone(signUp.getPhone()).email(signUp.getEmail())

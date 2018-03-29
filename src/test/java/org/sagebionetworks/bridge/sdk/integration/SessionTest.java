@@ -35,7 +35,6 @@ public class SessionTest {
 
             StudyParticipant updated = usersApi.getUsersParticipantRecord().execute().body();
             updated.setFirstName("TestFirstName");
-            updated.setExternalId("an_external_id");
             updated.setDataGroups(dataGroups);
             updated.setNotifyByEmail(false);
             updated.setStatus(AccountStatus.DISABLED);
@@ -52,7 +51,6 @@ public class SessionTest {
             assertEquals("TestLastName", asUpdated.getLastName());
             assertEquals(languages, asUpdated.getLanguages());
             assertEquals(dataGroups, asUpdated.getDataGroups());
-            assertEquals("an_external_id", asUpdated.getExternalId());
             assertFalse(asUpdated.getNotifyByEmail());
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, asUpdated.getSharingScope());
             assertTrue(asUpdated.getRoles().isEmpty()); // can't update the role
@@ -80,7 +78,6 @@ public class SessionTest {
             participant.setLastName("TestLastName");
             participant.setLanguages(languages);
             participant.setDataGroups(dataGroups);
-            participant.setExternalId("an_external_id");
             participant.setNotifyByEmail(false);
             participant.setSharingScope(SharingScope.SPONSORS_AND_PARTNERS);
             participant.setRoles(roles);
@@ -97,7 +94,6 @@ public class SessionTest {
             assertEquals("TestLastName", session.getLastName());
             assertEquals(languages, session.getLanguages());
             assertEquals(dataGroups, session.getDataGroups());
-            assertEquals("an_external_id", session.getExternalId());
             assertFalse(session.getNotifyByEmail());
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, session.getSharingScope());
             assertEquals(Lists.newArrayList(Role.RESEARCHER), session.getRoles());
