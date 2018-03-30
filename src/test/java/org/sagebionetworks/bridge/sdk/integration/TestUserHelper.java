@@ -17,6 +17,7 @@ import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
@@ -89,7 +90,11 @@ public class TestUserHelper {
         }
         public void signOutAndDeleteUser() throws IOException {
             if (getSession() != null) {
-                this.signOut();
+                try {
+                    this.signOut();    
+                } catch(BadRequestException e) {
+                    // It's quite possible at the end of some tests, the user isn't signed in.
+                }
             }
             if (userId != null) {
                 // This should sign the admin manager in automatically.
@@ -168,6 +173,7 @@ public class TestUserHelper {
         private SignUp signUp;
         private boolean setPassword = true;
         private ClientInfo clientInfo;
+        private String externalId;
         private Set<Role> roles = new HashSet<>();
         
         public Builder withConsentUser(boolean consentUser) {
@@ -190,6 +196,10 @@ public class TestUserHelper {
         }
         public Builder withSetPassword(boolean setPassword) {
             this.setPassword = setPassword;
+            return this;
+        }
+        public Builder withExternalId(String externalId) {
+            this.externalId = externalId;
             return this;
         }
 
@@ -231,6 +241,9 @@ public class TestUserHelper {
             signUp.setStudy(Tests.STUDY_ID);
             signUp.setRoles(new ArrayList<>(rolesList));
             signUp.setConsent(consentUser);
+            if (externalId != null) {
+                signUp.setExternalId(externalId);
+            }
             UserSessionInfo info = adminsApi.createUser(signUp).execute().body();
 
             SignIn signIn = new SignIn().study(signUp.getStudy()).phone(signUp.getPhone()).email(signUp.getEmail())

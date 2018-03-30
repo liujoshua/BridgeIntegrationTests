@@ -59,7 +59,9 @@ public class WorkerApiTest {
     
     @Test
     public void retrieveUsers() throws Exception {
-        user = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true);
+        String externalId = Tests.randomIdentifier(WorkerApiTest.class);
+        user = new TestUserHelper.Builder(WorkerApiTest.class).withConsentUser(true)
+                .withExternalId(externalId).createAndSignInUser();
         
         AccountSummaryList list = workersApi.getParticipantsInStudy("api", 0, 5, "", null, null, null).execute().body();
         assertTrue(list.getTotal() > 0);
@@ -82,10 +84,6 @@ public class WorkerApiTest {
         assertNull(participant2.getConsentHistories().get("api"));
         
         // get by external Id, also verify we do not include consent histories.
-        String externalId = Tests.randomIdentifier(WorkerApiTest.class);
-        participant.externalId(externalId);
-        researcher.getClient(ParticipantsApi.class).updateParticipant(participant.getId(), participant).execute();
-        
         StudyParticipant participant3 = workersApi.getParticipantInStudyByExternalId("api", externalId, false)
                 .execute().body();
         assertEquals(participant.getId(), participant3.getId());

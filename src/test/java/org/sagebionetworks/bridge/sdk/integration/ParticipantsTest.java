@@ -18,6 +18,8 @@ import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
+import retrofit2.Response;
+
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -35,6 +37,7 @@ import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
+import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
@@ -72,8 +75,17 @@ public class ParticipantsTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        researcher = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.RESEARCHER);
+        researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(Role.RESEARCHER).withConsentUser(true)
+                .withExternalId(Tests.randomIdentifier(ParticipantsTest.class)).createAndSignInUser();
         Tests.deletePhoneUser(researcher);
+        
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        Study study = studiesApi.getUsersStudy().execute().body();
+        if (!study.getPhoneSignInEnabled() || !study.getEmailSignInEnabled()) {
+            study.setPhoneSignInEnabled(true);
+            study.setEmailSignInEnabled(true);
+            studiesApi.updateStudy(study.getIdentifier(), study).execute();
+        }
     }
     
     @After
@@ -164,11 +176,8 @@ public class ParticipantsTest {
             assertNull(participant2.getConsentHistories().get("api"));
             
             // Get this participant using an external ID
-            String extId = Tests.randomIdentifier(ParticipantsTest.class);
-            participant2.externalId(extId);
-            participantsApi.updateParticipant(participant2.getId(), participant2).execute();
-            
-            StudyParticipant participant3 = participantsApi.getParticipantByExternalId(extId, false).execute().body();
+            StudyParticipant participant3 = participantsApi
+                    .getParticipantByExternalId(participant.getExternalId(), false).execute().body();
             assertEquals(participant.getId(), participant3.getId());
             assertNull(participant3.getConsentHistories().get("api"));
         } finally {
@@ -336,14 +345,14 @@ public class ParticipantsTest {
             retrieved = participantsApi.getParticipantById(id, true).execute().body();
             assertEquals("FirstName2", retrieved.getFirstName());
             assertEquals("LastName2", retrieved.getLastName());
-            assertEquals(email, retrieved.getEmail());
+            assertEquals(email, retrieved.getEmail()); // This cannot be updated
             retrievedPhone = retrieved.getPhone();
-            assertEquals(Tests.PHONE.getNumber(), retrievedPhone.getNumber());
+            assertEquals(Tests.PHONE.getNumber(), retrievedPhone.getNumber()); // This cannot be updated
             assertEquals("US", retrievedPhone.getRegionCode());
             assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
             assertFalse(retrieved.getEmailVerified());
             assertFalse(retrieved.getPhoneVerified());
-            assertEquals("externalID2", retrieved.getExternalId());
+            assertEquals("externalID", retrieved.getExternalId()); // This cannot be updated
             assertEquals(SharingScope.NO_SHARING, retrieved.getSharingScope());
             // BRIDGE-1604: should still be true, even though it was not sent to the server. Through participants API 
             assertTrue(retrieved.getNotifyByEmail());
@@ -365,7 +374,8 @@ public class ParticipantsTest {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
         // This is sending an email, which is difficult to verify, but this at least should not throw an error.
-        participantsApi.sendParticipantResetPasswordEmail(researcher.getSession().getId()).execute();
+        Response<Message> response = participantsApi.sendParticipantResetPasswordEmail(researcher.getSession().getId()).execute();
+        assertEquals(200, response.code());
     }
     
     @Test
@@ -373,9 +383,19 @@ public class ParticipantsTest {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
         // This is sending an email, which is difficult to verify, but this at least should not throw an error.
-        participantsApi.sendParticipantEmailVerification(researcher.getSession().getId()).execute();
+        Response<Message> response = participantsApi.sendParticipantEmailVerification(researcher.getSession().getId()).execute();
+        assertEquals(200, response.code());
     }
     
+    @Test
+    public void canResendPhoneVerification() throws Exception {
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        
+        // This is sending an email, which is difficult to verify, but this at least should not throw an error.
+        Response<Message> response = participantsApi.sendParticipantPhoneVerification(researcher.getSession().getId()).execute();
+        assertEquals(200, response.code());
+    }
+
     @Test
     public void canResendConsentAgreement() throws Exception {
         String userId =  researcher.getSession().getId();
@@ -383,7 +403,9 @@ public class ParticipantsTest {
         ConsentStatus status = researcher.getSession().getConsentStatuses().values().iterator().next();
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        participantsApi.resendParticipantConsentAgreement(userId, status.getSubpopulationGuid()).execute();
+        Response<Message> response = participantsApi
+                .resendParticipantConsentAgreement(userId, status.getSubpopulationGuid()).execute();
+        assertEquals(200, response.code());
     }
     
     @Test

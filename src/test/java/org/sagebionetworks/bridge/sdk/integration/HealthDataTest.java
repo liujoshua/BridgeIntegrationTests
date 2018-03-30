@@ -133,13 +133,13 @@ public class HealthDataTest {
         assertNotNull(surveyCreatedOn);
 
         // Set up user with data groups, external ID, and sharing scope.
-        user = TestUserHelper.createAndSignInUser(UploadTest.class, true);
         externalId = RandomStringUtils.randomAlphabetic(4);
+        user = new TestUserHelper.Builder(UploadTest.class).withExternalId(externalId).withConsentUser(true)
+                .createAndSignInUser();
         ParticipantsApi participantsApi = user.getClient(ParticipantsApi.class);
 
         StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
         participant.setDataGroups(ImmutableList.of("group1"));
-        participant.setExternalId(externalId);
         participant.setSharingScope(SharingScope.SPONSORS_AND_PARTNERS);
         participantsApi.updateUsersParticipantRecord(participant).execute();
     }
