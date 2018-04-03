@@ -10,7 +10,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
-import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
