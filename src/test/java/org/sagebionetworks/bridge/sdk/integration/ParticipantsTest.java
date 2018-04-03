@@ -75,13 +75,17 @@ public class ParticipantsTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        researcher = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.RESEARCHER);
+        researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(Role.RESEARCHER).withConsentUser(true)
+                .withExternalId(Tests.randomIdentifier(ParticipantsTest.class)).createAndSignInUser();
         Tests.deletePhoneUser(researcher);
         
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         Study study = studiesApi.getUsersStudy().execute().body();
-        study.setPhoneVerificationEnabled(true);
-        studiesApi.updateStudy(study.getIdentifier(), study).execute();
+        if (!study.getPhoneSignInEnabled() || !study.getEmailSignInEnabled()) {
+            study.setPhoneSignInEnabled(true);
+            study.setEmailSignInEnabled(true);
+            studiesApi.updateStudy(study.getIdentifier(), study).execute();
+        }
     }
     
     @After
@@ -172,11 +176,8 @@ public class ParticipantsTest {
             assertNull(participant2.getConsentHistories().get("api"));
             
             // Get this participant using an external ID
-            String extId = Tests.randomIdentifier(ParticipantsTest.class);
-            participant2.externalId(extId);
-            participantsApi.updateParticipant(participant2.getId(), participant2).execute();
-            
-            StudyParticipant participant3 = participantsApi.getParticipantByExternalId(extId, false).execute().body();
+            StudyParticipant participant3 = participantsApi
+                    .getParticipantByExternalId(participant.getExternalId(), false).execute().body();
             assertEquals(participant.getId(), participant3.getId());
             assertNull(participant3.getConsentHistories().get("api"));
         } finally {
@@ -344,14 +345,14 @@ public class ParticipantsTest {
             retrieved = participantsApi.getParticipantById(id, true).execute().body();
             assertEquals("FirstName2", retrieved.getFirstName());
             assertEquals("LastName2", retrieved.getLastName());
-            assertEquals(email, retrieved.getEmail());
+            assertEquals(email, retrieved.getEmail()); // This cannot be updated
             retrievedPhone = retrieved.getPhone();
-            assertEquals(Tests.PHONE.getNumber(), retrievedPhone.getNumber());
+            assertEquals(Tests.PHONE.getNumber(), retrievedPhone.getNumber()); // This cannot be updated
             assertEquals("US", retrievedPhone.getRegionCode());
             assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
             assertFalse(retrieved.getEmailVerified());
             assertFalse(retrieved.getPhoneVerified());
-            assertEquals("externalID2", retrieved.getExternalId());
+            assertEquals("externalID", retrieved.getExternalId()); // This cannot be updated
             assertEquals(SharingScope.NO_SHARING, retrieved.getSharingScope());
             // BRIDGE-1604: should still be true, even though it was not sent to the server. Through participants API 
             assertTrue(retrieved.getNotifyByEmail());

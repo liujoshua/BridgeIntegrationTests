@@ -63,6 +63,13 @@ public class AuthenticationTest {
         
         adminUser = TestUserHelper.getSignedInAdmin();
         adminStudiesApi = adminUser.getClient(StudiesApi.class);
+        
+        Study study = adminStudiesApi.getUsersStudy().execute().body();
+        if (!study.getPhoneSignInEnabled() || !study.getEmailSignInEnabled()) {
+            study.setPhoneSignInEnabled(true);
+            study.setEmailSignInEnabled(true);
+            adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
+        }
     }
     
     @AfterClass
@@ -216,13 +223,26 @@ public class AuthenticationTest {
     public void emailVerificationThrowsTheCorrectError() throws Exception {
         String hostUrl = testUser.getClientManager().getHostUrl();
 
-        HttpResponse response = Request.Post(hostUrl + "/api/v1/auth/verifyEmail?study=api")
+        HttpResponse response = Request.Post(hostUrl + "/v3/auth/verifyEmail?study=api")
                 .body(new StringEntity("{\"sptoken\":\"testtoken\",\"study\":\"api\"}")).execute().returnResponse();
         assertEquals(400, response.getStatusLine().getStatusCode());
         
         JsonNode node = new ObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
-        assertEquals("Verification token has expired (or already been used).", node.get("message").asText());
+        assertEquals("Verification token is invalid (it may have expired, or already been used).", node.get("message").asText());
     }
+    
+    @Test
+    public void phoneVerificationThrowsTheCorrectError() throws Exception {
+        String hostUrl = testUser.getClientManager().getHostUrl();
+
+        HttpResponse response = Request.Post(hostUrl + "/v3/auth/verifyPhone?study=api")
+                .body(new StringEntity("{\"sptoken\":\"testtoken\",\"study\":\"api\"}")).execute().returnResponse();
+        assertEquals(400, response.getStatusLine().getStatusCode());
+        
+        JsonNode node = new ObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
+        assertEquals("Verification token is invalid (it may have expired, or already been used).", node.get("message").asText());
+    }
+    
 
     // Should not be able to tell from the sign up response if an email is enrolled in the study or not.
     // Server change is not yet checked in for this.

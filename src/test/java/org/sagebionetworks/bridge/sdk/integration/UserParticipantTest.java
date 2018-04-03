@@ -86,7 +86,7 @@ public class UserParticipantTest {
     }
 
     @Test
-    public void canAddExternalIdentifier() throws Exception {
+    public void canAddButNotChangeExternalIdentifier() throws Exception {
         ForConsentedUsersApi usersApi = developer.getClient(ForConsentedUsersApi.class);
 
         StudyParticipant participant = usersApi.getUsersParticipantRecord().execute().body();
@@ -97,8 +97,14 @@ public class UserParticipantTest {
         participant = usersApi.getUsersParticipantRecord().execute().body();
         assertEquals(developer.getEmail(), participant.getEmail());
         assertEquals("ABC-123-XYZ", participant.getExternalId());
-    }
+        
+        participant.setExternalId("ThisWillNotWork");
+        usersApi.updateUsersParticipantRecord(participant).execute();
 
+        participant = usersApi.getUsersParticipantRecord().execute().body();
+        assertEquals("ABC-123-XYZ", participant.getExternalId());
+    }
+    
     @Test
     public void canUpdateDataGroups() throws Exception {
         List<String> dataGroups = Lists.newArrayList("sdk-int-1", "sdk-int-2");
