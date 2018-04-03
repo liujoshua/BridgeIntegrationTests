@@ -41,6 +41,7 @@ import retrofit2.Response;
 
 import org.sagebionetworks.bridge.config.PropertiesConfig;
 import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.UploadsApi;
@@ -95,12 +96,12 @@ public class StudyTest {
     @BeforeClass
     public static void ensureReauthenticationIsDisabled() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         
-        Study study = studiesApi.getStudy("api").execute().body();
+        Study study = adminApi.getStudy("api").execute().body();
         if (study.getReauthenticationEnabled()) {
             study.setReauthenticationEnabled(false);
-            studiesApi.updateStudy("api", study).execute();
+            adminApi.updateStudy("api", study).execute();
         }
     }
     
@@ -118,7 +119,7 @@ public class StudyTest {
     @After
     public void after() throws Exception {
         if (studyId != null) {
-            admin.getClient(StudiesApi.class).deleteStudy(studyId, true).execute();
+            admin.getClient(ForAdminsApi.class).deleteStudy(studyId, true).execute();
         }
         if (project != null) {
             synapseClient.deleteEntityById(project.getId());
@@ -227,7 +228,7 @@ public class StudyTest {
 
     @Test
     public void crudStudy() throws Exception {
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
 
         studyId = Tests.randomIdentifier(StudyTest.class);
         Study study = Tests.getStudy(studyId, null);
@@ -241,10 +242,10 @@ public class StudyTest {
         // Set validation strictness to null, to verify the default.
         study.setUploadValidationStrictness(null);
 
-        VersionHolder holder = studiesApi.createStudy(study).execute().body();
+        VersionHolder holder = adminApi.createStudy(study).execute().body();
         assertNotNull(holder.getVersion());
 
-        Study newStudy = studiesApi.getStudy(study.getIdentifier()).execute().body();
+        Study newStudy = adminApi.getStudy(study.getIdentifier()).execute().body();
         
         study.addDataGroupsItem("test_user"); // added by the server, required for equality of dataGroups.
 
@@ -314,9 +315,9 @@ public class StudyTest {
 
         Long oldVersion = newStudy.getVersion();
         alterStudy(newStudy);
-        studiesApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
+        adminApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
 
-        Study newerStudy = studiesApi.getStudy(newStudy.getIdentifier()).execute().body();
+        Study newerStudy = adminApi.getStudy(newStudy.getIdentifier()).execute().body();
         assertTrue(newerStudy.getVersion() > oldVersion);
 
         assertFalse(newerStudy.getAutoVerificationEmailSuppressed());
@@ -356,8 +357,8 @@ public class StudyTest {
         // ConsentNotificationEmailVerified cannot be set by the update API.
         newerStudy.setConsentNotificationEmailVerified(true);
 
-        studiesApi.updateStudy(newerStudy.getIdentifier(), newerStudy).execute().body();
-        Study newestStudy = studiesApi.getStudy(newStudy.getIdentifier()).execute().body();
+        adminApi.updateStudy(newerStudy.getIdentifier(), newerStudy).execute().body();
+        Study newestStudy = adminApi.getStudy(newStudy.getIdentifier()).execute().body();
 
         assertFalse("emailSignInEnabled should be false after update", newestStudy.getEmailSignInEnabled());
         assertFalse("studyIdExcludedInExport should be false after update", newestStudy.getStudyIdExcludedInExport());
@@ -365,14 +366,14 @@ public class StudyTest {
                 getConsentNotificationEmailVerified());
 
         // logically delete a study by admin
-        studiesApi.deleteStudy(studyId, false).execute();
-        Study retStudy = studiesApi.getStudy(studyId).execute().body();
+        adminApi.deleteStudy(studyId, false).execute();
+        Study retStudy = adminApi.getStudy(studyId).execute().body();
         assertNotNull(retStudy);
 
         // and try to update that deleted study
         retStudy.setSponsorName("renewed-sponsor-name");
-        studiesApi.updateStudy(retStudy.getIdentifier(), retStudy).execute().body();
-        Study retRenewedStudy = studiesApi.getStudy(retStudy.getIdentifier()).execute().body();
+        adminApi.updateStudy(retStudy.getIdentifier(), retStudy).execute().body();
+        Study retRenewedStudy = adminApi.getStudy(retStudy.getIdentifier()).execute().body();
         assertEquals("renewed-sponsor-name", retRenewedStudy.getSponsorName());
         
         // Verify updates occur
@@ -380,9 +381,9 @@ public class StudyTest {
         assertEquals("Updated ${url} body", retRenewedStudy.getAccountExistsTemplate().getBody());
         assertEquals(MimeType.TEXT_HTML, retRenewedStudy.getAccountExistsTemplate().getMimeType());
         
-        studiesApi.deleteStudy(studyId, true).execute();
+        adminApi.deleteStudy(studyId, true).execute();
         try {
-            studiesApi.getStudy(studyId).execute();
+            adminApi.getStudy(studyId).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
             // expected exception
@@ -397,11 +398,12 @@ public class StudyTest {
             studyId = Tests.randomIdentifier(StudyTest.class);
             Study study = Tests.getStudy(studyId, null);
 
-            StudiesApi adminStudiesApi = admin.getClient(StudiesApi.class);
-            adminStudiesApi.createStudy(study).execute();
+            ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+            adminApi.createStudy(study).execute();
 
             try {
-                StudiesApi resStudiesApi = researcher.getClient(StudiesApi.class);
+                // Researcher getting an admin client, an error should result
+                ForAdminsApi resStudiesApi = researcher.getClient(ForAdminsApi.class);
                 resStudiesApi.getStudy(studyId).execute();
                 fail("Should not have been able to get this other study");
             } catch(UnauthorizedException e) {
@@ -474,7 +476,7 @@ public class StudyTest {
 
     @Test
     public void uploadMetadataFieldDefinitions() throws Exception {
-        StudiesApi adminApi = admin.getClient(StudiesApi.class);
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
 
         // Random field name, so they don't conflict.
         String fieldName = "test-field-" + RandomStringUtils.randomAlphabetic(4);
@@ -595,12 +597,12 @@ public class StudyTest {
 
     @Test
     public void userCannotAccessApisWithDeprecatedClient() throws Exception {
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        Study study = studiesApi.getStudy(Tests.STUDY_ID).execute().body();
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        Study study = adminApi.getStudy(Tests.STUDY_ID).execute().body();
         // Set a minimum value that should not any other tests
         if (study.getMinSupportedAppVersions().get("Android") == null) {
             study.getMinSupportedAppVersions().put("Android", 1);
-            studiesApi.updateStudy(Tests.STUDY_ID, study).execute();
+            adminApi.updateStudy(Tests.STUDY_ID, study).execute();
         }
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
         try {

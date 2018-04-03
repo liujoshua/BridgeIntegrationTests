@@ -16,6 +16,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.PublicApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -37,7 +38,7 @@ public class AppConfigTest {
     private TestUser developer;
     private TestUser admin;
 
-    private AppConfigsApi adminApi;
+    private ForAdminsApi adminApi;
     private AppConfigsApi devApi;
     
     @Before
@@ -45,7 +46,7 @@ public class AppConfigTest {
         developer = TestUserHelper.createAndSignInUser(ExternalIdsTest.class, false, Role.DEVELOPER);
         admin = TestUserHelper.getSignedInAdmin();
         
-        adminApi = admin.getClient(AppConfigsApi.class);
+        adminApi = admin.getClient(ForAdminsApi.class);
         devApi = developer.getClient(AppConfigsApi.class);
     }
     

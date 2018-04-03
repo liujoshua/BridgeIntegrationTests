@@ -11,7 +11,6 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
@@ -48,7 +47,7 @@ public class AuthenticationTest {
     private static TestUser adminUser;
     private static TestUser phoneOnlyTestUser;
     private static AuthenticationApi authApi;
-    private static StudiesApi adminStudiesApi;
+    private static ForAdminsApi adminApi;
     
     @BeforeClass
     public static void beforeClass() throws IOException {
@@ -62,13 +61,13 @@ public class AuthenticationTest {
         authApi = testUser.getClient(AuthenticationApi.class);
         
         adminUser = TestUserHelper.getSignedInAdmin();
-        adminStudiesApi = adminUser.getClient(StudiesApi.class);
+        adminApi = adminUser.getClient(ForAdminsApi.class);
         
-        Study study = adminStudiesApi.getUsersStudy().execute().body();
+        Study study = adminApi.getUsersStudy().execute().body();
         if (!study.getPhoneSignInEnabled() || !study.getEmailSignInEnabled()) {
             study.setPhoneSignInEnabled(true);
             study.setEmailSignInEnabled(true);
-            adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
+            adminApi.updateStudy(study.getIdentifier(), study).execute();
         }
     }
     
@@ -95,22 +94,22 @@ public class AuthenticationTest {
     public void requestEmailSignIn() throws Exception {
         EmailSignInRequest emailSignInRequest = new EmailSignInRequest().study(testUser.getStudyId())
                 .email(testUser.getEmail());
-        Study study = adminStudiesApi.getStudy(testUser.getStudyId()).execute().body();
+        Study study = adminApi.getStudy(testUser.getStudyId()).execute().body();
         try {
             // Turn on email-based sign in for test. We can't verify the email was sent... we can verify this call
             // works and returns the right error conditions.
             study.setEmailSignInEnabled(true);
             
             // Bug: this call does not return VersionHolder (BRIDGE-1809). Retrieve study again.
-            adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
-            study = adminStudiesApi.getStudy(testUser.getStudyId()).execute().body();
+            adminApi.updateStudy(study.getIdentifier(), study).execute();
+            study = adminApi.getStudy(testUser.getStudyId()).execute().body();
             assertTrue(study.getEmailSignInEnabled());
             
             Response<Message> response = authApi.requestEmailSignIn(emailSignInRequest).execute();
             assertEquals(202, response.code());
         } finally {
             study.setEmailSignInEnabled(false);
-            adminStudiesApi.updateStudy(study.getIdentifier(), study).execute();
+            adminApi.updateStudy(study.getIdentifier(), study).execute();
         }
     }
     

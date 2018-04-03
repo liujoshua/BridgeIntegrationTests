@@ -22,7 +22,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
@@ -57,7 +57,7 @@ public class SharedModuleMetadataTest {
     private static SharedModulesApi nonAuthSharedModulesApi;
     private static UploadSchemasApi devUploadSchemasApi;
     private static SurveysApi devSurveysApi;
-    private static UploadSchemasApi adminUploadSchemasApi;
+    private static ForAdminsApi adminUploadSchemasApi;
     private static SurveysApi adminSurveysApi;
     private static String studyId;
 
@@ -77,7 +77,7 @@ public class SharedModuleMetadataTest {
         devUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
         devSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
         studyId = sharedDeveloper.getStudyId();
-        adminUploadSchemasApi = admin.getClient(UploadSchemasApi.class);
+        adminUploadSchemasApi = admin.getClient(ForAdminsApi.class);
         adminSurveysApi = admin.getClient(SurveysApi.class);
     }
 

@@ -3,8 +3,8 @@ package org.sagebionetworks.bridge.sdk.integration;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -18,7 +18,7 @@ public class UTF8Test {
     public void canSaveAndRetrieveDataStoredInDynamo() throws Exception {
         String studyId = Tests.randomIdentifier(UTF8Test.class);
         String studyName = "☃지구상의　３대　극지라　불리는";
-        StudiesApi studiesApi = TestUserHelper.getSignedInAdmin().getClient(StudiesApi.class);
+        ForAdminsApi adminApi = TestUserHelper.getSignedInAdmin().getClient(ForAdminsApi.class);
 
         // make minimal study
         Study study = new Study();
@@ -33,16 +33,16 @@ public class UTF8Test {
         study.setEmailVerificationEnabled(true);
 
         // create study
-        studiesApi.createStudy(study).execute();
+        adminApi.createStudy(study).execute();
 
         try {
             // get study back and verify fields
-            Study returnedStudy = studiesApi.getStudy(studyId).execute().body();
+            Study returnedStudy = adminApi.getStudy(studyId).execute().body();
             assertEquals(studyId, returnedStudy.getIdentifier());
             assertEquals(studyName, returnedStudy.getName());
         } finally {
             // clean-up: delete study
-            studiesApi.deleteStudy(studyId, true).execute();
+            adminApi.deleteStudy(studyId, true).execute();
         }
     }
 
