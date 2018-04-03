@@ -25,7 +25,6 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
@@ -79,12 +78,12 @@ public class ParticipantsTest {
                 .withExternalId(Tests.randomIdentifier(ParticipantsTest.class)).createAndSignInUser();
         Tests.deletePhoneUser(researcher);
         
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        Study study = studiesApi.getUsersStudy().execute().body();
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        Study study = adminApi.getUsersStudy().execute().body();
         if (!study.getPhoneSignInEnabled() || !study.getEmailSignInEnabled()) {
             study.setPhoneSignInEnabled(true);
             study.setEmailSignInEnabled(true);
-            studiesApi.updateStudy(study.getIdentifier(), study).execute();
+            adminApi.updateStudy(study.getIdentifier(), study).execute();
         }
     }
     
@@ -157,11 +156,11 @@ public class ParticipantsTest {
     @Test
     public void retrieveParticipant() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        Study study = studiesApi.getStudy(admin.getStudyId()).execute().body();
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        Study study = adminApi.getStudy(admin.getStudyId()).execute().body();
         try {
             study.setHealthCodeExportEnabled(true);
-            VersionHolder version = studiesApi.updateStudy(study.getIdentifier(), study).execute().body();
+            VersionHolder version = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
             study.version(version.getVersion());
             
             StudyParticipant participant = participantsApi.getParticipantById(researcher.getSession().getId(), true).execute().body();
@@ -182,7 +181,7 @@ public class ParticipantsTest {
             assertNull(participant3.getConsentHistories().get("api"));
         } finally {
             study.setHealthCodeExportEnabled(false);
-            VersionHolder version = studiesApi.updateStudy(study.getIdentifier(), study).execute().body();
+            VersionHolder version = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
             study.version(version.getVersion());
         }
     }

@@ -163,7 +163,7 @@ public class UploadSchemaTest {
 
         // Step 3b: Worker client can also get schemas, and can get schemas by study, schema, and rev.
         // This schema should be identical to updatedSchemaV2, except it also has the study ID.
-        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevisionInStudy(Tests.STUDY_ID, schemaId, 2L).execute().body();
+        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevision(Tests.STUDY_ID, schemaId, 2L).execute().body();
         assertEquals(Tests.STUDY_ID, workerSchemaV2.getStudyId());
         assertSchemaFilledIn(workerSchemaV2);
 
