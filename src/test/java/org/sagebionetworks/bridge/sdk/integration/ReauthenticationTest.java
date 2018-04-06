@@ -10,8 +10,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.SignIn;
@@ -52,21 +52,21 @@ public class ReauthenticationTest {
     @BeforeClass
     public static void turnOnReauthentication() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         
-        Study study = studiesApi.getStudy("api").execute().body();
+        Study study = adminApi.getStudy("api").execute().body();
         study.setReauthenticationEnabled(true);
-        studiesApi.updateStudy("api", study).execute();
+        adminApi.updateStudy("api", study).execute();
     }
     
     @AfterClass
     public static void turnOffReauthentication() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         
-        Study study = studiesApi.getStudy("api").execute().body();
+        Study study = adminApi.getStudy("api").execute().body();
         study.setReauthenticationEnabled(false);
-        studiesApi.updateStudy("api", study).execute();
+        adminApi.updateStudy("api", study).execute();
     }
     
     @Test

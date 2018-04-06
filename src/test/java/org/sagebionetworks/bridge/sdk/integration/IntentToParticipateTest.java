@@ -11,9 +11,9 @@ import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.IntentToParticipateApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.UsersApi;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
@@ -47,8 +47,8 @@ public class IntentToParticipateTest {
     @After
     public void deleteUser() throws Exception {
         if (session != null) {
-            UsersApi userApi = admin.getClient(UsersApi.class);
-            userApi.deleteUser(session.getId()).execute();
+            ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+            adminApi.deleteUser(session.getId()).execute();
         }
     }
 

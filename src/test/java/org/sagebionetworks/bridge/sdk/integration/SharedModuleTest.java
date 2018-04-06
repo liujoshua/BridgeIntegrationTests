@@ -12,7 +12,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
@@ -63,8 +63,7 @@ public class SharedModuleTest {
     public void deleteTestObjects() throws Exception {
         // Delete schemas created by test. We do it in a single After method instead of multiple, in case there are any
         // referential integrity concerns.
-        UploadSchemasApi adminSchemaApi = admin.getClient(UploadSchemasApi.class);
-        SurveysApi adminSurveyApi = admin.getClient(SurveysApi.class);
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
 
         if (module != null) {
             try {
@@ -77,8 +76,8 @@ public class SharedModuleTest {
 
         if (localSchema != null) {
             try {
-                adminSchemaApi.deleteAllRevisionsOfUploadSchema(apiDeveloper.getStudyId(),
-                        localSchema.getSchemaId()).execute();
+                adminApi.deleteAllRevisionsOfUploadSchema(apiDeveloper.getStudyId(), localSchema.getSchemaId())
+                        .execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting schema " + localSchema.getSchemaId() + " in study " +
                         apiDeveloper.getStudyId() + ": "  + ex.getMessage(), ex);
@@ -87,8 +86,8 @@ public class SharedModuleTest {
 
         if (sharedSchema != null) {
             try {
-                adminSchemaApi.deleteAllRevisionsOfUploadSchema(sharedDeveloper.getStudyId(),
-                        sharedSchema.getSchemaId()).execute();
+                adminApi.deleteAllRevisionsOfUploadSchema(sharedDeveloper.getStudyId(), sharedSchema.getSchemaId())
+                        .execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting schema " + sharedSchema.getSchemaId() + " in study " +
                         sharedDeveloper.getStudyId() + ": "  + ex.getMessage(), ex);
@@ -97,7 +96,7 @@ public class SharedModuleTest {
 
         if (localSurvey != null) {
             try {
-                adminSurveyApi.deleteSurvey(localSurvey.getGuid(), localSurvey.getCreatedOn(), true).execute();
+                adminApi.deleteSurvey(localSurvey.getGuid(), localSurvey.getCreatedOn(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting local survey " + sharedSurvey.getGuid() + ": "  + ex.getMessage(), ex);
             }
@@ -105,7 +104,7 @@ public class SharedModuleTest {
 
         if (sharedSurvey != null) {
             try {
-                adminSurveyApi.deleteSurvey(sharedSurvey.getGuid(), sharedSurvey.getCreatedOn(), true).execute();
+                adminApi.deleteSurvey(sharedSurvey.getGuid(), sharedSurvey.getCreatedOn(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting shared survey " + sharedSurvey.getGuid() + ": "  + ex.getMessage(), ex);
             }

@@ -19,6 +19,7 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -26,6 +27,7 @@ import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.RecordExportStatusRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SynapseExporterStatus;
+import org.sagebionetworks.bridge.rest.model.Upload;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
@@ -52,6 +54,7 @@ public class UploadTest {
     private static TestUserHelper.TestUser worker;
     private static TestUserHelper.TestUser developer;
     private static TestUserHelper.TestUser user;
+    private static TestUserHelper.TestUser researcher;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
@@ -59,6 +62,7 @@ public class UploadTest {
         worker = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.WORKER);
         developer = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true);
+        researcher = TestUserHelper.createAndSignInUser(UploadTest.class, true, Role.RESEARCHER);
 
         // ensure schemas exist, so we have something to upload against
         UploadSchemasApi uploadSchemasApi = developer.getClient(UploadSchemasApi.class);
@@ -133,7 +137,7 @@ public class UploadTest {
     }
 
     @AfterClass
-    public static void deleteResearcher() throws Exception {
+    public static void deleteDeveloper() throws Exception {
         if (developer != null) {
             developer.signOutAndDeleteUser();
         }
@@ -146,6 +150,13 @@ public class UploadTest {
         }
     }
 
+    @AfterClass
+    public static void deleteResearcher() throws Exception {
+        if (researcher != null) {
+            researcher.signOutAndDeleteUser();
+        }
+    }
+    
     @Test
     public void legacySurvey() throws Exception {
         testSurvey("legacy-survey-encrypted");
@@ -260,6 +271,16 @@ public class UploadTest {
         assertEquals("fencing", bbbAnswerList.get(0));
         assertEquals("running", bbbAnswerList.get(1));
         assertEquals("3", bbbAnswerList.get(2));
+        
+        // Should be possible to retrieve this record
+        ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
+        
+        Upload retrieved1 = researcherApi.getUploadById(status.getId()).execute().body();
+        Upload retrieved2 = researcherApi.getUploadByRecordId(record.getId()).execute().body();
+        
+        assertNotNull(retrieved1.getHealthData());
+        assertNotNull(retrieved2.getHealthData());
+        assertEquals(retrieved1, retrieved2);
     }
 
     // returns the path relative to the root of the project

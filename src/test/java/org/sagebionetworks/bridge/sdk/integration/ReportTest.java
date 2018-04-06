@@ -7,10 +7,11 @@ import org.joda.time.LocalDate;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantReportsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.StudyReportsApi;
 import org.sagebionetworks.bridge.rest.api.UsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
@@ -93,7 +94,7 @@ public class ReportTest {
         TestUser developer = TestUserHelper.createAndSignInUser(ReportTest.class, true, Role.DEVELOPER);
         String userId = user.getSession().getId();
         try {
-        		ParticipantReportsApi reportsApi = developer.getClient(ParticipantReportsApi.class);
+            ParticipantReportsApi reportsApi = developer.getClient(ParticipantReportsApi.class);
 
             reportsApi.addParticipantReportRecord(userId, reportId, REPORT1).execute();
             reportsApi.addParticipantReportRecord(userId, reportId, REPORT2).execute();
@@ -132,8 +133,8 @@ public class ReportTest {
         } finally {
             developer.signOutAndDeleteUser();
 
-            ParticipantReportsApi reportsApi = admin.getClient(ParticipantReportsApi.class);
-            reportsApi.deleteParticipantReportIndex(reportId).execute();
+            ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+            adminApi.deleteParticipantReportIndex(reportId).execute();
         }
     }
 
@@ -150,10 +151,10 @@ public class ReportTest {
         report3.setData(DATA3);
 
         TestUser admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        Study study = studiesApi.getStudy("api").execute().body();
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        Study study = adminApi.getStudy("api").execute().body();
         study.setHealthCodeExportEnabled(true);
-        VersionHolder versionHolder = studiesApi.updateStudy(study.getIdentifier(), study).execute().body();
+        VersionHolder versionHolder = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
         study.setVersion(versionHolder.getVersion());
 
         // Make this worker a researcher solely for the purpose of getting the healthCode needed to user the worker
@@ -172,10 +173,10 @@ public class ReportTest {
             report2.setHealthCode(healthCode);
             report3.setHealthCode(healthCode);
 
-            ParticipantReportsApi workerReportsApi = worker.getClient(ParticipantReportsApi.class);
-            workerReportsApi.addParticipantReportRecordForWorker(reportId, report1).execute();
-            workerReportsApi.addParticipantReportRecordForWorker(reportId, report2).execute();
-            workerReportsApi.addParticipantReportRecordForWorker(reportId, report3).execute();
+            ForWorkersApi workerReportsApi = worker.getClient(ForWorkersApi.class);
+            workerReportsApi.addParticipantReportRecord(reportId, report1).execute();
+            workerReportsApi.addParticipantReportRecord(reportId, report2).execute();
+            workerReportsApi.addParticipantReportRecord(reportId, report3).execute();
 
             ParticipantReportsApi userReportsApi = user.getClient(ParticipantReportsApi.class);
             ReportDataList results = userReportsApi
@@ -200,12 +201,12 @@ public class ReportTest {
             assertEquals(0, results.getItems().size());
         } finally {
             study.setHealthCodeExportEnabled(false);
-            studiesApi.updateStudy(study.getIdentifier(), study).execute();
+            adminApi.updateStudy(study.getIdentifier(), study).execute();
 
             worker.signOutAndDeleteUser();
             developer.signOutAndDeleteUser();
 
-            admin.getClient(ParticipantReportsApi.class).deleteParticipantReportIndex(reportId).execute();
+            admin.getClient(ForAdminsApi.class).deleteParticipantReportIndex(reportId).execute();
         }
     }
 
