@@ -18,8 +18,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -54,7 +54,7 @@ public class UploadTest {
     private static TestUserHelper.TestUser worker;
     private static TestUserHelper.TestUser developer;
     private static TestUserHelper.TestUser user;
-    private static TestUserHelper.TestUser researcher;
+    private static TestUserHelper.TestUser admin;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
@@ -62,8 +62,8 @@ public class UploadTest {
         worker = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.WORKER);
         developer = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true);
-        researcher = TestUserHelper.createAndSignInUser(UploadTest.class, true, Role.RESEARCHER);
-
+        admin = TestUserHelper.getSignedInAdmin();
+        
         // ensure schemas exist, so we have something to upload against
         UploadSchemasApi uploadSchemasApi = developer.getClient(UploadSchemasApi.class);
 
@@ -150,13 +150,6 @@ public class UploadTest {
         }
     }
 
-    @AfterClass
-    public static void deleteResearcher() throws Exception {
-        if (researcher != null) {
-            researcher.signOutAndDeleteUser();
-        }
-    }
-    
     @Test
     public void legacySurvey() throws Exception {
         testSurvey("legacy-survey-encrypted");
@@ -273,10 +266,10 @@ public class UploadTest {
         assertEquals("3", bbbAnswerList.get(2));
         
         // Should be possible to retrieve this record
-        ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         
-        Upload retrieved1 = researcherApi.getUploadById(status.getId()).execute().body();
-        Upload retrieved2 = researcherApi.getUploadByRecordId(record.getId()).execute().body();
+        Upload retrieved1 = adminApi.getUploadById(status.getId()).execute().body();
+        Upload retrieved2 = adminApi.getUploadByRecordId(record.getId()).execute().body();
         
         assertNotNull(retrieved1.getHealthData());
         assertNotNull(retrieved2.getHealthData());
