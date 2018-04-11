@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
@@ -10,8 +11,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.SignIn;
@@ -52,21 +53,21 @@ public class ReauthenticationTest {
     @BeforeClass
     public static void turnOnReauthentication() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         
-        Study study = studiesApi.getStudy("api").execute().body();
+        Study study = adminApi.getStudy("api").execute().body();
         study.setReauthenticationEnabled(true);
-        studiesApi.updateStudy("api", study).execute();
+        adminApi.updateStudy("api", study).execute();
     }
     
     @AfterClass
     public static void turnOffReauthentication() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         
-        Study study = studiesApi.getStudy("api").execute().body();
+        Study study = adminApi.getStudy("api").execute().body();
         study.setReauthenticationEnabled(false);
-        studiesApi.updateStudy("api", study).execute();
+        adminApi.updateStudy("api", study).execute();
     }
     
     @Test
@@ -94,7 +95,7 @@ public class ReauthenticationTest {
     }
     
     @Test
-    public void reauthenticationCannotHappenTwice() throws Exception {
+    public void reauthenticationTwiceReturnsSameSession() throws Exception {
         UserSessionInfo session = user.getSession();
         
         // You can re-authenticate.
@@ -109,13 +110,10 @@ public class ReauthenticationTest {
         assertNotEquals(reauthToken, newSession.getReauthToken());
         assertNotEquals(oldSessionToken, newSession.getSessionToken());
         
-        // Using the same token again does not work
-        try {
-            authApi.reauthenticate(request).execute().body();
-            fail("Should have thrown exception.");
-        } catch(EntityNotFoundException e) {
-            
-        }
+        // Using the same token again right away returns the same session.
+        UserSessionInfo duplicateSession = authApi.reauthenticate(request).execute().body();
+        assertEquals(newSession.getSessionToken(), duplicateSession.getSessionToken());
+        assertEquals(newSession.getReauthToken(), duplicateSession.getReauthToken());
         
         // User should be able to make this call without incident.
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);

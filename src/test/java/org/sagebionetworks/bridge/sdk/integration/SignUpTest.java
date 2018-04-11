@@ -7,7 +7,6 @@ import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
-import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -63,7 +62,7 @@ public class SignUpTest {
         try {
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             
-            Email email = new Email().study("junk").email("bridge-testing@sagebase.org");
+            SignIn email = new SignIn().study("junk").email("bridge-testing@sagebase.org");
             authApi.requestResetPassword(email).execute();
         } finally {
             testUser.signOutAndDeleteUser();
@@ -76,7 +75,7 @@ public class SignUpTest {
         try {
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             
-            Email email = new Email().email("bridge-testing@sagebase.org");
+            SignIn email = new SignIn().email("bridge-testing@sagebase.org");
             authApi.requestResetPassword(email).execute();
         } finally {
             testUser.signOutAndDeleteUser();
@@ -111,8 +110,8 @@ public class SignUpTest {
                 signUp.setExternalId("ABC");
                 authApi.signUp(signUp).execute();
                 fail("Should have thrown exception");
-            }catch(EntityNotFoundException e) {
-                assertEquals("ExternalIdentifier not found.", e.getMessage());
+            }catch(InvalidEntityException e) {
+                assertEquals("externalId is not a valid external ID", e.getErrors().get("externalId").get(0));
             }
         } finally {
             adminApi.deleteStudy(study.getIdentifier(), true).execute();

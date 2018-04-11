@@ -7,9 +7,9 @@ import static org.junit.Assert.fail;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorStringList;
 import org.sagebionetworks.bridge.rest.model.OAuthAuthorizationToken;
@@ -66,14 +66,14 @@ public class OAuthTest {
         } catch(EntityNotFoundException e) {
             assertEquals("OAuthProvider not found.", e.getMessage());
         }
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        Study study = studiesApi.getStudy(worker.getStudyId()).execute().body();
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        Study study = adminApi.getStudy(worker.getStudyId()).execute().body();
         try {
             OAuthProvider provider = new OAuthProvider().clientId("foo").endpoint("https://webservices.sagebridge.org/")
                     .callbackUrl("https://webservices.sagebridge.org/").secret("secret");
             
             study.getOAuthProviders().put("bridge", provider);
-            VersionHolder version = studiesApi.updateStudy(study.getIdentifier(), study).execute().body();
+            VersionHolder version = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
             study.setVersion(version.getVersion()); 
             
             ForwardCursorStringList list = workersApi.getHealthCodesGrantingOAuthAccess(worker.getStudyId(), "bridge", null, null).execute().body();
@@ -86,7 +86,7 @@ public class OAuthTest {
             }
         } finally {
             study.getOAuthProviders().remove("bridge");
-            studiesApi.updateStudy(study.getIdentifier(), study).execute();
+            adminApi.updateStudy(study.getIdentifier(), study).execute();
         }
     }
 }

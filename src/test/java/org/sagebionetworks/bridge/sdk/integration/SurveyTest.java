@@ -35,11 +35,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
@@ -513,14 +513,14 @@ public class SurveyTest {
         surveysApi.publishSurvey(survey2bKeys.getGuid(), survey2bKeys.getCreatedOn(), false).execute();
 
         // Sleep to clear eventual consistency problems.
-        SurveysApi workerSurveyClient = worker.getClient(SurveysApi.class);
+        ForWorkersApi workerApi = worker.getClient(ForWorkersApi.class);
         Thread.sleep(2000);
 
         // The surveys we created were just dummies. Just check that the surveys are not null and that the keys match.
-        Survey survey1a = workerSurveyClient.getSurvey(survey1aKeys.getGuid(), survey1aKeys.getCreatedOn()).execute().body();
-        Survey survey1b = workerSurveyClient.getSurvey(survey1bKeys.getGuid(), survey1bKeys.getCreatedOn()).execute().body();
-        Survey survey2a = workerSurveyClient.getSurvey(survey2aKeys.getGuid(), survey2aKeys.getCreatedOn()).execute().body();
-        Survey survey2b = workerSurveyClient.getSurvey(survey2bKeys.getGuid(), survey2bKeys.getCreatedOn()).execute().body();
+        Survey survey1a = workerApi.getSurvey(survey1aKeys.getGuid(), survey1aKeys.getCreatedOn()).execute().body();
+        Survey survey1b = workerApi.getSurvey(survey1bKeys.getGuid(), survey1bKeys.getCreatedOn()).execute().body();
+        Survey survey2a = workerApi.getSurvey(survey2aKeys.getGuid(), survey2aKeys.getCreatedOn()).execute().body();
+        Survey survey2b = workerApi.getSurvey(survey2bKeys.getGuid(), survey2bKeys.getCreatedOn()).execute().body();
 
         assertKeysEqual(survey1aKeys, survey1a);
         assertKeysEqual(survey1bKeys, survey1b);
@@ -528,11 +528,11 @@ public class SurveyTest {
         assertKeysEqual(survey2bKeys, survey2b);
 
         // Get using the guid+createdOn API for completeness.
-        Survey survey1aAgain = workerSurveyClient.getSurvey(survey1aKeys.getGuid(), survey1aKeys.getCreatedOn()).execute().body();
+        Survey survey1aAgain = workerApi.getSurvey(survey1aKeys.getGuid(), survey1aKeys.getCreatedOn()).execute().body();
         assertKeysEqual(survey1aKeys, survey1aAgain);
 
         // We only expect the most recently published versions, namely 1b and 2b.
-        SurveyList surveyResourceList = workerSurveyClient.getAllPublishedSurveysInStudy(Tests.STUDY_ID).execute().body();
+        SurveyList surveyResourceList = workerApi.getAllPublishedSurveys(Tests.STUDY_ID).execute().body();
         containsAll(surveyResourceList.getItems(), new MutableHolder(survey1b), new MutableHolder(survey2b));
     }
 
@@ -635,8 +635,8 @@ public class SurveyTest {
     
     @Test
     public void canCreateAndSaveVariousKindsOfBeforeRules() throws Exception {
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        Study study = studiesApi.getStudy(admin.getStudyId()).execute().body();
+        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+        Study study = adminsApi.getStudy(admin.getStudyId()).execute().body();
         String dataGroup = study.getDataGroups().get(0);
 
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
@@ -684,8 +684,8 @@ public class SurveyTest {
     
     @Test
     public void canCreateAndSaveVariousKindsOfAfterRules() throws Exception {
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        Study study = studiesApi.getStudy(admin.getStudyId()).execute().body();
+        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+        Study study = adminsApi.getStudy(admin.getStudyId()).execute().body();
         String dataGroup = study.getDataGroups().get(0);
 
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
@@ -727,8 +727,8 @@ public class SurveyTest {
     
     @Test
     public void displayActionsInAfterRulesValidated() throws Exception {
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        Study study = studiesApi.getStudy(admin.getStudyId()).execute().body();
+        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+        Study study = adminsApi.getStudy(admin.getStudyId()).execute().body();
         String dataGroup = study.getDataGroups().get(0);
 
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
