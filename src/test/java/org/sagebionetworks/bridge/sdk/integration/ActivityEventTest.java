@@ -140,11 +140,11 @@ public class ActivityEventTest {
         DateTime enrollmentTime = enrollmentEvent.getTimestamp();
         assertNotNull(enrollmentTime);
 
-        // Verify custom event exists and that it's 14 days after enrollment
+        // Verify custom event exists and that it's 2 weeks after enrollment
         ActivityEvent twoWeeksAfterEvent = activityEventMap.get("custom:" + TWO_WEEKS_AFTER_KEY);
         assertNotNull(twoWeeksAfterEvent);
         DateTime twoWeeksAfterTime = twoWeeksAfterEvent.getTimestamp();
         Period period = new Period(enrollmentTime, twoWeeksAfterTime);
-        assertEquals(14, period.getDays());
+        assertEquals(2, period.getWeeks());
     }
 }
