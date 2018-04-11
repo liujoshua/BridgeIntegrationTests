@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
@@ -94,7 +95,7 @@ public class ReauthenticationTest {
     }
     
     @Test
-    public void reauthenticationCannotHappenTwice() throws Exception {
+    public void reauthenticationTwiceReturnsSameSession() throws Exception {
         UserSessionInfo session = user.getSession();
         
         // You can re-authenticate.
@@ -109,13 +110,10 @@ public class ReauthenticationTest {
         assertNotEquals(reauthToken, newSession.getReauthToken());
         assertNotEquals(oldSessionToken, newSession.getSessionToken());
         
-        // Using the same token again does not work
-        try {
-            authApi.reauthenticate(request).execute().body();
-            fail("Should have thrown exception.");
-        } catch(EntityNotFoundException e) {
-            
-        }
+        // Using the same token again right away returns the same session.
+        UserSessionInfo duplicateSession = authApi.reauthenticate(request).execute().body();
+        assertEquals(newSession.getSessionToken(), duplicateSession.getSessionToken());
+        assertEquals(newSession.getReauthToken(), duplicateSession.getReauthToken());
         
         // User should be able to make this call without incident.
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
