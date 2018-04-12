@@ -134,17 +134,29 @@ public class ActivityEventTest {
         Map<String, ActivityEvent> activityEventMap = activityEventList.stream().collect(
                 Collectors.toMap(ActivityEvent::getEventId, e -> e));
 
-        // Verify enrollment event exists
+        // Verify enrollment events exist
         ActivityEvent enrollmentEvent = activityEventMap.get("enrollment");
         assertNotNull(enrollmentEvent);
         DateTime enrollmentTime = enrollmentEvent.getTimestamp();
         assertNotNull(enrollmentTime);
 
+        ActivityEvent twoWeeksBeforeEvent = activityEventMap.get("two_weeks_before_enrollment");
+        assertNotNull(twoWeeksBeforeEvent);
+        DateTime twoWeeksBeforeTime = twoWeeksBeforeEvent.getTimestamp();
+        Period twoWeeksBeforePeriod = new Period(twoWeeksBeforeTime, enrollmentTime);
+        assertEquals(2, twoWeeksBeforePeriod.getWeeks());
+
+        ActivityEvent twoMonthsBeforeEvent = activityEventMap.get("two_months_before_enrollment");
+        assertNotNull(twoMonthsBeforeEvent);
+        DateTime twoMonthsBeforeTime = twoMonthsBeforeEvent.getTimestamp();
+        Period twoMonthsBeforePeriod = new Period(twoMonthsBeforeTime, enrollmentTime);
+        assertEquals(2, twoMonthsBeforePeriod.getMonths());
+
         // Verify custom event exists and that it's 2 weeks after enrollment
         ActivityEvent twoWeeksAfterEvent = activityEventMap.get("custom:" + TWO_WEEKS_AFTER_KEY);
         assertNotNull(twoWeeksAfterEvent);
         DateTime twoWeeksAfterTime = twoWeeksAfterEvent.getTimestamp();
-        Period period = new Period(enrollmentTime, twoWeeksAfterTime);
-        assertEquals(2, period.getWeeks());
+        Period twoWeeksAfterPeriod = new Period(enrollmentTime, twoWeeksAfterTime);
+        assertEquals(2, twoWeeksAfterPeriod.getWeeks());
     }
 }

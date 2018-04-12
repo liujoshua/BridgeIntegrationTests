@@ -2,6 +2,8 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -14,6 +16,8 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.joda.time.DateTime;
+
 import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
@@ -300,7 +304,15 @@ public class Tests {
         }
         return study;
     }
-    
+
+    public static void assertDatesWithTimeZoneEqual(DateTime expected, DateTime actual) {
+        // Equals only asserts the instant is the same, not the time zone.
+        assertTrue(expected.isEqual(actual));
+
+        // This ensures that zones such as "America/Los_Angeles" and "-07:00" are equal
+        assertEquals(expected.getZone().getOffset(expected), actual.getZone().getOffset(actual));
+    }
+
     public static <T> boolean assertListsEqualIgnoringOrder(List<T> list1, List<T> list2) {
         if (list1.size() != list2.size()) {
             return false;

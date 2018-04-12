@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.assertDatesWithTimeZoneEqual;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -70,6 +72,7 @@ public class ScheduledActivityTest {
         }
     }
 
+    private String runId;
     private String monthlyActivityLabel;
     private String oneTimeActivityLabel;
     private TestUser researcher;
@@ -89,10 +92,13 @@ public class ScheduledActivityTest {
 
         schedulePlansApi = developer.getClient(SchedulesApi.class);
         usersApi = user.getClient(ForConsentedUsersApi.class);
+
+        // Run ID is a random string, used to uniquely identify schedules for this test.
+        runId = RandomStringUtils.randomAlphabetic(4);
     }
 
     private void monthlyAfterOneMonthSchedule() throws IOException {
-        monthlyActivityLabel = "monthly-activity-" + RandomStringUtils.randomAlphabetic(4);
+        monthlyActivityLabel = "monthly-activity-" + runId;
 
         String planGuid;
         Schedule schedule = new Schedule();
@@ -123,7 +129,7 @@ public class ScheduledActivityTest {
     }
 
     private void oneTimeScheduleAfter3Days() throws IOException {
-        oneTimeActivityLabel = "one-time-activity-" + RandomStringUtils.randomAlphabetic(4);
+        oneTimeActivityLabel = "one-time-activity-" + runId;
 
         Schedule schedule = new Schedule();
         schedule.setLabel(oneTimeActivityLabel);
@@ -179,6 +185,36 @@ public class ScheduledActivityTest {
         schedulePlanGuidList.add(planGuid);
     }
 
+    private void miniStudyBurstSchedule() throws Exception {
+        Schedule schedule = new Schedule();
+        schedule.setLabel("Mini Study Burst");
+        schedule.setEventId("two_weeks_before_enrollment,enrollment");
+        schedule.setExpires("P1M");
+        schedule.setInterval("P1D");
+        schedule.setScheduleType(ScheduleType.RECURRING);
+        schedule.setSequencePeriod("P3D");
+        schedule.setTimes(ImmutableList.of("06:00"));
+
+        TaskReference taskReference = new TaskReference();
+        taskReference.setIdentifier("task:AAA");
+
+        Activity activity = new Activity();
+        activity.setLabel("mini-study-burst-" + runId);
+        activity.setTask(taskReference);
+
+        schedule.setActivities(ImmutableList.of(activity));
+
+        SimpleScheduleStrategy strategy = new SimpleScheduleStrategy();
+        strategy.setSchedule(schedule);
+        strategy.setType("SimpleScheduleStrategy");
+
+        SchedulePlan plan = new SchedulePlan();
+        plan.setLabel("Mini Study Burst");
+        plan.setStrategy(strategy);
+        String planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
+        schedulePlanGuidList.add(planGuid);
+    }
+
     @After
     public void after() throws Exception {
         try {
@@ -205,7 +241,7 @@ public class ScheduledActivityTest {
         DateTime startTime = DateTime.now(EST);
         DateTime endTime = DateTime.now(EST).plusDays(4);
         
-        usersApi.getScheduledActivitiesByDateRange(startTime, endTime).execute().body();
+        usersApi.getScheduledActivitiesByDateRange(startTime, endTime).execute();
 
         // getTaskHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index is consistent.
         Thread.sleep(2000);
@@ -429,6 +465,36 @@ public class ScheduledActivityTest {
         assertEquals(5, idCounts.count(monthlyActivityLabel));
     }
 
+    @Test
+    public void scheduleWithMultipleEventIds() throws Exception {
+        DateTime now = DateTime.now(DateTimeZone.forOffsetHours(-8));
+
+        // Set up schedule
+        miniStudyBurstSchedule();
+
+        // Get activities, and filter on activity label.
+        List<ScheduledActivity> scheduledActivityList = usersApi.getScheduledActivities("-08:00", 7,
+                null).execute().body().getItems();
+        List<ScheduledActivity> filteredActivityList = scheduledActivityList.stream()
+                .filter(act -> act.getActivity().getLabel().equals("mini-study-burst-" + runId))
+                .collect(Collectors.toList());
+
+        // Activities should be generated and returned in order, starting from 6am 2 weeks before enrollment.
+        assertEquals(6, filteredActivityList.size());
+        assertDatesWithTimeZoneEqual(now.minusDays(14).withTime(6, 0, 0, 0), filteredActivityList.get(0)
+                .getScheduledOn());
+        assertDatesWithTimeZoneEqual(now.minusDays(13).withTime(6, 0, 0, 0), filteredActivityList.get(1)
+                .getScheduledOn());
+        assertDatesWithTimeZoneEqual(now.minusDays(12).withTime(6, 0, 0, 0), filteredActivityList.get(2)
+                .getScheduledOn());
+        assertDatesWithTimeZoneEqual(now.withTime(6, 0, 0, 0), filteredActivityList.get(3)
+                .getScheduledOn());
+        assertDatesWithTimeZoneEqual(now.plusDays(1).withTime(6, 0, 0, 0), filteredActivityList.get(4)
+                .getScheduledOn());
+        assertDatesWithTimeZoneEqual(now.plusDays(2).withTime(6, 0, 0, 0), filteredActivityList.get(5)
+                .getScheduledOn());
+    }
+
     // api study may have other schedule plans in it with other scheduled activities. To prevent tests from
     // conflicting, look for the activity with oneTimeActivityLabel.
     private ScheduledActivity findOneTimeActivity(List<ScheduledActivity> scheduledActivityList) {
@@ -446,5 +512,4 @@ public class ScheduledActivityTest {
                 .map((act) -> act.getActivity().getLabel())
                 .collect(Collectors.toList()));
     }
-    
 }
