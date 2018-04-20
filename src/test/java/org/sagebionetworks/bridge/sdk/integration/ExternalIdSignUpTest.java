@@ -14,7 +14,6 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
@@ -89,12 +88,9 @@ public class ExternalIdSignUpTest {
             signUp.externalId(externalId);
             authClient.signUp(signUp).execute();
             
-            ExternalIdentifierList list = devIdsClient.getExternalIds(null, 50, null, null).execute().body();
-            for (ExternalIdentifier identifier : list.getItems()) {
-                if (externalId.equals(identifier.getIdentifier())) {
-                    assertTrue(identifier.getAssigned());        
-                }
-            }
+            ExternalIdentifierList list = devIdsClient.getExternalIds(null, 5, externalId, null).execute().body();
+            assertEquals(1, list.getItems().size());
+            assertTrue(list.getItems().get(0).getAssigned());
             
             // Prove you can sign in with this account (status = enabled)
             SignIn signIn = new SignIn().externalId(externalId).study(Tests.STUDY_ID).password(Tests.PASSWORD);
