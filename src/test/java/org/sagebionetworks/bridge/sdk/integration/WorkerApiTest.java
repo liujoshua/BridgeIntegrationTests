@@ -8,9 +8,12 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import org.sagebionetworks.bridge.rest.api.ActivitiesApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
@@ -29,6 +32,8 @@ import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 
 public class WorkerApiTest {
+    private static final DateTimeZone TEST_USER_TIME_ZONE = DateTimeZone.forOffsetHours(-8);
+    private static final String TEST_USER_TIME_ZONE_STRING = "-08:00";
     
     TestUser worker;
     TestUser researcher;
@@ -81,18 +86,25 @@ public class WorkerApiTest {
         String externalId = Tests.randomIdentifier(WorkerApiTest.class);
         user = new TestUserHelper.Builder(WorkerApiTest.class).withConsentUser(true)
                 .withExternalId(externalId).createAndSignInUser();
-        
+
+        // Have the user get activities, to bootstrap timezone.
+        user.getClient(ActivitiesApi.class).getScheduledActivitiesByDateRange(DateTime.now(TEST_USER_TIME_ZONE),
+                DateTime.now(TEST_USER_TIME_ZONE).plusDays(1)).execute();
+
+        // Get all participants
         AccountSummaryList list = workersApi.getParticipants("api", 0, 5, "", null, null, null).execute().body();
         assertTrue(list.getTotal() > 0);
-        
+
+        // Get worker participant.
         list = workersApi.getParticipants("api", 0, 5, worker.getEmail(), null, null, null).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(worker.getEmail(), list.getItems().get(0).getEmail());
         
-        // Include consent history in this call.
+        // Get user participant. Include consent history in this call.
         StudyParticipant participant = workersApi.getParticipantById("api", user.getSession().getId(), true)
                 .execute().body();
         assertEquals(user.getEmail(), participant.getEmail());
+        assertEquals(TEST_USER_TIME_ZONE_STRING, participant.getTimeZone());
         assertNotNull(participant.getHealthCode());
         assertNotNull(participant.getConsentHistories().get("api").get(0));
         
