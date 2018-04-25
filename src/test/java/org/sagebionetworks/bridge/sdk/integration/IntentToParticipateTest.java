@@ -37,7 +37,7 @@ public class IntentToParticipateTest {
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         researcher = TestUserHelper.createAndSignInUser(IntentToParticipateTest.class, false, Role.ADMIN, Role.RESEARCHER);
-        Tests.deletePhoneUser(researcher);
+        IntegTestUtils.deletePhoneUser(researcher);
     }
     
     @After

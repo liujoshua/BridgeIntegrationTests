@@ -289,7 +289,7 @@ public class AuthenticationTest {
 
     @Test(expected = AuthenticationFailedException.class)
     public void phoneSignInThrows() throws Exception {
-        Tests.deletePhoneUser(researchUser);
+        IntegTestUtils.deletePhoneUser(researchUser);
 
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
 

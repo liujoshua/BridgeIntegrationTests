@@ -65,19 +65,6 @@ public class Tests {
     public static final SmsTemplate VERIFY_PHONE_SMS_TEMPLATE = new SmsTemplate().message("verifyPhoneSmsTemplate ${token}");
     public static final SmsTemplate ACCOUNT_EXISTS_SMS_TEMPLATE = new SmsTemplate().message("accountExistsSmsTemplate ${token}");
 
-    public static void deletePhoneUser(TestUser researcher) throws IOException {
-        checkArgument(researcher.getRoles().contains(Role.RESEARCHER));
-        
-        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-        AccountSummaryList list = participantsApi.getParticipants(
-                0, 5, null, IntegTestUtils.PHONE.getNumber(), null, null).execute().body();
-        if (!list.getItems().isEmpty()) {
-            TestUser admin = TestUserHelper.getSignedInAdmin();
-            ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
-            adminsApi.deleteUser(list.getItems().get(0).getId()).execute();
-        }
-    }
-    
     public static ClientInfo getClientInfoWithVersion(String osName, int version) {
         return new ClientInfo().appName(APP_NAME).appVersion(version).deviceName(APP_NAME).osName(osName)
                 .osVersion("2.0.0").sdkName("BridgeJavaSDK").sdkVersion(Integer.parseInt(IntegTestUtils.CONFIG.getSdkVersion()));

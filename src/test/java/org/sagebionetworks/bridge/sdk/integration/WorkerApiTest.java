@@ -125,7 +125,7 @@ public class WorkerApiTest {
     
     @Test
     public void retrieveUsersWithPhone() throws Exception {
-        Tests.deletePhoneUser(researcher);
+        IntegTestUtils.deletePhoneUser(researcher);
 
         SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1");
         phoneUser = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, signUp);

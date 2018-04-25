@@ -77,7 +77,7 @@ public class ParticipantsTest {
         admin = TestUserHelper.getSignedInAdmin();
         researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(Role.RESEARCHER).withConsentUser(true)
                 .withExternalId(Tests.randomIdentifier(ParticipantsTest.class)).createAndSignInUser();
-        Tests.deletePhoneUser(researcher);
+        IntegTestUtils.deletePhoneUser(researcher);
         
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         Study study = adminApi.getUsersStudy().execute().body();
