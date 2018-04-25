@@ -16,7 +16,6 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.rest.model.SignIn;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -28,6 +27,9 @@ import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -80,7 +82,7 @@ public class SignInTest {
         Map<String,String> map = Maps.newHashMap();
         map.put("can_be_recontacted", "true");
 
-        String email = Tests.makeEmail(SignInTest.class);
+        String email = IntegTestUtils.makeEmail(SignInTest.class);
 
         SignUp signUp = new SignUp();
         signUp.setStudy(researcher.getStudyId());
@@ -122,8 +124,8 @@ public class SignInTest {
     @Test(expected = EntityNotFoundException.class)
     public void signInNoAccount() throws Exception {
         // Generate random email, but don't create the account.
-        String email = Tests.makeEmail(SignInTest.class);
-        SignIn signIn = new SignIn().study(Tests.STUDY_ID).email(email).password(PASSWORD);
+        String email = IntegTestUtils.makeEmail(SignInTest.class);
+        SignIn signIn = new SignIn().study(IntegTestUtils.STUDY_ID).email(email).password(PASSWORD);
 
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
@@ -133,7 +135,7 @@ public class SignInTest {
     @Test(expected = EntityNotFoundException.class)
     public void signInBadPassword() throws Exception {
         // To prevent email enumeration attack, this throws a 404 not found.
-        SignIn signIn = new SignIn().study(Tests.STUDY_ID).email(user.getEmail()).password("This is not my password");
+        SignIn signIn = new SignIn().study(IntegTestUtils.STUDY_ID).email(user.getEmail()).password("This is not my password");
 
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);

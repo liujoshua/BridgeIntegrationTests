@@ -67,7 +67,9 @@ import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.UploadValidationStrictness;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class StudyTest {
     
@@ -467,7 +469,7 @@ public class StudyTest {
         // that our Java SDK is set up correctly.
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         try {
-            studiesApi.verifyEmail(Tests.STUDY_ID, "dummy-token", "consent_notification").execute();
+            studiesApi.verifyEmail(IntegTestUtils.STUDY_ID, "dummy-token", "consent_notification").execute();
             fail("expected exception");
         } catch (BadRequestException ex) {
             assertTrue(ex.getMessage().contains("Email verification token has expired (or already been used)."));
@@ -528,7 +530,7 @@ public class StudyTest {
             // Admin can modify field.
             removeFieldDefByName(fieldName, study);
             appendToStudy(study, modifiedField);
-            adminApi.updateStudy(Tests.STUDY_ID, study).execute();
+            adminApi.updateStudy(IntegTestUtils.STUDY_ID, study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
             returnedFieldDef = getFieldDefByName(fieldName, study);
@@ -536,7 +538,7 @@ public class StudyTest {
 
             // Admin can delete field.
             removeFieldDefByName(fieldName, study);
-            adminApi.updateStudy(Tests.STUDY_ID, study).execute();
+            adminApi.updateStudy(IntegTestUtils.STUDY_ID, study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
             returnedFieldDef = getFieldDefByName(fieldName, study);
@@ -598,11 +600,11 @@ public class StudyTest {
     @Test
     public void userCannotAccessApisWithDeprecatedClient() throws Exception {
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        Study study = adminApi.getStudy(Tests.STUDY_ID).execute().body();
+        Study study = adminApi.getStudy(IntegTestUtils.STUDY_ID).execute().body();
         // Set a minimum value that should not any other tests
         if (study.getMinSupportedAppVersions().get("Android") == null) {
             study.getMinSupportedAppVersions().put("Android", 1);
-            adminApi.updateStudy(Tests.STUDY_ID, study).execute();
+            adminApi.updateStudy(IntegTestUtils.STUDY_ID, study).execute();
         }
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
         try {

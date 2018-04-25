@@ -29,7 +29,9 @@ import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.SmsTemplate;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class WorkerApiTest {
     private static final DateTimeZone TEST_USER_TIME_ZONE = DateTimeZone.forOffsetHours(-8);
@@ -125,7 +127,7 @@ public class WorkerApiTest {
     public void retrieveUsersWithPhone() throws Exception {
         Tests.deletePhoneUser(researcher);
 
-        SignUp signUp = new SignUp().phone(Tests.PHONE).password("P@ssword`1");
+        SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1");
         phoneUser = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, signUp);
         
         AccountSummaryList list = workersApi.getParticipants("api", 0, 5, null, "248-6796", null, null).execute().body();
@@ -227,8 +229,8 @@ public class WorkerApiTest {
     @Test
     public void sendUserSmsMessage() throws Exception {
         SignUp signUp = new SignUp();
-        signUp.setPhone(Tests.PHONE);    
-        signUp.setStudy(Tests.STUDY_ID);
+        signUp.setPhone(IntegTestUtils.PHONE);
+        signUp.setStudy(IntegTestUtils.STUDY_ID);
         signUp.setConsent(true);
         
         user = new TestUserHelper.Builder(WorkerApiTest.class).withSignUp(signUp).withConsentUser(true)

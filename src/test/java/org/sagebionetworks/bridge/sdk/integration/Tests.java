@@ -18,7 +18,6 @@ import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 
-import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.model.ABTestGroup;
@@ -31,7 +30,6 @@ import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.EmailTemplate;
 import org.sagebionetworks.bridge.rest.model.MimeType;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
-import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
@@ -41,20 +39,18 @@ import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.SmsTemplate;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class Tests {
-    
-    private static final Config CONFIG = new Config();
     public static final String PACKAGE = "org.sagebionetworks.bridge";
     public static final String MOBILE_APP_NAME = "DummyApp";
     public static final String APP_ID = PACKAGE + "." + MOBILE_APP_NAME;
     public static final String FINGERPRINT = "14:6D:E9:83:C5:73:06:50:D8:EE:B9:95:2F:34:FC:64:16:A0:83:42:E6:1D:BE:A8:8A:04:96:B2:3F:CF:44:E5";
     public static final String APP_NAME = "Integration Tests";
-    public static final String STUDY_ID = "api";
     public static final String PASSWORD = "P@ssword`1";
-    public static final Phone PHONE = new Phone().number("+19712486796").regionCode("US");
-    
+
     public static final EmailTemplate TEST_RESET_PASSWORD_TEMPLATE = new EmailTemplate().subject("Reset your password")
         .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
     public static final EmailTemplate TEST_VERIFY_EMAIL_TEMPLATE = new EmailTemplate().subject("Verify your email")
@@ -74,7 +70,7 @@ public class Tests {
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         AccountSummaryList list = participantsApi.getParticipants(
-                0, 5, null, PHONE.getNumber(), null, null).execute().body();
+                0, 5, null, IntegTestUtils.PHONE.getNumber(), null, null).execute().body();
         if (!list.getItems().isEmpty()) {
             TestUser admin = TestUserHelper.getSignedInAdmin();
             ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
@@ -84,20 +80,13 @@ public class Tests {
     
     public static ClientInfo getClientInfoWithVersion(String osName, int version) {
         return new ClientInfo().appName(APP_NAME).appVersion(version).deviceName(APP_NAME).osName(osName)
-                .osVersion("2.0.0").sdkName("BridgeJavaSDK").sdkVersion(Integer.parseInt(CONFIG.getSdkVersion()));
+                .osVersion("2.0.0").sdkName("BridgeJavaSDK").sdkVersion(Integer.parseInt(IntegTestUtils.CONFIG.getSdkVersion()));
     }
 
     public static String randomIdentifier(Class<?> cls) {
         return ("sdk-" + cls.getSimpleName().toLowerCase() + "-" + RandomStringUtils.randomAlphabetic(5)).toLowerCase();
     }
 
-    public static String makeEmail(Class<?> cls) {
-        String devName = CONFIG.getDevName();
-        String clsPart = cls.getSimpleName();
-        String rndPart = RandomStringUtils.randomAlphabetic(4);
-        return String.format("bridge-testing+%s-%s-%s@sagebase.org", devName, clsPart, rndPart);
-    }
-    
     public static List<Activity> labelActivities(List<Activity> activities, String randomLabel) {
         List<Activity> taggedActivities = Lists.newArrayList();
         for (Activity activity : activities) {

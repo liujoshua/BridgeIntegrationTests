@@ -13,7 +13,9 @@ import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import java.io.IOException;
 
@@ -95,7 +97,7 @@ public class SignUpTest {
 
         SignUp signUp = new SignUp()
                 .study(study.getIdentifier())
-                .email(Tests.makeEmail(SignUpTest.class))
+                .email(IntegTestUtils.makeEmail(SignUpTest.class))
                 .password("P@ssword`1");
         AuthenticationApi authApi = admin.getClient(AuthenticationApi.class);
         try {

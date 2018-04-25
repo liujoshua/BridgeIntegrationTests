@@ -14,6 +14,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.model.Environment;
+import org.sagebionetworks.bridge.user.TestUserHelper;
 
 /**
  * Tests of headers, CORS, and other configuration at the HTTP level.

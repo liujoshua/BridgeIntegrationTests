@@ -11,6 +11,7 @@ import retrofit2.Response;
 import org.sagebionetworks.bridge.rest.api.UsersApi;
 import org.sagebionetworks.bridge.rest.model.DateRange;
 import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.user.TestUserHelper;
 
 // We don't currently have a way to hook into an email address to see the result. For now, just make sure that the call
 // to the API succeeds and doesn't throw.
