@@ -40,6 +40,8 @@ import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaList;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class UploadSchemaTest {
     // We put spaces in the schema ID to test URL encoding.
@@ -82,7 +84,7 @@ public class UploadSchemaTest {
     @After
     public void deleteSchemas() throws Exception {
         try {
-            adminApi.deleteAllRevisionsOfUploadSchema(Tests.STUDY_ID, schemaId).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaId).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
         }
@@ -163,8 +165,8 @@ public class UploadSchemaTest {
 
         // Step 3b: Worker client can also get schemas, and can get schemas by study, schema, and rev.
         // This schema should be identical to updatedSchemaV2, except it also has the study ID.
-        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevision(Tests.STUDY_ID, schemaId, 2L).execute().body();
-        assertEquals(Tests.STUDY_ID, workerSchemaV2.getStudyId());
+        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevision(IntegTestUtils.STUDY_ID, schemaId, 2L).execute().body();
+        assertEquals(IntegTestUtils.STUDY_ID, workerSchemaV2.getStudyId());
         assertSchemaFilledIn(workerSchemaV2);
 
         UploadSchema workerSchemaV2MinusStudyId = copy(null, workerSchemaV2);
@@ -188,7 +190,7 @@ public class UploadSchemaTest {
         assertTrue(foundRevSet.contains(3L));
 
         // Step 5: Delete all schemas with the test schema ID
-        adminApi.deleteAllRevisionsOfUploadSchema(Tests.STUDY_ID, schemaId).execute();
+        adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaId).execute();
 
         // Step 5a: Get API should throw
         Exception thrownEx = null;

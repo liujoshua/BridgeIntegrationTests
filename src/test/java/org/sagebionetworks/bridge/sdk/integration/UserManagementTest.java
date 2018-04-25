@@ -11,13 +11,15 @@ import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.model.SignIn;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class UserManagementTest {
 
@@ -41,7 +43,7 @@ public class UserManagementTest {
 
     @Test
     public void canCreateAndSignOutAndDeleteUser() throws Exception {
-        String email = Tests.makeEmail(UserManagementTest.class);
+        String email = IntegTestUtils.makeEmail(UserManagementTest.class);
         String password = "P4ssword";
 
         SignUp signUp = new SignUp();

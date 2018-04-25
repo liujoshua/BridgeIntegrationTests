@@ -21,7 +21,9 @@ import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.ImmutableList;
 
@@ -46,7 +48,7 @@ public class ExternalIdSignUpTest {
         
         adminClient = admin.getClient(ForAdminsApi.class);
         devIdsClient = developer.getClient(ExternalIdentifiersApi.class);
-        authClient = TestUserHelper.getNonAuthClient(AuthenticationApi.class, Tests.STUDY_ID);
+        authClient = TestUserHelper.getNonAuthClient(AuthenticationApi.class, IntegTestUtils.STUDY_ID);
         changeExternalIdValidation(false);
     }
     
@@ -61,13 +63,13 @@ public class ExternalIdSignUpTest {
     }
     
     public void changeExternalIdValidation(boolean enabled) throws Exception {
-        study = adminClient.getStudy(Tests.STUDY_ID).execute().body();
+        study = adminClient.getStudy(IntegTestUtils.STUDY_ID).execute().body();
         study.setExternalIdValidationEnabled(enabled);
         study.setExternalIdRequiredOnSignup(enabled);
-        VersionHolder versionHolder = adminClient.updateStudy(Tests.STUDY_ID, study).execute().body();
+        VersionHolder versionHolder = adminClient.updateStudy(IntegTestUtils.STUDY_ID, study).execute().body();
         study.setVersion(versionHolder.getVersion());
         
-        study = adminClient.getStudy(Tests.STUDY_ID).execute().body();
+        study = adminClient.getStudy(IntegTestUtils.STUDY_ID).execute().body();
         if (enabled) {
             assertTrue(study.getExternalIdValidationEnabled());
             assertTrue(study.getExternalIdRequiredOnSignup());
@@ -84,7 +86,7 @@ public class ExternalIdSignUpTest {
             changeExternalIdValidation(true);
             devIdsClient.addExternalIds(ImmutableList.of(externalId, otherExternalId)).execute();
             
-            SignUp signUp = new SignUp().study(Tests.STUDY_ID).password(Tests.PASSWORD);
+            SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
             signUp.externalId(externalId);
             authClient.signUp(signUp).execute();
             
@@ -93,7 +95,7 @@ public class ExternalIdSignUpTest {
             assertTrue(list.getItems().get(0).getAssigned());
             
             // Prove you can sign in with this account (status = enabled)
-            SignIn signIn = new SignIn().externalId(externalId).study(Tests.STUDY_ID).password(Tests.PASSWORD);
+            SignIn signIn = new SignIn().externalId(externalId).study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
             try {
                 authClient.signInV4(signIn).execute().body();
                 fail("Should have thrown exception.");
@@ -106,7 +108,7 @@ public class ExternalIdSignUpTest {
             // With validation disabled, this kind of account will not succeed, even if the external ID is there
             changeExternalIdValidation(false); 
             try {
-                signUp = new SignUp().study(Tests.STUDY_ID).password(Tests.PASSWORD);
+                signUp = new SignUp().study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
                 signUp.externalId(otherExternalId);
                 authClient.signUp(signUp).execute();
                 fail("Should have thrown exception.");

@@ -21,6 +21,7 @@ import org.sagebionetworks.bridge.rest.model.CompoundActivityDefinition;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
+import org.sagebionetworks.bridge.user.TestUserHelper;
 
 public class CompoundActivityDefinitionTest {
     private static final String SCHEMA_ID = "test-schema";

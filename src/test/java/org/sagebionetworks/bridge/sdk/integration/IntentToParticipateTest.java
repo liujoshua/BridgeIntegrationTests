@@ -24,7 +24,9 @@ import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class IntentToParticipateTest {
     private TestUser admin;
@@ -35,7 +37,7 @@ public class IntentToParticipateTest {
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         researcher = TestUserHelper.createAndSignInUser(IntentToParticipateTest.class, false, Role.ADMIN, Role.RESEARCHER);
-        Tests.deletePhoneUser(researcher);
+        IntegTestUtils.deletePhoneUser(researcher);
     }
     
     @After
@@ -60,9 +62,9 @@ public class IntentToParticipateTest {
                 .birthdate(LocalDate.parse("1980-01-01"));
         
         IntentToParticipate intent = new IntentToParticipate()
-                .phone(Tests.PHONE)
-                .studyId(Tests.STUDY_ID)
-                .subpopGuid(Tests.STUDY_ID)
+                .phone(IntegTestUtils.PHONE)
+                .studyId(IntegTestUtils.STUDY_ID)
+                .subpopGuid(IntegTestUtils.STUDY_ID)
                 .osName("iPhone")
                 .consentSignature(sig);
         
@@ -71,7 +73,7 @@ public class IntentToParticipateTest {
         String clientInfo = RestUtils.getUserAgent(admin.getClientManager().getClientInfo());
         String lang = RestUtils.getAcceptLanguage(admin.getClientManager().getAcceptedLanguages());
         
-        ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang, Tests.STUDY_ID);
+        ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang, IntegTestUtils.STUDY_ID);
         
         IntentToParticipateApi intentApi = provider.getClient(IntentToParticipateApi.class);
         
@@ -79,16 +81,16 @@ public class IntentToParticipateTest {
         
         AuthenticationApi authApi = provider.getClient(AuthenticationApi.class);
 
-        String email = Tests.makeEmail(IntentToParticipateTest.class);
+        String email = IntegTestUtils.makeEmail(IntentToParticipateTest.class);
         
         SignIn signIn = new SignIn()
-                .phone(Tests.PHONE)
-                .study(Tests.STUDY_ID)
+                .phone(IntegTestUtils.PHONE)
+                .study(IntegTestUtils.STUDY_ID)
                 .password(Tests.PASSWORD);
 
         SignUp signUp = new SignUp()
-                .study(Tests.STUDY_ID)
-                .phone(Tests.PHONE)
+                .study(IntegTestUtils.STUDY_ID)
+                .phone(IntegTestUtils.PHONE)
                 .email(email)
                 .password(Tests.PASSWORD)
                 .checkForConsent(true);

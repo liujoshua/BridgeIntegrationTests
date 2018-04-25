@@ -6,6 +6,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.user.TestUserHelper;
 
 import static org.junit.Assert.fail;
 

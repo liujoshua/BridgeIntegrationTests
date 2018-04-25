@@ -13,8 +13,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
@@ -54,6 +52,9 @@ import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -76,7 +77,7 @@ public class ParticipantsTest {
         admin = TestUserHelper.getSignedInAdmin();
         researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(Role.RESEARCHER).withConsentUser(true)
                 .withExternalId(Tests.randomIdentifier(ParticipantsTest.class)).createAndSignInUser();
-        Tests.deletePhoneUser(researcher);
+        IntegTestUtils.deletePhoneUser(researcher);
         
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         Study study = adminApi.getUsersStudy().execute().body();
@@ -255,7 +256,7 @@ public class ParticipantsTest {
     
     @Test
     public void crudParticipant() throws Exception {
-        String email = Tests.makeEmail(ParticipantsTest.class);
+        String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
         Map<String,String> attributes = new ImmutableMap.Builder<String,String>().put("can_be_recontacted","true").build();
         List<String> languages = Lists.newArrayList("en","fr");
         List<String> dataGroups = Lists.newArrayList("sdk-int-1", "sdk-int-2");
@@ -266,7 +267,7 @@ public class ParticipantsTest {
         participant.setLastName("LastName");
         participant.setPassword("P@ssword1!");
         participant.setEmail(email);
-        participant.setPhone(Tests.PHONE);
+        participant.setPhone(IntegTestUtils.PHONE);
         participant.setExternalId("externalID");
         participant.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
         // BRIDGE-1604: leave notifyByEmail to its default value (should be true)
@@ -305,7 +306,7 @@ public class ParticipantsTest {
             assertNotNull(retrieved.getCreatedOn());
             assertNotNull(retrieved.getId());
             Phone retrievedPhone = retrieved.getPhone();
-            assertEquals(Tests.PHONE.getNumber(), retrievedPhone.getNumber());
+            assertEquals(IntegTestUtils.PHONE.getNumber(), retrievedPhone.getNumber());
             // Tests.PHONE.getNationalFormat() isn't formatted on the client, so we have to hard-code it.
             assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
             assertEquals("US", retrievedPhone.getRegionCode());
@@ -346,7 +347,7 @@ public class ParticipantsTest {
             assertEquals("LastName2", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail()); // This cannot be updated
             retrievedPhone = retrieved.getPhone();
-            assertEquals(Tests.PHONE.getNumber(), retrievedPhone.getNumber()); // This cannot be updated
+            assertEquals(IntegTestUtils.PHONE.getNumber(), retrievedPhone.getNumber()); // This cannot be updated
             assertEquals("US", retrievedPhone.getRegionCode());
             assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
             assertFalse(retrieved.getEmailVerified());
@@ -612,7 +613,7 @@ public class ParticipantsTest {
     
     @Test
     public void crudUsersWithPhone() throws Exception {
-        SignUp signUp = new SignUp().phone(Tests.PHONE).password("P@ssword`1");
+        SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1");
         phoneUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
@@ -630,12 +631,12 @@ public class ParticipantsTest {
     
     @Test
     public void addEmailToPhoneUser() throws Exception {
-        SignUp signUp = new SignUp().phone(Tests.PHONE).password("P@ssword`1").study(Tests.STUDY_ID);
+        SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1").study(IntegTestUtils.STUDY_ID);
         phoneUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
         
-        SignIn signIn = new SignIn().phone(signUp.getPhone()).password(signUp.getPassword()).study(Tests.STUDY_ID);
+        SignIn signIn = new SignIn().phone(signUp.getPhone()).password(signUp.getPassword()).study(IntegTestUtils.STUDY_ID);
 
-        String email = Tests.makeEmail(ParticipantsTest.class);
+        String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
         IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(email);
         
         ForConsentedUsersApi usersApi = phoneUser.getClient(ForConsentedUsersApi.class);
@@ -647,7 +648,7 @@ public class ParticipantsTest {
         assertEquals(email, retrieved.getEmail());
         
         // But if you do it again, it should not work
-        String newEmail = Tests.makeEmail(ParticipantsTest.class);
+        String newEmail = IntegTestUtils.makeEmail(ParticipantsTest.class);
         identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(newEmail);
         
         info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
@@ -656,28 +657,28 @@ public class ParticipantsTest {
 
     @Test
     public void addPhoneToEmailUser() throws Exception {
-        String email = Tests.makeEmail(ParticipantsTest.class);
-        SignUp signUp = new SignUp().email(email).password("P@ssword`1").study(Tests.STUDY_ID);
+        String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
+        SignUp signUp = new SignUp().email(email).password("P@ssword`1").study(IntegTestUtils.STUDY_ID);
         emailUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
         
-        SignIn signIn = new SignIn().email(signUp.getEmail()).password(signUp.getPassword()).study(Tests.STUDY_ID);
+        SignIn signIn = new SignIn().email(signUp.getEmail()).password(signUp.getPassword()).study(IntegTestUtils.STUDY_ID);
 
-        IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(Tests.PHONE);
+        IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(IntegTestUtils.PHONE);
         
         ForConsentedUsersApi usersApi = emailUser.getClient(ForConsentedUsersApi.class);
         UserSessionInfo info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
-        assertEquals(Tests.PHONE.getNumber(), info.getPhone().getNumber());
+        assertEquals(IntegTestUtils.PHONE.getNumber(), info.getPhone().getNumber());
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         StudyParticipant retrieved = participantsApi.getParticipantById(emailUser.getSession().getId(), true).execute().body();
-        assertEquals(Tests.PHONE.getNumber(), retrieved.getPhone().getNumber());
+        assertEquals(IntegTestUtils.PHONE.getNumber(), retrieved.getPhone().getNumber());
         
         // But if you do it again, it should not work
         Phone otherPhone = new Phone().number("4082588569").regionCode("US");
         identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(otherPhone);
         
         info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
-        assertEquals(Tests.PHONE.getNumber(), info.getPhone().getNumber()); // unchanged
+        assertEquals(IntegTestUtils.PHONE.getNumber(), info.getPhone().getNumber()); // unchanged
     }
     
     private static List<ScheduledActivity> findActivitiesByLabel(List<ScheduledActivity> scheduledActivityList,

@@ -75,7 +75,9 @@ import org.sagebionetworks.bridge.rest.model.SurveyQuestionOption;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.rest.model.SurveyRule;
 import org.sagebionetworks.bridge.rest.model.UIHint;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class SurveyTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
@@ -532,7 +534,7 @@ public class SurveyTest {
         assertKeysEqual(survey1aKeys, survey1aAgain);
 
         // We only expect the most recently published versions, namely 1b and 2b.
-        SurveyList surveyResourceList = workerApi.getAllPublishedSurveys(Tests.STUDY_ID).execute().body();
+        SurveyList surveyResourceList = workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID).execute().body();
         containsAll(surveyResourceList.getItems(), new MutableHolder(survey1b), new MutableHolder(survey2b));
     }
 
