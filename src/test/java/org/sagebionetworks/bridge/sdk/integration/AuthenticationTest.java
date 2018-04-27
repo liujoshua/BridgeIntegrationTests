@@ -26,7 +26,9 @@ import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,7 +56,7 @@ public class AuthenticationTest {
         researchUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true, Role.RESEARCHER);
         
         // Make a test user with a phone number.
-        SignUp phoneOnlyUser = new SignUp().study(Tests.STUDY_ID).consent(true).phone(Tests.PHONE);
+        SignUp phoneOnlyUser = new SignUp().study(IntegTestUtils.STUDY_ID).consent(true).phone(IntegTestUtils.PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(AuthenticationTest.class).withConsentUser(true)
                 .withSignUp(phoneOnlyUser).withSetPassword(false).createUser();
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
@@ -287,11 +289,11 @@ public class AuthenticationTest {
 
     @Test(expected = AuthenticationFailedException.class)
     public void phoneSignInThrows() throws Exception {
-        Tests.deletePhoneUser(researchUser);
+        IntegTestUtils.deletePhoneUser(researchUser);
 
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
 
-        PhoneSignIn phoneSignIn = new PhoneSignIn().phone(Tests.PHONE).study(phoneOnlyTestUser.getStudyId()).token("test-token");
+        PhoneSignIn phoneSignIn = new PhoneSignIn().phone(IntegTestUtils.PHONE).study(phoneOnlyTestUser.getStudyId()).token("test-token");
 
         authApi.signInViaPhone(phoneSignIn).execute();
     }

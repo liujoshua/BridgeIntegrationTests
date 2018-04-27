@@ -36,6 +36,7 @@ import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.UploadStatus;
 import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
+import org.sagebionetworks.bridge.user.TestUserHelper;
 
 import com.google.common.collect.Lists;
 

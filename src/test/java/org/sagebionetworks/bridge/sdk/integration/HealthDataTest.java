@@ -42,6 +42,7 @@ import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.rest.model.UploadValidationStrictness;
+import org.sagebionetworks.bridge.user.TestUserHelper;
 
 @Category(IntegrationSmokeTest.class)
 @SuppressWarnings("unchecked")

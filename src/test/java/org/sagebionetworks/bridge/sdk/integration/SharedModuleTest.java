@@ -28,6 +28,7 @@ import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
+import org.sagebionetworks.bridge.user.TestUserHelper;
 
 public class SharedModuleTest {
     private static final Logger LOG = LoggerFactory.getLogger(SharedModuleTest.class);

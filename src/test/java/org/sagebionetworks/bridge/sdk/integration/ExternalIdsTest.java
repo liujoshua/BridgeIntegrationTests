@@ -14,10 +14,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
 import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 import com.google.common.collect.Lists;
 

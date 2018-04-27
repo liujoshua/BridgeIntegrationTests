@@ -15,7 +15,8 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.GuidHolder;
 import org.sagebionetworks.bridge.rest.model.NotificationTopic;
 import org.sagebionetworks.bridge.rest.model.Role;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 public class NotificationTopicTest {
 

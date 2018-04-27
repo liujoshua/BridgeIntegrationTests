@@ -17,7 +17,8 @@ import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
-import org.sagebionetworks.bridge.sdk.integration.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 public class OAuthTest {
 

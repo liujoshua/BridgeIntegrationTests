@@ -46,6 +46,7 @@ import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
+import org.sagebionetworks.bridge.user.TestUserHelper;
 
 public class ScheduledActivityAutoResolutionTest {
     private static final String ACTIVITY_LABEL_PREFIX = "activity-";
