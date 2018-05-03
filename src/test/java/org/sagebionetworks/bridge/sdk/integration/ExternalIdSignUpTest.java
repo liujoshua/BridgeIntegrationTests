@@ -21,7 +21,6 @@ import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
-import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -39,7 +38,6 @@ public class ExternalIdSignUpTest {
     private ForResearchersApi researchersClient;
     private ForAdminsApi adminClient;
     private AuthenticationApi authClient;
-    private UserSessionInfo info;
     private Study study;
     
     @Before
@@ -54,13 +52,6 @@ public class ExternalIdSignUpTest {
         devIdsClient = devResearcher.getClient(ExternalIdentifiersApi.class);
         researchersClient = devResearcher.getClient(ForResearchersApi.class);        
         authClient = TestUserHelper.getNonAuthClient(AuthenticationApi.class, IntegTestUtils.STUDY_ID);
-    }
-    
-    @After
-    public void after() throws Exception {
-        if (info != null) {
-            adminClient.deleteUser(info.getId()).execute();
-        }
     }
     
     @After
@@ -89,6 +80,8 @@ public class ExternalIdSignUpTest {
     
     @Test
     public void externalIdSignInTest() throws Exception {
+        String userId1 = null;
+        String userId2 = null;
         try {
             // Enable validation, and an account with just an external ID will succeed
             changeExternalIdValidation(true);
@@ -108,9 +101,9 @@ public class ExternalIdSignUpTest {
                 authClient.signInV4(signIn).execute().body();
                 fail("Should have thrown exception.");
             } catch(ConsentRequiredException e) {
-                info = e.getSession();
-                assertEquals(externalId, info.getExternalId());
-                assertEquals(AccountStatus.ENABLED, info.getStatus());
+                userId1 = e.getSession().getId();
+                assertEquals(externalId, e.getSession().getExternalId());
+                assertEquals(AccountStatus.ENABLED, e.getSession().getStatus());
             }
             
             // Request an auto-generated password
@@ -133,6 +126,7 @@ public class ExternalIdSignUpTest {
                 authClient.signInV4(otherSignIn).execute().body();
                 fail("Should have thrown exception.");
             } catch(ConsentRequiredException e) {
+                userId2 = e.getSession().getId();
                 // still not consented, has succeeded
             }
             
@@ -148,6 +142,8 @@ public class ExternalIdSignUpTest {
             }
         } finally {
             changeExternalIdValidation(false);
+            adminClient.deleteUser(userId1).execute();
+            adminClient.deleteUser(userId2).execute();
             devIdsClient.deleteExternalIds(ImmutableList.of(externalId, otherExternalId)).execute();
         }
     }
