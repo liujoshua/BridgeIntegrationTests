@@ -306,11 +306,11 @@ public class ConsentTest {
     }
     
     @Test
-    public void canEmailConsentAgreement() throws Exception {
+    public void canResendConsentAgreement() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
-            userApi.emailConsentAgreement(testUser.getDefaultSubpopulation()).execute();
+            userApi.resendConsentAgreement(testUser.getDefaultSubpopulation()).execute();
         } finally {
             testUser.signOutAndDeleteUser();
         }
