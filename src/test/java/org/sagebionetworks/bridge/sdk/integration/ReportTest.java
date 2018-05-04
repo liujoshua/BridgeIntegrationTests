@@ -295,9 +295,9 @@ public class ReportTest {
         // future regression, this test has been added.
 
         TestUser developer = TestUserHelper.createAndSignInUser(this.getClass(), false, Role.DEVELOPER);
+        StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
         try {
             // Create reports with different IDs.
-            StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
             devReportClient.addStudyReportRecord(reportId + 1, REPORT1).execute();
             devReportClient.addStudyReportRecord(reportId + 2, REPORT2).execute();
 
@@ -310,6 +310,8 @@ public class ReportTest {
             studyReportsApi.deleteAllStudyReportRecords(reportId + 1).execute();
             studyReportsApi.deleteAllStudyReportRecords(reportId + 2).execute();
         } finally {
+            devReportClient.deleteStudyReportRecord(reportId + 1, REPORT1.getLocalDate()).execute();
+            devReportClient.deleteStudyReportRecord(reportId + 2, REPORT2.getLocalDate()).execute();
             developer.signOutAndDeleteUser();
         }
     }
@@ -403,7 +405,7 @@ public class ReportTest {
         try {
             ParticipantReportsApi reportsApi = developer.getClient(ParticipantReportsApi.class);
             reportsApi.deleteAllParticipantReportRecords(user.getSession().getId(), "foo").execute();
-        } catch(Throwable t) {
+        } finally {
             developer.signOutAndDeleteUser();
         }
         results = userApi
