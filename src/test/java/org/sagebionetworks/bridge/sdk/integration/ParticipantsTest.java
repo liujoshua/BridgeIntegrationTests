@@ -206,7 +206,6 @@ public class ParticipantsTest {
         
         AccountSummary summary = summaries.getItems().get(0);
         assertNotNull(summary.getCreatedOn());
-        assertNotNull(summary.getEmail());
         assertNotNull(summary.getStatus());
         assertNotNull(summary.getId());
         
