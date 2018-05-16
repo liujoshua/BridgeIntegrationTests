@@ -102,7 +102,6 @@ public class IntentToParticipateTest {
         StudyParticipant participant = participantsApi.getParticipantById(list.getItems().get(0).getId(), false).execute().body();
         
         participant.setStatus(AccountStatus.ENABLED);
-        participant.setPhoneVerified(true);
         participantsApi.updateParticipant(participant.getId(), participant).execute();
         
         session = authApi.signInV4(signIn).execute().body();
