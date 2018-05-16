@@ -34,7 +34,7 @@ public class UserDataDownloadTest {
     public void withBody() throws Exception {
         LocalDate todaysDate = LocalDate.now();
         DateRange dateRange = new DateRange().startDate(todaysDate).endDate(todaysDate);
-        Response<Message> response = user.getClient(UsersApi.class).emailDataToUser(dateRange).execute();
+        Response<Message> response = user.getClient(UsersApi.class).sendDataToUser(dateRange).execute();
         assertEquals(202, response.code());
     }
 }
