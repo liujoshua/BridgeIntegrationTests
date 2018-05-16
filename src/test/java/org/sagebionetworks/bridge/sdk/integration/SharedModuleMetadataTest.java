@@ -117,7 +117,7 @@ public class SharedModuleMetadataTest {
     public void testNonAuthUserGetAndQueryCalls() throws Exception {
         // first create a test metadata
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(1)
-                .name(MODULE_NAME).schemaId(schemaId).schemaRevision(SCHEMA_REV);
+                .name(MODULE_NAME).notes("A note").schemaId(schemaId).schemaRevision(SCHEMA_REV);
         SharedModuleMetadata metadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
                 .body();
         // execute query and get
@@ -128,11 +128,16 @@ public class SharedModuleMetadataTest {
         assertEquals(metadata, retMetadata);
 
         SharedModuleMetadataList retMetadataList = nonAuthSharedModulesApi
-                .queryAllMetadata(false, false, "id=" + "\'" + metadata.getId() + "\'", null).execute().body();
+                .queryAllMetadata(false, false, null, "A note", null).execute().body();
         assertEquals(1, retMetadataList.getItems().size());
         assertEquals(metadata, retMetadataList.getItems().get(0));
 
-        retMetadataList = nonAuthSharedModulesApi.queryMetadataById(metadata.getId(), true, false, null, null).execute().body();
+        retMetadataList = nonAuthSharedModulesApi
+                .queryAllMetadata(false, false, MODULE_NAME, null, null).execute().body();
+        assertEquals(1, retMetadataList.getItems().size());
+        assertEquals(metadata, retMetadataList.getItems().get(0));
+        
+        retMetadataList = nonAuthSharedModulesApi.queryMetadataById(metadata.getId(), true, false, null, null, null).execute().body();
         assertEquals(1, retMetadataList.getItems().size());
         assertEquals(metadata, retMetadataList.getItems().get(0));
     }
@@ -248,8 +253,8 @@ public class SharedModuleMetadataTest {
 
         // Delete all. Query by ID now returns an empty list.
         sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
-        List<SharedModuleMetadata> metadataListAfterDeleteAll = sharedDeveloperModulesApi.queryMetadataById(moduleId,
-                false, false, null, null).execute().body().getItems();
+        List<SharedModuleMetadata> metadataListAfterDeleteAll = sharedDeveloperModulesApi
+                .queryMetadataById(moduleId, false, false, null, null, null).execute().body().getItems();
         assertEquals(0, metadataListAfterDeleteAll.size());
     }
 
@@ -328,8 +333,8 @@ public class SharedModuleMetadataTest {
     public void queryAll() throws Exception {
         // Create a few modules for the test
         SharedModuleMetadata moduleAV1ToCreate = new SharedModuleMetadata().id(moduleId + "A").version(1)
-                .name("Module A Version 1").schemaId(schemaId).schemaRevision(SCHEMA_REV).published(true).os("iOS")
-                .addTagsItem("foo");
+                .name("Module A Version 1").notes("Module A Version 1").schemaId(schemaId).schemaRevision(SCHEMA_REV)
+                .published(true).os("iOS").addTagsItem("foo");
         SharedModuleMetadata moduleAV1 = sharedDeveloperModulesApi.createMetadata(moduleAV1ToCreate).execute().body();
 
         SharedModuleMetadata moduleAV2ToCreate = new SharedModuleMetadata().id(moduleId + "A").version(2)
@@ -338,26 +343,21 @@ public class SharedModuleMetadataTest {
 
         SharedModuleMetadata moduleBV1ToCreate = new SharedModuleMetadata().id(moduleId + "B").version(1)
                 .name("Module B Version 1").schemaId(schemaId).schemaRevision(SCHEMA_REV).published(true)
-                .os("Android").addTagsItem("bar");
+                .os("Android").notes("Android").addTagsItem("bar");
         SharedModuleMetadata moduleBV1 = sharedDeveloperModulesApi.createMetadata(moduleBV1ToCreate).execute().body();
 
         SharedModuleMetadata moduleBV2ToCreate = new SharedModuleMetadata().id(moduleId + "B").version(2)
                 .name("Module B Version 2").schemaId(schemaId).schemaRevision(SCHEMA_REV).published(true)
-                .os("Android");
+                .os("Android").notes("Android");
         SharedModuleMetadata moduleBV2 = sharedDeveloperModulesApi.createMetadata(moduleBV2ToCreate).execute().body();
 
+        // These cases originally tested the ability to find by operating system and licensing restrictions. These are 
+        // temporarily removed from the API (we can add them back when this feature is put into widespread use). 
+        // Right now the only consuming client (the BSM) does a search of the notes and name fields of shared modules.
         try {
             // Case 1: query with both mostrecent=true and where throws exception
             try {
-                sharedDeveloperModulesApi.queryAllMetadata(true, false, "licenseRestricted=true", null).execute();
-                fail("expected exception");
-            } catch (BadRequestException ex) {
-                // expected exception
-            }
-
-            // Case 2: garbled query
-            try {
-                sharedDeveloperModulesApi.queryAllMetadata(false, false, "blargg", null).execute();
+                sharedDeveloperModulesApi.queryAllMetadata(true, false, null, "will not match", null).execute();
                 fail("expected exception");
             } catch (BadRequestException ex) {
                 // expected exception
@@ -366,73 +366,73 @@ public class SharedModuleMetadataTest {
             // Note that since there may be other modules in the shared study, we can't rely on result counts. Instead,
             // well need to test for the presence and absence of our test modules.
 
-            // Case 3: most recent published (returns AV1 and BV2)
-            List<SharedModuleMetadata> case3MetadataList = sharedDeveloperModulesApi.queryAllMetadata(true, true, null,
-                    null).execute().body().getItems();
+            // Case 2: most recent published (returns AV1 and BV2)
+            List<SharedModuleMetadata> case3MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(true, true, null, null, null).execute().body().getItems();
             assertTrue(case3MetadataList.contains(moduleAV1));
             assertFalse(case3MetadataList.contains(moduleAV2));
             assertFalse(case3MetadataList.contains(moduleBV1));
             assertTrue(case3MetadataList.contains(moduleBV2));
 
-            // Case 4: most recent (returns AV2 and BV2)
-            List<SharedModuleMetadata> case4MetadataList = sharedDeveloperModulesApi.queryAllMetadata(true, false,
-                    null, null).execute().body().getItems();
+            // Case 3: most recent (returns AV2 and BV2)
+            List<SharedModuleMetadata> case4MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(true, false, null, null, null).execute().body().getItems();
             assertFalse(case4MetadataList.contains(moduleAV1));
             assertTrue(case4MetadataList.contains(moduleAV2));
             assertFalse(case4MetadataList.contains(moduleBV1));
             assertTrue(case4MetadataList.contains(moduleBV2));
 
-            // Case 5: published, where os='iOS' (returns AV1)
-            List<SharedModuleMetadata> case5MetadataList = sharedDeveloperModulesApi.queryAllMetadata(false, true,
-                    "os='iOS'", null).execute().body().getItems();
+            // Case 4: published, where notes are matched (returns AV1)
+            List<SharedModuleMetadata> case5MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(false, true, null, "Module A Version 1", null).execute().body().getItems();
             assertTrue(case5MetadataList.contains(moduleAV1));
             assertFalse(case5MetadataList.contains(moduleAV2));
             assertFalse(case5MetadataList.contains(moduleBV1));
             assertFalse(case5MetadataList.contains(moduleBV2));
 
-            // Case 6: published, no where clause (returns AV1, BV1, BV2)
-            List<SharedModuleMetadata> case6MetadataList = sharedDeveloperModulesApi.queryAllMetadata(false, true,
-                    null, null).execute().body().getItems();
+            // Case 5: published, no where clause (returns AV1, BV1, BV2)
+            List<SharedModuleMetadata> case6MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(false, true, null, null, null).execute().body().getItems();
             assertTrue(case6MetadataList.contains(moduleAV1));
             assertFalse(case6MetadataList.contains(moduleAV2));
             assertTrue(case6MetadataList.contains(moduleBV1));
             assertTrue(case6MetadataList.contains(moduleBV2));
 
-            // Case 7: where os='Android' (returns BV1, BV2)
-            List<SharedModuleMetadata> case7MetadataList = sharedDeveloperModulesApi.queryAllMetadata(false, false,
-                    "os='Android'", null).execute().body().getItems();
+            // Case 6: where notes contain "Android" (returns BV1, BV2)
+            List<SharedModuleMetadata> case7MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(false, false, null, "Android", null).execute().body().getItems();
             assertFalse(case7MetadataList.contains(moduleAV1));
             assertFalse(case7MetadataList.contains(moduleAV2));
             assertTrue(case7MetadataList.contains(moduleBV1));
             assertTrue(case7MetadataList.contains(moduleBV2));
 
-            // Case 8: where os='Android', tags=bar (returns BV1)
-            List<SharedModuleMetadata> case8MetadataList = sharedDeveloperModulesApi.queryAllMetadata(false, false,
-                    "os='Android'", "bar").execute().body().getItems();
+            // Case 7: where notes contain 'Android', tags=bar (returns BV1)
+            List<SharedModuleMetadata> case8MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(false, false, null, "Android", "bar").execute().body().getItems();
             assertFalse(case8MetadataList.contains(moduleAV1));
             assertFalse(case8MetadataList.contains(moduleAV2));
             assertTrue(case8MetadataList.contains(moduleBV1));
             assertFalse(case8MetadataList.contains(moduleBV2));
 
-            // Case 9: multiple tags (returns AV1, BV1)
-            List<SharedModuleMetadata> case9MetadataList = sharedDeveloperModulesApi.queryAllMetadata(false, false,
-                    null, "foo,bar").execute().body().getItems();
+            // Case 8: multiple tags (returns AV1, BV1)
+            List<SharedModuleMetadata> case9MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(false, false, null, null, "foo,bar").execute().body().getItems();
             assertTrue(case9MetadataList.contains(moduleAV1));
             assertFalse(case9MetadataList.contains(moduleAV2));
             assertTrue(case9MetadataList.contains(moduleBV1));
             assertFalse(case9MetadataList.contains(moduleBV2));
 
-            // Case 10: all results
-            List<SharedModuleMetadata> case10MetadataList = sharedDeveloperModulesApi.queryAllMetadata(false, false,
-                    null, null).execute().body().getItems();
+            // Case 9: all results
+            List<SharedModuleMetadata> case10MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(false, false, null, null, null).execute().body().getItems();
             assertTrue(case10MetadataList.contains(moduleAV1));
             assertTrue(case10MetadataList.contains(moduleAV2));
             assertTrue(case10MetadataList.contains(moduleBV1));
             assertTrue(case10MetadataList.contains(moduleBV2));
 
-            // Case 11: no results
-            List<SharedModuleMetadata> case11MetadataList = sharedDeveloperModulesApi.queryAllMetadata(false, false,
-                    "licenseRestricted=true", null).execute().body().getItems();
+            // Case 10: no results
+            List<SharedModuleMetadata> case11MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(false, false, "matches no name", null, null).execute().body().getItems();
             assertFalse(case11MetadataList.contains(moduleAV1));
             assertFalse(case11MetadataList.contains(moduleAV2));
             assertFalse(case11MetadataList.contains(moduleBV1));
@@ -486,27 +486,28 @@ public class SharedModuleMetadataTest {
             // use counts to know exactly what results we expect.
 
             // Case 1: most recent (v4)
-            List<SharedModuleMetadata> case1MetadataList = sharedDeveloperModulesApi.queryMetadataById(moduleId, true,
-                    false, null, null).execute().body().getItems();
+            List<SharedModuleMetadata> case1MetadataList = sharedDeveloperModulesApi
+                    .queryMetadataById(moduleId, true, false, null, null, null).execute().body().getItems();
             assertEquals(1, case1MetadataList.size());
             assertTrue(case1MetadataList.contains(moduleV4));
 
             // Case 2: published (v1, v2)
-            List<SharedModuleMetadata> case2MetadataList = sharedDeveloperModulesApi.queryMetadataById(moduleId, false,
-                    true, null, null).execute().body().getItems();
+            List<SharedModuleMetadata> case2MetadataList = sharedDeveloperModulesApi
+                    .queryMetadataById(moduleId, false, true, null, null, null).execute().body().getItems();
             assertEquals(2, case2MetadataList.size());
             assertTrue(case2MetadataList.contains(moduleV1));
             assertTrue(case2MetadataList.contains(moduleV2));
 
             // Case 3: where licenseRestricted=true (v1)
-            List<SharedModuleMetadata> case3MetadataList = sharedDeveloperModulesApi.queryMetadataById(moduleId, false,
-                    false, "licenseRestricted=true", null).execute().body().getItems();
+            List<SharedModuleMetadata> case3MetadataList = sharedDeveloperModulesApi
+                    .queryMetadataById(moduleId, false, false, "Test Module Version 1", null, null).execute().body()
+                    .getItems();
             assertEquals(1, case3MetadataList.size());
             assertTrue(case3MetadataList.contains(moduleV1));
 
             // Case 4: tags=foo (v3)
-            List<SharedModuleMetadata> case4MetadataList = sharedDeveloperModulesApi.queryMetadataById(moduleId, false,
-                    false, null, "foo").execute().body().getItems();
+            List<SharedModuleMetadata> case4MetadataList = sharedDeveloperModulesApi
+                    .queryMetadataById(moduleId, false, false, null, null, "foo").execute().body().getItems();
             assertEquals(1, case4MetadataList.size());
             assertTrue(case4MetadataList.contains(moduleV3));
         } finally {

@@ -122,8 +122,7 @@ public class UploadSchemaTest {
 
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
                 .name("Integ Test Schema").schemaId(retSchema.getSchemaId()).schemaRevision(retSchema.getRevision().intValue());
-        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
-                .body();
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute().body();
 
         // execute delete
         Exception thrownEx = null;
