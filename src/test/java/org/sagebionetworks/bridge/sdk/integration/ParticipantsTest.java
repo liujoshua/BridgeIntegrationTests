@@ -81,7 +81,7 @@ public class ParticipantsTest {
         
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         Study study = adminApi.getUsersStudy().execute().body();
-        if (!study.getPhoneSignInEnabled() || !study.getEmailSignInEnabled()) {
+        if (!study.isPhoneSignInEnabled() || !study.isEmailSignInEnabled()) {
             study.setPhoneSignInEnabled(true);
             study.setEmailSignInEnabled(true);
             adminApi.updateStudy(study.getIdentifier(), study).execute();
@@ -141,7 +141,7 @@ public class ParticipantsTest {
             self = userApi.getUsersParticipantRecord().execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
             assertEquals(Lists.newArrayList("group1"), self.getDataGroups());
-            assertTrue(self.getNotifyByEmail());  // BRIDGE-1604: true value returned
+            assertTrue(self.isNotifyByEmail());  // BRIDGE-1604: true value returned
             
             List<String> deserClientData = (List<String>)RestUtils.toType(self.getClientData(), List.class);
             assertEquals("A", deserClientData.get(0));
@@ -297,7 +297,7 @@ public class ParticipantsTest {
             assertEquals(email, retrieved.getEmail());
             assertEquals("externalID", retrieved.getExternalId());
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
-            assertTrue(retrieved.getNotifyByEmail());
+            assertTrue(retrieved.isNotifyByEmail());
             assertListsEqualIgnoringOrder(dataGroups, retrieved.getDataGroups());
             assertListsEqualIgnoringOrder(languages, retrieved.getLanguages());
             assertEquals(attributes.get("can_be_recontacted"), retrieved.getAttributes().get("can_be_recontacted"));
@@ -309,8 +309,8 @@ public class ParticipantsTest {
             // Tests.PHONE.getNationalFormat() isn't formatted on the client, so we have to hard-code it.
             assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
             assertEquals("US", retrievedPhone.getRegionCode());
-            assertFalse(retrieved.getEmailVerified());
-            assertFalse(retrieved.getPhoneVerified());
+            assertFalse(retrieved.isEmailVerified());
+            assertFalse(retrieved.isPhoneVerified());
             createdOn = retrieved.getCreatedOn();
             
             // Update the user. Identified by the email address
@@ -349,12 +349,12 @@ public class ParticipantsTest {
             assertEquals(IntegTestUtils.PHONE.getNumber(), retrievedPhone.getNumber()); // This cannot be updated
             assertEquals("US", retrievedPhone.getRegionCode());
             assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
-            assertFalse(retrieved.getEmailVerified());
-            assertFalse(retrieved.getPhoneVerified());
+            assertFalse(retrieved.isEmailVerified());
+            assertFalse(retrieved.isPhoneVerified());
             assertEquals("externalID", retrieved.getExternalId()); // This cannot be updated
             assertEquals(SharingScope.NO_SHARING, retrieved.getSharingScope());
             // BRIDGE-1604: should still be true, even though it was not sent to the server. Through participants API 
-            assertTrue(retrieved.getNotifyByEmail());
+            assertTrue(retrieved.isNotifyByEmail());
             assertListsEqualIgnoringOrder(newDataGroups, retrieved.getDataGroups());
             assertListsEqualIgnoringOrder(newLanguages, retrieved.getLanguages());
             assertEquals(id, retrieved.getId());

@@ -112,7 +112,7 @@ public class SignInTest {
         assertEquals("external ID", retrieved.getExternalId());
         assertEquals(signUp.getEmail(), retrieved.getEmail());
         assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
-        assertTrue(retrieved.getNotifyByEmail());
+        assertTrue(retrieved.isNotifyByEmail());
         assertEquals(Lists.newArrayList("group1"), retrieved.getDataGroups());
         assertEquals(Lists.newArrayList("en"), retrieved.getLanguages());
         assertEquals("true", retrieved.getAttributes().get("can_be_recontacted"));

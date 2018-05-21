@@ -67,7 +67,7 @@ public class UserProfileTest {
         
         assertEquals("FirstName2", participant.getFirstName());
         assertEquals("LastName2", participant.getLastName());
-        assertTrue(participant.getNotifyByEmail()); // NOT CHANGED
+        assertTrue(participant.isNotifyByEmail()); // NOT CHANGED
         assertEquals("true", participant.getAttributes().get("can_be_recontacted"));
     }
     

@@ -126,7 +126,7 @@ public class ScheduleTest {
         
         Schedule originalSchedule = Tests.getSimpleSchedule(originalPlan);
         Schedule updatedSchedule = Tests.getSimpleSchedule(plan);
-        originalSchedule.setPersistent(updatedSchedule.getPersistent());
+        originalSchedule.setPersistent(updatedSchedule.isPersistent());
         Tests.setVariableValueInObject(originalSchedule, "type", "Schedule");
         
         assertEquals(originalPlan, plan);
@@ -168,7 +168,7 @@ public class ScheduleTest {
         plan = schedulesApi.getSchedulePlan(planGuid).execute().body();
         Schedule schedule = Tests.getSimpleSchedule(plan);
         
-        assertEquals(true, schedule.getPersistent());
+        assertEquals(true, schedule.isPersistent());
     }
     
     @Test
@@ -181,7 +181,7 @@ public class ScheduleTest {
         plan = schedulesApi.getSchedulePlan(planGuid).execute().body();
         Schedule schedule = Tests.getSimpleSchedule(plan);
         
-        assertEquals(false, schedule.getPersistent());
+        assertEquals(false, schedule.isPersistent());
     }
     
     @Test

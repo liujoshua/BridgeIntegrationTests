@@ -290,7 +290,7 @@ public class SchedulePlanTest {
         Schedule originalSchedule = original.getSchedule();
         Tests.setVariableValueInObject(originalSchedule, "type", "Schedule");
         
-        originalSchedule.setPersistent(updated.getSchedule().getPersistent());
+        originalSchedule.setPersistent(updated.getSchedule().isPersistent());
         
         Activity originalActivity = originalSchedule.getActivities().get(0);
         originalActivity.setGuid(updated.getSchedule().getActivities().get(0).getGuid());

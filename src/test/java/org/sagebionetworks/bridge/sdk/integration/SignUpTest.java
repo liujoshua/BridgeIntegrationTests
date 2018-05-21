@@ -32,7 +32,7 @@ public class SignUpTest {
             ParticipantsApi participantsApi = testUser.getClientManager().getClient(ParticipantsApi.class);
 
             StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
-            assertTrue(participant.getNotifyByEmail());
+            assertTrue(participant.isNotifyByEmail());
             assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
         } finally {
             testUser.signOutAndDeleteUser();
@@ -50,7 +50,7 @@ public class SignUpTest {
             SignIn signIn = testUser.getSignIn();
             UserSessionInfo session = authApi.signInV4(signIn).execute().body();
             
-            assertTrue(session.getAuthenticated());
+            assertTrue(session.isAuthenticated());
 
             authApi.signOut().execute();
         } finally {

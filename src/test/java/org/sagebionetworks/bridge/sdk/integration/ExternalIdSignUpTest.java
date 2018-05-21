@@ -70,11 +70,11 @@ public class ExternalIdSignUpTest {
         
         study = adminClient.getStudy(IntegTestUtils.STUDY_ID).execute().body();
         if (enabled) {
-            assertTrue(study.getExternalIdValidationEnabled());
-            assertTrue(study.getExternalIdRequiredOnSignup());
+            assertTrue(study.isExternalIdValidationEnabled());
+            assertTrue(study.isExternalIdRequiredOnSignup());
         } else {
-            assertFalse(study.getExternalIdValidationEnabled());
-            assertFalse(study.getExternalIdRequiredOnSignup());
+            assertFalse(study.isExternalIdValidationEnabled());
+            assertFalse(study.isExternalIdRequiredOnSignup());
         }
     }
     
@@ -93,7 +93,7 @@ public class ExternalIdSignUpTest {
             
             ExternalIdentifierList list = devIdsClient.getExternalIds(null, 5, externalId, null).execute().body();
             assertEquals(1, list.getItems().size());
-            assertTrue(list.getItems().get(0).getAssigned());
+            assertTrue(list.getItems().get(0).isAssigned());
             
             // Prove you can sign in with this account (status = enabled)
             SignIn signIn = new SignIn().externalId(externalId).study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
