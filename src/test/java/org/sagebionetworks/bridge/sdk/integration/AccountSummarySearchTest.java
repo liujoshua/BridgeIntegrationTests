@@ -54,6 +54,9 @@ public class AccountSummarySearchTest {
                 .withSignUp((SignUp) new SignUp().email(IntegTestUtils.makeEmail(AccountSummarySearchTest.class))
                         .languages(Lists.newArrayList("fr"))
                         .dataGroups(FRENCH_USER_GROUPS)).createUser();
+        
+        researcher = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.RESEARCHER);
+        worker = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.WORKER);
     }
     
     @AfterClass
@@ -93,25 +96,19 @@ public class AccountSummarySearchTest {
     
     @Test
     public void testSearchingApiForResearcher() throws Exception {
-        researcher = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.RESEARCHER);
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
-
         testSuite(search -> researcherApi.searchAccountSummaries(search).execute().body());
     }
     
     @Test
     public void testSearchForParticipantApi() throws Exception {
-        researcher = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.RESEARCHER);
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-
         testSuite(search -> participantsApi.searchAccountSummaries(search).execute().body());
     }
     
     @Test
     public void testSearchingApiForWorker() throws Exception {
-        worker = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.WORKER);
         ForWorkersApi workerApi = worker.getClient(ForWorkersApi.class);
-        
         testSuite(search -> workerApi.searchAccountSummaries("api", search).execute().body());
     }
     
