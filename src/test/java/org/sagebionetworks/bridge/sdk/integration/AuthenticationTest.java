@@ -112,7 +112,7 @@ public class AuthenticationTest {
             // Bug: this call does not return VersionHolder (BRIDGE-1809). Retrieve study again.
             adminApi.updateStudy(study.getIdentifier(), study).execute();
             study = adminApi.getStudy(testUser.getStudyId()).execute().body();
-            assertTrue(study.getEmailSignInEnabled());
+            assertTrue(study.isEmailSignInEnabled());
             
             Response<Message> response = authApi.requestEmailSignIn(emailSignInRequest).execute();
             assertEquals(202, response.code());

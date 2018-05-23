@@ -52,7 +52,7 @@ public class SessionTest {
             assertEquals("TestLastName", asUpdated.getLastName());
             assertEquals(languages, asUpdated.getLanguages());
             assertEquals(dataGroups, asUpdated.getDataGroups());
-            assertFalse(asUpdated.getNotifyByEmail());
+            assertFalse(asUpdated.isNotifyByEmail());
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, asUpdated.getSharingScope());
             assertTrue(asUpdated.getRoles().isEmpty()); // can't update the role
             assertEquals(AccountStatus.ENABLED, asUpdated.getStatus());
@@ -90,12 +90,12 @@ public class SessionTest {
             UserSessionInfo session = researcher.getSession();
             
             // Session should be updated with this information. 
-            assertTrue(session.getAuthenticated());
+            assertTrue(session.isAuthenticated());
             assertEquals("TestFirstName", session.getFirstName());
             assertEquals("TestLastName", session.getLastName());
             assertEquals(languages, session.getLanguages());
             assertEquals(dataGroups, session.getDataGroups());
-            assertFalse(session.getNotifyByEmail());
+            assertFalse(session.isNotifyByEmail());
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, session.getSharingScope());
             assertEquals(Lists.newArrayList(Role.RESEARCHER), session.getRoles());
             assertEquals(AccountStatus.ENABLED, session.getStatus());

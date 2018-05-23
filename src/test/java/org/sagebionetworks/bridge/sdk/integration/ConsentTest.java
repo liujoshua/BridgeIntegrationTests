@@ -116,7 +116,7 @@ public class ConsentTest {
             } catch(ConsentRequiredException e) {
                 UserSessionInfo session = e.getSession();
                 for (ConsentStatus status : session.getConsentStatuses().values()) {
-                    assertFalse(status.getConsented());
+                    assertFalse(status.isConsented());
                 }
                 assertFalse(RestUtils.isUserConsented(session));
             }
@@ -142,7 +142,7 @@ public class ConsentTest {
         TestUser user = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
         try {
             ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
-            assertFalse("User has not consented", user.getSession().getConsented());
+            assertFalse("User has not consented", user.getSession().isConsented());
             try {
                 userApi.getSchedules().execute();
                 fail("Should have required consent.");
@@ -157,7 +157,7 @@ public class ConsentTest {
             
             UserSessionInfo session = user.signInAgain();
             
-            assertTrue("User has consented", session.getConsented());
+            assertTrue("User has consented", session.isConsented());
             // This should succeed
             userApi.getSchedules().execute();
         } finally {
@@ -228,7 +228,7 @@ public class ConsentTest {
         try {
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
             
-            assertFalse("User has not consented", testUser.getSession().getConsented());
+            assertFalse("User has not consented", testUser.getSession().isConsented());
             assertFalse(RestUtils.isUserConsented(testUser.getSession()));
 
             // get consent should fail if the user hasn't given consent
@@ -244,8 +244,8 @@ public class ConsentTest {
             
             // Session should be updated to reflect this consent.
             ConsentStatus status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
-            assertTrue(status.getConsented());
-            assertTrue(status.getSignedMostRecentConsent());
+            assertTrue(status.isConsented());
+            assertTrue(status.isSignedMostRecentConsent());
             
             // Participant record includes the sharing scope that was set
             StudyParticipant participant = userApi.getUsersParticipantRecord().execute().body();
@@ -290,8 +290,8 @@ public class ConsentTest {
             
             // Session should reflect the withdrawal of consent
             status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
-            assertFalse(status.getConsented());
-            assertFalse(status.getSignedMostRecentConsent());
+            assertFalse(status.isConsented());
+            assertFalse(status.isSignedMostRecentConsent());
             
             // This method should now (immediately) throw a ConsentRequiredException
             try {

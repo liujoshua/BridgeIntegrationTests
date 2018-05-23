@@ -254,6 +254,6 @@ public class SharedModuleTest {
         assertEquals(module.getVersion(), localSurvey.getModuleVersion());
 
         // Also, local survey is published.
-        assertTrue(localSurvey.getPublished());
+        assertTrue(localSurvey.isPublished());
     }
 }

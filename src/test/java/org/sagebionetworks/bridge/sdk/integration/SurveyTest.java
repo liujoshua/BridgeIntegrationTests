@@ -255,11 +255,11 @@ public class SurveyTest {
         assertNotEquals("Version has been updated.", key.getCreatedOn(), laterKey.getCreatedOn());
 
         survey = surveysApi.getSurvey(laterKey.getGuid(), laterKey.getCreatedOn()).execute().body();
-        assertFalse("survey is not published.", survey.getPublished());
+        assertFalse("survey is not published.", survey.isPublished());
 
         surveysApi.publishSurvey(survey.getGuid(), survey.getCreatedOn(), false).execute();
         survey = surveysApi.getSurvey(survey.getGuid(), survey.getCreatedOn()).execute().body();
-        assertTrue("survey is now published.", survey.getPublished());
+        assertTrue("survey is now published.", survey.isPublished());
     }
 
     @Test(expected = InvalidEntityException.class)
@@ -342,7 +342,7 @@ public class SurveyTest {
         assertEquals("Type is HeightConstraints", DataType.HEIGHT, getConstraints(survey, HEIGHT_ID).getDataType());
         assertEquals("Type is WeightConstraints", DataType.WEIGHT, getConstraints(survey, WEIGHT_ID).getDataType());
         MultiValueConstraints multiCon = (MultiValueConstraints)getConstraints(survey, MULTIVALUE_ID);
-        assertTrue("Type is MultiValueConstraints", multiCon.getAllowMultiple());
+        assertTrue("Type is MultiValueConstraints", multiCon.isAllowMultiple());
         assertEquals("Type is SurveyQuestionOption", SurveyQuestionOption.class, multiCon.getEnumeration().get(0).getClass());
 
         survey.setName("New name");
@@ -566,7 +566,7 @@ public class SurveyTest {
         Survey retrieved = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
         SurveyRule retrievedRule = getSurveyElement(retrieved, "bar").getAfterRules().get(0);
         
-        assertEquals(Boolean.TRUE, retrievedRule.getEndSurvey());
+        assertEquals(Boolean.TRUE, retrievedRule.isEndSurvey());
         assertEquals("true", retrievedRule.getValue());
         assertEquals(Operator.EQ, retrievedRule.getOperator());
         assertNull(retrievedRule.getSkipTo());

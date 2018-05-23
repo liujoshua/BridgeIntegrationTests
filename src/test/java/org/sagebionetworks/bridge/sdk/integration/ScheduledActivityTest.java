@@ -309,7 +309,7 @@ public class ScheduledActivityTest {
         retrievedFromHistory = list.getItems().get(0);
         Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
         assertEquals(schActivity, retrievedFromHistory);
-        assertFalse(list.getHasNext());
+        assertFalse(list.isHasNext());
         assertEquals(startDateTime, list.getRequestParams().getScheduledOnStart());
         assertEquals(endDateTime, list.getRequestParams().getScheduledOnEnd());
         
@@ -396,7 +396,7 @@ public class ScheduledActivityTest {
         retrievedFromHistory = list.getItems().get(0);
         Tests.setVariableValueInObject(retrievedFromHistory, "schedulePlanGuid", schActivity.getSchedulePlanGuid());
         assertEquals(schActivity, retrievedFromHistory);
-        assertFalse(list.getHasNext());
+        assertFalse(list.isHasNext());
         assertEquals(startDateTime, list.getRequestParams().getScheduledOnStart());
         assertEquals(endDateTime, list.getRequestParams().getScheduledOnEnd());
         

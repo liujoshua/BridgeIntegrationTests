@@ -118,13 +118,13 @@ public class SurveySchemaTest {
         assertEquals(2, fieldDefList.size());
 
         assertEquals("q1", fieldDefList.get(0).getName());
-        assertFalse(fieldDefList.get(0).getRequired());
+        assertFalse(fieldDefList.get(0).isRequired());
         assertEquals(UploadFieldType.MULTI_CHOICE, fieldDefList.get(0).getType());
-        assertTrue(fieldDefList.get(0).getAllowOtherChoices());
+        assertTrue(fieldDefList.get(0).isAllowOtherChoices());
         assertEquals(ImmutableList.of("foo", "bar"), fieldDefList.get(0).getMultiChoiceAnswerList());
 
         assertEquals("q2", fieldDefList.get(1).getName());
-        assertFalse(fieldDefList.get(1).getRequired());
+        assertFalse(fieldDefList.get(1).isRequired());
         assertEquals(UploadFieldType.BOOLEAN, fieldDefList.get(1).getType());
 
         // Update the survey. You can delete answer choices, fields, make compatible changes to fields.
@@ -178,16 +178,16 @@ public class SurveySchemaTest {
         assertEquals(3, updatedFieldDefList.size());
 
         assertEquals("q1", updatedFieldDefList.get(0).getName());
-        assertFalse(updatedFieldDefList.get(0).getRequired());
+        assertFalse(updatedFieldDefList.get(0).isRequired());
         assertEquals(UploadFieldType.MULTI_CHOICE, updatedFieldDefList.get(0).getType());
-        assertTrue(updatedFieldDefList.get(0).getAllowOtherChoices());
+        assertTrue(updatedFieldDefList.get(0).isAllowOtherChoices());
         assertEquals(ImmutableList.of("asdf", "qwerty", "foo", "bar"), updatedFieldDefList.get(0)
                 .getMultiChoiceAnswerList());
 
         assertEquals("q3", updatedFieldDefList.get(1).getName());
-        assertFalse(updatedFieldDefList.get(1).getRequired());
+        assertFalse(updatedFieldDefList.get(1).isRequired());
         assertEquals(UploadFieldType.STRING, updatedFieldDefList.get(1).getType());
-        assertTrue(updatedFieldDefList.get(1).getUnboundedText());
+        assertTrue(updatedFieldDefList.get(1).isUnboundedText());
 
         // q2 was deleted, but was appended to the end of the schema for compatibility. This should be identical to the
         // original q2.
@@ -229,9 +229,9 @@ public class SurveySchemaTest {
         assertEquals(1, updatedFieldDefList.size());
 
         assertEquals("q2", updatedFieldDefList.get(0).getName());
-        assertFalse(updatedFieldDefList.get(0).getRequired());
+        assertFalse(updatedFieldDefList.get(0).isRequired());
         assertEquals(UploadFieldType.STRING, updatedFieldDefList.get(0).getType());
-        assertTrue(updatedFieldDefList.get(0).getUnboundedText());
+        assertTrue(updatedFieldDefList.get(0).isUnboundedText());
     }
 
     @Test
@@ -288,15 +288,15 @@ public class SurveySchemaTest {
         assertEquals(2, updatedFieldDefList.size());
 
         assertEquals("q1", updatedFieldDefList.get(0).getName());
-        assertFalse(updatedFieldDefList.get(0).getRequired());
+        assertFalse(updatedFieldDefList.get(0).isRequired());
         assertEquals(UploadFieldType.MULTI_CHOICE, updatedFieldDefList.get(0).getType());
-        assertFalse(updatedFieldDefList.get(0).getAllowOtherChoices());
+        assertFalse(updatedFieldDefList.get(0).isAllowOtherChoices());
         assertEquals(ImmutableList.of("asdf", "qwerty"), updatedFieldDefList.get(0).getMultiChoiceAnswerList());
 
         assertEquals("q3", updatedFieldDefList.get(1).getName());
-        assertFalse(updatedFieldDefList.get(1).getRequired());
+        assertFalse(updatedFieldDefList.get(1).isRequired());
         assertEquals(UploadFieldType.STRING, updatedFieldDefList.get(1).getType());
-        assertTrue(updatedFieldDefList.get(1).getUnboundedText());
+        assertTrue(updatedFieldDefList.get(1).isUnboundedText());
     }
 
     private GuidCreatedOnVersionHolder setupSurveySchemaTest() throws Exception {

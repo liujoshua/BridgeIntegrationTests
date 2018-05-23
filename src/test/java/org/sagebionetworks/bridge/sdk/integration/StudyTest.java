@@ -101,7 +101,7 @@ public class StudyTest {
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         
         Study study = adminApi.getStudy("api").execute().body();
-        if (study.getReauthenticationEnabled()) {
+        if (study.isReauthenticationEnabled()) {
             study.setReauthenticationEnabled(false);
             adminApi.updateStudy("api", study).execute();
         }
@@ -253,7 +253,7 @@ public class StudyTest {
 
         // Verify study has password/email templates
         assertTrue("autoVerificationEmailSuppressed should be true",
-                newStudy.getAutoVerificationEmailSuppressed());
+                newStudy.isAutoVerificationEmailSuppressed());
         assertNotNull("password policy should not be null", newStudy.getPasswordPolicy());
         assertNotNull("verify email template should not be null", newStudy.getVerifyEmailTemplate());
         assertNotNull("password reset template should not be null", newStudy.getResetPasswordTemplate());
@@ -262,10 +262,10 @@ public class StudyTest {
         assertEquals("name should be equal", study.getName(), newStudy.getName());
         assertEquals("minAgeOfConsent should be equal", study.getMinAgeOfConsent(), newStudy.getMinAgeOfConsent());
         assertEquals("sponsorName should be equal", study.getSponsorName(), newStudy.getSponsorName());
-        assertTrue("strictUploadValidationEnabled should be true", newStudy.getStrictUploadValidationEnabled());
+        assertTrue("strictUploadValidationEnabled should be true", newStudy.isStrictUploadValidationEnabled());
         assertEquals("supportEmail should be equal", study.getSupportEmail(), newStudy.getSupportEmail());
         assertEquals("technicalEmail should be equal", study.getTechnicalEmail(), newStudy.getTechnicalEmail());
-        assertTrue("usesCustomExportSchedule should be true", study.getUsesCustomExportSchedule());
+        assertTrue("usesCustomExportSchedule should be true", study.isUsesCustomExportSchedule());
         assertEquals("consentNotificationEmail should be equal", study.getConsentNotificationEmail(), newStudy.getConsentNotificationEmail());
         assertEquals("userProfileAttributes should be equal", study.getUserProfileAttributes(), newStudy.getUserProfileAttributes());
         assertEquals("taskIdentifiers should be equal", study.getTaskIdentifiers(), newStudy.getTaskIdentifiers());
@@ -290,13 +290,13 @@ public class StudyTest {
 
         // Verify other defaults
         assertFalse("consentNotificationEmailVerified should be false", newStudy
-                .getConsentNotificationEmailVerified());
-        assertTrue("studyIdExcludedInExport should be true", newStudy.getStudyIdExcludedInExport());
+                .isConsentNotificationEmailVerified());
+        assertTrue("studyIdExcludedInExport should be true", newStudy.isStudyIdExcludedInExport());
         assertEquals("uploadValidationStrictness should be REPORT", UploadValidationStrictness.REPORT,
                 newStudy.getUploadValidationStrictness());
-        assertTrue("healthCodeExportEnabled should be true", newStudy.getHealthCodeExportEnabled());
-        assertTrue("emailVerificationEnabled should be true", newStudy.getEmailVerificationEnabled());
-        assertTrue("emailSignInEnabled should be true", newStudy.getEmailSignInEnabled());
+        assertTrue("healthCodeExportEnabled should be true", newStudy.isHealthCodeExportEnabled());
+        assertTrue("emailVerificationEnabled should be true", newStudy.isEmailVerificationEnabled());
+        assertTrue("emailSignInEnabled should be true", newStudy.isEmailSignInEnabled());
         
         assertEquals(1, newStudy.getAndroidAppLinks().size());
         AndroidAppLink androidAppLink = newStudy.getAndroidAppLinks().get(0);
@@ -313,7 +313,7 @@ public class StudyTest {
         assertEquals(path, appleAppLink.getPaths().get(0));
 
         // assert disable study
-        assertTrue(newStudy.getDisableExport());
+        assertTrue(newStudy.isDisableExport());
 
         Long oldVersion = newStudy.getVersion();
         alterStudy(newStudy);
@@ -322,9 +322,9 @@ public class StudyTest {
         Study newerStudy = adminApi.getStudy(newStudy.getIdentifier()).execute().body();
         assertTrue(newerStudy.getVersion() > oldVersion);
 
-        assertFalse(newerStudy.getAutoVerificationEmailSuppressed());
+        assertFalse(newerStudy.isAutoVerificationEmailSuppressed());
         assertEquals("Altered Test Study [SDK]", newerStudy.getName());
-        assertFalse(newerStudy.getStrictUploadValidationEnabled());
+        assertFalse(newerStudy.isStrictUploadValidationEnabled());
         assertEquals("test3@test.com", newerStudy.getSupportEmail());
         assertEquals(UploadValidationStrictness.WARNING, newerStudy.getUploadValidationStrictness());
         assertEquals("bridge-testing+test4@sagebase.org", newerStudy.getConsentNotificationEmail());
@@ -362,10 +362,10 @@ public class StudyTest {
         adminApi.updateStudy(newerStudy.getIdentifier(), newerStudy).execute().body();
         Study newestStudy = adminApi.getStudy(newStudy.getIdentifier()).execute().body();
 
-        assertFalse("emailSignInEnabled should be false after update", newestStudy.getEmailSignInEnabled());
-        assertFalse("studyIdExcludedInExport should be false after update", newestStudy.getStudyIdExcludedInExport());
-        assertFalse("consentNotificationEmailVerified should be false after update", newestStudy.
-                getConsentNotificationEmailVerified());
+        assertFalse("emailSignInEnabled should be false after update", newestStudy.isEmailSignInEnabled());
+        assertFalse("studyIdExcludedInExport should be false after update", newestStudy.isStudyIdExcludedInExport());
+        assertFalse("consentNotificationEmailVerified should be false after update", newestStudy
+                .isConsentNotificationEmailVerified());
 
         // logically delete a study by admin
         adminApi.deleteStudy(studyId, false).execute();
@@ -441,10 +441,10 @@ public class StudyTest {
             studiesApi.updateUsersStudy(study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
-            assertFalse("healthCodeExportEnabled should be false", study.getHealthCodeExportEnabled());
-            assertTrue("emailVersificationEnabled should be true", study.getEmailVerificationEnabled());
-            assertTrue("studyIdExcludedInExport should be true", study.getStudyIdExcludedInExport());
-            assertFalse("reauthenticationEnabled should be false", study.getReauthenticationEnabled());
+            assertFalse("healthCodeExportEnabled should be false", study.isHealthCodeExportEnabled());
+            assertTrue("emailVersificationEnabled should be true", study.isEmailVerificationEnabled());
+            assertTrue("studyIdExcludedInExport should be true", study.isStudyIdExcludedInExport());
+            assertFalse("reauthenticationEnabled should be false", study.isReauthenticationEnabled());
         } finally {
             developer.signOutAndDeleteUser();
         }

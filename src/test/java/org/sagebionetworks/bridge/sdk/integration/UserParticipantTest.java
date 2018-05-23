@@ -54,7 +54,7 @@ public class UserParticipantTest {
             StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
 
             // This should be true by default, once a participant is created:
-            assertTrue(participant.getNotifyByEmail());
+            assertTrue(participant.isNotifyByEmail());
             
             participant.setFirstName("Davey");
             participant.setLastName("Crockett");
@@ -67,7 +67,7 @@ public class UserParticipantTest {
             assertEquals("Crockett", participant.getLastName());
             assertEquals("true", participant.getAttributes().get("can_be_recontacted"));
             // This should not have been changed as the result of updating other fields
-            assertTrue(participant.getNotifyByEmail());
+            assertTrue(participant.isNotifyByEmail());
             
             // Now update only some of the record but verify the map is still there
             participant = participantsApi.getUsersParticipantRecord().execute().body();
@@ -80,7 +80,7 @@ public class UserParticipantTest {
             assertEquals("First name updated", "Davey2", participant.getFirstName());
             assertEquals("Last name updated", "Crockett2", participant.getLastName());
             assertEquals("true", participant.getAttributes().get("can_be_recontacted"));
-            assertFalse(participant.getNotifyByEmail());
+            assertFalse(participant.isNotifyByEmail());
         } finally {
             user.signOutAndDeleteUser();
         }

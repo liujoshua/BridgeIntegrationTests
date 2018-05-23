@@ -318,11 +318,11 @@ public class SharedModuleMetadataTest {
         assertEquals(moduleId, createdMetadata.getId());
         assertEquals(2, createdMetadata.getVersion().intValue());
         assertEquals(MODULE_NAME, createdMetadata.getName());
-        assertTrue(createdMetadata.getLicenseRestricted());
+        assertTrue(createdMetadata.isLicenseRestricted());
         assertEquals(SharedModuleType.SCHEMA, createdMetadata.getModuleType());
         assertEquals(NOTES, createdMetadata.getNotes());
         assertEquals(OS, createdMetadata.getOs());
-        assertTrue(createdMetadata.getPublished());
+        assertTrue(createdMetadata.isPublished());
         assertEquals(schemaId, createdMetadata.getSchemaId());
         assertEquals(SCHEMA_REV, createdMetadata.getSchemaRevision().intValue());
         assertEquals(TAGS, ImmutableSet.copyOf(createdMetadata.getTags()));
