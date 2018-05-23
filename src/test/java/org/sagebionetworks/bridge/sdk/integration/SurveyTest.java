@@ -112,8 +112,6 @@ public class SurveyTest {
 
     @Before
     public void before() {
-        // Init surveys to delete set. It's not clear whether JUnit will re-init member vars between each method, so we
-        // do it here just to be clear.
         surveysToDelete = new HashSet<>();
     }
 
@@ -658,7 +656,7 @@ public class SurveyTest {
         
         SurveysApi devSurveysApi = developer.getClient(SurveysApi.class);
         
-        GuidCreatedOnVersionHolder keys = devSurveysApi.createSurvey(survey).execute().body();
+        GuidCreatedOnVersionHolder keys = createSurvey(devSurveysApi, survey);
         Survey created = devSurveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
         
         List<SurveyRule> createdRules = created.getElements().get(0).getBeforeRules();
@@ -705,7 +703,7 @@ public class SurveyTest {
         
         SurveysApi devSurveysApi = developer.getClient(SurveysApi.class);
         
-        GuidCreatedOnVersionHolder keys = devSurveysApi.createSurvey(survey).execute().body();
+        GuidCreatedOnVersionHolder keys = createSurvey(devSurveysApi, survey);
         Survey created = devSurveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
         
         List<SurveyRule> createdRules = created.getElements().get(0).getAfterRules();
