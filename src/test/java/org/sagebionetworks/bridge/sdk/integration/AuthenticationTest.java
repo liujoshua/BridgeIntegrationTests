@@ -46,7 +46,6 @@ import static org.junit.Assert.fail;
 public class AuthenticationTest {
     private static TestUser researchUser;
     private static TestUser testUser;
-    private static TestUser adminUser;
     private static TestUser phoneOnlyTestUser;
     private static AuthenticationApi authApi;
     private static ForAdminsApi adminApi;
@@ -61,16 +60,16 @@ public class AuthenticationTest {
                 .withSignUp(phoneOnlyUser).withSetPassword(false).createUser();
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         authApi = testUser.getClient(AuthenticationApi.class);
-        
-        adminUser = TestUserHelper.getSignedInAdmin();
+
+        TestUser adminUser = TestUserHelper.getSignedInAdmin();
         adminApi = adminUser.getClient(ForAdminsApi.class);
-        
+
+        // Verify necessary flags (email sign in, phone sign in, reauth) are enabled
         Study study = adminApi.getUsersStudy().execute().body();
-        if (!study.isPhoneSignInEnabled() || !study.isEmailSignInEnabled()) {
-            study.setPhoneSignInEnabled(true);
-            study.setEmailSignInEnabled(true);
-            adminApi.updateStudy(study.getIdentifier(), study).execute();
-        }
+        study.setPhoneSignInEnabled(true);
+        study.setEmailSignInEnabled(true);
+        study.setReauthenticationEnabled(true);
+        adminApi.updateStudy(study.getIdentifier(), study).execute();
     }
     
     @AfterClass
@@ -91,7 +90,15 @@ public class AuthenticationTest {
             phoneOnlyTestUser.signOutAndDeleteUser();
         }
     }
-    
+
+    @AfterClass
+    public static void disableReauth() throws Exception {
+        // Because of https://sagebionetworks.jira.com/browse/BRIDGE-2091, we don't want to leave reauth enabled.
+        Study study = adminApi.getUsersStudy().execute().body();
+        study.setReauthenticationEnabled(false);
+        adminApi.updateStudy(study.getIdentifier(), study).execute();
+    }
+
     @Test
     public void requestEmailSignIn() throws Exception {
         EmailSignInRequest emailSignInRequest = new EmailSignInRequest().study(testUser.getStudyId())
@@ -125,6 +132,7 @@ public class AuthenticationTest {
             authApi.signInViaEmail(emailSignIn).execute();
             fail("Should have thrown exception");
         } catch (AuthenticationFailedException e) {
+            // expected exception
         }
     }
     
@@ -305,5 +313,69 @@ public class AuthenticationTest {
         
         UserSessionInfo session = authApi.signInV4(testUser.getSignIn()).execute().body();
         assertNotNull(session);
+    }
+
+    @Test
+    public void sessionInvalidationTest() throws Exception {
+        // Test account is shared across multiple tests, at least one of which signs out and signs back in. Sign in and
+        // get the new session Id.
+        AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
+        UserSessionInfo session = authApi.signIn(testUser.getSignIn()).execute().body();
+        verifySession(200, session.getSessionToken());
+
+        // Make sure signIn actually checks credentials even while already logged in.
+        SignIn badSignIn = new SignIn().study(IntegTestUtils.STUDY_ID).email(testUser.getEmail())
+                .password("bad password");
+        try {
+            authApi.signIn(badSignIn).execute();
+            fail("expected exception");
+        } catch (EntityNotFoundException ex) {
+            // expected exception
+        }
+        try {
+            authApi.signInV4(badSignIn).execute();
+            fail("expected exception");
+        } catch (EntityNotFoundException ex) {
+            // expected exception
+        }
+
+        // Also, reauth
+        SignIn badReauth = new SignIn().study(IntegTestUtils.STUDY_ID).email(testUser.getEmail())
+                .reauthToken("bad token");
+        try {
+            authApi.reauthenticate(badReauth).execute();
+            fail("expected exception");
+        } catch (EntityNotFoundException ex) {
+            // expected exception
+        }
+
+        // Verify the old session still works, despite the failed signIns.
+        verifySession(200, session.getSessionToken());
+
+        // Sign in to get a new session. Verify old session no longer works, but new session is still good.
+        UserSessionInfo newSession = authApi.signIn(testUser.getSignIn()).execute().body();
+        verifySession(401, session.getSessionToken());
+        verifySession(200, newSession.getSessionToken());
+
+        // Test again with v4.
+        UserSessionInfo newSessionV4 = authApi.signInV4(testUser.getSignIn()).execute().body();
+        verifySession(401, newSession.getSessionToken());
+        verifySession(200, newSessionV4.getSessionToken());
+
+        // Test again with reauth.
+        SignIn reauth = new SignIn().study(IntegTestUtils.STUDY_ID).email(testUser.getEmail())
+                .reauthToken(newSessionV4.getReauthToken());
+        UserSessionInfo newSessionReauth = authApi.reauthenticate(reauth).execute().body();
+        verifySession(401, newSessionV4.getSessionToken());
+        verifySession(200, newSessionReauth.getSessionToken());
+    }
+
+    // Helper function to make a raw HTTP request to a simple lightweight API that requires authentication, like get
+    // activity events.
+    private static void verifySession(int expectedStatusCode, String sessionId) throws Exception {
+        String hostUrl = testUser.getClientManager().getHostUrl();
+        HttpResponse httpResponse = Request.Get(hostUrl + "/v1/activityevents")
+                .setHeader("Bridge-Session", sessionId).execute().returnResponse();
+        assertEquals(expectedStatusCode, httpResponse.getStatusLine().getStatusCode());
     }
 }
