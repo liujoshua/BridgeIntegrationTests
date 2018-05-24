@@ -142,8 +142,12 @@ public class ExternalIdSignUpTest {
             }
         } finally {
             changeExternalIdValidation(false);
-            adminClient.deleteUser(userId1).execute();
-            adminClient.deleteUser(userId2).execute();
+            if (userId1 != null) {
+                adminClient.deleteUser(userId1).execute();    
+            }
+            if (userId2 != null) {
+                adminClient.deleteUser(userId2).execute();
+            }
             devIdsClient.deleteExternalIds(ImmutableList.of(externalId, otherExternalId)).execute();
         }
     }

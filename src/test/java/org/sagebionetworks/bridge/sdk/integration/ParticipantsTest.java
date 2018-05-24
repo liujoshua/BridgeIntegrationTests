@@ -23,8 +23,8 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
-import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
@@ -239,14 +239,14 @@ public class ParticipantsTest {
         return true;
     }
     
-    @Test(expected = BadRequestException.class)
+    @Test(expected = InvalidEntityException.class)
     public void cannotSetBadOffset() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
         participantsApi.getParticipants(-1, 10, null, null, null, null).execute();
     }
     
-    @Test(expected = BadRequestException.class)
+    @Test(expected = InvalidEntityException.class)
     public void cannotSetBadPageSize() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
