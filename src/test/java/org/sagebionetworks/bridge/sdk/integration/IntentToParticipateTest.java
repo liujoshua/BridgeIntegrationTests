@@ -22,7 +22,6 @@ import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -83,11 +82,6 @@ public class IntentToParticipateTest {
 
         String email = IntegTestUtils.makeEmail(IntentToParticipateTest.class);
         
-        SignIn signIn = new SignIn()
-                .phone(IntegTestUtils.PHONE)
-                .study(IntegTestUtils.STUDY_ID)
-                .password(Tests.PASSWORD);
-
         SignUp signUp = new SignUp()
                 .study(IntegTestUtils.STUDY_ID)
                 .phone(IntegTestUtils.PHONE)
@@ -96,16 +90,11 @@ public class IntentToParticipateTest {
                 .checkForConsent(true);
         authApi.signUp(signUp).execute().body();
         
-        // We need to enable the user without verifying the phone, so the next part of the test works.
+        // You can no longer enable a user to sign in without also verifying email or phone number
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         AccountSummaryList list = participantsApi.getParticipants(0, 5, email, null, null, null).execute().body();
-        StudyParticipant participant = participantsApi.getParticipantById(list.getItems().get(0).getId(), false).execute().body();
-        
-        participant.setStatus(AccountStatus.ENABLED);
-        participantsApi.updateParticipant(participant.getId(), participant).execute();
-        
-        session = authApi.signInV4(signIn).execute().body();
-        assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
+        assertEquals(1, list.getItems().size());
+        assertEquals(AccountStatus.UNVERIFIED, list.getItems().get(0).getStatus());
     }
     
 }
