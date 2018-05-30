@@ -76,7 +76,7 @@ public class IpLockingTest {
         Study study = studiesApi.getUsersStudy().execute().body();
 
         // Only modify the study if the flag value is different.
-        if (study.getParticipantIpLockingEnabled() != participantIpLockingEnabled) {
+        if (study.isParticipantIpLockingEnabled() != participantIpLockingEnabled) {
             study.setParticipantIpLockingEnabled(participantIpLockingEnabled);
             studiesApi.updateUsersStudy(study).execute();
         }
