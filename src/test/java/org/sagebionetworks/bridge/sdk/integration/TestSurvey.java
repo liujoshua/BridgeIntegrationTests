@@ -223,7 +223,7 @@ public class TestSurvey {
         weightQuestion.setUiHint(UIHint.WEIGHT);
         weightQuestion.setType("SurveyQuestion");
         
-        survey.setName("General Blood Pressure Survey");
+        survey.setName(cls.getSimpleName() + " Survey");
         survey.setIdentifier(Tests.randomIdentifier(cls));
         List<SurveyElement> elements = survey.getElements();
         elements.add(booleanQuestion);
