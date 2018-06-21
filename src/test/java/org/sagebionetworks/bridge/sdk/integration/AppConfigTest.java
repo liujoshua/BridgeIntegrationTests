@@ -1,8 +1,10 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -53,9 +55,10 @@ public class AppConfigTest {
     
     @After
     public void after() throws Exception {
-        AppConfigList list = devApi.getAppConfigs().execute().body();
+        AppConfigList list = devApi.getAppConfigs(true).execute().body();
         for (AppConfig config : list.getItems()) {
-            adminApi.deleteAppConfig(config.getGuid()).execute();
+            assertFalse(config.isDeleted());
+            adminApi.deleteAppConfig(config.getGuid(), true).execute();
         }
         try {
             developer.signOutAndDeleteUser();    
@@ -66,6 +69,7 @@ public class AppConfigTest {
     @Test
     public void crudAppConfig() throws Exception {
         StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+        int initialCount = devApi.getAppConfigs(false).execute().body().getItems().size();
         
         SchemaReference schemaRef1 = new SchemaReference().id("boo").revision(2L);
         Tests.setVariableValueInObject(schemaRef1, "type", "SchemaReference");
@@ -116,7 +120,7 @@ public class AppConfigTest {
         appConfig.setGuid(holder.getGuid());
         appConfig.setVersion(holder.getVersion());
 
-        // You can retrieve this first app config.
+        // Retrieve again, it is updated
         AppConfig secondOneRetrieved = devApi.getAppConfig(appConfig.getGuid()).execute().body();
         assertEquals(2, secondOneRetrieved.getSchemaReferences().size());
         assertEquals(2, secondOneRetrieved.getSurveyReferences().size());
@@ -124,16 +128,15 @@ public class AppConfigTest {
         assertEquals(secondOneRetrieved.getCreatedOn().toString(), firstOneRetrieved.getCreatedOn().toString());
         assertNotEquals(secondOneRetrieved.getModifiedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
         
-        // You can get it as the user (there's only one)
+        // You can get it as the user
         AppConfig userAppConfig = studiesApi.getAppConfig(developer.getStudyId()).execute().body();
         assertNotNull(userAppConfig);
         
         // Create a second app config
-        devApi.createAppConfig(appConfig).execute().body();
+        devApi.createAppConfig(appConfig).execute();
         appConfig = devApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
         
-        AppConfig shouldBeFirstOne = studiesApi.getAppConfig(developer.getStudyId()).execute().body();
-        assertEquals(appConfig.getCreatedOn().toString(), shouldBeFirstOne.getCreatedOn().toString());
+        assertEquals(initialCount+2, devApi.getAppConfigs(false).execute().body().getItems().size());
 
         ClientInfo clientInfo = new ClientInfo();
         clientInfo.appName("Integration Tests");
@@ -149,6 +152,7 @@ public class AppConfigTest {
         PublicApi publicApi = getPublicClient(PublicApi.class, ua);
         
         try {
+            // This should not match the clientInfo provided
             publicApi.getAppConfig(developer.getStudyId()).execute().body();
             fail("Should have thrown an exception");
         } catch(EntityNotFoundException e) {
@@ -158,9 +162,27 @@ public class AppConfigTest {
         appConfig.getCriteria().getMaxAppVersions().remove("Android");
         devApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
         
-        // Finally... we have one, it will be returned
+        // Having changed the config to match the criteria, we should be able to retrieve it.
         AppConfig config = publicApi.getAppConfig(developer.getStudyId()).execute().body();
         assertEquals(appConfig.getGuid(), config.getGuid());
+        
+        // test logical deletion
+        devApi.deleteAppConfig(config.getGuid(), false).execute(); // flag does not matter here however
+        
+        // We can retrieve it individually and it is marked as deleted
+        AppConfig deletedConfig = devApi.getAppConfig(config.getGuid()).execute().body();
+        assertTrue(deletedConfig.isDeleted());
+        
+        int updatedCount = devApi.getAppConfigs(false).execute().body().getItems().size();
+        assertTrue((initialCount+1) == updatedCount);
+        
+        updatedCount = devApi.getAppConfigs(true).execute().body().getItems().size();
+        assertTrue((initialCount+2) == updatedCount);
+        
+        // This should *really* delete the config from the db in order to clean up.
+        adminApi.deleteAppConfig(config.getGuid(), true).execute();
+        int countAfterDelete = devApi.getAppConfigs(true).execute().body().getItems().size();
+        assertTrue(countAfterDelete < updatedCount);
     }
     
     public <T> T getPublicClient(Class<T> clazz, String ua) {
