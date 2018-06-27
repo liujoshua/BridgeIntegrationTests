@@ -19,15 +19,18 @@ import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.PublicApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 import org.sagebionetworks.bridge.rest.model.AppConfigList;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.Criteria;
+import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -40,7 +43,10 @@ public class AppConfigTest {
     private TestUser admin;
 
     private ForAdminsApi adminApi;
-    private AppConfigsApi devApi;
+    private AppConfigsApi appConfigApi;
+    private SurveysApi surveysApi;
+    
+    private GuidCreatedOnVersionHolder surveyKeys;
     
     @Before
     public void before() throws IOException {
@@ -48,34 +54,42 @@ public class AppConfigTest {
         admin = TestUserHelper.getSignedInAdmin();
         
         adminApi = admin.getClient(ForAdminsApi.class);
-        devApi = developer.getClient(AppConfigsApi.class);
+        appConfigApi = developer.getClient(AppConfigsApi.class);
+        surveysApi = developer.getClient(SurveysApi.class);
     }
     
     @After
     public void after() throws Exception {
-        AppConfigList list = devApi.getAppConfigs().execute().body();
+        AppConfigList list = appConfigApi.getAppConfigs().execute().body();
         for (AppConfig config : list.getItems()) {
             adminApi.deleteAppConfig(config.getGuid()).execute();
         }
+        if (surveyKeys != null) {
+            admin.getClient(SurveysApi.class).deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true)
+                    .execute();
+        }
         try {
-            developer.signOutAndDeleteUser();    
+            developer.signOutAndDeleteUser();
         } catch(Throwable throwable) {
         }
     }
     
     @Test
     public void crudAppConfig() throws Exception {
+        Survey survey = TestSurvey.getSurvey(AppConfigTest.class);
+        survey.setIdentifier("survey1");
+        surveyKeys = surveysApi.createSurvey(survey).execute().body();
+        surveysApi.publishSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), false).execute();
+        
         StudiesApi studiesApi = developer.getClient(StudiesApi.class);
         
         SchemaReference schemaRef1 = new SchemaReference().id("boo").revision(2L);
         Tests.setVariableValueInObject(schemaRef1, "type", "SchemaReference");
-        List<SchemaReference> schemaReferences = Lists.newArrayList();
-        schemaReferences.add(schemaRef1);
+        List<SchemaReference> schemaReferences = Lists.newArrayList(schemaRef1);
         
-        SurveyReference surveyRef1 = new SurveyReference().guid("ABC-DEF-GHI").identifier("ya").createdOn(DateTime.now(DateTimeZone.UTC));
+        SurveyReference surveyRef1 = new SurveyReference().guid(surveyKeys.getGuid()).createdOn(surveyKeys.getCreatedOn());
         Tests.setVariableValueInObject(surveyRef1, "type", "SurveyReference");
-        List<SurveyReference> surveyReferences = Lists.newArrayList();
-        surveyReferences.add(surveyRef1);
+        List<SurveyReference> surveyReferences = Lists.newArrayList(surveyRef1);
 
         StudyParticipant participant = new StudyParticipant();
         participant.setExternalId("externalId");
@@ -91,9 +105,9 @@ public class AppConfigTest {
         appConfig.setSurveyReferences(surveyReferences);
         
         // Create
-        GuidVersionHolder holder = devApi.createAppConfig(appConfig).execute().body();
-        
-        AppConfig firstOneRetrieved = devApi.getAppConfig(holder.getGuid()).execute().body();
+        GuidVersionHolder holder = appConfigApi.createAppConfig(appConfig).execute().body();
+
+        AppConfig firstOneRetrieved = appConfigApi.getAppConfig(holder.getGuid()).execute().body();
         Tests.setVariableValueInObject(firstOneRetrieved.getSurveyReferences().get(0), "href", null);
         assertEquals(appConfig.getLabel(), firstOneRetrieved.getLabel());
         assertEquals(schemaRef1, firstOneRetrieved.getSchemaReferences().get(0));
@@ -101,23 +115,28 @@ public class AppConfigTest {
         assertNotNull(firstOneRetrieved.getCreatedOn());
         assertNotNull(firstOneRetrieved.getModifiedOn());
         assertEquals(firstOneRetrieved.getCreatedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
-        
         StudyParticipant savedUser = RestUtils.toType(firstOneRetrieved.getClientData(), StudyParticipant.class);
         assertEquals("externalId", savedUser.getExternalId());
         
-        // Change it
-        appConfig.getSchemaReferences().add(schemaRef1);
-        appConfig.getSurveyReferences().add(surveyRef1);
+        // Change it. You can no longer add duplicate references, so create two new ones.
+        SchemaReference schemaRef2 = new SchemaReference().id("foo").revision(1L);
+        Tests.setVariableValueInObject(schemaRef1, "type", "SchemaReference");
+        
+        SurveyReference surveyRef2 = new SurveyReference().guid("JKL-MNO-PQR").createdOn(DateTime.now(DateTimeZone.UTC));
+        Tests.setVariableValueInObject(surveyRef1, "type", "SurveyReference");
+        
+        appConfig.getSchemaReferences().add(schemaRef2);
+        appConfig.getSurveyReferences().add(surveyRef2);
         appConfig.setGuid(holder.getGuid());
         appConfig.setVersion(holder.getVersion());
         
         // Update it.
-        holder = devApi.updateAppConfig(appConfig.getGuid(), appConfig).execute().body();
+        holder = appConfigApi.updateAppConfig(appConfig.getGuid(), appConfig).execute().body();
         appConfig.setGuid(holder.getGuid());
         appConfig.setVersion(holder.getVersion());
 
         // You can retrieve this first app config.
-        AppConfig secondOneRetrieved = devApi.getAppConfig(appConfig.getGuid()).execute().body();
+        AppConfig secondOneRetrieved = appConfigApi.getAppConfig(appConfig.getGuid()).execute().body();
         assertEquals(2, secondOneRetrieved.getSchemaReferences().size());
         assertEquals(2, secondOneRetrieved.getSurveyReferences().size());
         assertNotEquals(secondOneRetrieved.getCreatedOn().toString(), secondOneRetrieved.getModifiedOn().toString());
@@ -129,8 +148,8 @@ public class AppConfigTest {
         assertNotNull(userAppConfig);
         
         // Create a second app config
-        devApi.createAppConfig(appConfig).execute().body();
-        appConfig = devApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
+        appConfigApi.createAppConfig(appConfig).execute().body();
+        appConfig = appConfigApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
         
         AppConfig shouldBeFirstOne = studiesApi.getAppConfig(developer.getStudyId()).execute().body();
         assertEquals(appConfig.getCreatedOn().toString(), shouldBeFirstOne.getCreatedOn().toString());
@@ -156,11 +175,13 @@ public class AppConfigTest {
         }
         
         appConfig.getCriteria().getMaxAppVersions().remove("Android");
-        devApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
+        appConfigApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
         
         // Finally... we have one, it will be returned
         AppConfig config = publicApi.getAppConfig(developer.getStudyId()).execute().body();
         assertEquals(appConfig.getGuid(), config.getGuid());
+        // And the survey identifiers have been resolved 
+        assertEquals("survey1", config.getSurveyReferences().get(0).getIdentifier());
     }
     
     public <T> T getPublicClient(Class<T> clazz, String ua) {
