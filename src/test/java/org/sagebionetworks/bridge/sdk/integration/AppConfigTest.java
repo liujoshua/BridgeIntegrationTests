@@ -1,13 +1,13 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.joda.time.DateTime;
@@ -23,7 +23,6 @@ import org.sagebionetworks.bridge.rest.api.PublicApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
-import org.sagebionetworks.bridge.rest.model.AppConfigList;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
@@ -43,6 +42,7 @@ public class AppConfigTest {
 
     private ForAdminsApi adminApi;
     private AppConfigsApi devApi;
+    private List<GuidVersionHolder> configsToDelete = new ArrayList<>();
     
     @Before
     public void before() throws IOException {
@@ -55,9 +55,7 @@ public class AppConfigTest {
     
     @After
     public void after() throws Exception {
-        AppConfigList list = devApi.getAppConfigs(true).execute().body();
-        for (AppConfig config : list.getItems()) {
-            assertFalse(config.isDeleted());
+        for (GuidVersionHolder config : configsToDelete) {
             adminApi.deleteAppConfig(config.getGuid(), true).execute();
         }
         try {
@@ -96,6 +94,7 @@ public class AppConfigTest {
         
         // Create
         GuidVersionHolder holder = devApi.createAppConfig(appConfig).execute().body();
+        configsToDelete.add(holder);
         
         AppConfig firstOneRetrieved = devApi.getAppConfig(holder.getGuid()).execute().body();
         Tests.setVariableValueInObject(firstOneRetrieved.getSurveyReferences().get(0), "href", null);
@@ -133,7 +132,8 @@ public class AppConfigTest {
         assertNotNull(userAppConfig);
         
         // Create a second app config
-        devApi.createAppConfig(appConfig).execute();
+        GuidVersionHolder secondHolder = devApi.createAppConfig(appConfig).execute().body();
+        configsToDelete.add(secondHolder);
         appConfig = devApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
         
         assertEquals(initialCount+2, devApi.getAppConfigs(false).execute().body().getItems().size());
@@ -179,10 +179,14 @@ public class AppConfigTest {
         updatedCount = devApi.getAppConfigs(true).execute().body().getItems().size();
         assertTrue((initialCount+2) == updatedCount);
         
-        // This should *really* delete the config from the db in order to clean up.
+        // This should *really* delete the config from the db in order to clean up, so 
         adminApi.deleteAppConfig(config.getGuid(), true).execute();
-        int countAfterDelete = devApi.getAppConfigs(true).execute().body().getItems().size();
-        assertTrue(countAfterDelete < updatedCount);
+        try {
+            devApi.getAppConfig(config.getGuid()).execute();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+            
+        }
     }
     
     public <T> T getPublicClient(Class<T> clazz, String ua) {
