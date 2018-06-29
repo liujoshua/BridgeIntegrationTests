@@ -10,8 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,17 +20,26 @@ import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.PublicApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.api.SurveysApi;
+import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.Criteria;
+import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
+import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
+import org.sagebionetworks.bridge.rest.model.UploadFieldType;
+import org.sagebionetworks.bridge.rest.model.UploadSchema;
+import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.Lists;
 
@@ -41,8 +49,13 @@ public class AppConfigTest {
     private TestUser admin;
 
     private ForAdminsApi adminApi;
-    private AppConfigsApi devApi;
+    private AppConfigsApi appConfigsApi;
+    private UploadSchemasApi schemasApi;
+    private SurveysApi surveysApi;
     private List<GuidVersionHolder> configsToDelete = new ArrayList<>();
+    
+    private GuidCreatedOnVersionHolder surveyKeys;
+    private UploadSchema schemaKeys;
     
     @Before
     public void before() throws IOException {
@@ -50,7 +63,9 @@ public class AppConfigTest {
         admin = TestUserHelper.getSignedInAdmin();
         
         adminApi = admin.getClient(ForAdminsApi.class);
-        devApi = developer.getClient(AppConfigsApi.class);
+        appConfigsApi = developer.getClient(AppConfigsApi.class);
+        schemasApi = developer.getClient(UploadSchemasApi.class);
+        surveysApi = developer.getClient(SurveysApi.class);
     }
     
     @After
@@ -58,26 +73,43 @@ public class AppConfigTest {
         for (GuidVersionHolder config : configsToDelete) {
             adminApi.deleteAppConfig(config.getGuid(), true).execute();
         }
+        if (surveyKeys != null) {
+            admin.getClient(SurveysApi.class).deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true)
+                    .execute();
+        }
+        if (schemaKeys != null) {
+            adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaKeys.getSchemaId()).execute();
+        }
         try {
-            developer.signOutAndDeleteUser();    
+            developer.signOutAndDeleteUser();
         } catch(Throwable throwable) {
         }
     }
     
     @Test
     public void crudAppConfig() throws Exception {
+        Survey survey = TestSurvey.getSurvey(AppConfigTest.class);
+        survey.setIdentifier("survey1");
+        surveyKeys = surveysApi.createSurvey(survey).execute().body();
+        surveysApi.publishSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), false).execute();
+        
+        UploadFieldDefinition fieldDef = new UploadFieldDefinition();
+        fieldDef.setName("field");
+        fieldDef.setType(UploadFieldType.STRING);
+        UploadSchema schema = new UploadSchema();
+        schema.setName("Schema");
+        schema.setSchemaId("schemaId"+RandomStringUtils.randomAlphabetic(4));
+        schema.setSchemaType(UploadSchemaType.IOS_DATA);
+        schema.setFieldDefinitions(Lists.newArrayList(fieldDef));
+        
+        // create it
+        schemaKeys = schemasApi.createOrUpdateUploadSchema(schema).execute().body();
+        
         StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-        int initialCount = devApi.getAppConfigs(false).execute().body().getItems().size();
+        int initialCount = appConfigsApi.getAppConfigs(false).execute().body().getItems().size();
         
-        SchemaReference schemaRef1 = new SchemaReference().id("boo").revision(2L);
-        Tests.setVariableValueInObject(schemaRef1, "type", "SchemaReference");
-        List<SchemaReference> schemaReferences = Lists.newArrayList();
-        schemaReferences.add(schemaRef1);
-        
-        SurveyReference surveyRef1 = new SurveyReference().guid("ABC-DEF-GHI").identifier("ya").createdOn(DateTime.now(DateTimeZone.UTC));
-        Tests.setVariableValueInObject(surveyRef1, "type", "SurveyReference");
-        List<SurveyReference> surveyReferences = Lists.newArrayList();
-        surveyReferences.add(surveyRef1);
+        SurveyReference surveyRef1 = new SurveyReference().guid(surveyKeys.getGuid()).createdOn(surveyKeys.getCreatedOn());
+        List<SurveyReference> surveyReferences = Lists.newArrayList(surveyRef1);
 
         StudyParticipant participant = new StudyParticipant();
         participant.setExternalId("externalId");
@@ -89,40 +121,42 @@ public class AppConfigTest {
         appConfig.setLabel(Tests.randomIdentifier(AppConfigTest.class));
         appConfig.clientData(participant);
         appConfig.setCriteria(criteria);
-        appConfig.setSchemaReferences(schemaReferences);
         appConfig.setSurveyReferences(surveyReferences);
         
         // Create
-        GuidVersionHolder holder = devApi.createAppConfig(appConfig).execute().body();
+        GuidVersionHolder holder = appConfigsApi.createAppConfig(appConfig).execute().body();
         configsToDelete.add(holder);
         
-        AppConfig firstOneRetrieved = devApi.getAppConfig(holder.getGuid()).execute().body();
+        AppConfig firstOneRetrieved = appConfigsApi.getAppConfig(holder.getGuid()).execute().body();
         Tests.setVariableValueInObject(firstOneRetrieved.getSurveyReferences().get(0), "href", null);
         assertEquals(appConfig.getLabel(), firstOneRetrieved.getLabel());
-        assertEquals(schemaRef1, firstOneRetrieved.getSchemaReferences().get(0));
-        assertEquals(surveyRef1, firstOneRetrieved.getSurveyReferences().get(0));
+        assertSurveyReference(surveyRef1, firstOneRetrieved.getSurveyReferences().get(0));
         assertNotNull(firstOneRetrieved.getCreatedOn());
         assertNotNull(firstOneRetrieved.getModifiedOn());
         assertEquals(firstOneRetrieved.getCreatedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
-        
         StudyParticipant savedUser = RestUtils.toType(firstOneRetrieved.getClientData(), StudyParticipant.class);
         assertEquals("externalId", savedUser.getExternalId());
         
-        // Change it
-        appConfig.getSchemaReferences().add(schemaRef1);
-        appConfig.getSurveyReferences().add(surveyRef1);
+        // Change it. You can no longer add duplicate or invalid references, so just add a second reference
+        SchemaReference schemaRef1 = new SchemaReference().id(schemaKeys.getSchemaId())
+                .revision(schemaKeys.getRevision());
+        List<SchemaReference> schemaReferences = Lists.newArrayList(schemaRef1);
+        
+        appConfig.setSchemaReferences(schemaReferences);
         appConfig.setGuid(holder.getGuid());
         appConfig.setVersion(holder.getVersion());
         
         // Update it.
-        holder = devApi.updateAppConfig(appConfig.getGuid(), appConfig).execute().body();
+        holder = appConfigsApi.updateAppConfig(appConfig.getGuid(), appConfig).execute().body();
         appConfig.setGuid(holder.getGuid());
         appConfig.setVersion(holder.getVersion());
 
         // Retrieve again, it is updated
-        AppConfig secondOneRetrieved = devApi.getAppConfig(appConfig.getGuid()).execute().body();
-        assertEquals(2, secondOneRetrieved.getSchemaReferences().size());
-        assertEquals(2, secondOneRetrieved.getSurveyReferences().size());
+        AppConfig secondOneRetrieved = appConfigsApi.getAppConfig(appConfig.getGuid()).execute().body();
+        assertEquals(1, secondOneRetrieved.getSchemaReferences().size());
+        assertEquals(1, secondOneRetrieved.getSurveyReferences().size());
+        assertSchemaReference(schemaRef1, secondOneRetrieved.getSchemaReferences().get(0));
+        assertSurveyReference(surveyRef1, secondOneRetrieved.getSurveyReferences().get(0));
         assertNotEquals(secondOneRetrieved.getCreatedOn().toString(), secondOneRetrieved.getModifiedOn().toString());
         assertEquals(secondOneRetrieved.getCreatedOn().toString(), firstOneRetrieved.getCreatedOn().toString());
         assertNotEquals(secondOneRetrieved.getModifiedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
@@ -132,11 +166,11 @@ public class AppConfigTest {
         assertNotNull(userAppConfig);
         
         // Create a second app config
-        GuidVersionHolder secondHolder = devApi.createAppConfig(appConfig).execute().body();
+        GuidVersionHolder secondHolder = appConfigsApi.createAppConfig(appConfig).execute().body();
         configsToDelete.add(secondHolder);
-        appConfig = devApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
+        appConfig = appConfigsApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
         
-        assertEquals(initialCount+2, devApi.getAppConfigs(false).execute().body().getItems().size());
+        assertEquals(initialCount+2, appConfigsApi.getAppConfigs(false).execute().body().getItems().size());
 
         ClientInfo clientInfo = new ClientInfo();
         clientInfo.appName("Integration Tests");
@@ -160,33 +194,44 @@ public class AppConfigTest {
         }
         
         appConfig.getCriteria().getMaxAppVersions().remove("Android");
-        devApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
+        appConfigsApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
         
         // Having changed the config to match the criteria, we should be able to retrieve it.
         AppConfig config = publicApi.getAppConfig(developer.getStudyId()).execute().body();
         assertEquals(appConfig.getGuid(), config.getGuid());
         
         // test logical deletion
-        devApi.deleteAppConfig(config.getGuid(), false).execute(); // flag does not matter here however
+        appConfigsApi.deleteAppConfig(config.getGuid(), false).execute(); // flag does not matter here however
         
         // We can retrieve it individually and it is marked as deleted
-        AppConfig deletedConfig = devApi.getAppConfig(config.getGuid()).execute().body();
+        AppConfig deletedConfig = appConfigsApi.getAppConfig(config.getGuid()).execute().body();
         assertTrue(deletedConfig.isDeleted());
         
-        int updatedCount = devApi.getAppConfigs(false).execute().body().getItems().size();
+        int updatedCount = appConfigsApi.getAppConfigs(false).execute().body().getItems().size();
         assertTrue((initialCount+1) == updatedCount);
         
-        updatedCount = devApi.getAppConfigs(true).execute().body().getItems().size();
+        updatedCount = appConfigsApi.getAppConfigs(true).execute().body().getItems().size();
         assertTrue((initialCount+2) == updatedCount);
         
         // This should *really* delete the config from the db in order to clean up, so 
         adminApi.deleteAppConfig(config.getGuid(), true).execute();
         try {
-            devApi.getAppConfig(config.getGuid()).execute();
+            appConfigsApi.getAppConfig(config.getGuid()).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
             
         }
+    }
+    
+    public void assertSchemaReference(SchemaReference expected, SchemaReference actual) {
+        assertEquals(expected.getId(), actual.getId());
+        assertEquals(expected.getRevision(), actual.getRevision());
+        
+    }
+    
+    public void assertSurveyReference(SurveyReference expected, SurveyReference actual) {
+        assertEquals(expected.getGuid(), actual.getGuid());
+        assertEquals(expected.getCreatedOn(), actual.getCreatedOn());
     }
     
     public <T> T getPublicClient(Class<T> clazz, String ua) {
