@@ -373,7 +373,7 @@ public class ParticipantsTest {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
         // This is sending an email, which is difficult to verify, but this at least should not throw an error.
-        Response<Message> response = participantsApi.sendParticipantResetPasswordEmail(researcher.getSession().getId()).execute();
+        Response<Message> response = participantsApi.sendParticipantResetPassword(researcher.getSession().getId()).execute();
         assertEquals(200, response.code());
     }
     
