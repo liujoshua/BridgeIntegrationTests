@@ -133,8 +133,14 @@ public class SchedulePlanTest {
         ScheduleList schedules = usersApi.getSchedules().execute().body();
         assertTrue("Schedules exist", !schedules.getItems().isEmpty());
 
-        // Delete
-        newSchedulesApi.deleteSchedulePlan(keys.getGuid()).execute();
+        // Logical delete
+        newSchedulesApi.deleteSchedulePlan(keys.getGuid(), false).execute();
+        
+        SchedulePlan retrieved = newSchedulesApi.getSchedulePlan(keys.getGuid()).execute().body();
+        assertTrue(retrieved.isDeleted());
+        
+        // Physical delete
+        admin.getClient(SchedulesApi.class).deleteSchedulePlan(keys.getGuid(), true).execute();
 
         try {
             newSchedulesApi.getSchedulePlan(keys.getGuid()).execute();
@@ -212,7 +218,7 @@ public class SchedulePlanTest {
             assertEquals(scheduleCriteria2, retrievedStrategy.getScheduleCriteria().get(1));
         } finally {
             if (retrievedPlan != null) {
-                schedulesApi.deleteSchedulePlan(retrievedPlan.getGuid()).execute();    
+                admin.getClient(SchedulesApi.class).deleteSchedulePlan(retrievedPlan.getGuid(), true).execute();
             }
         }
     }
@@ -268,10 +274,11 @@ public class SchedulePlanTest {
             plan.setVersion(newPlan.getVersion());
             plan.setGuid(newPlan.getGuid());
             
+            plan.setDeleted(false); // For equality, this has to be set
             assertEquals(plan, newPlan);
         } finally {
             if (keys != null) {
-                schedulesApi.deleteSchedulePlan(keys.getGuid()).execute();
+                admin.getClient(SchedulesApi.class).deleteSchedulePlan(keys.getGuid(), true).execute();
             }
             if (surveyKeys != null) {
                 SurveysApi surveysApi = admin.getClient(SurveysApi.class);

@@ -76,6 +76,7 @@ public class ScheduledActivityTest {
     private String runId;
     private String monthlyActivityLabel;
     private String oneTimeActivityLabel;
+    private TestUser admin;
     private TestUser researcher;
     private TestUser user;
     private TestUser developer;
@@ -87,6 +88,7 @@ public class ScheduledActivityTest {
     public void before() throws Exception {
         schedulePlanGuidList = new ArrayList<>();
 
+        admin = TestUserHelper.getSignedInAdmin();
         researcher = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Role.RESEARCHER);
         developer = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true);
@@ -219,8 +221,9 @@ public class ScheduledActivityTest {
     @After
     public void after() throws Exception {
         try {
+            SchedulesApi schedulesApi = admin.getClient(SchedulesApi.class);
             for (String oneSchedulePlanGuid : schedulePlanGuidList) {
-                schedulePlansApi.deleteSchedulePlan(oneSchedulePlanGuid).execute();
+                schedulesApi.deleteSchedulePlan(oneSchedulePlanGuid, true).execute();
             }
         } finally {
             if (researcher != null) {

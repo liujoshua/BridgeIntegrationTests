@@ -37,6 +37,7 @@ public class WorkerApiTest {
     private static final DateTimeZone TEST_USER_TIME_ZONE = DateTimeZone.forOffsetHours(-8);
     private static final String TEST_USER_TIME_ZONE_STRING = "-08:00";
     
+    TestUser admin;
     TestUser worker;
     TestUser researcher;
     TestUser developer;
@@ -46,6 +47,7 @@ public class WorkerApiTest {
 
     @Before
     public void before() throws Exception {
+        admin = TestUserHelper.getSignedInAdmin();
         worker = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, Role.WORKER);
         researcher = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, Role.RESEARCHER);
         developer = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, Role.DEVELOPER);
@@ -149,7 +151,7 @@ public class WorkerApiTest {
         try {
             guid = planApi.createSchedulePlan(plan).execute().body();
             
-            SchedulePlanList plans = workersApi.getSchedulePlans("api").execute().body();
+            SchedulePlanList plans = workersApi.getSchedulePlans("api", false).execute().body();
             
             final String theGuid = guid.getGuid();
             if (!plans.getItems().stream().anyMatch((onePlan) -> onePlan.getGuid().equals(theGuid))) {
@@ -157,7 +159,7 @@ public class WorkerApiTest {
             }
         } finally {
             if (guid != null) {
-                planApi.deleteSchedulePlan(guid.getGuid()).execute();    
+                admin.getClient(SchedulesApi.class).deleteSchedulePlan(guid.getGuid(), true).execute();
             }
         }
     }
@@ -194,7 +196,7 @@ public class WorkerApiTest {
             assertFalse(list.getItems().isEmpty());
         } finally {
             if (guid != null) {
-                planApi.deleteSchedulePlan(guid.getGuid()).execute();    
+                admin.getClient(SchedulesApi.class).deleteSchedulePlan(guid.getGuid(), true).execute();    
             }
         }
     }
@@ -221,7 +223,7 @@ public class WorkerApiTest {
             assertFalse(list.getItems().isEmpty());
         } finally {
             if (guid != null) {
-                planApi.deleteSchedulePlan(guid.getGuid()).execute();    
+                admin.getClient(SchedulesApi.class).deleteSchedulePlan(guid.getGuid(), true).execute();    
             }
         }
     }
