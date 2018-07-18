@@ -77,7 +77,7 @@ public class SharedModuleTest {
 
         if (localSchema != null) {
             try {
-                adminApi.deleteAllRevisionsOfUploadSchema(apiDeveloper.getStudyId(), localSchema.getSchemaId())
+                adminApi.deleteAllRevisionsOfUploadSchema(apiDeveloper.getStudyId(), localSchema.getSchemaId(), true)
                         .execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting schema " + localSchema.getSchemaId() + " in study " +
@@ -87,8 +87,8 @@ public class SharedModuleTest {
 
         if (sharedSchema != null) {
             try {
-                adminApi.deleteAllRevisionsOfUploadSchema(sharedDeveloper.getStudyId(), sharedSchema.getSchemaId())
-                        .execute();
+                adminApi.deleteAllRevisionsOfUploadSchema(sharedDeveloper.getStudyId(), sharedSchema.getSchemaId(),
+                        true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting schema " + sharedSchema.getSchemaId() + " in study " +
                         sharedDeveloper.getStudyId() + ": "  + ex.getMessage(), ex);

@@ -84,7 +84,7 @@ public class UploadSchemaTest {
     @After
     public void deleteSchemas() throws Exception {
         try {
-            adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaId).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaId, true).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
         }
@@ -127,7 +127,7 @@ public class UploadSchemaTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            adminApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId(), true).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
@@ -135,7 +135,7 @@ public class UploadSchemaTest {
             // finally delete shared module and uploaded schema
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
-            adminApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId(), true).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -189,7 +189,7 @@ public class UploadSchemaTest {
         assertTrue(foundRevSet.contains(3L));
 
         // Step 5: Delete all schemas with the test schema ID
-        adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaId).execute();
+        adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaId, true).execute();
 
         // Step 5a: Get API should throw
         Exception thrownEx = null;
@@ -202,7 +202,7 @@ public class UploadSchemaTest {
         assertNotNull(thrownEx);
 
         // Step 5b: Use list API to verify no schemas with this ID
-        UploadSchemaList schemaList2 = devUploadSchemasApi.getMostRecentUploadSchemas().execute().body();
+        UploadSchemaList schemaList2 = devUploadSchemasApi.getMostRecentUploadSchemas(false).execute().body();
         //noinspection Convert2streamapi
         for (UploadSchema oneSchema : schemaList2.getItems()) {
             assertSchemaFilledIn(oneSchema);
@@ -462,7 +462,7 @@ public class UploadSchemaTest {
 
     @Test(expected=UnauthorizedException.class)
     public void unauthorizedTest() throws Exception {
-        user.getClient(UploadSchemasApi.class).getMostRecentUploadSchemas().execute();
+        user.getClient(UploadSchemasApi.class).getMostRecentUploadSchemas(false).execute();
     }
 
     private UploadFieldDefinition field(String name, boolean required, UploadFieldType type) {
@@ -502,6 +502,7 @@ public class UploadSchemaTest {
         destination.setStudyId(source.getStudyId());
         destination.setSurveyCreatedOn(source.getSurveyCreatedOn());
         destination.setSurveyGuid(source.getSurveyGuid());
+        destination.setDeleted(source.isDeleted());
         destination.setVersion(source.getVersion());
         Tests.setVariableValueInObject(destination, "type", source.getType());
         return destination;

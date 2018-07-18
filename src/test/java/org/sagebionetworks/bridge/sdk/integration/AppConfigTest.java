@@ -78,7 +78,7 @@ public class AppConfigTest {
                     .execute();
         }
         if (schemaKeys != null) {
-            adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaKeys.getSchemaId()).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaKeys.getSchemaId(), true).execute();
         }
         try {
             developer.signOutAndDeleteUser();

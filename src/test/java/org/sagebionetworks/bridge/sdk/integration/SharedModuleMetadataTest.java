@@ -109,7 +109,7 @@ public class SharedModuleMetadataTest {
         }
 
         // also delete created upload schema
-        adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyId, schemaId).execute();
+        adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyId, schemaId, true).execute();
         adminSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
     }
 
