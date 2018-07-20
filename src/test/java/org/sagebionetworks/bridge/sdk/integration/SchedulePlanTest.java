@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -30,6 +31,7 @@ import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.ScheduleCriteria;
 import org.sagebionetworks.bridge.rest.model.ScheduleList;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
+import org.sagebionetworks.bridge.rest.model.SchedulePlanList;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.Survey;
@@ -139,8 +141,20 @@ public class SchedulePlanTest {
         SchedulePlan retrieved = newSchedulesApi.getSchedulePlan(keys.getGuid()).execute().body();
         assertTrue(retrieved.isDeleted());
         
+        // Does not include retrieved, which has been logically deleted
+        SchedulePlanList withoutDeleted = newSchedulesApi.getSchedulePlans(false).execute().body();
+        assertTrue(withoutDeleted.getItems().stream().noneMatch(onePlan -> onePlan.getGuid().equals(retrieved.getGuid())));
+        
+        // Does include retrieved, which has been logically deleted
+        SchedulePlanList withDeleted = newSchedulesApi.getSchedulePlans(true).execute().body();
+        assertTrue(withDeleted.getItems().stream().anyMatch(onePlan -> onePlan.getGuid().equals(retrieved.getGuid())));
+        
         // Physical delete
         admin.getClient(SchedulesApi.class).deleteSchedulePlan(keys.getGuid(), true).execute();
+        
+        // It is now not in the list.
+        withDeleted = newSchedulesApi.getSchedulePlans(true).execute().body();
+        assertFalse(withDeleted.getItems().stream().anyMatch(onePlan -> onePlan.getGuid().equals(retrieved.getGuid())));
 
         try {
             newSchedulesApi.getSchedulePlan(keys.getGuid()).execute();
