@@ -629,7 +629,7 @@ public class SurveyTest {
         } catch(ConstraintViolationException e) {
             
         } finally {
-            schedulesApi.deleteSchedulePlan(holder.getGuid()).execute();
+            admin.getClient(SchedulesApi.class).deleteSchedulePlan(holder.getGuid(), true).execute();
         }
     }
     

@@ -36,6 +36,7 @@ public class ScheduleTest {
 
     private String planGuid;
     
+    private TestUser admin;
     private TestUser user;
     private TestUser developer;
     
@@ -43,6 +44,7 @@ public class ScheduleTest {
     public void before() throws Exception {
         ClientInfo clientInfo = getClientInfo(Tests.APP_NAME, 3);
         
+        admin = TestUserHelper.getSignedInAdmin();
         user = new TestUserHelper.Builder(ScheduleTest.class).withClientInfo(clientInfo).withConsentUser(true)
                 .createAndSignInUser();
 
@@ -58,8 +60,8 @@ public class ScheduleTest {
         if (developer != null) {
             try {
                 if (planGuid != null) {
-                    SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
-                    schedulesApi.deleteSchedulePlan(planGuid).execute();
+                    SchedulesApi schedulesApi = admin.getClient(SchedulesApi.class);
+                    schedulesApi.deleteSchedulePlan(planGuid, true).execute();
                 }
             } finally {
                 developer.signOutAndDeleteUser();    
@@ -129,6 +131,7 @@ public class ScheduleTest {
         originalSchedule.setPersistent(updatedSchedule.isPersistent());
         Tests.setVariableValueInObject(originalSchedule, "type", "Schedule");
         
+        originalPlan.setDeleted(false); // Has to be set for equality to work
         assertEquals(originalPlan, plan);
     }
 
