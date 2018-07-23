@@ -284,8 +284,19 @@ public class SurveyTest {
         GuidCreatedOnVersionHolder key = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
         key = versionSurvey(surveysApi, key);
         
-        int count = surveysApi.getAllVersionsOfSurvey(key.getGuid(), false).execute().body().getItems().size();
+        SurveyList surveyList = surveysApi.getAllVersionsOfSurvey(key.getGuid(), false).execute().body();
+        int count = surveyList.getItems().size();
         assertEquals("Two versions for this survey.", 2, count);
+        
+        // verify includeDeleted
+        Survey oneVersion = surveyList.getItems().get(0); 
+        surveysApi.deleteSurvey(oneVersion.getGuid(), oneVersion.getCreatedOn(), false).execute();
+        
+        assertEquals(surveyList.getItems().size(),
+                surveysApi.getAllVersionsOfSurvey(key.getGuid(), true).execute().body().getItems().size());
+        
+        assertNotEquals(surveyList.getItems().size(),
+                surveysApi.getAllVersionsOfSurvey(key.getGuid(), false).execute().body().getItems().size());
     }
 
     @Test
@@ -313,8 +324,17 @@ public class SurveyTest {
         key2 = surveysApi.publishSurvey(key2.getGuid(), key2.getCreatedOn(), false).execute().body();
 
         Thread.sleep(2000);
-        SurveyList publishedSurveys = surveysApi.getPublishedSurveys().execute().body();
+        SurveyList publishedSurveys = surveysApi.getPublishedSurveys(false).execute().body();
         containsAll(publishedSurveys.getItems(), key, key2);
+        
+        // verify logical deletion
+        surveysApi.deleteSurvey(key2.getGuid(), key2.getCreatedOn(), false).execute();
+        
+        assertTrue(surveysApi.getMostRecentSurveys(true).execute().body().getItems().stream()
+                .anyMatch(survey -> survey.isDeleted()));
+        
+        assertTrue(surveysApi.getMostRecentSurveys(false).execute().body().getItems().stream()
+                .noneMatch(survey -> survey.isDeleted()));
     }
 
     @Test
@@ -585,9 +605,13 @@ public class SurveyTest {
         // getPublishedSurveys() uses a secondary global index. Sleep for 2 seconds to help make sure the index is consistent.
         Thread.sleep(2000);
 
-        // you can still retrieve the survey in lists
-        SurveyList list = surveysApi.getPublishedSurveys().execute().body();
+        // no longer in the list
+        SurveyList list = surveysApi.getPublishedSurveys(false).execute().body();
         assertFalse(list.getItems().stream().anyMatch(survey -> survey.getGuid().equals(keys.getGuid())));
+
+        // you can still retrieve the logically deleted survey in the list
+        list = surveysApi.getPublishedSurveys(true).execute().body();
+        assertTrue(list.getItems().stream().anyMatch(survey -> survey.getGuid().equals(keys.getGuid())));
     }
     
     @Test
@@ -629,7 +653,7 @@ public class SurveyTest {
         } catch(ConstraintViolationException e) {
             
         } finally {
-            schedulesApi.deleteSchedulePlan(holder.getGuid()).execute();
+            admin.getClient(SchedulesApi.class).deleteSchedulePlan(holder.getGuid(), true).execute();
         }
     }
     

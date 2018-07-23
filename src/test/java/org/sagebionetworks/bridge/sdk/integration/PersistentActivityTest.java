@@ -29,12 +29,14 @@ import com.google.common.collect.Lists;
 public class PersistentActivityTest {
 
     private String planGuid;
-    
+
+    private TestUser admin;
     private TestUser user;
     private TestUser developer;
     
     @Before
     public void before() throws Exception {
+        admin = TestUserHelper.getSignedInAdmin();
         user = new TestUserHelper.Builder(ScheduleTest.class).withConsentUser(true)
                 .createAndSignInUser();
 
@@ -50,8 +52,7 @@ public class PersistentActivityTest {
         if (developer != null) {
             try {
                 if (planGuid != null) {
-                    SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
-                    schedulesApi.deleteSchedulePlan(planGuid).execute();
+                    admin.getClient(SchedulesApi.class).deleteSchedulePlan(planGuid, true).execute();
                 }
             } finally {
                 developer.signOutAndDeleteUser();    

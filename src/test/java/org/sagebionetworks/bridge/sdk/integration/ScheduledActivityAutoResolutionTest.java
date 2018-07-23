@@ -63,6 +63,7 @@ public class ScheduledActivityAutoResolutionTest {
     private static SurveysApi adminSurveyApi;
     private static SurveysApi surveyApi;
     private static TestUserHelper.TestUser developer;
+    private static TestUserHelper.TestUser admin;
 
     private List<GuidCreatedOnVersionHolder> surveysToDelete;
     private String activityLabel;
@@ -73,6 +74,7 @@ public class ScheduledActivityAutoResolutionTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
+        admin = TestUserHelper.getSignedInAdmin();
         // init users and clients
         developer = TestUserHelper.createAndSignInUser(ScheduledActivityAutoResolutionTest.class, false,
                 Role.DEVELOPER);
@@ -139,7 +141,7 @@ public class ScheduledActivityAutoResolutionTest {
 
         // Delete schedules first, or we get constraint violation exceptions.
         if (schedulePlanGuidToDelete != null) {
-            schedulePlanApi.deleteSchedulePlan(schedulePlanGuidToDelete).execute();
+            admin.getClient(SchedulesApi.class).deleteSchedulePlan(schedulePlanGuidToDelete, true).execute();
         }
 
         // Delete compound activity, if any
