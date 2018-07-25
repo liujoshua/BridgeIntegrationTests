@@ -777,7 +777,8 @@ public class SurveyTest {
         SurveysApi devSurveysApi = developer.getClient(SurveysApi.class);
         
         try {
-            devSurveysApi.createSurvey(survey).execute().body();    
+            devSurveysApi.createSurvey(survey).execute().body();
+            fail("Should have thrown exception");
         } catch(InvalidEntityException e) {
             assertEquals("elements[0].afterRules[0].displayIf specifies display after screen has been shown",
                     e.getErrors().get("elements[0].afterRules[0].displayIf").get(0));
@@ -856,6 +857,7 @@ public class SurveyTest {
         
         try {
             surveysApi.getPublishedSurveys(true).execute();
+            fail("Should have thrown an exception");
         } catch(EntityNotFoundException e) {
             
         }
