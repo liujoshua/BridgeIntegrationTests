@@ -854,13 +854,6 @@ public class SurveyTest {
         Thread.sleep(1000);
         anyDeleted(surveysApi.getPublishedSurveys(true));
         noneDeleted(surveysApi.getPublishedSurveys(false));
-        
-        try {
-            surveysApi.getPublishedSurveys(true).execute();
-            fail("Should have thrown an exception");
-        } catch(EntityNotFoundException e) {
-            
-        }
     }
     
     @Test
