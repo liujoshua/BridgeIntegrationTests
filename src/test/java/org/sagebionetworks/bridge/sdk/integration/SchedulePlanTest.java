@@ -74,6 +74,27 @@ public class SchedulePlanTest {
     }
 
     @Test
+    public void canPhysicallyDeleteLogicallyDeletedAppConfig() throws Exception {
+        SchedulePlan plan = Tests.getSimpleSchedulePlan();
+        
+        GuidVersionHolder keys = schedulesApi.createSchedulePlan(plan).execute().body();
+        
+        schedulesApi.deleteSchedulePlan(keys.getGuid(), false).execute();
+        
+        SchedulePlan retrieved = schedulesApi.getSchedulePlan(keys.getGuid()).execute().body();
+        assertTrue(retrieved.isDeleted());
+        
+        admin.getClient(SchedulesApi.class).deleteSchedulePlan(keys.getGuid(), true).execute();
+        
+        try {
+            schedulesApi.getSchedulePlan(keys.getGuid()).execute().body();
+            fail("Should have thrown an exception.");
+        } catch(EntityNotFoundException e) {
+            
+        }
+    }
+    
+    @Test
     public void normalUserCannotAccess() throws Exception {
         TestUser normalUser = null;
         try {
