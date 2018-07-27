@@ -223,6 +223,29 @@ public class AppConfigTest {
         }
     }
     
+    @Test
+    public void canPhysicallyDeleteLogicallyDeletedAppConfig() throws Exception {
+        AppConfig appConfig = new AppConfig();
+        appConfig.setLabel(Tests.randomIdentifier(AppConfigTest.class));
+        appConfig.setCriteria(new Criteria());
+        
+        GuidVersionHolder keys = appConfigsApi.createAppConfig(appConfig).execute().body();
+        
+        appConfigsApi.deleteAppConfig(keys.getGuid(), false).execute();
+        
+        AppConfig retrieved = appConfigsApi.getAppConfig(keys.getGuid()).execute().body();
+        assertTrue(retrieved.isDeleted());
+        
+        admin.getClient(AppConfigsApi.class).deleteAppConfig(keys.getGuid(), true).execute();
+        
+        try {
+            appConfigsApi.getAppConfig(keys.getGuid()).execute();
+            fail("Should have thrown an exception.");
+        } catch(EntityNotFoundException e) {
+            
+        }
+    }
+    
     public void assertSchemaReference(SchemaReference expected, SchemaReference actual) {
         assertEquals(expected.getId(), actual.getId());
         assertEquals(expected.getRevision(), actual.getRevision());
