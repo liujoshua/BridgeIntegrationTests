@@ -81,5 +81,21 @@ public class UserManagementTest {
             // expected exception
         }
     }
+    
+    @Test
+    public void canSignInAsAdminAndChangeStudy() throws Exception {
+        // Unfortunately right now, we only have one study, but try all the APIs to make sure you
+        // don't get any mistakes
+        admin.signOut();
+        
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        SignIn signIn = new SignIn().study(admin.getStudyId())
+                .email(admin.getEmail()).password((admin.getPassword()));
+        
+        adminApi.adminSignIn(signIn).execute().body();
+        
+        adminApi = admin.getClient(ForAdminsApi.class);
+        adminApi.adminChangeStudy(new SignIn().study("api")).execute().body();
+    }
 
 }
