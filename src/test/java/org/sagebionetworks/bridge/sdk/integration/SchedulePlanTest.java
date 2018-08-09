@@ -74,7 +74,7 @@ public class SchedulePlanTest {
     }
 
     @Test
-    public void canPhysicallyDeleteLogicallyDeletedAppConfig() throws Exception {
+    public void canPhysicallyDeleteLogicallyDeletedSchedulePlan() throws Exception {
         SchedulePlan plan = Tests.getSimpleSchedulePlan();
         
         GuidVersionHolder keys = schedulesApi.createSchedulePlan(plan).execute().body();
