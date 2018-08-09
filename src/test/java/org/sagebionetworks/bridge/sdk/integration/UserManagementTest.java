@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
@@ -13,16 +14,20 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class UserManagementTest {
-
+    
+    private static final String API = "api";
+    private static final String SHARED = "shared";
     private TestUser admin;
     private TestUser researcher;
 
@@ -93,9 +98,30 @@ public class UserManagementTest {
                 .email(admin.getEmail()).password((admin.getPassword()));
         
         adminApi.adminSignIn(signIn).execute().body();
+        Study currentStudy = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
+        assertEquals(API, currentStudy.getIdentifier());
         
         adminApi = admin.getClient(ForAdminsApi.class);
-        adminApi.adminChangeStudy(new SignIn().study("api")).execute().body();
+        adminApi.adminChangeStudy(new SignIn().study(SHARED)).execute().body();
+        
+        currentStudy = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
+        assertEquals(SHARED, currentStudy.getIdentifier());
+        
+        // now reverse the order
+        admin.signOut();
+        
+        adminApi = admin.getClient(ForAdminsApi.class);
+        signIn = new SignIn().study(SHARED)
+                .email(admin.getEmail()).password((admin.getPassword()));
+        
+        adminApi.adminSignIn(signIn).execute().body();
+        currentStudy = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
+        assertEquals(SHARED, currentStudy.getIdentifier());
+        
+        adminApi = admin.getClient(ForAdminsApi.class);
+        adminApi.adminChangeStudy(new SignIn().study(API)).execute().body();
+        
+        currentStudy = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
+        assertEquals(API, currentStudy.getIdentifier());
     }
-
 }
