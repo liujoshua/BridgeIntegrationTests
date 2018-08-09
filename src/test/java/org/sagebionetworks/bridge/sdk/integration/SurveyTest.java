@@ -663,6 +663,28 @@ public class SurveyTest {
     }
     
     @Test
+    public void canPhysicallyDeleteLogicallyDeletedSurvey() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+
+        GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        
+        surveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
+        
+        Survey retrieved = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+        assertTrue(retrieved.isDeleted());
+        
+        adminSurveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
+        
+        // Should not be able to physically delete this survey
+        try {
+            surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+            fail("Should have thrown an exception.");
+        } catch(EntityNotFoundException e) {
+            
+        }
+    }
+    
+    @Test
     public void canCreateAndSaveVariousKindsOfBeforeRules() throws Exception {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         Study study = adminsApi.getStudy(admin.getStudyId()).execute().body();
