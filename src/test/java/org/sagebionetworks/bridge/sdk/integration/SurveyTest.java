@@ -675,7 +675,6 @@ public class SurveyTest {
         
         adminSurveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
         
-        // Should not be able to physically delete this survey
         try {
             surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
             fail("Should have thrown an exception.");
