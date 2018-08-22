@@ -37,8 +37,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
@@ -67,6 +65,7 @@ import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
 import org.sagebionetworks.bridge.rest.model.Study;
@@ -84,8 +83,6 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class SurveyTest {
-    private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
-
     private static final String SURVEY_NAME = "dummy-survey-name";
     private static final String SURVEY_IDENTIFIER = "dummy-survey-identifier";
 
@@ -96,6 +93,7 @@ public class SurveyTest {
     private static SharedModulesApi sharedDeveloperModulesApi;
     private static SurveysApi sharedSurveysApi;
     private static SurveysApi adminSurveysApi;
+    private static ForAdminsApi adminsApi;
 
     // We use SimpleGuidCreatedOnVersionHolder, because we need to use an immutable version holder, to ensure we're
     // deleting the correct surveys.
@@ -104,6 +102,7 @@ public class SurveyTest {
     @BeforeClass
     public static void beforeClass() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
+        adminsApi = admin.getClient(ForAdminsApi.class);
         developer = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(SurveyTest.class, true);
         worker = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.WORKER);
@@ -126,11 +125,7 @@ public class SurveyTest {
         
         SurveysApi surveysApi = admin.getClient(SurveysApi.class);
         for (GuidCreatedOnVersionHolder oneSurvey : surveysToDelete) {
-            try {
-                surveysApi.deleteSurvey(oneSurvey.getGuid(), oneSurvey.getCreatedOn(), true).execute();
-            } catch (RuntimeException ex) {
-                LOG.error("Error deleting survey=" + oneSurvey + ": " + ex.getMessage(), ex);
-            }
+            surveysApi.deleteSurvey(oneSurvey.getGuid(), oneSurvey.getCreatedOn(), true).execute();
         }
     }
 
@@ -171,6 +166,7 @@ public class SurveyTest {
         // execute delete
         Exception thrownEx = null;
         try {
+            adminsApi.adminChangeStudy(new SignIn().study("shared")).execute();
             adminSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
@@ -179,7 +175,8 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
-            adminSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            admin.getClient(SurveysApi.class).deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminsApi.adminChangeStudy(new SignIn().study("api")).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -208,7 +205,9 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
-            adminSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminsApi.adminChangeStudy(new SignIn().study("shared")).execute();
+            admin.getClient(SurveysApi.class).deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminsApi.adminChangeStudy(new SignIn().study("api")).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -674,6 +673,7 @@ public class SurveyTest {
         assertTrue(retrieved.isDeleted());
         
         adminSurveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
+        surveysToDelete.remove(keys);
         
         try {
             surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
@@ -685,7 +685,6 @@ public class SurveyTest {
     
     @Test
     public void canCreateAndSaveVariousKindsOfBeforeRules() throws Exception {
-        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         Study study = adminsApi.getStudy(admin.getStudyId()).execute().body();
         String dataGroup = study.getDataGroups().get(0);
 
@@ -734,7 +733,6 @@ public class SurveyTest {
     
     @Test
     public void canCreateAndSaveVariousKindsOfAfterRules() throws Exception {
-        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         Study study = adminsApi.getStudy(admin.getStudyId()).execute().body();
         String dataGroup = study.getDataGroups().get(0);
 
@@ -777,7 +775,6 @@ public class SurveyTest {
     
     @Test
     public void displayActionsInAfterRulesValidated() throws Exception {
-        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         Study study = adminsApi.getStudy(admin.getStudyId()).execute().body();
         String dataGroup = study.getDataGroups().get(0);
 
@@ -841,6 +838,7 @@ public class SurveyTest {
         
         // Really delete it
         admin.getClient(SurveysApi.class).deleteSurvey(keys2.getGuid(), keys2.getCreatedOn(), true).execute();
+        surveysToDelete.remove(keys2);
         
         try {
             surveysApi.getSurvey(keys2.getGuid(), keys2.getCreatedOn()).execute().body();
