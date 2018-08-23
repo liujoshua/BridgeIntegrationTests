@@ -39,7 +39,6 @@ import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.Lists;
 
@@ -78,7 +77,7 @@ public class AppConfigTest {
                     .execute();
         }
         if (schemaKeys != null) {
-            adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaKeys.getSchemaId(), true).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(schemaKeys.getSchemaId(), true).execute();
         }
         try {
             developer.signOutAndDeleteUser();
@@ -218,6 +217,29 @@ public class AppConfigTest {
         try {
             appConfigsApi.getAppConfig(config.getGuid()).execute();
             fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+            
+        }
+    }
+    
+    @Test
+    public void canPhysicallyDeleteLogicallyDeletedAppConfig() throws Exception {
+        AppConfig appConfig = new AppConfig();
+        appConfig.setLabel(Tests.randomIdentifier(AppConfigTest.class));
+        appConfig.setCriteria(new Criteria());
+        
+        GuidVersionHolder keys = appConfigsApi.createAppConfig(appConfig).execute().body();
+        
+        appConfigsApi.deleteAppConfig(keys.getGuid(), false).execute();
+        
+        AppConfig retrieved = appConfigsApi.getAppConfig(keys.getGuid()).execute().body();
+        assertTrue(retrieved.isDeleted());
+        
+        admin.getClient(AppConfigsApi.class).deleteAppConfig(keys.getGuid(), true).execute();
+        
+        try {
+            appConfigsApi.getAppConfig(keys.getGuid()).execute();
+            fail("Should have thrown an exception.");
         } catch(EntityNotFoundException e) {
             
         }

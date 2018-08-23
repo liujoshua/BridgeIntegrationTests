@@ -35,6 +35,7 @@ import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadataList;
 import org.sagebionetworks.bridge.rest.model.SharedModuleType;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -61,8 +62,8 @@ public class SharedModuleMetadataTest {
     private static SurveysApi devSurveysApi;
     private static ForAdminsApi adminUploadSchemasApi;
     private static SurveysApi adminSurveysApi;
-    private static String studyId;
-
+    private static String sharedStudyId;
+    
     private String moduleId;
     private String schemaId;
     private String surveyGuid;
@@ -75,10 +76,10 @@ public class SharedModuleMetadataTest {
         apiDeveloperModulesApi = apiDeveloper.getClient(SharedModulesApi.class);
         TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
+        sharedStudyId = sharedDeveloper.getStudyId();
         nonAuthSharedModulesApi = TestUserHelper.getNonAuthClient(SharedModulesApi.class, IntegTestUtils.STUDY_ID);
         devUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
         devSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
-        studyId = sharedDeveloper.getStudyId();
         adminUploadSchemasApi = admin.getClient(ForAdminsApi.class);
         adminSurveysApi = admin.getClient(SurveysApi.class);
     }
@@ -109,7 +110,9 @@ public class SharedModuleMetadataTest {
         }
 
         // also delete created upload schema
-        adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyId, schemaId, true).execute();
+        adminUploadSchemasApi.adminChangeStudy(new SignIn().study(sharedStudyId)).execute();   
+        adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
+        adminUploadSchemasApi.adminChangeStudy(new SignIn().study(IntegTestUtils.STUDY_ID)).execute();
         adminSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
     }
 

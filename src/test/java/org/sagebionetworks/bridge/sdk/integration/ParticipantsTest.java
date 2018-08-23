@@ -518,7 +518,7 @@ public class ParticipantsTest {
                     .getParticipantActivityHistory(userId, activityGuid, null, null, null, 50).execute().body();
             assertEquals(0, resActivities.getItems().size());
         } finally {
-            schedulePlanApi.deleteSchedulePlan(planKeys.getGuid()).execute();
+            admin.getClient(SchedulesApi.class).deleteSchedulePlan(planKeys.getGuid(), true).execute();
             user.signOutAndDeleteUser();
         }
     }
@@ -567,7 +567,7 @@ public class ParticipantsTest {
                     .execute().body();
             assertTrue(list.getItems().isEmpty());
         } finally {
-            schedulePlanApi.deleteSchedulePlan(planKeys.getGuid()).execute();
+            admin.getClient(SchedulesApi.class).deleteSchedulePlan(planKeys.getGuid(), true).execute();
             user.signOutAndDeleteUser();
         }
     }

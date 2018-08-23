@@ -19,12 +19,16 @@ import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.MULTIVALUE_I
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.TIME_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.WEIGHT_ID;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
+
+import retrofit2.Call;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -211,7 +215,7 @@ public class SurveyTest {
 
     @Test(expected=UnauthorizedException.class)
     public void cannotSubmitAsNormalUser() throws Exception {
-        user.getClient(SurveysApi.class).getMostRecentSurveys().execute().body();
+        user.getClient(SurveysApi.class).getMostRecentSurveys(false).execute().body();
     }
 
     @Test
@@ -284,8 +288,16 @@ public class SurveyTest {
         GuidCreatedOnVersionHolder key = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
         key = versionSurvey(surveysApi, key);
         
-        int count = surveysApi.getAllVersionsOfSurvey(key.getGuid()).execute().body().getItems().size();
+        SurveyList surveyList = surveysApi.getAllVersionsOfSurvey(key.getGuid(), false).execute().body();
+        int count = surveyList.getItems().size();
         assertEquals("Two versions for this survey.", 2, count);
+        
+        // verify includeDeleted
+        Survey oneVersion = surveyList.getItems().get(0); 
+        surveysApi.deleteSurvey(oneVersion.getGuid(), oneVersion.getCreatedOn(), false).execute();
+        
+        anyDeleted(surveysApi.getAllVersionsOfSurvey(key.getGuid(), true));
+        noneDeleted(surveysApi.getAllVersionsOfSurvey(key.getGuid(), false));
     }
 
     @Test
@@ -306,15 +318,21 @@ public class SurveyTest {
 
         // Sleep to clear eventual consistency problems.
         Thread.sleep(2000);
-        SurveyList recentSurveys = surveysApi.getMostRecentSurveys().execute().body();
+        SurveyList recentSurveys = surveysApi.getMostRecentSurveys(false).execute().body();
         containsAll(recentSurveys.getItems(), key, key1, key2);
 
         key = surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), false).execute().body();
         key2 = surveysApi.publishSurvey(key2.getGuid(), key2.getCreatedOn(), false).execute().body();
 
         Thread.sleep(2000);
-        SurveyList publishedSurveys = surveysApi.getPublishedSurveys().execute().body();
+        SurveyList publishedSurveys = surveysApi.getPublishedSurveys(false).execute().body();
         containsAll(publishedSurveys.getItems(), key, key2);
+        
+        // verify logical deletion
+        surveysApi.deleteSurvey(key2.getGuid(), key2.getCreatedOn(), false).execute();
+        
+        anyDeleted(surveysApi.getMostRecentSurveys(true));
+        noneDeleted(surveysApi.getMostRecentSurveys(false));
     }
 
     @Test
@@ -425,7 +443,7 @@ public class SurveyTest {
         
         surveysToDelete.add(new MutableHolder(keys));
 
-        SurveyList allRevisions = surveysApi.getAllVersionsOfSurvey(keys.getGuid()).execute().body();
+        SurveyList allRevisions = surveysApi.getAllVersionsOfSurvey(keys.getGuid(), false).execute().body();
         assertEquals("There are now two versions", 2, allRevisions.getItems().size());
 
         Survey mostRecent = surveysApi.getPublishedSurveyVersion(existingSurvey.getGuid()).execute().body();
@@ -532,8 +550,15 @@ public class SurveyTest {
         assertKeysEqual(survey1aKeys, survey1aAgain);
 
         // We only expect the most recently published versions, namely 1b and 2b.
-        SurveyList surveyResourceList = workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID).execute().body();
+        SurveyList surveyResourceList = workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID, false).execute().body();
         containsAll(surveyResourceList.getItems(), new MutableHolder(survey1b), new MutableHolder(survey2b));
+        
+        // Delete 2b.
+        developer.getClient(SurveysApi.class).deleteSurvey(survey2b.getGuid(), survey2b.getCreatedOn(), false).execute();
+        
+        // Verify includeDeleted works
+        noneDeleted(workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID, false));
+        anyDeleted(workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID, true));
     }
 
     @Test
@@ -585,9 +610,13 @@ public class SurveyTest {
         // getPublishedSurveys() uses a secondary global index. Sleep for 2 seconds to help make sure the index is consistent.
         Thread.sleep(2000);
 
-        // you can still retrieve the survey in lists
-        SurveyList list = surveysApi.getPublishedSurveys().execute().body();
+        // no longer in the list
+        SurveyList list = surveysApi.getPublishedSurveys(false).execute().body();
         assertFalse(list.getItems().stream().anyMatch(survey -> survey.getGuid().equals(keys.getGuid())));
+
+        // you can still retrieve the logically deleted survey in the list
+        list = surveysApi.getPublishedSurveys(true).execute().body();
+        assertTrue(list.getItems().stream().anyMatch(survey -> survey.getGuid().equals(keys.getGuid())));
     }
     
     @Test
@@ -603,7 +632,7 @@ public class SurveyTest {
         } catch(EntityNotFoundException e) {
         }
         try {
-            surveysApi.getAllVersionsOfSurvey(keys.getGuid()).execute().body();    
+            surveysApi.getAllVersionsOfSurvey(keys.getGuid(), false).execute().body();    
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
         }
@@ -629,7 +658,28 @@ public class SurveyTest {
         } catch(ConstraintViolationException e) {
             
         } finally {
-            schedulesApi.deleteSchedulePlan(holder.getGuid()).execute();
+            admin.getClient(SchedulesApi.class).deleteSchedulePlan(holder.getGuid(), true).execute();
+        }
+    }
+    
+    @Test
+    public void canPhysicallyDeleteLogicallyDeletedSurvey() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+
+        GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        
+        surveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
+        
+        Survey retrieved = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+        assertTrue(retrieved.isDeleted());
+        
+        adminSurveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
+        
+        try {
+            surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+            fail("Should have thrown an exception.");
+        } catch(EntityNotFoundException e) {
+            
         }
     }
     
@@ -748,13 +798,120 @@ public class SurveyTest {
         SurveysApi devSurveysApi = developer.getClient(SurveysApi.class);
         
         try {
-            devSurveysApi.createSurvey(survey).execute().body();    
+            devSurveysApi.createSurvey(survey).execute().body();
+            fail("Should have thrown exception");
         } catch(InvalidEntityException e) {
             assertEquals("elements[0].afterRules[0].displayIf specifies display after screen has been shown",
                     e.getErrors().get("elements[0].afterRules[0].displayIf").get(0));
             assertEquals("elements[0].afterRules[1].displayUnless specifies display after screen has been shown",
                     e.getErrors().get("elements[0].afterRules[1].displayUnless").get(0));
         }
+    }
+    
+    @Test
+    public void canRetrieveDeletedSurveys() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        
+        Survey survey = TestSurvey.getSurvey(SurveyTest.class);
+        
+        GuidCreatedOnVersionHolder keys1 = createSurvey(surveysApi, survey);
+        keys1 = surveysApi.publishSurvey(keys1.getGuid(), keys1.getCreatedOn(), true).execute().body();
+        
+        GuidCreatedOnVersionHolder keys2 = versionSurvey(surveysApi, keys1);
+        
+        survey.setCopyrightNotice("This is a change");
+        survey.setCreatedOn(keys2.getCreatedOn());
+        survey.setVersion(keys2.getVersion());
+        surveysApi.updateSurvey(keys2.getGuid(), keys2.getCreatedOn(), survey).execute().body();
+        
+        // These two are the same because there are no deleted surveys
+        noneDeleted(surveysApi.getAllVersionsOfSurvey(keys1.getGuid(), false));
+        noneDeleted(surveysApi.getAllVersionsOfSurvey(keys1.getGuid(), true));
+
+        // Logically delete the second version of the survey
+        surveysApi.deleteSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
+        
+        // These now differ.
+        noneDeleted(surveysApi.getAllVersionsOfSurvey(keys1.getGuid(), false));
+        anyDeleted(surveysApi.getAllVersionsOfSurvey(keys1.getGuid(), true));
+        
+        // You can get the logically deleted survey
+        Survey deletedSurvey = surveysApi.getSurvey(keys2.getGuid(), keys2.getCreatedOn()).execute().body();
+        assertTrue(deletedSurvey.isDeleted());
+        
+        // Really delete it
+        admin.getClient(SurveysApi.class).deleteSurvey(keys2.getGuid(), keys2.getCreatedOn(), true).execute();
+        
+        try {
+            surveysApi.getSurvey(keys2.getGuid(), keys2.getCreatedOn()).execute().body();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+            
+        }
+        // End result is that it no longer appears in the list of versions
+        noneDeleted(surveysApi.getAllVersionsOfSurvey(keys1.getGuid(), true));
+    }
+    
+    @Test
+    public void getPublishedSurveyVersionAndDelete() throws Exception {
+        // Test the interaction of publication and the two kinds of deletion
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        
+        Survey survey = TestSurvey.getSurvey(SurveyTest.class);
+        GuidCreatedOnVersionHolder keys1 = createSurvey(surveysApi, survey);
+        GuidCreatedOnVersionHolder keys2 = versionSurvey(surveysApi, keys1);
+        
+        // You cannot publish a (logically) deleted survey
+        surveysApi.deleteSurvey(keys1.getGuid(), keys1.getCreatedOn(), false).execute();
+        try {
+            surveysApi.publishSurvey(keys1.getGuid(), keys1.getCreatedOn(), false).execute();
+            fail("Should have thrown an exception");
+        } catch(EntityNotFoundException e) {
+            
+        }
+        surveysApi.publishSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
+        surveysApi.deleteSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
+        
+        Thread.sleep(1000);
+        anyDeleted(surveysApi.getPublishedSurveys(true));
+        noneDeleted(surveysApi.getPublishedSurveys(false));
+    }
+    
+    @Test
+    public void getMostRecentSurveyVersionAndDelete() throws Exception {
+        // Test the interaction of publication and the two kinds of deletion
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        
+        Survey survey = TestSurvey.getSurvey(SurveyTest.class);
+        GuidCreatedOnVersionHolder keys1 = createSurvey(surveysApi, survey);
+        GuidCreatedOnVersionHolder keys2 = versionSurvey(surveysApi, keys1);
+        String guid = keys1.getGuid();
+        
+        // You cannot publish a (logically) deleted survey
+        surveysApi.deleteSurvey(keys1.getGuid(), keys1.getCreatedOn(), false).execute();
+        try {
+            surveysApi.publishSurvey(keys1.getGuid(), keys1.getCreatedOn(), false).execute();
+            fail("Should have thrown an exception");
+        } catch(EntityNotFoundException e) {
+            
+        }
+        surveysApi.publishSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
+        surveysApi.deleteSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
+        Thread.sleep(1000);
+        
+        try {
+            surveysApi.getMostRecentSurveyVersion(guid).execute().body();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+        }
+    }
+    
+    private void anyDeleted(Call<SurveyList> call) throws IOException {
+        assertTrue(call.execute().body().getItems().stream().anyMatch(Survey::isDeleted));
+    }
+    
+    private void noneDeleted(Call<SurveyList> call) throws IOException {
+        assertTrue(call.execute().body().getItems().stream().noneMatch(Survey::isDeleted));
     }
     
     private SchedulePlan createSchedulePlanTo(GuidCreatedOnVersionHolder keys) {
