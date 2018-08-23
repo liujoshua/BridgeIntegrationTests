@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -13,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -192,11 +194,39 @@ public class UploadSchemaTest {
         assertTrue(foundRevSet.contains(1L));
         assertTrue(foundRevSet.contains(2L));
         assertTrue(foundRevSet.contains(3L));
+        
+        UploadSchemaList schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(true).execute().body();
+        List<Long> firstRevisions = schemasList.getItems().stream().map(UploadSchema::getRevision)
+                .collect(Collectors.toList());
+        
+        // Step 5: Logically delete one of the schemas with the test schema ID
+        Long mostRecentRev = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body().getRevision();
+        adminApi.deleteUploadSchema(schemaId, mostRecentRev, false).execute();
+        
+        // This will return different version numbers, as more recent versions are deleted
+        schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(false).execute().body();
+        List<Long> secondRevisions = schemasList.getItems().stream().map(UploadSchema::getRevision)
+                .collect(Collectors.toList());
 
-        // Step 5: Delete all schemas with the test schema ID
+        // Not equal because different revisions are now returned
+        assertNotEquals(firstRevisions, secondRevisions);
+        
+        // Only some are returned if deleted are excluded
+        schemasList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId, false).execute().body();
+        assertEquals(2, schemasList.getItems().size());
+        
+        // All are returned if deleted are included
+        schemasList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId, true).execute().body();
+        assertEquals(3, schemasList.getItems().size());
+        
+        // This still works, despite the fact the schema is logically deleted
+        UploadSchema aSchema = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body();
+        assertTrue(aSchema.isDeleted());
+        
+        // Physically delete all the schemas
         adminApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
 
-        // Step 5a: Get API should throw
+        // Step 5a: Get API should now throw as schema does not exist at all
         Exception thrownEx = null;
         try {
             devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute();
