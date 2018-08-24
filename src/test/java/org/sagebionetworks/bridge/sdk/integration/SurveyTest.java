@@ -81,8 +81,12 @@ import org.sagebionetworks.bridge.rest.model.UIHint;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SurveyTest {
+    private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
+    
     private static final String SURVEY_NAME = "dummy-survey-name";
     private static final String SURVEY_IDENTIFIER = "dummy-survey-identifier";
 
@@ -92,7 +96,7 @@ public class SurveyTest {
     private static TestUser worker;
     private static SharedModulesApi sharedDeveloperModulesApi;
     private static SurveysApi sharedSurveysApi;
-    private static SurveysApi adminSurveysApi;
+    //private static SurveysApi adminSurveysApi;
     private static ForAdminsApi adminsApi;
 
     // We use SimpleGuidCreatedOnVersionHolder, because we need to use an immutable version holder, to ensure we're
@@ -110,7 +114,6 @@ public class SurveyTest {
         TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
         sharedSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
-        adminSurveysApi = admin.getClient(SurveysApi.class);
     }
 
     @Before
@@ -125,7 +128,11 @@ public class SurveyTest {
         
         SurveysApi surveysApi = admin.getClient(SurveysApi.class);
         for (GuidCreatedOnVersionHolder oneSurvey : surveysToDelete) {
-            surveysApi.deleteSurvey(oneSurvey.getGuid(), oneSurvey.getCreatedOn(), true).execute();
+            try {
+                surveysApi.deleteSurvey(oneSurvey.getGuid(), oneSurvey.getCreatedOn(), true).execute();    
+            } catch (RuntimeException ex) {
+                LOG.error("Error deleting survey=" + oneSurvey + ": " + ex.getMessage(), ex);
+            }
         }
     }
 
@@ -167,7 +174,7 @@ public class SurveyTest {
         Exception thrownEx = null;
         try {
             adminsApi.adminChangeStudy(new SignIn().study("shared")).execute();
-            adminSurveysApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
@@ -672,7 +679,7 @@ public class SurveyTest {
         Survey retrieved = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
         assertTrue(retrieved.isDeleted());
         
-        adminSurveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
+        adminsApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
         surveysToDelete.remove(keys);
         
         try {
