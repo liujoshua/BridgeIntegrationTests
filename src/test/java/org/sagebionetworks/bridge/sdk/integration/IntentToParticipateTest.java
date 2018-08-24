@@ -3,8 +3,6 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.util.List;
-
 import org.joda.time.LocalDate;
 import org.junit.After;
 import org.junit.Before;
@@ -14,13 +12,10 @@ import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.IntentToParticipateApi;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.IntentToParticipate;
-import org.sagebionetworks.bridge.rest.model.NotificationProtocol;
-import org.sagebionetworks.bridge.rest.model.NotificationRegistration;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -92,15 +87,6 @@ public class IntentToParticipateTest {
             
             ConsentStatus status = session.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
             assertTrue(status.isConsented());
-
-            // This aso creates an SMS notification registration.
-            List<NotificationRegistration> registrationList = user.getClient(ForConsentedUsersApi.class)
-                    .getNotificationRegistrations().execute().body().getItems();
-            assertEquals(1, registrationList.size());
-
-            NotificationRegistration registration = registrationList.get(0);
-            assertEquals(NotificationProtocol.SMS, registration.getProtocol());
-            assertEquals(IntegTestUtils.PHONE.getNumber(), registration.getEndpoint());
         } finally {
             if (user != null) {
                 user.signOutAndDeleteUser();

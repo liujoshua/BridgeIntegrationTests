@@ -44,7 +44,8 @@ public class NotificationTopicTest {
     public void crud() throws IOException {
         NotificationsApi api = developer.getClient(NotificationsApi.class);
         
-        NotificationTopic topic = new NotificationTopic().name("Topic name").description("topic description");
+        NotificationTopic topic = new NotificationTopic().name("Topic name").shortName("shortname")
+                .description("topic description");
         GuidHolder keys = api.createNotificationTopic(topic).execute().body();
         
         NotificationTopic retrieved = api.getNotificationTopic(keys.getGuid()).execute().body();
@@ -78,7 +79,7 @@ public class NotificationTopicTest {
         NotificationsApi api = developer.getClient(NotificationsApi.class);
 
         // Create.
-        NotificationTopic topic = new NotificationTopic().name("topic").criteria(CRITERIA_1);
+        NotificationTopic topic = new NotificationTopic().name("topic").shortName("topic").criteria(CRITERIA_1);
         String topicGuid = api.createNotificationTopic(topic).execute().body().getGuid();
 
         topic = api.getNotificationTopic(topicGuid).execute().body();

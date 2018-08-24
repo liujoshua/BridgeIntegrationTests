@@ -59,25 +59,27 @@ public class SmsNotificationRegistrationTest {
 
         if (autoTopicGuid1 == null) {
             Criteria criteria = new Criteria().addAllOfGroupsItem("sdk-int-1");
-            NotificationTopic topicToCreate = new NotificationTopic().name("auto-topic-1").criteria(criteria);
+            NotificationTopic topicToCreate = new NotificationTopic().name("auto-topic-1").shortName("auto-1")
+                    .criteria(criteria);
             autoTopicGuid1 = notificationsApi.createNotificationTopic(topicToCreate).execute().body().getGuid();
         }
 
         if (autoTopicGuid2 == null) {
             Criteria criteria = new Criteria().addAllOfGroupsItem("sdk-int-2");
-            NotificationTopic topicToCreate = new NotificationTopic().name("auto-topic-2").criteria(criteria);
+            NotificationTopic topicToCreate = new NotificationTopic().name("auto-topic-2").shortName("auto-2")
+                    .criteria(criteria);
             autoTopicGuid2 = notificationsApi.createNotificationTopic(topicToCreate).execute().body().getGuid();
         }
 
         if (manualTopicGuid == null) {
-            NotificationTopic topicToCreate = new NotificationTopic().name("manual-topic");
+            NotificationTopic topicToCreate = new NotificationTopic().name("manual-topic").shortName("manual");
             manualTopicGuid = notificationsApi.createNotificationTopic(topicToCreate).execute().body().getGuid();
         }
 
         // Create phone user, initially with data group sdk-int-1.
         SignUp phoneSignUp = new SignUp().study(IntegTestUtils.STUDY_ID).consent(true).phone(IntegTestUtils.PHONE);
         phoneSignUp.addDataGroupsItem("sdk-int-1");
-        phoneUser = new TestUserHelper.Builder(SmsNotificationRegistrationTest.class).withConsentUser(false)
+        phoneUser = new TestUserHelper.Builder(SmsNotificationRegistrationTest.class).withConsentUser(true)
                 .withSignUp(phoneSignUp).createAndSignInUser();
     }
 
@@ -99,23 +101,24 @@ public class SmsNotificationRegistrationTest {
     public void test() throws Exception {
         ForConsentedUsersApi api = phoneUser.getClient(ForConsentedUsersApi.class);
 
-        // On consent, we create an SMS notification registration for the user.
-        ConsentSignature sig = new ConsentSignature().name("Eggplant McTester")
-                .birthdate(LocalDate.parse("1999-03-15")).scope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
-        api.createConsentSignature(IntegTestUtils.STUDY_ID, sig).execute();
+        // Create notification.
+        NotificationRegistration registration = new NotificationRegistration()
+                .protocol(NotificationProtocol.SMS).endpoint(IntegTestUtils.PHONE.getNumber());
+        String registrationGuid = api.createNotificationRegistration(registration).execute().body().getGuid();
 
-        // Use the list API to find that registration.
+        // Test get API.
+        registration = api.getNotificationRegistration(registrationGuid).execute().body();
+        assertEquals(registrationGuid, registration.getGuid());
+        assertEquals(NotificationProtocol.SMS, registration.getProtocol());
+        assertEquals(IntegTestUtils.PHONE.getNumber(), registration.getEndpoint());
+
+        // Test list API.
         List<NotificationRegistration> registrationList = api.getNotificationRegistrations().execute().body()
                 .getItems();
         assertEquals(1, registrationList.size());
 
-        NotificationRegistration registration = registrationList.get(0);
-        String registrationGuid = registration.getGuid();
-        assertEquals(NotificationProtocol.SMS, registration.getProtocol());
-        assertEquals(IntegTestUtils.PHONE.getNumber(), registration.getEndpoint());
-
-        // Test get API.
-        registration = api.getNotificationRegistration(registrationGuid).execute().body();
+        registration = registrationList.get(0);
+        assertEquals(registrationGuid, registration.getGuid());
         assertEquals(NotificationProtocol.SMS, registration.getProtocol());
         assertEquals(IntegTestUtils.PHONE.getNumber(), registration.getEndpoint());
 
@@ -152,21 +155,5 @@ public class SmsNotificationRegistrationTest {
         api.deleteNotificationRegistration(registrationGuid).execute();
         registrationList = api.getNotificationRegistrations().execute().body().getItems();
         assertTrue(registrationList.stream().noneMatch(t -> t.getGuid().equals(registrationGuid)));
-
-        // Test create API.
-        NotificationRegistration registration2 = new NotificationRegistration()
-                .protocol(NotificationProtocol.SMS).endpoint(IntegTestUtils.PHONE.getNumber());
-        String registrationGuid2 = api.createNotificationRegistration(registration2).execute().body().getGuid();
-
-        registration2 = api.getNotificationRegistration(registrationGuid2).execute().body();
-        assertEquals(NotificationProtocol.SMS, registration2.getProtocol());
-        assertEquals(IntegTestUtils.PHONE.getNumber(), registration2.getEndpoint());
-
-        // We automatically subscribed to autoTopic2 on create.
-        subscriptionsByGuid = api.getTopicSubscriptions(registrationGuid2).execute().body().getItems().stream()
-                .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed));
-        assertFalse(subscriptionsByGuid.get(autoTopicGuid1));
-        assertTrue(subscriptionsByGuid.get(autoTopicGuid2));
-        assertFalse(subscriptionsByGuid.get(manualTopicGuid));
     }
 }
