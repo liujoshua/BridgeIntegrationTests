@@ -194,14 +194,16 @@ public class UploadSchemaTest {
         assertTrue(foundRevSet.contains(1L));
         assertTrue(foundRevSet.contains(2L));
         assertTrue(foundRevSet.contains(3L));
-        
-        UploadSchemaList schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(true).execute().body();
-        List<Long> firstRevisions = schemasList.getItems().stream().map(UploadSchema::getRevision)
-                .collect(Collectors.toList());
-        
+
         // Step 5: Logically delete one of the schemas with the test schema ID
         Long mostRecentRev = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body().getRevision();
         adminApi.deleteUploadSchema(schemaId, mostRecentRev, false).execute();
+
+        // Get the schemas with and without the logically deleted schema. the version numbers of these schemas
+        // should be different as a result of including/excluding logically deleted versions
+        UploadSchemaList schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(true).execute().body();
+        List<Long> firstRevisions = schemasList.getItems().stream().map(UploadSchema::getRevision)
+                .collect(Collectors.toList());
         
         // This will return different version numbers, as more recent versions are deleted
         schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(false).execute().body();
@@ -209,7 +211,8 @@ public class UploadSchemaTest {
                 .collect(Collectors.toList());
 
         // Not equal because different revisions are now returned
-        assertNotEquals(firstRevisions, secondRevisions);
+        assertTrue(firstRevisions.contains(mostRecentRev));
+        assertFalse(secondRevisions.contains(mostRecentRev));
         
         // Only some are returned if deleted are excluded
         schemasList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId, false).execute().body();
@@ -223,7 +226,15 @@ public class UploadSchemaTest {
         UploadSchema aSchema = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body();
         assertTrue(aSchema.isDeleted());
         
-        // Physically delete all the schemas
+        // Physically delete this version of the schema and verify it's gone
+        adminApi.deleteUploadSchema(schemaId, mostRecentRev, true).execute();
+        try {
+            devUploadSchemasApi.getUploadSchema(schemaId, mostRecentRev).execute();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+        }
+        
+        // Now delete all revisions
         adminApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
 
         // Step 5a: Get API should now throw as schema does not exist at all
