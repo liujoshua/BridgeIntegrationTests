@@ -40,14 +40,10 @@ import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 
 public class AppConfigTest {
-    private static final Logger LOG = LoggerFactory.getLogger(AppConfigTest.class);
-    
     private TestUser developer;
     private TestUser admin;
 
@@ -55,7 +51,7 @@ public class AppConfigTest {
     private AppConfigsApi appConfigsApi;
     private UploadSchemasApi schemasApi;
     private SurveysApi surveysApi;
-    private List<GuidVersionHolder> configsToDelete = new ArrayList<>();
+    private List<String> configsToDelete = new ArrayList<>();
     
     private GuidCreatedOnVersionHolder surveyKeys;
     private UploadSchema schemaKeys;
@@ -73,12 +69,8 @@ public class AppConfigTest {
     
     @After
     public void after() throws Exception {
-        for (GuidVersionHolder config : configsToDelete) {
-            try {
-                adminApi.deleteAppConfig(config.getGuid(), true).execute();    
-            } catch (RuntimeException ex) {
-                LOG.error("Error deleting app config=" + config + ": " + ex.getMessage(), ex);
-            }
+        for (String oneConfigGuid : configsToDelete) {
+            adminApi.deleteAppConfig(oneConfigGuid, true).execute();    
         }
         if (surveyKeys != null) {
             admin.getClient(SurveysApi.class).deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true)
@@ -132,7 +124,7 @@ public class AppConfigTest {
         
         // Create
         GuidVersionHolder holder = appConfigsApi.createAppConfig(appConfig).execute().body();
-        configsToDelete.add(holder);
+        configsToDelete.add(holder.getGuid());
         
         AppConfig firstOneRetrieved = appConfigsApi.getAppConfig(holder.getGuid()).execute().body();
         Tests.setVariableValueInObject(firstOneRetrieved.getSurveyReferences().get(0), "href", null);
@@ -174,7 +166,7 @@ public class AppConfigTest {
         
         // Create a second app config
         GuidVersionHolder secondHolder = appConfigsApi.createAppConfig(appConfig).execute().body();
-        configsToDelete.add(secondHolder);
+        configsToDelete.add(secondHolder.getGuid());
         appConfig = appConfigsApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
         
         assertEquals(initialCount+2, appConfigsApi.getAppConfigs(false).execute().body().getItems().size());
@@ -226,7 +218,7 @@ public class AppConfigTest {
             appConfigsApi.getAppConfig(config.getGuid()).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
-            
+            configsToDelete.remove(config.getGuid());
         }
     }
     
@@ -249,7 +241,7 @@ public class AppConfigTest {
             appConfigsApi.getAppConfig(keys.getGuid()).execute();
             fail("Should have thrown an exception.");
         } catch(EntityNotFoundException e) {
-            
+            configsToDelete.remove(keys.getGuid());
         }
     }
     
