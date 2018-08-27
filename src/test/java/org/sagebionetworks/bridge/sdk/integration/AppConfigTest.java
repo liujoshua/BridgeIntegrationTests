@@ -40,10 +40,13 @@ import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 
 public class AppConfigTest {
+    private static final Logger LOG = LoggerFactory.getLogger(AppConfigTest.class);
     
     private TestUser developer;
     private TestUser admin;
@@ -71,7 +74,11 @@ public class AppConfigTest {
     @After
     public void after() throws Exception {
         for (GuidVersionHolder config : configsToDelete) {
-            adminApi.deleteAppConfig(config.getGuid(), true).execute();
+            try {
+                adminApi.deleteAppConfig(config.getGuid(), true).execute();    
+            } catch (RuntimeException ex) {
+                LOG.error("Error deleting app config=" + config + ": " + ex.getMessage(), ex);
+            }
         }
         if (surveyKeys != null) {
             admin.getClient(SurveysApi.class).deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true)
