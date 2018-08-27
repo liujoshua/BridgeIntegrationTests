@@ -90,13 +90,12 @@ public class SurveyTest {
     private static final String SURVEY_NAME = "dummy-survey-name";
     private static final String SURVEY_IDENTIFIER = "dummy-survey-identifier";
 
-    private static TestUser admin;
+    //private static TestUser admin;
     private static TestUser developer;
     private static TestUser user;
     private static TestUser worker;
     private static SharedModulesApi sharedDeveloperModulesApi;
     private static SurveysApi sharedSurveysApi;
-    //private static SurveysApi adminSurveysApi;
     private static ForAdminsApi adminsApi;
 
     // We use SimpleGuidCreatedOnVersionHolder, because we need to use an immutable version holder, to ensure we're
@@ -105,7 +104,7 @@ public class SurveyTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        admin = TestUserHelper.getSignedInAdmin();
+        TestUser admin = TestUserHelper.getSignedInAdmin();
         adminsApi = admin.getClient(ForAdminsApi.class);
         developer = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(SurveyTest.class, true);
@@ -182,7 +181,7 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
-            admin.getClient(SurveysApi.class).deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
             adminsApi.adminChangeStudy(new SignIn().study("api")).execute();
         }
         assertNotNull(thrownEx);
@@ -213,7 +212,7 @@ public class SurveyTest {
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
             adminsApi.adminChangeStudy(new SignIn().study("shared")).execute();
-            admin.getClient(SurveysApi.class).deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
             adminsApi.adminChangeStudy(new SignIn().study("api")).execute();
         }
         assertNotNull(thrownEx);
@@ -658,13 +657,12 @@ public class SurveyTest {
         
         // Should not be able to physically delete this survey
         try {
-            SurveysApi adminSurveysApi = admin.getClient(SurveysApi.class);
-            adminSurveysApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
+            adminsApi.deleteSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
             fail("Should have thrown an exception.");
         } catch(ConstraintViolationException e) {
             
         } finally {
-            admin.getClient(SchedulesApi.class).deleteSchedulePlan(holder.getGuid(), true).execute();
+            adminsApi.deleteSchedulePlan(holder.getGuid(), true).execute();
         }
     }
     
@@ -692,7 +690,7 @@ public class SurveyTest {
     
     @Test
     public void canCreateAndSaveVariousKindsOfBeforeRules() throws Exception {
-        Study study = adminsApi.getStudy(admin.getStudyId()).execute().body();
+        Study study = adminsApi.getUsersStudy().execute().body();
         String dataGroup = study.getDataGroups().get(0);
 
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
@@ -740,7 +738,7 @@ public class SurveyTest {
     
     @Test
     public void canCreateAndSaveVariousKindsOfAfterRules() throws Exception {
-        Study study = adminsApi.getStudy(admin.getStudyId()).execute().body();
+        Study study = adminsApi.getUsersStudy().execute().body();
         String dataGroup = study.getDataGroups().get(0);
 
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
@@ -782,7 +780,7 @@ public class SurveyTest {
     
     @Test
     public void displayActionsInAfterRulesValidated() throws Exception {
-        Study study = adminsApi.getStudy(admin.getStudyId()).execute().body();
+        Study study = adminsApi.getUsersStudy().execute().body();
         String dataGroup = study.getDataGroups().get(0);
 
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
@@ -844,7 +842,7 @@ public class SurveyTest {
         assertTrue(deletedSurvey.isDeleted());
         
         // Really delete it
-        admin.getClient(SurveysApi.class).deleteSurvey(keys2.getGuid(), keys2.getCreatedOn(), true).execute();
+        adminsApi.deleteSurvey(keys2.getGuid(), keys2.getCreatedOn(), true).execute();
         surveysToDelete.remove(keys2);
         
         try {

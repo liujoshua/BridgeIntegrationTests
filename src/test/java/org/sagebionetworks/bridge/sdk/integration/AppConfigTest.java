@@ -69,8 +69,8 @@ public class AppConfigTest {
     
     @After
     public void after() throws Exception {
-        for (String oneConfigGuid : configsToDelete) {
-            adminApi.deleteAppConfig(oneConfigGuid, true).execute();    
+        for (String configGuid : configsToDelete) {
+            adminApi.deleteAppConfig(configGuid, true).execute();
         }
         if (surveyKeys != null) {
             admin.getClient(SurveysApi.class).deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true)
