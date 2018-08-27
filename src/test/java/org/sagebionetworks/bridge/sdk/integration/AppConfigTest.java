@@ -51,7 +51,7 @@ public class AppConfigTest {
     private AppConfigsApi appConfigsApi;
     private UploadSchemasApi schemasApi;
     private SurveysApi surveysApi;
-    private List<GuidVersionHolder> configsToDelete = new ArrayList<>();
+    private List<String> configsToDelete = new ArrayList<>();
     
     private GuidCreatedOnVersionHolder surveyKeys;
     private UploadSchema schemaKeys;
@@ -69,8 +69,8 @@ public class AppConfigTest {
     
     @After
     public void after() throws Exception {
-        for (GuidVersionHolder config : configsToDelete) {
-            adminApi.deleteAppConfig(config.getGuid(), true).execute();
+        for (String configGuid : configsToDelete) {
+            adminApi.deleteAppConfig(configGuid, true).execute();
         }
         if (surveyKeys != null) {
             admin.getClient(SurveysApi.class).deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true)
@@ -124,7 +124,7 @@ public class AppConfigTest {
         
         // Create
         GuidVersionHolder holder = appConfigsApi.createAppConfig(appConfig).execute().body();
-        configsToDelete.add(holder);
+        configsToDelete.add(holder.getGuid());
         
         AppConfig firstOneRetrieved = appConfigsApi.getAppConfig(holder.getGuid()).execute().body();
         Tests.setVariableValueInObject(firstOneRetrieved.getSurveyReferences().get(0), "href", null);
@@ -166,7 +166,7 @@ public class AppConfigTest {
         
         // Create a second app config
         GuidVersionHolder secondHolder = appConfigsApi.createAppConfig(appConfig).execute().body();
-        configsToDelete.add(secondHolder);
+        configsToDelete.add(secondHolder.getGuid());
         appConfig = appConfigsApi.getAppConfig(appConfig.getGuid()).execute().body(); // get createdOn timestamp
         
         assertEquals(initialCount+2, appConfigsApi.getAppConfigs(false).execute().body().getItems().size());
@@ -218,7 +218,7 @@ public class AppConfigTest {
             appConfigsApi.getAppConfig(config.getGuid()).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
-            
+            configsToDelete.remove(config.getGuid());
         }
     }
     
@@ -241,7 +241,7 @@ public class AppConfigTest {
             appConfigsApi.getAppConfig(keys.getGuid()).execute();
             fail("Should have thrown an exception.");
         } catch(EntityNotFoundException e) {
-            
+            configsToDelete.remove(keys.getGuid());
         }
     }
     
