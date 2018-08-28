@@ -102,13 +102,13 @@ public class UserManagementTest {
         assertEquals(API, currentStudy.getIdentifier());
         
         adminApi = admin.getClient(ForAdminsApi.class);
-        adminApi.adminChangeStudy(new SignIn().study(SHARED)).execute().body();
+        adminApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute().body();
         
         currentStudy = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
         assertEquals(SHARED, currentStudy.getIdentifier());
         
         // now reverse the order
-        admin.signOut();
+        admin.signOut(); // so it's not necessary to switch back to the API study for future tests
         
         adminApi = admin.getClient(ForAdminsApi.class);
         signIn = new SignIn().study(SHARED)
@@ -119,7 +119,7 @@ public class UserManagementTest {
         assertEquals(SHARED, currentStudy.getIdentifier());
         
         adminApi = admin.getClient(ForAdminsApi.class);
-        adminApi.adminChangeStudy(new SignIn().study(API)).execute().body();
+        adminApi.adminChangeStudy(Tests.API_SIGNIN).execute().body();
         
         currentStudy = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
         assertEquals(API, currentStudy.getIdentifier());
