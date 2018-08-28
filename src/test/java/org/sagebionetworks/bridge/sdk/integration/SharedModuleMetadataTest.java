@@ -111,8 +111,12 @@ public class SharedModuleMetadataTest {
 
         // also delete created upload schema
         adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyId, schemaId).execute();
-        adminUploadSchemasApi.adminChangeStudy(new SignIn().study(studyId)).execute();
-        adminSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
+        try {
+            adminUploadSchemasApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            adminSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
+        } finally {
+            adminUploadSchemasApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+        }
     }
 
     @Test

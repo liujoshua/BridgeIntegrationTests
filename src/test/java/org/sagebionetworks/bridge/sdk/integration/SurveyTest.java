@@ -172,7 +172,7 @@ public class SurveyTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            adminsApi.adminChangeStudy(new SignIn().study("shared")).execute();
+            adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
@@ -182,7 +182,7 @@ public class SurveyTest {
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
-            adminsApi.adminChangeStudy(new SignIn().study("api")).execute();
+            adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -211,9 +211,9 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
-            adminsApi.adminChangeStudy(new SignIn().study("shared")).execute();
+            adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
-            adminsApi.adminChangeStudy(new SignIn().study("api")).execute();
+            adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
