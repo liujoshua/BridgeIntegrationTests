@@ -44,7 +44,6 @@ import org.sagebionetworks.bridge.util.IntegTestUtils;
 import com.google.common.collect.Lists;
 
 public class AppConfigTest {
-    
     private TestUser developer;
     private TestUser admin;
 
