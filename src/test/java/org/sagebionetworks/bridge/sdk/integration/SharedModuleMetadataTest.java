@@ -35,7 +35,6 @@ import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadataList;
 import org.sagebionetworks.bridge.rest.model.SharedModuleType;
-import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.user.TestUserHelper;
