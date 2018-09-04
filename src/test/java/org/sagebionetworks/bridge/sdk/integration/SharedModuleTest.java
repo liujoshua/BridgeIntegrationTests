@@ -22,6 +22,7 @@ import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.SharedModuleImportStatus;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.SharedModuleType;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyElement;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
@@ -29,6 +30,7 @@ import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class SharedModuleTest {
     private static final Logger LOG = LoggerFactory.getLogger(SharedModuleTest.class);
@@ -105,9 +107,12 @@ public class SharedModuleTest {
 
         if (sharedSurvey != null) {
             try {
+                adminApi.adminChangeStudy(new SignIn().study("shared")).execute();
                 adminApi.deleteSurvey(sharedSurvey.getGuid(), sharedSurvey.getCreatedOn(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting shared survey " + sharedSurvey.getGuid() + ": "  + ex.getMessage(), ex);
+            } finally {
+                adminApi.adminChangeStudy(new SignIn().study(IntegTestUtils.STUDY_ID)).execute();
             }
         }
     }

@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,7 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Criteria;
@@ -68,7 +70,7 @@ public class SubpopulationTest {
         SubpopulationsApi subpopulationsApi = developer.getClient(SubpopulationsApi.class);
         
         // Study has a default subpopulation
-        SubpopulationList subpops = subpopulationsApi.getSubpopulations().execute().body();
+        SubpopulationList subpops = subpopulationsApi.getSubpopulations(false).execute().body();
         int initialCount = subpops.getItems().size();
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));
         
@@ -99,22 +101,44 @@ public class SubpopulationTest {
         retrieved.setVersion(keys.getVersion());
         
         // Verify it is available in the list
-        subpops = subpopulationsApi.getSubpopulations().execute().body();
+        subpops = subpopulationsApi.getSubpopulations(false).execute().body();
         assertEquals((initialCount+1), subpops.getItems().size());
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));
         assertNotNull(findByName(subpops.getItems(), "Later Consent Group"));
 
-        // Delete it
+        // Delete it (logically)
         SubpopulationsApi adminSubpopApi = admin.getClient(SubpopulationsApi.class);
+        adminSubpopApi.deleteSubpopulation(retrieved.getGuid(), false).execute();
+        assertEquals(initialCount, subpopulationsApi.getSubpopulations(false).execute().body().getItems().size());
+        assertEquals(initialCount+1, subpopulationsApi.getSubpopulations(true).execute().body().getItems().size());
+        
+        // Try to delete it logically again, it fails
+        try {
+            adminSubpopApi.deleteSubpopulation(retrieved.getGuid(), false).execute();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+        }
+        
+        // Delete it (physically)
         adminSubpopApi.deleteSubpopulation(retrieved.getGuid(), true).execute();
-        assertEquals(initialCount, subpopulationsApi.getSubpopulations().execute().body().getItems().size());
+        assertEquals(initialCount, subpopulationsApi.getSubpopulations(true).execute().body().getItems().size());
         subpop1 = null;
         
-        // Cannot delete the default, however:
         try {
+            subpopulationsApi.getSubpopulation(retrieved.getGuid()).execute();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+        }
+    }
+    
+    @Test
+    public void cannotLogicallyDeleteDefaultSubpopulation() throws IOException {
+        SubpopulationsApi subpopulationsApi = developer.getClient(SubpopulationsApi.class);
+        try {
+            SubpopulationList subpops = subpopulationsApi.getSubpopulations(false).execute().body();
             Subpopulation defaultSubpop = findByName(subpops.getItems(), "Default Consent Group");
             assertNotNull(defaultSubpop);
-            adminSubpopApi.deleteSubpopulation(defaultSubpop.getGuid(), true).execute();
+            subpopulationsApi.deleteSubpopulation(defaultSubpop.getGuid(), false).execute();
             fail("Should have thrown an exception.");
         } catch(BadRequestException e) {
             assertEquals("Cannot delete the default subpopulation for a study.", e.getMessage());

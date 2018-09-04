@@ -65,7 +65,6 @@ import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
-import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
 import org.sagebionetworks.bridge.rest.model.Study;
