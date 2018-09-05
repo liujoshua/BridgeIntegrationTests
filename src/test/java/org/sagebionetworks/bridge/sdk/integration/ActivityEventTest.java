@@ -32,7 +32,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 public class ActivityEventTest {
     private static final String EVENT_KEY = "event1";
     private static final String TWO_WEEKS_AFTER_KEY = "2-weeks-after";
-    private static final String TWO_WEEKS_AFTER_PERIOD = "P2W";
+    private static final String TWO_WEEKS_AFTER_VALUE = "enrollment:P2W";
 
     private static TestUserHelper.TestUser developer;
     private static TestUserHelper.TestUser researcher;
@@ -59,7 +59,7 @@ public class ActivityEventTest {
 
         // Add automatic custom event.
         if (!study.getAutomaticCustomEvents().containsKey(TWO_WEEKS_AFTER_KEY)) {
-            study.putAutomaticCustomEventsItem(TWO_WEEKS_AFTER_KEY, TWO_WEEKS_AFTER_PERIOD);
+            study.putAutomaticCustomEventsItem(TWO_WEEKS_AFTER_KEY, TWO_WEEKS_AFTER_VALUE);
             updateStudy = true;
         }
 
