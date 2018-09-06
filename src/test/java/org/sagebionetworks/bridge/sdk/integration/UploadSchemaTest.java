@@ -50,7 +50,6 @@ public class UploadSchemaTest {
     // We put spaces in the schema ID to test URL encoding.
     private static final String TEST_SCHEMA_ID_PREFIX = "integration test schema ";
 
-    private static TestUserHelper.TestUser admin;
     private static TestUserHelper.TestUser developer;
     private static TestUserHelper.TestUser user;
     private static TestUserHelper.TestUser worker;
@@ -65,7 +64,7 @@ public class UploadSchemaTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        admin = TestUserHelper.getSignedInAdmin();
+        TestUserHelper.TestUser admin = TestUserHelper.getSignedInAdmin();
         developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
         worker = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.WORKER);
