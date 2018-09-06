@@ -31,6 +31,7 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ActivityType;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
@@ -43,6 +44,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -91,6 +93,14 @@ public class ScheduledActivityTest {
         admin = TestUserHelper.getSignedInAdmin();
         researcher = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Role.RESEARCHER);
         developer = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Role.DEVELOPER);
+        
+        StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+        Study study = studiesApi.getUsersStudy().execute().body();
+        if (!study.getAutomaticCustomEvents().containsKey("two_weeks_before_enrollment")) {
+            study.getAutomaticCustomEvents().put("two_weeks_before_enrollment", "enrollment:P-14D");
+            studiesApi.updateUsersStudy(study).execute().body();
+        }
+        
         user = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true);
 
         schedulePlansApi = developer.getClient(SchedulesApi.class);
@@ -191,7 +201,7 @@ public class ScheduledActivityTest {
     private void miniStudyBurstSchedule() throws Exception {
         Schedule schedule = new Schedule();
         schedule.setLabel("Mini Study Burst");
-        schedule.setEventId("two_weeks_before_enrollment,enrollment");
+        schedule.setEventId("custom:two_weeks_before_enrollment,enrollment");
         schedule.setExpires("P1M");
         schedule.setInterval("P1D");
         schedule.setScheduleType(ScheduleType.RECURRING);

@@ -110,10 +110,13 @@ public class SharedModuleMetadataTest {
         }
 
         // also delete created upload schema
-        adminUploadSchemasApi.adminChangeStudy(new SignIn().study(sharedStudyId)).execute();   
-        adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
-        adminUploadSchemasApi.adminChangeStudy(new SignIn().study(IntegTestUtils.STUDY_ID)).execute();
-        adminSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
+        adminUploadSchemasApi.deleteAllRevisionsOfUploadSchema(studyId, schemaId).execute();
+        try {
+            adminUploadSchemasApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            adminSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
+        } finally {
+            adminUploadSchemasApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+        }
     }
 
     @Test
