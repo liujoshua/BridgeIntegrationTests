@@ -62,8 +62,8 @@ public class SharedModuleMetadataTest {
     private static SurveysApi devSurveysApi;
     private static ForAdminsApi adminUploadSchemasApi;
     private static SurveysApi adminSurveysApi;
-    private static String studyId;
-
+    private static String sharedStudyId;
+    
     private String moduleId;
     private String schemaId;
     private String surveyGuid;
@@ -76,10 +76,10 @@ public class SharedModuleMetadataTest {
         apiDeveloperModulesApi = apiDeveloper.getClient(SharedModulesApi.class);
         TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
+        sharedStudyId = sharedDeveloper.getStudyId();
         nonAuthSharedModulesApi = TestUserHelper.getNonAuthClient(SharedModulesApi.class, IntegTestUtils.STUDY_ID);
         devUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
         devSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
-        studyId = sharedDeveloper.getStudyId();
         adminUploadSchemasApi = admin.getClient(ForAdminsApi.class);
         adminSurveysApi = admin.getClient(SurveysApi.class);
     }
