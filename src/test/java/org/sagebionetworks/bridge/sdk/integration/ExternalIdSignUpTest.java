@@ -30,8 +30,9 @@ import com.google.common.collect.ImmutableList;
 
 public class ExternalIdSignUpTest {
     
-    private String externalId;
-    private String otherExternalId;
+    private String externalId1;
+    private String externalId2;
+    private String externalId3;
     private TestUser admin;
     private TestUser devResearcher;
     private ExternalIdentifiersApi devIdsClient;
@@ -47,8 +48,9 @@ public class ExternalIdSignUpTest {
         
         changeExternalIdValidation(false);
         devResearcher = TestUserHelper.createAndSignInUser(ExternalIdSignUpTest.class, false, Role.DEVELOPER, Role.RESEARCHER);
-        externalId = Tests.randomIdentifier(ExternalIdSignUpTest.class);
-        otherExternalId = Tests.randomIdentifier(ExternalIdSignUpTest.class);
+        externalId1 = Tests.randomIdentifier(ExternalIdSignUpTest.class);
+        externalId2 = Tests.randomIdentifier(ExternalIdSignUpTest.class);
+        externalId3 = Tests.randomIdentifier(ExternalIdSignUpTest.class);
         devIdsClient = devResearcher.getClient(ExternalIdentifiersApi.class);
         researchersClient = devResearcher.getClient(ForResearchersApi.class);        
         authClient = TestUserHelper.getNonAuthClient(AuthenticationApi.class, IntegTestUtils.STUDY_ID);
@@ -82,34 +84,35 @@ public class ExternalIdSignUpTest {
     public void externalIdSignInTest() throws Exception {
         String userId1 = null;
         String userId2 = null;
+        String userId3 = null;
         try {
             // Enable validation, and an account with just an external ID will succeed
             changeExternalIdValidation(true);
-            devIdsClient.addExternalIds(ImmutableList.of(externalId, otherExternalId)).execute();
+            devIdsClient.addExternalIds(ImmutableList.of(externalId1, externalId2, externalId3)).execute();
             
             SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
-            signUp.externalId(externalId);
+            signUp.externalId(externalId1);
             authClient.signUp(signUp).execute();
             
-            ExternalIdentifierList list = devIdsClient.getExternalIds(null, 5, externalId, null).execute().body();
+            ExternalIdentifierList list = devIdsClient.getExternalIds(null, 5, externalId1, null).execute().body();
             assertEquals(1, list.getItems().size());
             assertTrue(list.getItems().get(0).isAssigned());
             
             // Prove you can sign in with this account (status = enabled)
-            SignIn signIn = new SignIn().externalId(externalId).study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
+            SignIn signIn = new SignIn().externalId(externalId1).study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
             try {
                 authClient.signInV4(signIn).execute().body();
                 fail("Should have thrown exception.");
             } catch(ConsentRequiredException e) {
                 userId1 = e.getSession().getId();
-                assertEquals(externalId, e.getSession().getExternalId());
+                assertEquals(externalId1, e.getSession().getExternalId());
                 assertEquals(AccountStatus.ENABLED, e.getSession().getStatus());
             }
             
             // Request an auto-generated password
-            GeneratedPassword generatedPassword = researchersClient.generatePassword(
-                    externalId, false).execute().body();
-            signIn.password(generatedPassword.getPassword());
+            GeneratedPassword generatedPassword1 = researchersClient.generatePassword(
+                    externalId1, false).execute().body();
+            signIn.password(generatedPassword1.getPassword());
             try {
                 authClient.signInV4(signIn).execute().body();
                 fail("Should have thrown exception.");
@@ -118,15 +121,34 @@ public class ExternalIdSignUpTest {
             }
             
             // Let's do that again, with otherExternalId, and ask for the account to be created.
-            GeneratedPassword otherGeneratedPassword = researchersClient.generatePassword(
-                    otherExternalId, true).execute().body();
-            SignIn otherSignIn = new SignIn().externalId(otherExternalId).study(IntegTestUtils.STUDY_ID)
-                    .password(otherGeneratedPassword.getPassword());
+            GeneratedPassword generatedPassword2 = researchersClient.generatePassword(
+                    externalId2, true).execute().body();
+            SignIn signIn2 = new SignIn().externalId(externalId2).study(IntegTestUtils.STUDY_ID)
+                    .password(generatedPassword2.getPassword());
             try {
-                authClient.signInV4(otherSignIn).execute().body();
+                authClient.signInV4(signIn2).execute().body();
                 fail("Should have thrown exception.");
             } catch(ConsentRequiredException e) {
                 userId2 = e.getSession().getId();
+                // still not consented, has succeeded
+            }
+            
+            // Third case: create an account with an externalId, then generate the password, and the 
+            // account should now be usable (enabled)
+            signUp = new SignUp();
+            signUp.externalId(externalId3);
+            signUp.study(IntegTestUtils.STUDY_ID);
+            authClient.signUp(signUp).execute();
+            
+            GeneratedPassword generatedPassword3 = researchersClient.generatePassword(
+                    externalId3, false).execute().body();
+            SignIn signIn3 = new SignIn().externalId(externalId3).study(IntegTestUtils.STUDY_ID)
+                    .password(generatedPassword3.getPassword());
+            try {
+                authClient.signInV4(signIn3).execute().body();
+                fail("Should have thrown exception.");
+            } catch(ConsentRequiredException e) {
+                userId3 = e.getSession().getId();
                 // still not consented, has succeeded
             }
             
@@ -134,7 +156,7 @@ public class ExternalIdSignUpTest {
             changeExternalIdValidation(false); 
             try {
                 signUp = new SignUp().study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
-                signUp.externalId(otherExternalId);
+                signUp.externalId(externalId2);
                 authClient.signUp(signUp).execute();
                 fail("Should have thrown exception.");
             } catch(UnauthorizedException e) {
@@ -148,7 +170,10 @@ public class ExternalIdSignUpTest {
             if (userId2 != null) {
                 adminClient.deleteUser(userId2).execute();
             }
-            devIdsClient.deleteExternalIds(ImmutableList.of(externalId, otherExternalId)).execute();
+            if (userId3 != null) {
+                adminClient.deleteUser(userId3).execute();
+            }
+            devIdsClient.deleteExternalIds(ImmutableList.of(externalId1, externalId2, externalId3)).execute();
         }
     }
 }

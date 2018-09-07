@@ -22,6 +22,7 @@ import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.SharedModuleImportStatus;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.SharedModuleType;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyElement;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
@@ -29,6 +30,7 @@ import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class SharedModuleTest {
     private static final Logger LOG = LoggerFactory.getLogger(SharedModuleTest.class);
@@ -42,6 +44,7 @@ public class SharedModuleTest {
     private UploadSchema localSchema;
     private Survey sharedSurvey;
     private Survey localSurvey;
+    private String studyIdShared;
 
     @BeforeClass
     public static void beforeClass() {
@@ -58,6 +61,7 @@ public class SharedModuleTest {
         localSchema = null;
         sharedSurvey = null;
         localSurvey = null;
+        studyIdShared = sharedDeveloper.getStudyId();
     }
 
     @After
@@ -77,7 +81,7 @@ public class SharedModuleTest {
 
         if (localSchema != null) {
             try {
-                adminApi.deleteAllRevisionsOfUploadSchema(apiDeveloper.getStudyId(), localSchema.getSchemaId())
+                adminApi.deleteAllRevisionsOfUploadSchema(localSchema.getSchemaId(), true)
                         .execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting schema " + localSchema.getSchemaId() + " in study " +
@@ -87,8 +91,9 @@ public class SharedModuleTest {
 
         if (sharedSchema != null) {
             try {
-                adminApi.deleteAllRevisionsOfUploadSchema(sharedDeveloper.getStudyId(), sharedSchema.getSchemaId())
-                        .execute();
+                adminApi.adminChangeStudy(new SignIn().study(studyIdShared)).execute();
+                adminApi.deleteAllRevisionsOfUploadSchema(sharedSchema.getSchemaId(), true).execute();
+                adminApi.adminChangeStudy(new SignIn().study(IntegTestUtils.STUDY_ID)).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting schema " + sharedSchema.getSchemaId() + " in study " +
                         sharedDeveloper.getStudyId() + ": "  + ex.getMessage(), ex);

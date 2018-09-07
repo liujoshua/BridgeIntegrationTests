@@ -39,7 +39,6 @@ import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.Lists;
 
@@ -77,7 +76,7 @@ public class AppConfigTest {
                     .execute();
         }
         if (schemaKeys != null) {
-            adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaKeys.getSchemaId()).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(schemaKeys.getSchemaId(), true).execute();
         }
         try {
             developer.signOutAndDeleteUser();

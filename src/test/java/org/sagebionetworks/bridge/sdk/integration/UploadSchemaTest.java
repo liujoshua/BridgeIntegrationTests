@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -13,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,6 +37,7 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
@@ -84,7 +87,7 @@ public class UploadSchemaTest {
     @After
     public void deleteSchemas() throws Exception {
         try {
-            adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaId).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
         }
@@ -127,7 +130,9 @@ public class UploadSchemaTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            adminApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+            adminApi.adminChangeStudy(new SignIn().study(studyIdShared)).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(retSchema.getSchemaId(), true).execute();
+            adminApi.adminChangeStudy(new SignIn().study(IntegTestUtils.STUDY_ID)).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
@@ -135,7 +140,9 @@ public class UploadSchemaTest {
             // finally delete shared module and uploaded schema
             sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
 
-            adminApi.deleteAllRevisionsOfUploadSchema(studyIdShared, retSchema.getSchemaId()).execute();
+            adminApi.adminChangeStudy(new SignIn().study(studyIdShared)).execute();
+            adminApi.deleteAllRevisionsOfUploadSchema(retSchema.getSchemaId(), true).execute();
+            adminApi.adminChangeStudy(new SignIn().study(IntegTestUtils.STUDY_ID)).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -175,7 +182,7 @@ public class UploadSchemaTest {
 
         // Step 4a: Use list API to verify all 3 versions are still present
         Set<Long> foundRevSet = new HashSet<>();
-        UploadSchemaList schemaList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId).execute().body();
+        UploadSchemaList schemaList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId, false).execute().body();
         //noinspection Convert2streamapi
         for (UploadSchema oneSchema : schemaList.getItems()) {
             assertSchemaFilledIn(oneSchema);
@@ -188,10 +195,49 @@ public class UploadSchemaTest {
         assertTrue(foundRevSet.contains(2L));
         assertTrue(foundRevSet.contains(3L));
 
-        // Step 5: Delete all schemas with the test schema ID
-        adminApi.deleteAllRevisionsOfUploadSchema(IntegTestUtils.STUDY_ID, schemaId).execute();
+        // Step 5: Logically delete one of the schemas with the test schema ID
+        Long mostRecentRev = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body().getRevision();
+        adminApi.deleteUploadSchema(schemaId, mostRecentRev, false).execute();
 
-        // Step 5a: Get API should throw
+        // Get the schemas with and without the logically deleted schema. the version numbers of these schemas
+        // should be different as a result of including/excluding logically deleted versions
+        UploadSchemaList schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(true).execute().body();
+        List<Long> firstRevisions = schemasList.getItems().stream().map(UploadSchema::getRevision)
+                .collect(Collectors.toList());
+        
+        // This will return different version numbers, as more recent versions are deleted
+        schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(false).execute().body();
+        List<Long> secondRevisions = schemasList.getItems().stream().map(UploadSchema::getRevision)
+                .collect(Collectors.toList());
+
+        // Not equal because different revisions are now returned
+        assertTrue(firstRevisions.contains(mostRecentRev));
+        assertFalse(secondRevisions.contains(mostRecentRev));
+        
+        // Only some are returned if deleted are excluded
+        schemasList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId, false).execute().body();
+        assertEquals(2, schemasList.getItems().size());
+        
+        // All are returned if deleted are included
+        schemasList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId, true).execute().body();
+        assertEquals(3, schemasList.getItems().size());
+        
+        // This still works, despite the fact the schema is logically deleted
+        UploadSchema aSchema = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body();
+        assertTrue(aSchema.isDeleted());
+        
+        // Physically delete this version of the schema and verify it's gone
+        adminApi.deleteUploadSchema(schemaId, mostRecentRev, true).execute();
+        try {
+            devUploadSchemasApi.getUploadSchema(schemaId, mostRecentRev).execute();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+        }
+        
+        // Now delete all revisions
+        adminApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
+
+        // Step 5a: Get API should now throw as schema does not exist at all
         Exception thrownEx = null;
         try {
             devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute();
@@ -202,7 +248,7 @@ public class UploadSchemaTest {
         assertNotNull(thrownEx);
 
         // Step 5b: Use list API to verify no schemas with this ID
-        UploadSchemaList schemaList2 = devUploadSchemasApi.getMostRecentUploadSchemas().execute().body();
+        UploadSchemaList schemaList2 = devUploadSchemasApi.getMostRecentUploadSchemas(false).execute().body();
         //noinspection Convert2streamapi
         for (UploadSchema oneSchema : schemaList2.getItems()) {
             assertSchemaFilledIn(oneSchema);
@@ -462,7 +508,7 @@ public class UploadSchemaTest {
 
     @Test(expected=UnauthorizedException.class)
     public void unauthorizedTest() throws Exception {
-        user.getClient(UploadSchemasApi.class).getMostRecentUploadSchemas().execute();
+        user.getClient(UploadSchemasApi.class).getMostRecentUploadSchemas(false).execute();
     }
 
     private UploadFieldDefinition field(String name, boolean required, UploadFieldType type) {
@@ -502,6 +548,7 @@ public class UploadSchemaTest {
         destination.setStudyId(source.getStudyId());
         destination.setSurveyCreatedOn(source.getSurveyCreatedOn());
         destination.setSurveyGuid(source.getSurveyGuid());
+        destination.setDeleted(source.isDeleted());
         destination.setVersion(source.getVersion());
         Tests.setVariableValueInObject(destination, "type", source.getType());
         return destination;
