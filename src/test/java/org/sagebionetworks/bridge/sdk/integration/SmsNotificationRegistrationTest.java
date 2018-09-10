@@ -9,11 +9,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.NotificationsApi;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.NotificationProtocol;
@@ -32,7 +35,9 @@ public class SmsNotificationRegistrationTest {
     private static String autoTopicGuid2;
     private static String manualTopicGuid;
     private static TestUserHelper.TestUser developer;
-    private static TestUserHelper.TestUser phoneUser;
+    private static TestUserHelper.TestUser researcher;
+
+    private TestUserHelper.TestUser phoneUser;
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -40,7 +45,8 @@ public class SmsNotificationRegistrationTest {
         // 1. auto-topic-1 (assigned to data group sdk-int-1)
         // 2. auto-topic-2 (assigned to data group sdk-int-2)
         // 3. manual-topic (not managed by criteria)
-        developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(SmsNotificationRegistrationTest.class, false,
+                Role.DEVELOPER);
         NotificationsApi notificationsApi = developer.getClient(NotificationsApi.class);
 
         List<NotificationTopic> topicList = notificationsApi.getNotificationTopics().execute().body().getItems();
@@ -73,6 +79,13 @@ public class SmsNotificationRegistrationTest {
             manualTopicGuid = notificationsApi.createNotificationTopic(topicToCreate).execute().body().getGuid();
         }
 
+        // Create researcher.
+        researcher = TestUserHelper.createAndSignInUser(SmsNotificationRegistrationTest.class, false,
+                Role.RESEARCHER);
+    }
+
+    @Before
+    public void createUser() throws Exception {
         // Create phone user, initially with data group sdk-int-1.
         SignUp phoneSignUp = new SignUp().study(IntegTestUtils.STUDY_ID).consent(true).phone(IntegTestUtils.PHONE);
         phoneSignUp.addDataGroupsItem("sdk-int-1");
@@ -81,21 +94,24 @@ public class SmsNotificationRegistrationTest {
     }
 
     @AfterClass
-    public static void deleteDeveloper() throws Exception {
+    public static void deleteDeveloperAndResearcher() throws Exception {
         if (developer != null) {
             developer.signOutAndDeleteUser();
         }
+        if (researcher != null) {
+            researcher.signOutAndDeleteUser();
+        }
     }
 
-    @AfterClass
-    public static void deletePhoneUser() throws Exception {
+    @After
+    public void deletePhoneUser() throws Exception {
         if (phoneUser != null) {
             phoneUser.signOutAndDeleteUser();
         }
     }
 
     @Test
-    public void test() throws Exception {
+    public void userCreateRegistration() throws Exception {
         ForConsentedUsersApi api = phoneUser.getClient(ForConsentedUsersApi.class);
 
         // Create notification.
@@ -152,5 +168,32 @@ public class SmsNotificationRegistrationTest {
         api.deleteNotificationRegistration(registrationGuid).execute();
         registrationList = api.getNotificationRegistrations().execute().body().getItems();
         assertTrue(registrationList.stream().noneMatch(t -> t.getGuid().equals(registrationGuid)));
+    }
+
+    @Test
+    public void researcherCreatesRegistration() throws Exception {
+        ForResearchersApi researchersApi = researcher.getClient(ForResearchersApi.class);
+        ForConsentedUsersApi userApi = phoneUser.getClient(ForConsentedUsersApi.class);
+        String userId = phoneUser.getUserId();
+
+        // Create registration.
+        researchersApi.createSmsNotificationRegistrationForParticipant(userId).execute();
+
+        // Verify the user's registration.
+        List<NotificationRegistration> registrationList = researchersApi
+                .getParticipantPushNotificationRegistrations(userId).execute().body().getItems();
+        assertEquals(1, registrationList.size());
+
+        NotificationRegistration registration = registrationList.get(0);
+        assertEquals(NotificationProtocol.SMS, registration.getProtocol());
+        assertEquals(IntegTestUtils.PHONE.getNumber(), registration.getEndpoint());
+
+        // Verify auto-subscriptions.
+        Map<String, Boolean> subscriptionsByGuid = userApi.getTopicSubscriptions(registration.getGuid()).execute()
+                .body().getItems().stream()
+                .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed));
+        assertTrue(subscriptionsByGuid.get(autoTopicGuid1));
+        assertFalse(subscriptionsByGuid.get(autoTopicGuid2));
+        assertFalse(subscriptionsByGuid.get(manualTopicGuid));
     }
 }
