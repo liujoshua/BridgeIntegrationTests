@@ -169,6 +169,8 @@ public class ReauthenticationTest {
             // rotates without waiting
             Thread.sleep(REAUTH_CACHE_IN_MILLIS);
             // Cannot sign out, it destroys the token... but this will still reauth and rotate the token.
+            // Pause for 16 seconds... becuase we're caching this value
+            Thread.sleep(16000);
             
             SignIn signIn = new SignIn().study(testUser.getStudyId()).email(testUser.getEmail()).reauthToken(reauthToken);
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);

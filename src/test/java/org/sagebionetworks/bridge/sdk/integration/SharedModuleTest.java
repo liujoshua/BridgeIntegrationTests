@@ -44,6 +44,7 @@ public class SharedModuleTest {
     private UploadSchema localSchema;
     private Survey sharedSurvey;
     private Survey localSurvey;
+    private String studyIdShared;
 
     @BeforeClass
     public static void beforeClass() {
@@ -60,6 +61,7 @@ public class SharedModuleTest {
         localSchema = null;
         sharedSurvey = null;
         localSurvey = null;
+        studyIdShared = sharedDeveloper.getStudyId();
     }
 
     @After
@@ -79,7 +81,7 @@ public class SharedModuleTest {
 
         if (localSchema != null) {
             try {
-                adminApi.deleteAllRevisionsOfUploadSchema(apiDeveloper.getStudyId(), localSchema.getSchemaId())
+                adminApi.deleteAllRevisionsOfUploadSchema(localSchema.getSchemaId(), true)
                         .execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting schema " + localSchema.getSchemaId() + " in study " +
@@ -89,8 +91,9 @@ public class SharedModuleTest {
 
         if (sharedSchema != null) {
             try {
-                adminApi.deleteAllRevisionsOfUploadSchema(sharedDeveloper.getStudyId(), sharedSchema.getSchemaId())
-                        .execute();
+                adminApi.adminChangeStudy(new SignIn().study(studyIdShared)).execute();
+                adminApi.deleteAllRevisionsOfUploadSchema(sharedSchema.getSchemaId(), true).execute();
+                adminApi.adminChangeStudy(new SignIn().study(IntegTestUtils.STUDY_ID)).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting schema " + sharedSchema.getSchemaId() + " in study " +
                         sharedDeveloper.getStudyId() + ": "  + ex.getMessage(), ex);
