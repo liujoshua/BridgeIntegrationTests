@@ -14,7 +14,6 @@ import org.joda.time.LocalDate;
 import org.joda.time.format.ISODateTimeFormat;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.rest.api.ConsentsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
@@ -359,15 +358,13 @@ public class ConsentTest {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         String userId = testUser.getSession().getId();
         try {
-            ConsentsApi consentsApi = testUser.getClient(ConsentsApi.class);
+            ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
             
             Withdrawal withdrawal = new Withdrawal().reason("Reason for withdrawal.");
-            
-            Message message = consentsApi.withdrawFromStudy(withdrawal).execute().body();
-            assertEquals("Signed out.", message.getMessage());
+            Message message = participantsApi.withdrawParticipantFromStudy(userId, withdrawal).execute().body();
+            assertEquals("User has been withdrawn from the study.", message.getMessage());
             
             // Retrieve the account and verify it has been processed correctly.
-            ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
             StudyParticipant theUser = participantsApi.getParticipantById(userId, true).execute().body();
             assertEquals(SharingScope.NO_SHARING, theUser.getSharingScope());
             assertFalse(theUser.isNotifyByEmail());
