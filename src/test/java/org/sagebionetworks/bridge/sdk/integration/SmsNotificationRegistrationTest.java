@@ -49,7 +49,7 @@ public class SmsNotificationRegistrationTest {
                 Role.DEVELOPER);
         NotificationsApi notificationsApi = developer.getClient(NotificationsApi.class);
 
-        List<NotificationTopic> topicList = notificationsApi.getNotificationTopics().execute().body().getItems();
+        List<NotificationTopic> topicList = notificationsApi.getNotificationTopics(false).execute().body().getItems();
         for (NotificationTopic oneTopic : topicList) {
             if ("auto-topic-1".equals(oneTopic.getName())) {
                 autoTopicGuid1 = oneTopic.getGuid();
