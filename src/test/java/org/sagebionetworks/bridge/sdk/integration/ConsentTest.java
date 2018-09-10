@@ -2,9 +2,12 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -12,24 +15,29 @@ import org.joda.time.LocalDate;
 import org.joda.time.format.ISODateTimeFormat;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ConsentsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
+import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
+import org.sagebionetworks.bridge.rest.model.UserConsentHistory;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
+import java.util.List;
 import java.util.Map;
 
 @Category(IntegrationSmokeTest.class)
@@ -317,7 +325,7 @@ public class ConsentTest {
     }
     
     @Test
-    public void canWithdrawFromAllConsentsInStudy() throws Exception {
+    public void canWithdrawFromStudy() throws Exception {
         TestUser researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.RESEARCHER);
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
@@ -329,23 +337,56 @@ public class ConsentTest {
             
             assertTrue(RestUtils.isUserConsented(session));
             
-            ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
             Withdrawal withdrawal = new Withdrawal().reason("I'm just a test user.");
-            
-            participantsApi.withdrawParticipantFromStudy(session.getId(), withdrawal).execute();
+            testUser.getClient(ForConsentedUsersApi.class).withdrawFromStudy(withdrawal).execute();
 
-            testUser.signOut();
             try {
                 testUser.signInAgain();
-            } catch(ConsentRequiredException e) {
-                assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
-                assertFalse(RestUtils.isUserConsented(e.getSession()));
+                fail("Should have thrown exception");
+            } catch(EntityNotFoundException e) {
             }
         } finally {
             try {
                 testUser.signOutAndDeleteUser();    
             } finally {
                 researchUser.signOutAndDeleteUser();    
+            }
+        }
+    }
+    
+    @Test
+    public void canWithdrawParticipantFromStudy() throws Exception {
+        TestUser researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.RESEARCHER);
+        TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
+        String userId = testUser.getSession().getId();
+        try {
+            ConsentsApi consentsApi = testUser.getClient(ConsentsApi.class);
+            
+            Withdrawal withdrawal = new Withdrawal().reason("Reason for withdrawal.");
+            
+            Message message = consentsApi.withdrawFromStudy(withdrawal).execute().body();
+            assertEquals("Signed out.", message.getMessage());
+            
+            // Retrieve the account and verify it has been processed correctly.
+            ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
+            StudyParticipant theUser = participantsApi.getParticipantById(userId, true).execute().body();
+            assertEquals(SharingScope.NO_SHARING, theUser.getSharingScope());
+            assertFalse(theUser.isNotifyByEmail());
+            assertNull(theUser.getEmail());
+            assertFalse(theUser.isEmailVerified());
+            assertNull(theUser.getPhone());
+            assertFalse(theUser.isPhoneVerified());
+            assertNull(theUser.getExternalId());
+            for (List<UserConsentHistory> histories : theUser.getConsentHistories().values()) {
+                for (UserConsentHistory oneHistory : histories) {
+                    assertNotNull(oneHistory.getWithdrewOn());
+                }
+            }
+        } finally {
+            try {
+                testUser.signOutAndDeleteUser();    
+            } finally {
+                researchUser.signOutAndDeleteUser();
             }
         }
     }
