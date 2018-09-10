@@ -110,9 +110,12 @@ public class SharedModuleTest {
 
         if (sharedSurvey != null) {
             try {
+                adminApi.adminChangeStudy(new SignIn().study("shared")).execute();
                 adminApi.deleteSurvey(sharedSurvey.getGuid(), sharedSurvey.getCreatedOn(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting shared survey " + sharedSurvey.getGuid() + ": "  + ex.getMessage(), ex);
+            } finally {
+                adminApi.adminChangeStudy(new SignIn().study(IntegTestUtils.STUDY_ID)).execute();
             }
         }
     }
