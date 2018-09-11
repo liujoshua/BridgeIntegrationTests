@@ -23,8 +23,6 @@ import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
-import com.google.common.collect.ImmutableList;
-
 @SuppressWarnings("ConstantConditions")
 public class NotificationTopicTest {
     private static final Criteria CRITERIA_1 = new Criteria().addAllOfGroupsItem("sdk-int-1");
