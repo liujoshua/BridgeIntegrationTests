@@ -24,6 +24,7 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
@@ -426,9 +427,9 @@ public class ParticipantsTest {
             participantsApi.withdrawParticipantFromStudy(userId, withdrawal).execute();
             
             user.signInAgain();
-            fail("Should have thrown consent exception");
-        } catch(ConsentRequiredException e) {
-            assertFalse(RestUtils.isUserConsented(e.getSession()));
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+            // User can no longer sign in. 
         } finally {
             user.signOutAndDeleteUser();
         }
