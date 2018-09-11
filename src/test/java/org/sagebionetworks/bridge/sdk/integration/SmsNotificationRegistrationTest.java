@@ -16,7 +16,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
+import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.NotificationsApi;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.NotificationProtocol;
@@ -172,15 +172,12 @@ public class SmsNotificationRegistrationTest {
 
     @Test
     public void researcherCreatesRegistration() throws Exception {
-        ForResearchersApi researchersApi = researcher.getClient(ForResearchersApi.class);
-        ForConsentedUsersApi userApi = phoneUser.getClient(ForConsentedUsersApi.class);
-        String userId = phoneUser.getUserId();
-
         // Create registration.
-        researchersApi.createSmsNotificationRegistrationForParticipant(userId).execute();
+        String userId = phoneUser.getUserId();
+        researcher.getClient(InternalApi.class).createSmsRegistration(userId).execute();
 
         // Verify the user's registration.
-        List<NotificationRegistration> registrationList = researchersApi
+        List<NotificationRegistration> registrationList = researcher.getClient(NotificationsApi.class)
                 .getParticipantPushNotificationRegistrations(userId).execute().body().getItems();
         assertEquals(1, registrationList.size());
 
@@ -189,8 +186,8 @@ public class SmsNotificationRegistrationTest {
         assertEquals(IntegTestUtils.PHONE.getNumber(), registration.getEndpoint());
 
         // Verify auto-subscriptions.
-        Map<String, Boolean> subscriptionsByGuid = userApi.getTopicSubscriptions(registration.getGuid()).execute()
-                .body().getItems().stream()
+        Map<String, Boolean> subscriptionsByGuid = phoneUser.getClient(ForConsentedUsersApi.class)
+                .getTopicSubscriptions(registration.getGuid()).execute().body().getItems().stream()
                 .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed));
         assertTrue(subscriptionsByGuid.get(autoTopicGuid1));
         assertFalse(subscriptionsByGuid.get(autoTopicGuid2));
