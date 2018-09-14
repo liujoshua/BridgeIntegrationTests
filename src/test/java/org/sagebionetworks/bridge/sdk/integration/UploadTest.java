@@ -26,6 +26,8 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.RecordExportStatusRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.SynapseExporterStatus;
 import org.sagebionetworks.bridge.rest.model.Upload;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
@@ -220,7 +222,8 @@ public class UploadTest {
         }
         // userClient.upload marks the download complete
         // marking an already completed download as complete again should succeed (and be a no-op)
-        worker.getClient(ForWorkersApi.class).completeUploadSession(session.getId(), false).execute();
+        worker.getClient(ForWorkersApi.class).completeUploadSession(session.getId(), false, false)
+                .execute();
 
         validateUploadValidationStatus(uploadId, status);
 
@@ -239,23 +242,31 @@ public class UploadTest {
     }
 
     @Test
-    public void synchronousMode() throws Exception {
+    public void synchronousModeAndRedrive() throws Exception {
         // use V2 Generic Survey, since that's the most straightforward to parse and validate.
         File file = resolveFilePath("generic-survey-encrypted");
 
-        // Upload the file.
+        // Set user sharing scope, just to test metadata in upload validation.
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+        StudyParticipant participant = usersApi.getUsersParticipantRecord().execute().body();
+        participant.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
+        usersApi.updateUsersParticipantRecord(participant).execute();
+
+        // Upload the file.
         UploadRequest request = RestUtils.makeUploadRequestForFile(file);
         UploadSession session = usersApi.requestUploadSession(request).execute().body();
         RestUtils.uploadToS3(file, session.getUrl());
         String uploadId = session.getId();
 
         // Complete upload in synchronous mode.
-        UploadValidationStatus status = usersApi.completeUploadSession(uploadId, true).execute().body();
+        UploadValidationStatus status = usersApi.completeUploadSession(uploadId, true, false)
+                .execute().body();
         validateUploadValidationStatus(uploadId, status);
 
         // Validate the record data.
         HealthDataRecord record = status.getRecord();
+        assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, record.getUserSharingScope());
+
         Map<String, Object> data = RestUtils.toType(record.getData(), Map.class);
         assertEquals(2, data.size());
         assertEquals("Yes", data.get("AAA"));
@@ -275,6 +286,21 @@ public class UploadTest {
         assertNotNull(retrieved1.getHealthData());
         assertNotNull(retrieved2.getHealthData());
         assertEquals(retrieved1, retrieved2);
+
+        // Change the user's sharing scope. This is the simplest change we can make that will be reflected when we
+        // redrive the upload.
+        participant.setSharingScope(SharingScope.SPONSORS_AND_PARTNERS);
+        usersApi.updateUsersParticipantRecord(participant).execute();
+
+        // Redrive.
+        UploadValidationStatus status2 = usersApi.completeUploadSession(uploadId, true, true)
+                .execute().body();
+        validateUploadValidationStatus(uploadId, status2);
+
+        // Validate.
+        HealthDataRecord record2 = status2.getRecord();
+        assertEquals(SharingScope.SPONSORS_AND_PARTNERS, record2.getUserSharingScope());
+        assertEquals(record.getData(), record2.getData());
     }
 
     // returns the path relative to the root of the project
