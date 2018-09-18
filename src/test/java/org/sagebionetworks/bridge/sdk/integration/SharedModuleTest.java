@@ -72,7 +72,7 @@ public class SharedModuleTest {
 
         if (module != null) {
             try {
-                sharedDeveloper.getClient(SharedModulesApi.class).deleteMetadataByIdAllVersions(module.getId())
+                sharedDeveloper.getClient(SharedModulesApi.class).deleteMetadataByIdAllVersions(module.getId(), true)
                         .execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting module " + module.getId() + ": "  + ex.getMessage(), ex);

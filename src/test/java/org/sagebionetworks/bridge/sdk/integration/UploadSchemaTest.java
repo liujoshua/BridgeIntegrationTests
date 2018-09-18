@@ -137,7 +137,7 @@ public class UploadSchemaTest {
             thrownEx = e;
         } finally {
             // finally delete shared module and uploaded schema
-            sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId).execute();
+            sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
 
             adminApi.adminChangeStudy(new SignIn().study(studyIdShared)).execute();
             adminApi.deleteAllRevisionsOfUploadSchema(retSchema.getSchemaId(), true).execute();
