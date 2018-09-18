@@ -242,7 +242,10 @@ public class UploadTest {
     }
 
     @Test
-    public void synchronousModeAndRedrive() throws Exception {
+    public void miscTests() throws Exception {
+        // This test tests synchronous mode, redrive, and get upload by upload ID / record ID APIs. They're all lumped
+        // into a single method to avoid having to set up an upload multiple times.
+
         // use V2 Generic Survey, since that's the most straightforward to parse and validate.
         File file = resolveFilePath("generic-survey-encrypted");
 
@@ -286,6 +289,16 @@ public class UploadTest {
         assertNotNull(retrieved1.getHealthData());
         assertNotNull(retrieved2.getHealthData());
         assertEquals(retrieved1, retrieved2);
+
+        // Worker can also retrieve this records.
+        ForWorkersApi workerApi = worker.getClient(ForWorkersApi.class);
+
+        Upload retrieved3 = workerApi.getUploadById(status.getId()).execute().body();
+        Upload retrieved4 = workerApi.getUploadByRecordId(record.getId()).execute().body();
+
+        assertNotNull(retrieved3.getHealthData());
+        assertNotNull(retrieved4.getHealthData());
+        assertEquals(retrieved3, retrieved4);
 
         // Change the user's sharing scope. This is the simplest change we can make that will be reflected when we
         // redrive the upload.
