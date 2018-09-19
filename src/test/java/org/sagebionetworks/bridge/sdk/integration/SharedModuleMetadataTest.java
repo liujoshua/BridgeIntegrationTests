@@ -19,7 +19,6 @@ import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,7 +118,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test
-    @Ignore
     public void testNonAuthUserGetAndQueryCalls() throws Exception {
         // first create a test metadata
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(1)
@@ -150,7 +148,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test(expected = BadRequestException.class)
-    @Ignore
     public void testCreateWithoutSchema() throws Exception {
         String failedSchemaId = "failed-schema-id-" + RandomStringUtils.randomAlphabetic(4);
         SharedModuleMetadata metadataToFail = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
@@ -160,7 +157,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test(expected = BadRequestException.class)
-    @Ignore
     public void testCreateWithoutSurvey() throws Exception {
         String failedSurveyId = "failed-survey-id-" + RandomStringUtils.randomAlphabetic(4);
         SharedModuleMetadata metadataToFail = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
@@ -170,7 +166,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test(expected = BadRequestException.class)
-    @Ignore
     public void testUpdateWithoutExistSchema() throws Exception {
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME).version(1)
                 .schemaId(schemaId).schemaRevision(SCHEMA_REV);
@@ -184,7 +179,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test(expected = BadRequestException.class)
-    @Ignore
     public void testUpdateWithoutExistSurvey() throws Exception {
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME).version(1)
                 .surveyCreatedOn(surveyCreatedOn.toString()).surveyGuid(surveyGuid);
@@ -198,7 +192,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test
-    @Ignore
     public void crud() throws Exception {
         // Create a bunch of versions. This test various cases of version auto-incrementing and explicitly setting
         // versions.
@@ -294,7 +287,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test
-    @Ignore
     public void schemaModule() throws Exception {
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
                 .schemaId(schemaId).schemaRevision(SCHEMA_REV);
@@ -309,7 +301,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test
-    @Ignore
     public void surveyModule() throws Exception {
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).name(MODULE_NAME)
                 .surveyCreatedOn(surveyCreatedOn.toString()).surveyGuid(surveyGuid);
@@ -324,7 +315,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test
-    @Ignore
     public void optionalParams() throws Exception {
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(2).name(MODULE_NAME)
                 .licenseRestricted(true).notes(NOTES).os(OS).published(true).schemaId(schemaId)
@@ -346,7 +336,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test
-    @Ignore
     public void queryAll() throws Exception {
         // Create a few modules for the test
         SharedModuleMetadata moduleAV1ToCreate = new SharedModuleMetadata().id(moduleId + "A").version(1)
@@ -471,7 +460,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test
-    @Ignore
     public void queryById() throws Exception {
         // Note that full query logic is tested in queryAll(). This tests an abbreviated set of logic to make sure
         // everything is plumbed through correctly.
@@ -540,32 +528,27 @@ public class SharedModuleMetadataTest {
     }
 
     @Test(expected = EntityNotFoundException.class)
-    @Ignore
     public void deleteByIdAllVersions404() throws Exception {
         adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
     }
 
     @Test(expected = EntityNotFoundException.class)
-    @Ignore
     public void deleteByIdAndVersion404() throws Exception {
         adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
         adminsApi.deleteMetadataByIdAndVersion(moduleId, 1, true).execute();
     }
 
     @Test(expected = EntityNotFoundException.class)
-    @Ignore
     public void getByIdAndVersion404() throws Exception {
         sharedDeveloperModulesApi.getMetadataByIdAndVersion(moduleId, 1).execute();
     }
 
     @Test(expected = EntityNotFoundException.class)
-    @Ignore
     public void getByIdLatest404() throws Exception {
         sharedDeveloperModulesApi.getMetadataByIdLatestVersion(moduleId).execute();
     }
 
     @Test(expected = EntityNotFoundException.class)
-    @Ignore
     public void update404() throws Exception {
         SharedModuleMetadata metadata = new SharedModuleMetadata().id(moduleId).version(1).name(MODULE_NAME)
                 .schemaId(schemaId).schemaRevision(SCHEMA_REV);
@@ -573,7 +556,6 @@ public class SharedModuleMetadataTest {
     }
 
     @Test(expected = UnauthorizedException.class)
-    @Ignore
     public void nonSharedDeveloperCantCreate() throws Exception {
         SharedModuleMetadata metadata = new SharedModuleMetadata().id(moduleId).version(1).name(MODULE_NAME)
                 .schemaId(schemaId).schemaRevision(SCHEMA_REV);
@@ -581,19 +563,16 @@ public class SharedModuleMetadataTest {
     }
 
     @Test(expected = UnauthorizedException.class)
-    @Ignore
     public void nonSharedDeveloperCantDeleteByIdAllVersions() throws Exception {
         adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
     }
 
     @Test(expected = UnauthorizedException.class)
-    @Ignore
     public void nonSharedDeveloperCantDeleteByIdAndVersion() throws Exception {
         adminsApi.deleteMetadataByIdAndVersion(moduleId, 1, true).execute();
     }
 
     @Test(expected = UnauthorizedException.class)
-    @Ignore
     public void nonSharedDeveloperCantUpdate() throws Exception {
         SharedModuleMetadata metadata = new SharedModuleMetadata().id(moduleId).version(1).name(MODULE_NAME)
                 .schemaId(schemaId).schemaRevision(SCHEMA_REV);
@@ -604,20 +583,16 @@ public class SharedModuleMetadataTest {
     public void logicalDelete() throws Exception {
         try {
             sharedDeveloperModulesApi.createMetadata(new SharedModuleMetadata().id(moduleId + "A").version(1)
-                    .name("Module A Version 1").notes("Module A Version 1").schemaId(schemaId).published(true)
-                    .os("iOS").schemaRevision(SCHEMA_REV).addTagsItem("foo")).execute().body();
+                    .name("Module A Version 1").schemaId(schemaId).schemaRevision(SCHEMA_REV)).execute().body();
     
             sharedDeveloperModulesApi.createMetadata(new SharedModuleMetadata().id(moduleId + "A").version(2)
-                    .name("Module A Version 2").schemaId(schemaId).schemaRevision(SCHEMA_REV).published(false)
-                    .os("iOS")).execute().body();
+                    .name("Module A Version 2").schemaId(schemaId).schemaRevision(SCHEMA_REV)).execute().body();
     
             sharedDeveloperModulesApi.createMetadata(new SharedModuleMetadata().id(moduleId + "B").version(1)
-                    .name("Module B Version 1").schemaId(schemaId).schemaRevision(SCHEMA_REV).published(true)
-                    .os("Android").notes("Android").addTagsItem("bar")).execute().body();
+                    .name("Module B Version 1").schemaId(schemaId).schemaRevision(SCHEMA_REV)).execute().body();
     
             sharedDeveloperModulesApi.createMetadata(new SharedModuleMetadata().id(moduleId + "B").version(2)
-                    .name("Module B Version 2").schemaId(schemaId).schemaRevision(SCHEMA_REV).published(true)
-                    .os("Android").notes("Android")).execute().body();
+                    .name("Module B Version 2").schemaId(schemaId).schemaRevision(SCHEMA_REV)).execute().body();
             
             // delete one of the As and all of the Bs logically
             sharedDeveloperModulesApi.deleteMetadataByIdAndVersion(moduleId + "A", 1, false).execute();
@@ -630,26 +605,22 @@ public class SharedModuleMetadataTest {
                     null, null, null, null, false).execute().body();
             assertEquals(1, list.getItems().size());
             
-            list = sharedDeveloperModulesApi.queryMetadataById(moduleId + "A", null, null, null, null, null, true)
+            list = sharedDeveloperModulesApi.queryMetadataById(moduleId + "A", false, false, null, null, null, true)
                     .execute().body();
             assertEquals(2, list.getItems().size());
             
-            list = sharedDeveloperModulesApi
-                    .queryMetadataById(moduleId + "B", null, null, null, null, null, false).execute().body();
+            list = sharedDeveloperModulesApi.queryMetadataById(moduleId + "B", false, false, null, null, null, false)
+                    .execute().body();
             assertEquals(0, list.getItems().size());
             
-            list = sharedDeveloperModulesApi.queryMetadataById(moduleId + "B", null, null, null, null, null, true)
+            list = sharedDeveloperModulesApi.queryMetadataById(moduleId + "B", false, false, null, null, null, true)
                     .execute().body();
             assertEquals(2, list.getItems().size());
+
         } finally {
-            try {
-                adminsApi.deleteMetadataByIdAllVersions(moduleId + "A", true).execute();    
-            } catch(Exception e) {
-            }
-            try {
-                adminsApi.deleteMetadataByIdAllVersions(moduleId + "B", true).execute();    
-            } catch(Exception e) {
-            }
+            adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            adminsApi.deleteMetadataByIdAllVersions(moduleId + "A", true).execute();
+            adminsApi.deleteMetadataByIdAllVersions(moduleId + "B", true).execute();
         }
     }
 }

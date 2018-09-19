@@ -178,8 +178,7 @@ public class SurveyTest {
             thrownEx = e;
         } finally {
             // finally delete shared module and uploaded schema
-            sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
-
+            adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
             adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
@@ -208,9 +207,8 @@ public class SurveyTest {
             thrownEx = e;
         } finally {
             // finally delete shared module and uploaded schema
-            sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
-
             adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
             adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }

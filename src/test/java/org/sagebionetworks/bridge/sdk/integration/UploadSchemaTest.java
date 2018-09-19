@@ -36,7 +36,6 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
-import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
@@ -57,7 +56,6 @@ public class UploadSchemaTest {
     private static ForWorkersApi workerUploadSchemasApi;
     private static SharedModulesApi sharedDeveloperModulesApi;
     private static UploadSchemasApi sharedUploadSchemasApi;
-    private static String studyIdShared;
 
     private String schemaId;
 
@@ -74,8 +72,6 @@ public class UploadSchemaTest {
         devUploadSchemasApi = developer.getClient(UploadSchemasApi.class);
         sharedUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
         workerUploadSchemasApi = worker.getClient(ForWorkersApi.class);
-
-        studyIdShared = sharedDeveloper.getStudyId();
     }
 
     @Before
@@ -129,19 +125,19 @@ public class UploadSchemaTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            adminApi.adminChangeStudy(new SignIn().study(studyIdShared)).execute();
+            adminApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             adminApi.deleteAllRevisionsOfUploadSchema(retSchema.getSchemaId(), true).execute();
-            adminApi.adminChangeStudy(new SignIn().study(IntegTestUtils.STUDY_ID)).execute();
+            adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
         } finally {
             // finally delete shared module and uploaded schema
-            sharedDeveloperModulesApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
+            adminApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
 
-            adminApi.adminChangeStudy(new SignIn().study(studyIdShared)).execute();
+            adminApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             adminApi.deleteAllRevisionsOfUploadSchema(retSchema.getSchemaId(), true).execute();
-            adminApi.adminChangeStudy(new SignIn().study(IntegTestUtils.STUDY_ID)).execute();
+            adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
