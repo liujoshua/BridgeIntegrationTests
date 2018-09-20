@@ -82,6 +82,7 @@ public class UploadSchemaTest {
     @After
     public void deleteSchemas() throws Exception {
         try {
+            adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
             adminApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
@@ -204,7 +205,7 @@ public class UploadSchemaTest {
         schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(false).execute().body();
         List<Long> secondRevisions = schemasList.getItems().stream().map(UploadSchema::getRevision)
                 .collect(Collectors.toList());
-
+        
         // Not equal because different revisions are now returned
         assertTrue(firstRevisions.contains(mostRecentRev));
         assertFalse(secondRevisions.contains(mostRecentRev));

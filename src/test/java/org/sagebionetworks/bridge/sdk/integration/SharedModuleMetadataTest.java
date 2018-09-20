@@ -107,14 +107,16 @@ public class SharedModuleMetadataTest {
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the module.
         }
-
         // also delete created upload schema
-        adminsApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
         try {
             adminSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
         } finally {
             adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
+        /*
+        adminsApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
+        adminSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
+        */
     }
 
     @Test
