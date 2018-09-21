@@ -397,7 +397,7 @@ public class UploadSchemaTest {
         fieldDef.setType(UploadFieldType.STRING);
         
         UploadSchema schema = new UploadSchema();
-        schema.setName("Schema");
+        schema.setName("UploadSchemaTest Schema");
         schema.setSchemaId(schemaId);
         schema.setRevision(rev);
         schema.setSchemaType(UploadSchemaType.IOS_DATA);
