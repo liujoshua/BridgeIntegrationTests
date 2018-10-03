@@ -229,6 +229,8 @@ public class UploadTest {
 
         // check for update record export status, no need to activate exporter in testing
         HealthDataRecord record = status.getRecord();
+        assertEquals(record.getId() + "-raw.zip", record.getRawDataAttachmentId());
+
         RecordExportStatusRequest statusRequest = new RecordExportStatusRequest();
         statusRequest.setRecordIds(ImmutableList.of(record.getId()));
         statusRequest.setSynapseExporterStatus(SynapseExporterStatus.NOT_EXPORTED);
