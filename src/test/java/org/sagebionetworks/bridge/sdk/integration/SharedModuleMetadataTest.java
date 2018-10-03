@@ -442,6 +442,38 @@ public class SharedModuleMetadataTest {
             assertFalse(case11MetadataList.contains(moduleAV2));
             assertFalse(case11MetadataList.contains(moduleBV1));
             assertFalse(case11MetadataList.contains(moduleBV2));
+            
+            // Logically delete a couple of versions of a couple of modules
+            sharedDeveloperModulesApi.deleteMetadataByIdAndVersion(moduleAV1.getId(), moduleAV1.getVersion(), false).execute();
+            sharedDeveloperModulesApi.deleteMetadataByIdAndVersion(moduleBV2.getId(), moduleBV2.getVersion(), false).execute();
+            
+            // Retrieve with logically deleted included, all are included
+            List<SharedModuleMetadata> case12MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(false, false, null, null, null, true).execute().body().getItems();
+            // contains does not work for this test because the returned items are not equal 
+            assertTrue(moduleMetadataListContains(case12MetadataList, moduleAV1));
+            assertTrue(moduleMetadataListContains(case12MetadataList, moduleAV2));
+            assertTrue(moduleMetadataListContains(case12MetadataList, moduleBV1));
+            assertTrue(moduleMetadataListContains(case12MetadataList, moduleBV2));
+
+            assertTrue(findMetadata(case12MetadataList, moduleAV1).isDeleted());
+            assertTrue(findMetadata(case12MetadataList, moduleBV2).isDeleted());
+
+            List<SharedModuleMetadata> case13MetadataList = sharedDeveloperModulesApi
+                    .queryAllMetadata(false, false, null, null, null, false).execute().body().getItems();
+            assertFalse(moduleMetadataListContains(case13MetadataList, moduleAV1));
+            assertTrue(moduleMetadataListContains(case13MetadataList, moduleAV2));
+            assertTrue(moduleMetadataListContains(case13MetadataList, moduleBV1));
+            assertFalse(moduleMetadataListContains(case13MetadataList, moduleBV2));
+            
+            // Verify physical delete
+            adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            adminsApi.deleteMetadataByIdAndVersion(moduleAV1.getId(), moduleAV1.getVersion(), true).execute();
+            try {
+                sharedDeveloperModulesApi.getMetadataByIdAndVersion(moduleAV1.getId(), moduleAV1.getVersion()).execute();
+                fail("Should have thrown exception");
+            } catch(EntityNotFoundException e) {
+            }
         } finally {
             adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             try {
@@ -456,6 +488,19 @@ public class SharedModuleMetadataTest {
                 LOG.error("Error deleting module " + moduleId + "B: " + ex.getMessage(), ex);
             }
         }
+    }
+    
+    private boolean moduleMetadataListContains(List<SharedModuleMetadata> list, SharedModuleMetadata metadata) {
+        return findMetadata(list, metadata) != null;
+    }
+    
+    private SharedModuleMetadata findMetadata(List<SharedModuleMetadata> list, SharedModuleMetadata metadata) {
+        for (SharedModuleMetadata oneMetadata : list) {
+            if (oneMetadata.getId().equals(metadata.getId()) && oneMetadata.getVersion().equals(metadata.getVersion())) {
+                return oneMetadata;
+            }
+        }
+        return null;
     }
 
     @Test
