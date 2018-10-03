@@ -183,6 +183,7 @@ public class HealthDataTest {
         assertEquals(APP_VERSION, record.getAppVersion());
         assertNotNull(record.getId());
         assertEquals(PHONE_INFO, record.getPhoneInfo());
+        assertEquals(record.getId() + "-raw.json", record.getRawDataAttachmentId());
         assertEquals(SCHEMA_ID, record.getSchemaId());
         assertEquals(SCHEMA_REV, record.getSchemaRevision().longValue());
         assertNotNull(record.getUploadDate());
