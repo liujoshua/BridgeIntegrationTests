@@ -180,6 +180,7 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -209,6 +210,7 @@ public class SurveyTest {
             adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
