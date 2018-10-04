@@ -72,6 +72,8 @@ public class SharedModuleTest {
                 adminApi.deleteMetadataByIdAllVersions(module.getId(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting module " + module.getId() + ": "  + ex.getMessage(), ex);
+            } finally {
+                adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
             }
         }
 
@@ -92,6 +94,8 @@ public class SharedModuleTest {
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting schema " + sharedSchema.getSchemaId() + " in study " +
                         sharedDeveloper.getStudyId() + ": "  + ex.getMessage(), ex);
+            } finally {
+                adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
             }
         }
 
@@ -109,6 +113,8 @@ public class SharedModuleTest {
                 adminApi.deleteSurvey(sharedSurvey.getGuid(), sharedSurvey.getCreatedOn(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting shared survey " + sharedSurvey.getGuid() + ": "  + ex.getMessage(), ex);
+            } finally {
+                adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
             }
         }
     }
