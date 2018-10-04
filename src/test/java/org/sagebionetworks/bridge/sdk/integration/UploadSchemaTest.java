@@ -198,13 +198,13 @@ public class UploadSchemaTest {
         // Get the schemas with and without the logically deleted schema. the version numbers of these schemas
         // should be different as a result of including/excluding logically deleted versions
         UploadSchemaList schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(true).execute().body();
-        List<Long> firstRevisions = schemasList.getItems().stream().map(UploadSchema::getRevision)
-                .collect(Collectors.toList());
+        List<Long> firstRevisions = schemasList.getItems().stream().filter(s -> schemaId.equals(s.getSchemaId()))
+                .map(UploadSchema::getRevision).collect(Collectors.toList());
         
         // This will return different version numbers, as more recent versions are deleted
         schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(false).execute().body();
-        List<Long> secondRevisions = schemasList.getItems().stream().map(UploadSchema::getRevision)
-                .collect(Collectors.toList());
+        List<Long> secondRevisions = schemasList.getItems().stream().filter(s -> schemaId.equals(s.getSchemaId()))
+                .map(UploadSchema::getRevision).collect(Collectors.toList());
         
         // Not equal because different revisions are now returned
         assertTrue(firstRevisions.contains(mostRecentRev));
