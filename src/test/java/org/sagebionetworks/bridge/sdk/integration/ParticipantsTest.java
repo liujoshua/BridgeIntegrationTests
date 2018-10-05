@@ -352,7 +352,7 @@ public class ParticipantsTest {
             assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
             assertFalse(retrieved.isEmailVerified());
             assertFalse(retrieved.isPhoneVerified());
-            assertEquals("externalID", retrieved.getExternalId()); // This cannot be updated
+            assertEquals("externalID2", retrieved.getExternalId());
             assertEquals(SharingScope.NO_SHARING, retrieved.getSharingScope());
             // BRIDGE-1604: should still be true, even though it was not sent to the server. Through participants API 
             assertTrue(retrieved.isNotifyByEmail());
