@@ -12,6 +12,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
+import org.sagebionetworks.bridge.rest.exceptions.ConcurrentModificationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityPublishedException;
@@ -129,6 +130,16 @@ public class AppConfigElementTest {
         VersionHolder holder = configsApi.updateAppConfigElement(id, elementV1.getRevision(), elementV1).execute()
                 .body();
         elementV1.setVersion(holder.getVersion());
+        
+        // Cannot submit an update without a version...
+        long savedVersion = elementV1.getVersion();
+        try {
+            elementV1.setVersion(null);
+            configsApi.updateAppConfigElement(id, elementV1.getRevision(), elementV1).execute().body();
+            fail("Should have thrown exception");
+        } catch (ConcurrentModificationException e) {
+        }
+        elementV1.setVersion(savedVersion);
 
         // Publish v1
         configsApi.publishAppConfigElement(id, elementV1.getRevision()).execute();
@@ -160,7 +171,7 @@ public class AppConfigElementTest {
             fail("Should have thrown exception");
         } catch (EntityPublishedException e) {
         }
-
+        
         AppConfigElement retrievedUpdated = configsApi.getAppConfigElement(elementV1.getId(), elementV1.getRevision())
                 .execute().body();
         assertEquals(TEST_STRING, (String) retrievedUpdated.getData());

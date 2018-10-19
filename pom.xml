@@ -60,7 +60,7 @@
         <dependency>
             <groupId>org.sagebionetworks</groupId>
             <artifactId>synapseJavaClient</artifactId>
-            <version>161.0-4-g843de2c</version>
+            <version>242.0-10-gd48760b</version>
         </dependency>
     </dependencies>
 
