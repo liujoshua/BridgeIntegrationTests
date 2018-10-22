@@ -195,6 +195,9 @@ public class UploadSchemaTest {
         Long mostRecentRev = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body().getRevision();
         adminApi.deleteUploadSchema(schemaId, mostRecentRev, false).execute();
 
+        // getMostRecentUploadSchemas() uses a Global Secondary Index. Sleep to help mitigate consistency issues.
+        Thread.sleep(1000);
+
         // Get the schemas with and without the logically deleted schema. the version numbers of these schemas
         // should be different as a result of including/excluding logically deleted versions
         UploadSchemaList schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(true).execute().body();

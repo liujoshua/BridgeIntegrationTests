@@ -557,7 +557,10 @@ public class SurveyTest {
         
         // Delete 2b.
         developer.getClient(SurveysApi.class).deleteSurvey(survey2b.getGuid(), survey2b.getCreatedOn(), false).execute();
-        
+
+        // Sleep to clear eventual consistency problems.
+        Thread.sleep(2000);
+
         // Verify includeDeleted works
         noneDeleted(workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID, false));
         anyDeleted(workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID, true));
