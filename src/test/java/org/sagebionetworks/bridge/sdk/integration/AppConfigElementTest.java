@@ -15,7 +15,6 @@ import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConcurrentModificationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.rest.exceptions.EntityPublishedException;
 import org.sagebionetworks.bridge.rest.model.AppConfigElement;
 import org.sagebionetworks.bridge.rest.model.AppConfigElementList;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -34,7 +33,7 @@ public class AppConfigElementTest {
 
     @Before
     public void before() throws IOException {
-        developer = TestUserHelper.createAndSignInUser(ExternalIdsTest.class, false, Role.DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(AppConfigElementTest.class, false, Role.DEVELOPER);
         admin = TestUserHelper.getSignedInAdmin();
         id = Tests.randomIdentifier(AppConfigElementTest.class);
         id2 = Tests.randomIdentifier(AppConfigElementTest.class);
@@ -141,37 +140,6 @@ public class AppConfigElementTest {
         }
         elementV1.setVersion(savedVersion);
 
-        // Publish v1
-        configsApi.publishAppConfigElement(id, elementV1.getRevision()).execute();
-
-        // publishing again throws an exception
-        try {
-            configsApi.publishAppConfigElement(id, elementV1.getRevision()).execute();
-            fail("Should have thrown exception");
-        } catch (EntityPublishedException e) {
-        }
-
-        // Most recently published should be v1
-        AppConfigElement mrpElement = configsApi.getMostRecentlyPublishedAppConfigElement(id).execute().body();
-        assertEquals(elementV1.getRevision(), mrpElement.getRevision());
-        assertTrue(mrpElement.isPublished());
-
-        // Publish v2
-        configsApi.publishAppConfigElement(id, elementV2.getRevision()).execute();
-
-        // Most recently published should now be v2
-        mrpElement = configsApi.getMostRecentlyPublishedAppConfigElement(id).execute().body();
-        assertEquals(elementV2.getRevision(), mrpElement.getRevision());
-        assertTrue(mrpElement.isPublished());
-
-        // Cannot change a published version
-        mrpElement.setData(TEST_STRING);
-        try {
-            configsApi.updateAppConfigElement(id, elementV2.getRevision(), mrpElement).execute().body();
-            fail("Should have thrown exception");
-        } catch (EntityPublishedException e) {
-        }
-        
         AppConfigElement retrievedUpdated = configsApi.getAppConfigElement(elementV1.getId(), elementV1.getRevision())
                 .execute().body();
         assertEquals(TEST_STRING, (String) retrievedUpdated.getData());
@@ -183,9 +151,9 @@ public class AppConfigElementTest {
         AppConfigElement element = configsApi.getAppConfigElement(id, elementV2.getRevision()).execute().body();
         assertTrue(element.isDeleted());
 
-        // Most recently published should now be v1
-        mrpElement = configsApi.getMostRecentlyPublishedAppConfigElement(id).execute().body();
-        assertEquals(elementV1.getRevision(), mrpElement.getRevision());
+        // Most recent should now be v1
+        AppConfigElement mostRecentElement = configsApi.getMostRecentAppConfigElement(id).execute().body();
+        assertEquals(elementV1.getRevision(), mostRecentElement.getRevision());
 
         // Test includeDeleted on the call to get all revisions of one element
         AppConfigElementList responseFalse = configsApi.getAllAppConfigElementRevisions(id, false).execute().body();
@@ -196,6 +164,15 @@ public class AppConfigElementTest {
         assertEquals(2, responseTrue.getItems().size());
         assertTrue(responseTrue.getRequestParams().isIncludeDeleted());
 
+        // Logically delete and verify all versions are marked deleted
+        configsApi.deleteAllAppConfigElementRevisions(id, false).execute();
+        
+        AppConfigElementList list = configsApi.getAllAppConfigElementRevisions(id, true).execute().body();
+        assertFalse(list.getItems().isEmpty());
+        
+        list = configsApi.getAllAppConfigElementRevisions(id, false).execute().body();
+        assertTrue(list.getItems().isEmpty());
+        
         // Physically delete and verify a version is gone
         // admin has to do this...
         adminConfigsApi.deleteAppConfigElement(id, elementV1.getRevision(), true).execute();
@@ -242,15 +219,11 @@ public class AppConfigElementTest {
         configsApi.createAppConfigElement(elementID2V1).execute();
         configsApi.createAppConfigElement(elementID2V2).execute();
 
-        // PUBLISH
-        configsApi.publishAppConfigElement(elementID1V2.getId(), elementID1V2.getRevision()).execute();
-        configsApi.publishAppConfigElement(elementID2V1.getId(), elementID2V1.getRevision()).execute();
+        AppConfigElement mostRecentElement = configsApi.getMostRecentAppConfigElement(id).execute().body();
+        assertTrue(isElementVersion(mostRecentElement, id, 2L));
 
-        AppConfigElement mrpElement = configsApi.getMostRecentlyPublishedAppConfigElement(id).execute().body();
-        assertTrue(isElementVersion(mrpElement, id, 2L));
-
-        mrpElement = configsApi.getMostRecentlyPublishedAppConfigElement(id2).execute().body();
-        assertTrue(isElementVersion(mrpElement, id2, 1L));
+        mostRecentElement = configsApi.getMostRecentAppConfigElement(id2).execute().body();
+        assertTrue(isElementVersion(mostRecentElement, id2, 2L));
 
         // DELETE
         configsApi.deleteAppConfigElement(id, 1L, false).execute();
@@ -260,18 +233,16 @@ public class AppConfigElementTest {
         Thread.sleep(1000);
 
         AppConfigElementList list = configsApi.getMostRecentAppConfigElements(true).execute().body();
-        assertEquals(2, list.getItems().size());
         // With deleted included, these should be v1 r2, and v2 r2 (both the most recent)
         assertElementVersion(list, id, 2L);
         assertElementVersion(list, id2, 2L);
 
         // With deleted excluded, this picture looks different:
         list = configsApi.getMostRecentAppConfigElements(false).execute().body();
-        // Still 2 items...
-        assertEquals(2, list.getItems().size());
         // Now we get a prior version in the list.
         assertElementVersion(list, id, 2L);
         assertElementVersion(list, id2, 1L);
+
     }
 
     private void assertElementVersion(AppConfigElementList list, String id, long revision) {
