@@ -215,7 +215,10 @@ public class WorkerApiTest {
             
             ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
             userApi.getScheduledActivities("-07:00", 4, 1).execute();
-            
+
+            // Sleep to wait for global secondary index
+            Thread.sleep(2000);
+
             ForwardCursorScheduledActivityList list = workersApi.getParticipantTaskHistory(user.getStudyId(), 
                     user.getSession().getId(), "task:CCC", DateTime.now().minusDays(2), DateTime.now().plusDays(2), 
                     null, 50).execute().body();
