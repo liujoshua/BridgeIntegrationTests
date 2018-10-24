@@ -4,6 +4,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
+import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -24,6 +25,8 @@ import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.SmsMessage;
+import org.sagebionetworks.bridge.rest.model.SmsType;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -159,7 +162,17 @@ public class AuthenticationTest {
         Response<Message> response = authApi.requestResetPassword(email).execute();
         assertEquals(200, response.code());
     }
-    
+
+    @Test
+    public void canRequestPasswordForPhone() throws Exception {
+        // Request reset password.
+        Response<Message> response = authApi.requestResetPassword(phoneOnlyTestUser.getSignIn()).execute();
+        assertEquals(200, response.code());
+
+        // Verify message logs contains the expected message.
+        verifyTransactionalMessage();
+    }
+
     @Test
     public void requestingResetPasswordForUnknownPhoneDoesNotThrowException() throws Exception {
         SignIn email = new SignIn().study(testUser.getStudyId())
@@ -170,12 +183,16 @@ public class AuthenticationTest {
     }
 
     @Test
-    public void canResendPhoneVerification() throws IOException {
+    public void canResendPhoneVerification() throws Exception {
+        // Request resend phone verificaiton.
         Identifier phone = new Identifier().study(phoneOnlyTestUser.getSignIn().getStudy())
                 .phone(phoneOnlyTestUser.getPhone());
 
         Response<Message> response = authApi.resendPhoneVerification(phone).execute();
         assertEquals(200, response.code());
+
+        // Verify message logs contains the expected message.
+        verifyTransactionalMessage();
     }
     
     @Test
@@ -189,8 +206,8 @@ public class AuthenticationTest {
     
     @Test
     public void accountWithOneStudySeparateFromAccountWithSecondStudy() throws IOException {
-        TestUser adminUser = TestUserHelper.getSignedInAdmin();
-        ForAdminsApi adminsApi = adminUser.getClient(ForAdminsApi.class);
+        //TestUser adminUser = TestUserHelper.getSignedInAdmin();
+        //ForAdminsApi adminsApi = adminUser.getClient(ForAdminsApi.class);
         String studyId = Tests.randomIdentifier(AuthenticationTest.class);
         try {
             testUser.signInAgain();
@@ -207,7 +224,7 @@ public class AuthenticationTest {
             study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
             study.setEmailVerificationEnabled(true);
             
-            adminsApi.createStudy(study).execute();
+            adminApi.createStudy(study).execute();
 
             // Can we sign in to secondstudy? No.
             try {
@@ -223,7 +240,7 @@ public class AuthenticationTest {
                 assertEquals(404, e.getStatusCode());
             }
         } finally {
-            adminsApi.deleteStudy(studyId, true).execute();
+            adminApi.deleteStudy(studyId, true).execute();
         }
     }
     
@@ -286,6 +303,7 @@ public class AuthenticationTest {
 
     @Test
     public void requestPhoneSignInWithPhone() throws Exception {
+        // Request phone sign-in.
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
         
         PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().phone(phoneOnlyTestUser.getPhone())
@@ -293,12 +311,13 @@ public class AuthenticationTest {
 
         Response<Message> response = authApi.requestPhoneSignIn(phoneSignIn).execute();
         assertEquals(202, response.code());
+
+        // Verify message logs contains the expected message.
+        verifyTransactionalMessage();
     }
 
     @Test(expected = AuthenticationFailedException.class)
     public void phoneSignInThrows() throws Exception {
-        IntegTestUtils.deletePhoneUser(researchUser);
-
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
 
         PhoneSignIn phoneSignIn = new PhoneSignIn().phone(IntegTestUtils.PHONE).study(phoneOnlyTestUser.getStudyId()).token("test-token");
@@ -377,5 +396,21 @@ public class AuthenticationTest {
         HttpResponse httpResponse = Request.Get(hostUrl + "/v1/activityevents")
                 .setHeader("Bridge-Session", sessionId).execute().returnResponse();
         assertEquals(expectedStatusCode, httpResponse.getStatusLine().getStatusCode());
+    }
+
+    private static void verifyTransactionalMessage() throws Exception {
+        // Verify message logs contains the expected message.
+        SmsMessage message = adminApi.getMostRecentSmsMessage(phoneOnlyTestUser.getUserId()).execute().body();
+        assertEquals(phoneOnlyTestUser.getPhone().getNumber(), message.getPhoneNumber());
+        assertNotNull(message.getMessageId());
+        assertEquals(SmsType.TRANSACTIONAL, message.getSmsType());
+        assertEquals(phoneOnlyTestUser.getStudyId(), message.getStudyId());
+
+        // Message body isn't constrained by the test, so just check that it exists.
+        assertNotNull(message.getMessageBody());
+
+        // Clock skew on Jenkins can be known to go as high as 10 minutes. For a robust test, simply check that the
+        // message was sent within the last hour.
+        assertTrue(message.getSentOn().isAfter(DateTime.now().minusHours(1)));
     }
 }

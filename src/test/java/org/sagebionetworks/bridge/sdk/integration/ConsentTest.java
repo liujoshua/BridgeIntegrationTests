@@ -7,13 +7,19 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.joda.time.DateTime;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.joda.time.LocalDate;
 import org.joda.time.format.ISODateTimeFormat;
+import retrofit2.Response;
+
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
@@ -27,6 +33,9 @@ import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.SmsMessage;
+import org.sagebionetworks.bridge.rest.model.SmsType;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.rest.model.UserConsentHistory;
@@ -34,6 +43,7 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -42,6 +52,40 @@ import java.util.Map;
 @SuppressWarnings("unchecked")
 public class ConsentTest {
     private static final String FAKE_IMAGE_DATA = "VGVzdCBzdHJpbmc=";
+
+    private static ForAdminsApi adminApi;
+    private static TestUser phoneOnlyTestUser;
+    private static TestUser researchUser;
+
+    @BeforeClass
+    public static void before() throws Exception {
+        // Get admin API.
+        TestUser adminUser = TestUserHelper.getSignedInAdmin();
+        adminApi = adminUser.getClient(ForAdminsApi.class);
+
+        // Make researcher.
+        researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.RESEARCHER);
+
+        // Make phone user.
+        IntegTestUtils.deletePhoneUser(researchUser);
+        SignUp phoneOnlyUser = new SignUp().study(IntegTestUtils.STUDY_ID).consent(true).phone(IntegTestUtils.PHONE);
+        phoneOnlyTestUser = new TestUserHelper.Builder(AuthenticationTest.class).withConsentUser(true)
+                .withSignUp(phoneOnlyUser).createAndSignInUser();
+    }
+
+    @AfterClass
+    public static void deleteResearcher() throws Exception {
+        if (researchUser != null) {
+            researchUser.signOutAndDeleteUser();
+        }
+    }
+
+    @AfterClass
+    public static void deletePhoneUser() throws Exception {
+        if (phoneOnlyTestUser != null) {
+            phoneOnlyTestUser.signOutAndDeleteUser();
+        }
+    }
 
     @Test
     public void canToggleDataSharing() throws Exception {
@@ -321,10 +365,31 @@ public class ConsentTest {
             testUser.signOutAndDeleteUser();
         }
     }
-    
+
+    @Test
+    public void canResendConsentAgreementForPhone() throws Exception {
+        // Request phone consent.
+        Response<Message> response = phoneOnlyTestUser.getClient(ForConsentedUsersApi.class)
+                .resendConsentAgreement(phoneOnlyTestUser.getDefaultSubpopulation()).execute();
+        assertEquals(200, response.code());
+
+        // Verify message logs contains the expected message.
+        SmsMessage message = adminApi.getMostRecentSmsMessage(phoneOnlyTestUser.getUserId()).execute().body();
+        assertEquals(phoneOnlyTestUser.getPhone().getNumber(), message.getPhoneNumber());
+        assertNotNull(message.getMessageId());
+        assertEquals(SmsType.TRANSACTIONAL, message.getSmsType());
+        assertEquals(phoneOnlyTestUser.getStudyId(), message.getStudyId());
+
+        // Message body isn't constrained by the test, so just check that it exists.
+        assertNotNull(message.getMessageBody());
+
+        // Clock skew on Jenkins can be known to go as high as 10 minutes. For a robust test, simply check that the
+        // message was sent within the last hour.
+        assertTrue(message.getSentOn().isAfter(DateTime.now().minusHours(1)));
+    }
+
     @Test
     public void canWithdrawFromStudy() throws Exception {
-        TestUser researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.RESEARCHER);
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
             UserSessionInfo session = testUser.getSession();
@@ -344,17 +409,12 @@ public class ConsentTest {
             } catch(EntityNotFoundException e) {
             }
         } finally {
-            try {
-                testUser.signOutAndDeleteUser();    
-            } finally {
-                researchUser.signOutAndDeleteUser();    
-            }
+            testUser.signOutAndDeleteUser();
         }
     }
     
     @Test
     public void canWithdrawParticipantFromStudy() throws Exception {
-        TestUser researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.RESEARCHER);
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         String userId = testUser.getSession().getId();
         try {
@@ -379,11 +439,7 @@ public class ConsentTest {
                 }
             }
         } finally {
-            try {
-                testUser.signOutAndDeleteUser();    
-            } finally {
-                researchUser.signOutAndDeleteUser();
-            }
+            testUser.signOutAndDeleteUser();
         }
     }
 }
