@@ -54,13 +54,13 @@
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
             <artifactId>rest-client</artifactId>
-            <version>0.16.15</version>
+            <version>0.16.16</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.sagebionetworks</groupId>
             <artifactId>synapseJavaClient</artifactId>
-            <version>161.0-4-g843de2c</version>
+            <version>242.0-10-gd48760b</version>
         </dependency>
     </dependencies>
 

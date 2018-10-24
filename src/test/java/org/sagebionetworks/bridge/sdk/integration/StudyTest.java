@@ -32,7 +32,7 @@ import org.sagebionetworks.client.exceptions.SynapseException;
 import org.sagebionetworks.reflection.model.PaginatedResults;
 import org.sagebionetworks.repo.model.AccessControlList;
 import org.sagebionetworks.repo.model.Entity;
-import org.sagebionetworks.repo.model.MembershipInvtnSubmission;
+import org.sagebionetworks.repo.model.MembershipInvitation;
 import org.sagebionetworks.repo.model.Project;
 import org.sagebionetworks.repo.model.ResourceAccess;
 import org.sagebionetworks.repo.model.Team;
@@ -114,7 +114,7 @@ public class StudyTest {
 
         admin = TestUserHelper.getSignedInAdmin();
         synapseClient = new SynapseAdminClientImpl();
-        synapseClient.setUserName(SYNAPSE_USER);
+        synapseClient.setUsername(SYNAPSE_USER);
         synapseClient.setApiKey(SYNAPSE_API_KEY);
     }
 
@@ -217,12 +217,12 @@ public class StudyTest {
 
             // membership invitation to target user
             // (teamId, inviteeId, limit, offset)
-            PaginatedResults<MembershipInvtnSubmission> retInvitations =  synapseClient.getOpenMembershipInvitationSubmissions(teamId.toString(), TEST_USER_ID.toString(), 1, 0);
-            List<MembershipInvtnSubmission> invitationList = retInvitations.getResults();
+            PaginatedResults<MembershipInvitation> retInvitations =  synapseClient.getOpenMembershipInvitationSubmissions(teamId.toString(), TEST_USER_ID.toString(), 1, 0);
+            List<MembershipInvitation> invitationList = retInvitations.getResults();
             assertEquals(invitationList.size(), 1); // only one invitation submission from newly created team to target user
-            MembershipInvtnSubmission invtnSubmission = invitationList.get(0);
-            assertEquals(invtnSubmission.getInviteeId(), TEST_USER_ID.toString());
-            assertEquals(invtnSubmission.getTeamId(), teamId.toString());
+            MembershipInvitation membershipInvitation = invitationList.get(0);
+            assertEquals(membershipInvitation.getInviteeId(), TEST_USER_ID.toString());
+            assertEquals(membershipInvitation.getTeamId(), teamId.toString());
         } finally {
             developer.signOutAndDeleteUser();
         }
