@@ -19,8 +19,8 @@ import retrofit2.Response;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
@@ -53,15 +53,14 @@ import java.util.Map;
 public class ConsentTest {
     private static final String FAKE_IMAGE_DATA = "VGVzdCBzdHJpbmc=";
 
-    private static ForAdminsApi adminApi;
+    private static TestUser adminUser;
     private static TestUser phoneOnlyTestUser;
     private static TestUser researchUser;
 
     @BeforeClass
     public static void before() throws Exception {
         // Get admin API.
-        TestUser adminUser = TestUserHelper.getSignedInAdmin();
-        adminApi = adminUser.getClient(ForAdminsApi.class);
+        adminUser = TestUserHelper.getSignedInAdmin();
 
         // Make researcher.
         researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.RESEARCHER);
@@ -124,7 +123,6 @@ public class ConsentTest {
     // BRIDGE-1594
     @Test
     public void giveConsentAndWithdrawTwice() throws Exception {
-        TestUser admin = TestUserHelper.getSignedInAdmin();
         TestUser developer = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.DEVELOPER);
         TestUser user = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
         SubpopulationsApi subpopsApi = developer.getClientManager().getClient(SubpopulationsApi.class);
@@ -171,7 +169,7 @@ public class ConsentTest {
                 assertFalse(RestUtils.isUserConsented(session));
             }
         } finally {
-            admin.getClient(SubpopulationsApi.class).deleteSubpopulation(keys.getGuid(), true).execute();
+            adminUser.getClient(SubpopulationsApi.class).deleteSubpopulation(keys.getGuid(), true).execute();
             user.signOutAndDeleteUser();
             developer.signOutAndDeleteUser();
         }
@@ -374,7 +372,8 @@ public class ConsentTest {
         assertEquals(200, response.code());
 
         // Verify message logs contains the expected message.
-        SmsMessage message = adminApi.getMostRecentSmsMessage(phoneOnlyTestUser.getUserId()).execute().body();
+        SmsMessage message = adminUser.getClient(InternalApi.class).getMostRecentSmsMessage(phoneOnlyTestUser
+                .getUserId()).execute().body();
         assertEquals(phoneOnlyTestUser.getPhone().getNumber(), message.getPhoneNumber());
         assertNotNull(message.getMessageId());
         assertEquals(SmsType.TRANSACTIONAL, message.getSmsType());

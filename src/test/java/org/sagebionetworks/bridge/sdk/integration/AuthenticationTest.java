@@ -12,6 +12,7 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
@@ -47,6 +48,7 @@ import static org.junit.Assert.fail;
 
 @Category(IntegrationSmokeTest.class)
 public class AuthenticationTest {
+    private static TestUser adminUser;
     private static TestUser researchUser;
     private static TestUser testUser;
     private static TestUser phoneOnlyTestUser;
@@ -64,7 +66,7 @@ public class AuthenticationTest {
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         authApi = testUser.getClient(AuthenticationApi.class);
 
-        TestUser adminUser = TestUserHelper.getSignedInAdmin();
+        adminUser = TestUserHelper.getSignedInAdmin();
         adminApi = adminUser.getClient(ForAdminsApi.class);
 
         // Verify necessary flags (email sign in, phone sign in, reauth) are enabled
@@ -206,8 +208,6 @@ public class AuthenticationTest {
     
     @Test
     public void accountWithOneStudySeparateFromAccountWithSecondStudy() throws IOException {
-        //TestUser adminUser = TestUserHelper.getSignedInAdmin();
-        //ForAdminsApi adminsApi = adminUser.getClient(ForAdminsApi.class);
         String studyId = Tests.randomIdentifier(AuthenticationTest.class);
         try {
             testUser.signInAgain();
@@ -400,7 +400,8 @@ public class AuthenticationTest {
 
     private static void verifyTransactionalMessage() throws Exception {
         // Verify message logs contains the expected message.
-        SmsMessage message = adminApi.getMostRecentSmsMessage(phoneOnlyTestUser.getUserId()).execute().body();
+        SmsMessage message = adminUser.getClient(InternalApi.class).getMostRecentSmsMessage(phoneOnlyTestUser
+                .getUserId()).execute().body();
         assertEquals(phoneOnlyTestUser.getPhone().getNumber(), message.getPhoneNumber());
         assertNotNull(message.getMessageId());
         assertEquals(SmsType.TRANSACTIONAL, message.getSmsType());

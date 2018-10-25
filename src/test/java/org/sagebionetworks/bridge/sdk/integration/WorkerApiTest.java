@@ -14,10 +14,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ActivitiesApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
+import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.ActivityEventList;
@@ -260,7 +260,7 @@ public class WorkerApiTest {
 
     private void verifyPromotionalMessage(String expectedMessageBody) throws Exception {
         // Verify message logs contains the expected message.
-        SmsMessage message = admin.getClient(ForAdminsApi.class).getMostRecentSmsMessage(user.getUserId()).execute()
+        SmsMessage message = admin.getClient(InternalApi.class).getMostRecentSmsMessage(user.getUserId()).execute()
                 .body();
         assertEquals(user.getPhone().getNumber(), message.getPhoneNumber());
         assertEquals(expectedMessageBody, message.getMessageBody());
