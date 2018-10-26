@@ -13,7 +13,6 @@ import java.util.List;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.RestUtils;
@@ -120,7 +119,6 @@ public class AppConfigTest {
     }
     
     @Test
-    @Ignore
     public void crudAppConfig() throws Exception {
         Survey survey = TestSurvey.getSurvey(AppConfigTest.class);
         survey.setIdentifier("survey1");
@@ -258,7 +256,6 @@ public class AppConfigTest {
     }
     
     @Test
-    @Ignore
     public void canPhysicallyDeleteLogicallyDeletedAppConfig() throws Exception {
         AppConfig appConfig = new AppConfig();
         appConfig.setLabel(Tests.randomIdentifier(AppConfigTest.class));
