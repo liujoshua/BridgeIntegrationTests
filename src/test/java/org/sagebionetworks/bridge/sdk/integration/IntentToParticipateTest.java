@@ -1,8 +1,12 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.ImmutableMap;
+import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.After;
 import org.junit.Before;
@@ -12,13 +16,18 @@ import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.IntentToParticipateApi;
+import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.IntentToParticipate;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.SmsMessage;
+import org.sagebionetworks.bridge.rest.model.SmsType;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -31,8 +40,14 @@ public class IntentToParticipateTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        researcher = TestUserHelper.createAndSignInUser(IntentToParticipateTest.class, false, Role.ADMIN, Role.RESEARCHER);
+        researcher = TestUserHelper.createAndSignInUser(IntentToParticipateTest.class, false, Role.RESEARCHER);
         IntegTestUtils.deletePhoneUser(researcher);
+
+        // Add dummy install link to trigger Intent SMS.
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        Study study = adminApi.getUsersStudy().execute().body();
+        study.setInstallLinks(ImmutableMap.of("Universal", "http://example.com/"));
+        adminApi.updateStudy(study.getIdentifier(), study).execute();
     }
     
     @After
@@ -77,11 +92,29 @@ public class IntentToParticipateTest {
                 .withSignUp(signUp)
                 .withConsentUser(false) // important, the ITP must do this.
                 .createUser();
-            
-            user.signOut();
-            AuthenticationApi authApi = provider.getClient(AuthenticationApi.class);
-            
+
+            // Verify message logs contains the expected message. We do this after we create the account, but before
+            // we sign-in, because intent is checked on sign-in and sends another SMS message with the consent doc (if
+            // the study is configured to do so).
+            SmsMessage message = admin.getClient(InternalApi.class).getMostRecentSmsMessage(user.getUserId()).execute()
+                    .body();
+            assertEquals(IntegTestUtils.PHONE.getNumber(), message.getPhoneNumber());
+            assertNotNull(message.getMessageId());
+            assertEquals(SmsType.TRANSACTIONAL, message.getSmsType());
+            assertEquals(IntegTestUtils.STUDY_ID, message.getStudyId());
+
+            // Message body isn't constrained by the test, so just check that it exists.
+            assertNotNull(message.getMessageBody());
+
+            // Clock skew on Jenkins can be known to go as high as 10 minutes. For a robust test, simply check that the
+            // message was sent within the last hour.
+            assertTrue(message.getSentOn().isAfter(DateTime.now().minusHours(1)));
+
+            // Because this message was sent before the account was created, it is not tagged with a health code.
+            assertNull(message.getHealthCode());
+
             // This does not throw a consent exception.
+            AuthenticationApi authApi = provider.getClient(AuthenticationApi.class);
             UserSessionInfo session = authApi.signInV4(user.getSignIn()).execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
             

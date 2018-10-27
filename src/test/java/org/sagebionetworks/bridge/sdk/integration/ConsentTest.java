@@ -19,7 +19,9 @@ import retrofit2.Response;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
@@ -36,6 +38,7 @@ import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
 import org.sagebionetworks.bridge.rest.model.SmsType;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.rest.model.UserConsentHistory;
@@ -70,6 +73,12 @@ public class ConsentTest {
         SignUp phoneOnlyUser = new SignUp().study(IntegTestUtils.STUDY_ID).consent(true).phone(IntegTestUtils.PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(AuthenticationTest.class).withConsentUser(true)
                 .withSignUp(phoneOnlyUser).createAndSignInUser();
+
+        // Verify necessary flags (health code export) are enabled
+        ForAdminsApi adminApi = adminUser.getClient(ForAdminsApi.class);
+        Study study = adminApi.getUsersStudy().execute().body();
+        study.setHealthCodeExportEnabled(true);
+        adminApi.updateStudy(study.getIdentifier(), study).execute();
     }
 
     @AfterClass
@@ -385,6 +394,11 @@ public class ConsentTest {
         // Clock skew on Jenkins can be known to go as high as 10 minutes. For a robust test, simply check that the
         // message was sent within the last hour.
         assertTrue(message.getSentOn().isAfter(DateTime.now().minusHours(1)));
+
+        // Verify the health code matches.
+        StudyParticipant participant = researchUser.getClient(ForResearchersApi.class).getParticipantById(
+                phoneOnlyTestUser.getUserId(), false).execute().body();
+        assertEquals(participant.getHealthCode(), message.getHealthCode());
     }
 
     @Test
