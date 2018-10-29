@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
@@ -35,6 +36,7 @@ import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
@@ -48,8 +50,12 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 public class AppConfigTest {
+    private static final int MIN_MAX_TEST_VALUE = 1000;
+    private static final Integer ONE = new Integer(1);
+    
     private TestUser developer;
     private TestUser admin;
     private TestUser user;
@@ -73,6 +79,20 @@ public class AppConfigTest {
         appConfigsApi = developer.getClient(AppConfigsApi.class);
         schemasApi = developer.getClient(UploadSchemasApi.class);
         surveysApi = developer.getClient(SurveysApi.class);
+        
+        // App configs with no criteria will conflict with the run of this test. Set the range on these
+        // for Android to 1-1.
+        List<AppConfig> appConfigs = appConfigsApi.getAppConfigs(false).execute().body().getItems();
+        for (AppConfig appConfig : appConfigs) {
+            Map<String,Integer> minMap = appConfig.getCriteria().getMinAppVersions();
+            Map<String,Integer> maxMap = appConfig.getCriteria().getMaxAppVersions();
+            
+            if (!(ONE.equals(minMap.get("Android"))) || !(ONE.equals(maxMap.get("Android")))) {
+                minMap.put("Android", 1);
+                maxMap.put("Android", 1);
+                appConfigsApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
+            }
+        }
     }
     
     @After
@@ -282,6 +302,11 @@ public class AppConfigTest {
     public void appConfigWithElements() throws Exception {
         user = TestUserHelper.createAndSignInUser(AppConfigTest.class, true);
         
+        user.setClientInfo(new ClientInfo().appName(Tests.APP_NAME).appVersion(MIN_MAX_TEST_VALUE)
+                .deviceName("SomeAndroid").osName("Android").osVersion("2.0.0")
+                .sdkName(developer.getClientManager().getClientInfo().getSdkName())
+                .sdkVersion(developer.getClientManager().getClientInfo().getSdkVersion()));
+        
         String elementId = Tests.randomIdentifier(AppConfigTest.class);
         // Create an app config element
         element = new AppConfigElement().id(elementId).revision(1L).data(Tests.getSimpleSchedulePlan());
@@ -290,7 +315,11 @@ public class AppConfigTest {
         element.setVersion(version.getVersion());
         
         // include it, return it from an app config (with content)
-        AppConfig config = new AppConfig().label("A test config").criteria(new Criteria())
+        Map<String,Integer> map = Maps.newHashMap();
+        map.put("Android", MIN_MAX_TEST_VALUE);
+        Criteria criteria = new Criteria().minAppVersions(map).maxAppVersions(map);
+        
+        AppConfig config = new AppConfig().label("A test config").criteria(criteria)
                 .configReferences(ImmutableList.of(new ConfigReference().id(elementId).revision(1L)));
         
         GuidVersionHolder guidVersion = appConfigsApi.createAppConfig(config).execute().body();
@@ -305,6 +334,7 @@ public class AppConfigTest {
         // Verify that for the user, the config is included in the app config itself
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         AppConfig usersAppConfig = userApi.getAppConfig(user.getStudyId()).execute().body();
+        
         SchedulePlan plan = RestUtils.toType(usersAppConfig.getConfigElements().get(elementId), SchedulePlan.class);        
         assertEquals("Cron-based schedule", plan.getLabel());
         
@@ -317,7 +347,7 @@ public class AppConfigTest {
         usersAppConfig = userApi.getAppConfig(user.getStudyId()).execute().body();
         SchedulePlan secondPlan = RestUtils.toType(usersAppConfig.getConfigElements().get(elementId), SchedulePlan.class);
         assertEquals("Persistent schedule", secondPlan.getLabel());
-        
+
         // delete the element, verify the config is returned, but without it.
         admin.getClient(AppConfigsApi.class).deleteAppConfigElement(element.getId(), element.getRevision(), false).execute();
         
