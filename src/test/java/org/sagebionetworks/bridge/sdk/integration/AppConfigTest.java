@@ -53,6 +53,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class AppConfigTest {
+    private static final int MIN_MAX_TEST_VALUE = 1000;
+    private static final Integer ONE = new Integer(1);
+    
     private TestUser developer;
     private TestUser admin;
     private TestUser user;
@@ -77,16 +80,16 @@ public class AppConfigTest {
         schemasApi = developer.getClient(UploadSchemasApi.class);
         surveysApi = developer.getClient(SurveysApi.class);
         
-        // App configs with no criteria will conflict with the run of this test. 
+        // App configs with no criteria will conflict with the run of this test. Set the range on these
+        // for Android to 1-1.
         List<AppConfig> appConfigs = appConfigsApi.getAppConfigs(false).execute().body().getItems();
         for (AppConfig appConfig : appConfigs) {
             Map<String,Integer> minMap = appConfig.getCriteria().getMinAppVersions();
             Map<String,Integer> maxMap = appConfig.getCriteria().getMaxAppVersions();
-            if (maxMap.get("Android") == null) {
-                if (minMap.get("Android") == null) {
-                    minMap.put("Android", 1);
-                }
-                maxMap.put("Android", minMap.get("Android") + 1);
+            
+            if (!(ONE.equals(minMap.get("Android"))) || !(ONE.equals(maxMap.get("Android")))) {
+                minMap.put("Android", 1);
+                maxMap.put("Android", 1);
                 appConfigsApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
             }
         }
@@ -297,11 +300,9 @@ public class AppConfigTest {
     
     @Test
     public void appConfigWithElements() throws Exception {
-        Study study = adminApi.getUsersStudy().execute().body();
-        
         user = TestUserHelper.createAndSignInUser(AppConfigTest.class, true);
         
-        user.setClientInfo(new ClientInfo().appName(Tests.APP_NAME).appVersion(study.getVersion().intValue())
+        user.setClientInfo(new ClientInfo().appName(Tests.APP_NAME).appVersion(MIN_MAX_TEST_VALUE)
                 .deviceName("SomeAndroid").osName("Android").osVersion("2.0.0")
                 .sdkName(developer.getClientManager().getClientInfo().getSdkName())
                 .sdkVersion(developer.getClientManager().getClientInfo().getSdkVersion()));
@@ -315,7 +316,7 @@ public class AppConfigTest {
         
         // include it, return it from an app config (with content)
         Map<String,Integer> map = Maps.newHashMap();
-        map.put("Android", study.getVersion().intValue());
+        map.put("Android", MIN_MAX_TEST_VALUE);
         Criteria criteria = new Criteria().minAppVersions(map).maxAppVersions(map);
         
         AppConfig config = new AppConfig().label("A test config").criteria(criteria)
