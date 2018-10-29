@@ -271,5 +271,10 @@ public class WorkerApiTest {
         // Clock skew on Jenkins can be known to go as high as 10 minutes. For a robust test, simply check that the
         // message was sent within the last hour.
         assertTrue(message.getSentOn().isAfter(DateTime.now().minusHours(1)));
+
+        // Verify the health code matches.
+        StudyParticipant participant = workersApi.getParticipantById(user.getStudyId(), user.getUserId(),
+                false).execute().body();
+        assertEquals(participant.getHealthCode(), message.getHealthCode());
     }
 }

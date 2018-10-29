@@ -12,6 +12,7 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -29,6 +30,7 @@ import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
 import org.sagebionetworks.bridge.rest.model.SmsType;
 import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -69,8 +71,9 @@ public class AuthenticationTest {
         adminUser = TestUserHelper.getSignedInAdmin();
         adminApi = adminUser.getClient(ForAdminsApi.class);
 
-        // Verify necessary flags (email sign in, phone sign in, reauth) are enabled
+        // Verify necessary flags (health code export, email sign in, phone sign in, reauth) are enabled
         Study study = adminApi.getUsersStudy().execute().body();
+        study.setHealthCodeExportEnabled(true);
         study.setPhoneSignInEnabled(true);
         study.setEmailSignInEnabled(true);
         study.setReauthenticationEnabled(true);
@@ -413,5 +416,10 @@ public class AuthenticationTest {
         // Clock skew on Jenkins can be known to go as high as 10 minutes. For a robust test, simply check that the
         // message was sent within the last hour.
         assertTrue(message.getSentOn().isAfter(DateTime.now().minusHours(1)));
+
+        // Verify the health code matches.
+        StudyParticipant participant = researchUser.getClient(ForResearchersApi.class).getParticipantById(
+                phoneOnlyTestUser.getUserId(), false).execute().body();
+        assertEquals(participant.getHealthCode(), message.getHealthCode());
     }
 }
