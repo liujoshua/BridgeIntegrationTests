@@ -17,6 +17,7 @@ import org.sagebionetworks.bridge.rest.api.ActivitiesApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
+import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.ActivityEventList;
@@ -27,7 +28,9 @@ import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.SchedulePlanList;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
+import org.sagebionetworks.bridge.rest.model.SmsMessage;
 import org.sagebionetworks.bridge.rest.model.SmsTemplate;
+import org.sagebionetworks.bridge.rest.model.SmsType;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -241,13 +244,32 @@ public class WorkerApiTest {
         user = new TestUserHelper.Builder(WorkerApiTest.class).withSignUp(signUp).withConsentUser(true)
                 .createAndSignInUser();
 
-        // It doesn't fail...
-        SmsTemplate message = new SmsTemplate().message("Test message.");
-        workersApi.sendSmsMessageToParticipant(user.getStudyId(), user.getSession().getId(), message).execute();
-        
+        // Test sending SMS from worker.
+        String messageFromWorker = "Test message from worker.";
+        workersApi.sendSmsMessageToParticipant(user.getStudyId(), user.getSession().getId(),
+                new SmsTemplate().message(messageFromWorker)).execute();
+        verifyPromotionalMessage(messageFromWorker);
+
+        // Test sending SMS from researcher.
+        String messageFromResearcher = "Test message from researcher";
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
-        
-        researcherApi.sendSmsMessageToParticipant(user.getSession().getId(), message).execute();
+        researcherApi.sendSmsMessageToParticipant(user.getSession().getId(),
+                new SmsTemplate().message(messageFromResearcher)).execute();
+        verifyPromotionalMessage(messageFromResearcher);
     }
-    
+
+    private void verifyPromotionalMessage(String expectedMessageBody) throws Exception {
+        // Verify message logs contains the expected message.
+        SmsMessage message = admin.getClient(InternalApi.class).getMostRecentSmsMessage(user.getUserId()).execute()
+                .body();
+        assertEquals(user.getPhone().getNumber(), message.getPhoneNumber());
+        assertEquals(expectedMessageBody, message.getMessageBody());
+        assertNotNull(message.getMessageId());
+        assertEquals(SmsType.PROMOTIONAL, message.getSmsType());
+        assertEquals(user.getStudyId(), message.getStudyId());
+
+        // Clock skew on Jenkins can be known to go as high as 10 minutes. For a robust test, simply check that the
+        // message was sent within the last hour.
+        assertTrue(message.getSentOn().isAfter(DateTime.now().minusHours(1)));
+    }
 }
