@@ -23,7 +23,6 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.sagebionetworks.client.SynapseAdminClientImpl;
@@ -94,19 +93,7 @@ public class StudyTest {
     private static final String USER_CONFIG_FILE = System.getProperty("user.home") + "/" + CONFIG_FILE;
 
     private static final int MAX_PAGE_SIZE = 100;
-    
-    @BeforeClass
-    public static void ensureReauthenticationIsDisabled() throws Exception {
-        TestUser admin = TestUserHelper.getSignedInAdmin();
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        
-        Study study = adminApi.getStudy("api").execute().body();
-        if (study.isReauthenticationEnabled()) {
-            study.setReauthenticationEnabled(false);
-            adminApi.updateStudy("api", study).execute();
-        }
-    }
-    
+
     @Before
     public void before() throws IOException {
         // pre-load test user id and exporter synapse user id
@@ -434,17 +421,26 @@ public class StudyTest {
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
 
             Study study = studiesApi.getUsersStudy().execute().body();
-            study.setHealthCodeExportEnabled(true);
-            study.setEmailVerificationEnabled(false);
-            study.setStudyIdExcludedInExport(false);
-            study.setReauthenticationEnabled(true);
+            boolean originalHealthCodeExportEnabled = study.isHealthCodeExportEnabled();
+            boolean originalEmailVerificationEnabled = study.isEmailVerificationEnabled();
+            boolean originalStudyIdExcludedInExport = study.isStudyIdExcludedInExport();
+            boolean originalReauthenticationEnabled = study.isReauthenticationEnabled();
+
+            study.setHealthCodeExportEnabled(!originalHealthCodeExportEnabled);
+            study.setEmailVerificationEnabled(!originalEmailVerificationEnabled);
+            study.setStudyIdExcludedInExport(!originalStudyIdExcludedInExport);
+            study.setReauthenticationEnabled(!originalReauthenticationEnabled);
             studiesApi.updateUsersStudy(study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
-            assertFalse("healthCodeExportEnabled should be false", study.isHealthCodeExportEnabled());
-            assertTrue("emailVersificationEnabled should be true", study.isEmailVerificationEnabled());
-            assertTrue("studyIdExcludedInExport should be true", study.isStudyIdExcludedInExport());
-            assertFalse("reauthenticationEnabled should be false", study.isReauthenticationEnabled());
+            assertEquals("healthCodeExportEnabled should be unchanged", originalHealthCodeExportEnabled,
+                    study.isHealthCodeExportEnabled());
+            assertEquals("emailVersificationEnabled should be unchanged", originalEmailVerificationEnabled,
+                    study.isEmailVerificationEnabled());
+            assertEquals("studyIdExcludedInExport should be unchanged", originalStudyIdExcludedInExport,
+                    study.isStudyIdExcludedInExport());
+            assertEquals("reauthenticationEnabled should be unchanged", originalReauthenticationEnabled,
+                    study.isReauthenticationEnabled());
         } finally {
             developer.signOutAndDeleteUser();
         }
