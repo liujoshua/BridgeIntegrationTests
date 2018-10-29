@@ -47,15 +47,12 @@ import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class AppConfigTest {
-    private static final String INTEG_TEST_OS_NAME = "BridgeIntegrationTests";
-    
     private TestUser developer;
     private TestUser admin;
     private TestUser user;
@@ -336,8 +333,6 @@ public class AppConfigTest {
         // Verify that for the user, the config is included in the app config itself
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         AppConfig usersAppConfig = userApi.getAppConfig(user.getStudyId()).execute().body();
-        
-        System.out.println(usersAppConfig.getGuid());
         
         SchedulePlan plan = RestUtils.toType(usersAppConfig.getConfigElements().get(elementId), SchedulePlan.class);        
         assertEquals("Cron-based schedule", plan.getLabel());
