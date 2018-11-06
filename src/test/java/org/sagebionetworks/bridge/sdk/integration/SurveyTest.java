@@ -332,7 +332,8 @@ public class SurveyTest {
         
         // verify logical deletion
         surveysApi.deleteSurvey(key2.getGuid(), key2.getCreatedOn(), false).execute();
-        
+
+        Thread.sleep(2000);
         anyDeleted(surveysApi.getMostRecentSurveys(true));
         noneDeleted(surveysApi.getMostRecentSurveys(false));
     }
