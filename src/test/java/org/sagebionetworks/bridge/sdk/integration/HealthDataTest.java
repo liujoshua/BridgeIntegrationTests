@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
@@ -215,6 +216,13 @@ public class HealthDataTest {
         assertEquals(2, returnedUserMetadataMap.size());
         assertEquals("test-task-guid", returnedUserMetadataMap.get("taskRunId"));
         assertEquals(3.0, (double) returnedUserMetadataMap.get("lastMedicationHoursAgo"), 0.001);
+
+        // We can get the record back from the API.
+        List<HealthDataRecord> recordList = user.getClient(HealthDataApi.class).getHealthDataByCreatedOn(CREATED_ON,
+                CREATED_ON).execute().body().getItems();
+        HealthDataRecord returnedRecord = recordList.stream().filter(r -> r.getSchemaId().equals(SCHEMA_ID)).findAny()
+                .get();
+        assertEquals(record, returnedRecord);
     }
 
     @Test

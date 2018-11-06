@@ -10,15 +10,18 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
+import org.sagebionetworks.bridge.rest.api.HealthDataApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.EmailSignIn;
 import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
+import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.Identifier;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Phone;
@@ -42,6 +45,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import retrofit2.Response;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -49,6 +54,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @Category(IntegrationSmokeTest.class)
+@SuppressWarnings("unchecked")
 public class AuthenticationTest {
     private static TestUser adminUser;
     private static TestUser researchUser;
@@ -64,7 +70,7 @@ public class AuthenticationTest {
         // Make a test user with a phone number.
         SignUp phoneOnlyUser = new SignUp().study(IntegTestUtils.STUDY_ID).consent(true).phone(IntegTestUtils.PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(AuthenticationTest.class).withConsentUser(true)
-                .withSignUp(phoneOnlyUser).withSetPassword(false).createUser();
+                .withSignUp(phoneOnlyUser).createUser();
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         authApi = testUser.getClient(AuthenticationApi.class);
 
@@ -421,5 +427,23 @@ public class AuthenticationTest {
         StudyParticipant participant = researchUser.getClient(ForResearchersApi.class).getParticipantById(
                 phoneOnlyTestUser.getUserId(), false).execute().body();
         assertEquals(participant.getHealthCode(), message.getHealthCode());
+
+        // Verify the SMS message log was written to health data.
+        DateTime messageSentOn = message.getSentOn();
+        List<HealthDataRecord> recordList = phoneOnlyTestUser.getClient(HealthDataApi.class).getHealthDataByCreatedOn(
+                messageSentOn, messageSentOn).execute().body().getItems();
+        HealthDataRecord smsMessageRecord = recordList.stream()
+                .filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge")).findAny().get();
+        assertEquals("sms-messages-sent-from-bridge", smsMessageRecord.getSchemaId());
+        assertEquals(1, smsMessageRecord.getSchemaRevision().intValue());
+
+        // SMS Message log saves the date as epoch milliseconds.
+        assertEquals(messageSentOn.getMillis(), smsMessageRecord.getCreatedOn().getMillis());
+
+        // Verify data.
+        Map<String, String> recordDataMap = RestUtils.toType(smsMessageRecord.getData(), Map.class);
+        assertEquals("Transactional", recordDataMap.get("smsType"));
+        assertNotNull(recordDataMap.get("messageBody"));
+        assertEquals(messageSentOn.getMillis(), DateTime.parse(recordDataMap.get("sentOn")).getMillis());
     }
 }
