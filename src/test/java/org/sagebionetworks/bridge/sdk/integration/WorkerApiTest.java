@@ -7,12 +7,16 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.List;
+import java.util.Map;
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ActivitiesApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
@@ -23,6 +27,7 @@ import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.ActivityEventList;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
+import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.SchedulePlanList;
@@ -36,6 +41,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
+@SuppressWarnings("unchecked")
 public class WorkerApiTest {
     private static final DateTimeZone TEST_USER_TIME_ZONE = DateTimeZone.forOffsetHours(-8);
     private static final String TEST_USER_TIME_ZONE_STRING = "-08:00";
@@ -244,6 +250,11 @@ public class WorkerApiTest {
         user = new TestUserHelper.Builder(WorkerApiTest.class).withSignUp(signUp).withConsentUser(true)
                 .createAndSignInUser();
 
+        // User should get activities to set that initial timezone.
+        DateTime startTime = DateTime.now(TEST_USER_TIME_ZONE);
+        user.getClient(ActivitiesApi.class).getScheduledActivitiesByDateRange(startTime, startTime.plusDays(1))
+                .execute();
+
         // Test sending SMS from worker.
         String messageFromWorker = "Test message from worker.";
         workersApi.sendSmsMessageToParticipant(user.getStudyId(), user.getSession().getId(),
@@ -276,5 +287,26 @@ public class WorkerApiTest {
         StudyParticipant participant = workersApi.getParticipantById(user.getStudyId(), user.getUserId(),
                 false).execute().body();
         assertEquals(participant.getHealthCode(), message.getHealthCode());
+
+        // Verify the SMS message log was written to health data.
+        DateTime messageSentOn = message.getSentOn();
+        List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(messageSentOn,
+                messageSentOn).execute().body().getItems();
+        HealthDataRecord smsMessageRecord = recordList.stream()
+                .filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge")).findAny().get();
+        assertEquals("sms-messages-sent-from-bridge", smsMessageRecord.getSchemaId());
+        assertEquals(1, smsMessageRecord.getSchemaRevision().intValue());
+
+        assertEquals(messageSentOn.getMillis(), smsMessageRecord.getCreatedOn().getMillis());
+        assertEquals("-0800", smsMessageRecord.getCreatedOnTimeZone());
+
+        // Verify data.
+        Map<String, String> recordDataMap = RestUtils.toType(smsMessageRecord.getData(), Map.class);
+        assertEquals("Promotional", recordDataMap.get("smsType"));
+        assertEquals(expectedMessageBody, recordDataMap.get("messageBody"));
+
+        DateTime recordSentOn = DateTime.parse(recordDataMap.get("sentOn"));
+        assertEquals(messageSentOn.getMillis(), recordSentOn.getMillis());
+        assertEquals(TEST_USER_TIME_ZONE, recordSentOn.getZone());
     }
 }
