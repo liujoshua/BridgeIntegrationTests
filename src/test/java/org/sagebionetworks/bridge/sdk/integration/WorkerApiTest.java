@@ -21,7 +21,6 @@ import org.sagebionetworks.bridge.rest.api.ActivitiesApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
-import org.sagebionetworks.bridge.rest.api.HealthDataApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
@@ -291,7 +290,7 @@ public class WorkerApiTest {
 
         // Verify the SMS message log was written to health data.
         DateTime messageSentOn = message.getSentOn();
-        List<HealthDataRecord> recordList = user.getClient(HealthDataApi.class).getHealthDataByCreatedOn(messageSentOn,
+        List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(messageSentOn,
                 messageSentOn).execute().body().getItems();
         HealthDataRecord smsMessageRecord = recordList.stream()
                 .filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge")).findAny().get();

@@ -21,6 +21,7 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.HealthDataApi;
+import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
@@ -218,7 +219,7 @@ public class HealthDataTest {
         assertEquals(3.0, (double) returnedUserMetadataMap.get("lastMedicationHoursAgo"), 0.001);
 
         // We can get the record back from the API.
-        List<HealthDataRecord> recordList = user.getClient(HealthDataApi.class).getHealthDataByCreatedOn(CREATED_ON,
+        List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(CREATED_ON,
                 CREATED_ON).execute().body().getItems();
         HealthDataRecord returnedRecord = recordList.stream().filter(r -> r.getSchemaId().equals(SCHEMA_ID)).findAny()
                 .get();

@@ -14,7 +14,6 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
-import org.sagebionetworks.bridge.rest.api.HealthDataApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -430,7 +429,7 @@ public class AuthenticationTest {
 
         // Verify the SMS message log was written to health data.
         DateTime messageSentOn = message.getSentOn();
-        List<HealthDataRecord> recordList = phoneOnlyTestUser.getClient(HealthDataApi.class).getHealthDataByCreatedOn(
+        List<HealthDataRecord> recordList = phoneOnlyTestUser.getClient(InternalApi.class).getHealthDataByCreatedOn(
                 messageSentOn, messageSentOn).execute().body().getItems();
         HealthDataRecord smsMessageRecord = recordList.stream()
                 .filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge")).findAny().get();
