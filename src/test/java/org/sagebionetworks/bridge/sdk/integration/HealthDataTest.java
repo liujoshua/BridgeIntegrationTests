@@ -14,7 +14,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -32,6 +34,7 @@ import org.sagebionetworks.bridge.rest.model.DataType;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.HealthDataSubmission;
+import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
 import org.sagebionetworks.bridge.rest.model.Study;
@@ -50,22 +53,25 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 @SuppressWarnings("unchecked")
 public class HealthDataTest {
     private static final String APP_VERSION = "version 1.0.0, build 2";
-    private static final DateTime CREATED_ON = DateTime.parse("2017-08-24T14:38:57.340+0900");
-    private static final String CREATED_ON_TIMEZONE = "+0900";
+    private static final DateTimeZone CREATED_ON_TIMEZONE = DateTimeZone.forOffsetHours(9);
+    private static final String CREATED_ON_TIMEZONE_STRING = "+0900";
     private static final String PHONE_INFO = "Integration Tests";
     private static final String SCHEMA_ID = "health-data-integ-test-schema";
     private static final long SCHEMA_REV = 1L;
     private static final String SURVEY_ID = "health-data-integ-test-survey";
 
+    private static TestUserHelper.TestUser developer;
     private static String externalId;
     private static StudiesApi studiesApi;
     private static DateTime surveyCreatedOn;
     private static String surveyGuid;
     private static TestUserHelper.TestUser user;
 
+    private DateTime createdOn;
+
     @BeforeClass
     public static void beforeClass() throws Exception {
-        TestUserHelper.TestUser developer = TestUserHelper.getSignedInApiDeveloper();
+        developer = TestUserHelper.createAndSignInUser(HealthDataTest.class, false, Role.DEVELOPER);
         studiesApi = developer.getClient(StudiesApi.class);
 
         // Ensure schema exists, so we have something to submit against.
@@ -158,12 +164,22 @@ public class HealthDataTest {
     public static void resetUploadValidationStrictness() throws Exception {
         // Some of these tests change the strictness for the test. Reset it to REPORT.
         setUploadValidationStrictness(UploadValidationStrictness.REPORT);
+
+        // Then delete the developer afterwards.
+        if (developer != null) {
+            developer.signOutAndDeleteUser();
+        }
     }
 
     private static void setUploadValidationStrictness(UploadValidationStrictness strictness) throws Exception {
         Study study = studiesApi.getUsersStudy().execute().body();
         study.setUploadValidationStrictness(strictness);
         studiesApi.updateUsersStudy(study).execute();
+    }
+
+    @Before
+    public void before() {
+        createdOn = DateTime.now(CREATED_ON_TIMEZONE);
     }
 
     @Test
@@ -177,7 +193,7 @@ public class HealthDataTest {
                 .put("bar", "This is an attachment").build();
         Map<String, Object> metadata = ImmutableMap.<String, Object>builder().put("taskRunId", "test-task-guid")
                 .put("lastMedicationHoursAgo", 3).build();
-        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(createdOn)
                 .data(data).metadata(metadata).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
 
         // submit and validate
@@ -195,8 +211,8 @@ public class HealthDataTest {
         assertEquals(ImmutableList.of("group1"), record.getUserDataGroups());
 
         // createdOn is flattened to UTC server side.
-        assertEquals(CREATED_ON.getMillis(), record.getCreatedOn().getMillis());
-        assertEquals(CREATED_ON_TIMEZONE, record.getCreatedOnTimeZone());
+        assertEquals(createdOn.getMillis(), record.getCreatedOn().getMillis());
+        assertEquals(CREATED_ON_TIMEZONE_STRING, record.getCreatedOnTimeZone());
 
         // Data has foo "foo value" and bar is an attachment.
         Map<String, String> returnedDataMap = RestUtils.toType(record.getData(), Map.class);
@@ -219,8 +235,8 @@ public class HealthDataTest {
         assertEquals(3.0, (double) returnedUserMetadataMap.get("lastMedicationHoursAgo"), 0.001);
 
         // We can get the record back from the API.
-        List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(CREATED_ON,
-                CREATED_ON).execute().body().getItems();
+        List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(createdOn,
+                createdOn).execute().body().getItems();
         HealthDataRecord returnedRecord = recordList.stream().filter(r -> r.getSchemaId().equals(SCHEMA_ID)).findAny()
                 .get();
         assertEquals(record, returnedRecord);
@@ -231,7 +247,7 @@ public class HealthDataTest {
         // make health data to submit - Use a map instead of a Jackson JSON node, because mixing JSON libraries causes
         // bad things to happen.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("answer-me", "C").build();
-        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(createdOn)
                 .data(data).phoneInfo(PHONE_INFO).surveyGuid(surveyGuid).surveyCreatedOn(surveyCreatedOn);
 
         // submit and validate - Most of the record attributes are already validated in the previous test. Just
@@ -246,12 +262,39 @@ public class HealthDataTest {
     }
 
     @Test
+    public void developerCanSubmitHealthData() throws Exception {
+        // make health data to submit - Use a map instead of a Jackson JSON node, because mixing JSON libraries causes
+        // bad things to happen.
+        Map<String, String> data = ImmutableMap.<String, String>builder().put("answer-me", "C").build();
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(createdOn)
+                .data(data).phoneInfo(PHONE_INFO).surveyGuid(surveyGuid).surveyCreatedOn(surveyCreatedOn);
+
+        // submit and validate - Most of the record attributes are already validated in the previous test. Just
+        // validate survey ID was set properly as the schema ID and that the data is correct.
+        HealthDataRecord record = developer.getClient(InternalApi.class).submitHealthDataForParticipant(
+                user.getUserId(), submission).execute().body();
+        assertEquals(SURVEY_ID, record.getSchemaId());
+        assertNotNull(record.getSchemaRevision());
+
+        Map<String, String> returnedDataMap = RestUtils.toType(record.getData(), Map.class);
+        assertEquals(1, returnedDataMap.size());
+        assertEquals("C", returnedDataMap.get("answer-me"));
+
+        // User can get the health data too.
+        List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(createdOn,
+                createdOn).execute().body().getItems();
+        HealthDataRecord returnedRecord = recordList.stream().filter(r -> r.getSchemaId().equals(SURVEY_ID)).findAny()
+                .get();
+        assertEquals(record, returnedRecord);
+    }
+
+    @Test
     public void strictValidationThrows() throws Exception {
         setUploadValidationStrictness(UploadValidationStrictness.STRICT);
 
         // Make health data. This submission has foo, but not bar. Since bar is required, this trips Strict Validation.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value").build();
-        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(createdOn)
                 .data(data).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
 
         // submit and catch exception
@@ -269,7 +312,7 @@ public class HealthDataTest {
 
         // Make health data. This submission has foo, but not bar. Since bar is required, this trips Strict Validation.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value").build();
-        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(createdOn)
                 .data(data).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
 
         // submit and validate - Most of the record attributes are already validated in the previous test. Just
@@ -288,7 +331,7 @@ public class HealthDataTest {
 
         // Make health data. This submission has foo, but not bar. Since bar is required, this trips Strict Validation.
         Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "foo value").build();
-        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(CREATED_ON)
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(createdOn)
                 .data(data).phoneInfo(PHONE_INFO).schemaId(SCHEMA_ID).schemaRevision(SCHEMA_REV);
 
         // submit and validate - Most of the record attributes are already validated in the previous test. Just
