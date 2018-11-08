@@ -32,6 +32,7 @@ import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
+import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
@@ -399,6 +400,24 @@ public class ConsentTest {
         StudyParticipant participant = researchUser.getClient(ForResearchersApi.class).getParticipantById(
                 phoneOnlyTestUser.getUserId(), false).execute().body();
         assertEquals(participant.getHealthCode(), message.getHealthCode());
+
+        // Verify the SMS message log was written to health data.
+        DateTime messageSentOn = message.getSentOn();
+        List<HealthDataRecord> recordList = phoneOnlyTestUser.getClient(InternalApi.class).getHealthDataByCreatedOn(
+                messageSentOn, messageSentOn).execute().body().getItems();
+        HealthDataRecord smsMessageRecord = recordList.stream()
+                .filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge")).findAny().get();
+        assertEquals("sms-messages-sent-from-bridge", smsMessageRecord.getSchemaId());
+        assertEquals(1, smsMessageRecord.getSchemaRevision().intValue());
+
+        // SMS Message log saves the date as epoch milliseconds.
+        assertEquals(messageSentOn.getMillis(), smsMessageRecord.getCreatedOn().getMillis());
+
+        // Verify data.
+        Map<String, String> recordDataMap = RestUtils.toType(smsMessageRecord.getData(), Map.class);
+        assertEquals("Transactional", recordDataMap.get("smsType"));
+        assertNotNull(recordDataMap.get("messageBody"));
+        assertEquals(messageSentOn.getMillis(), DateTime.parse(recordDataMap.get("sentOn")).getMillis());
     }
 
     @Test
