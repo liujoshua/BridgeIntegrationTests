@@ -118,7 +118,7 @@ public class SubstudyTest {
     }
     
     @Test
-    public void usersAndTaintedBySubstudyAssociation() throws Exception {
+    public void usersAreTaintedBySubstudyAssociation() throws Exception {
         // Create a substudy for this test.
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
