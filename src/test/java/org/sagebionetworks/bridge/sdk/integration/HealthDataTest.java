@@ -235,6 +235,7 @@ public class HealthDataTest {
         assertEquals(3.0, (double) returnedUserMetadataMap.get("lastMedicationHoursAgo"), 0.001);
 
         // We can get the record back from the API.
+        Thread.sleep(2000);
         List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(createdOn,
                 createdOn).execute().body().getItems();
         HealthDataRecord returnedRecord = recordList.stream().filter(r -> r.getSchemaId().equals(SCHEMA_ID)).findAny()
@@ -281,6 +282,7 @@ public class HealthDataTest {
         assertEquals("C", returnedDataMap.get("answer-me"));
 
         // User can get the health data too.
+        Thread.sleep(2000);
         List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(createdOn,
                 createdOn).execute().body().getItems();
         HealthDataRecord returnedRecord = recordList.stream().filter(r -> r.getSchemaId().equals(SURVEY_ID)).findAny()
