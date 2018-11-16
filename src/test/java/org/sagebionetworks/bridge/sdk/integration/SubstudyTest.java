@@ -13,6 +13,7 @@ import java.util.List;
 
 import org.joda.time.DateTime;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
@@ -38,6 +39,19 @@ public class SubstudyTest {
     
     private List<String> substudyIdsToDelete = new ArrayList<>();
     private List<String> userIdsToDelete = new ArrayList<>();
+    private TestUser testResearcher;
+    
+    @Before
+    public void before() throws Exception { 
+        testResearcher = TestUserHelper.createAndSignInUser(SubstudyTest.class, false, Role.RESEARCHER);
+    }
+    
+    @After
+    public void deleteResearcher() throws Exception {
+        if (testResearcher != null) {
+            testResearcher.signOutAndDeleteUser();
+        }
+    }
     
     @After
     public void after() throws Exception {
@@ -121,8 +135,6 @@ public class SubstudyTest {
     public void usersAreTaintedBySubstudyAssociation() throws Exception {
         // Create a substudy for this test.
         TestUser admin = TestUserHelper.getSignedInAdmin();
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        SubstudiesApi substudiesApi = admin.getClient(SubstudiesApi.class);
         
         String id1 = Tests.randomIdentifier(SubstudyTest.class);
         Substudy substudy1 = new Substudy().id(id1).name("Substudy 1 Test");
@@ -130,9 +142,9 @@ public class SubstudyTest {
         String id2 = Tests.randomIdentifier(SubstudyTest.class);
         Substudy substudy2 = new Substudy().id(id2).name("Substudy 2 Test");
         
+        SubstudiesApi substudiesApi = admin.getClient(SubstudiesApi.class);
         substudiesApi.createSubstudy(substudy1).execute();
         substudyIdsToDelete.add(id1);
-        
         substudiesApi.createSubstudy(substudy2).execute();
         substudyIdsToDelete.add(id2);
         
@@ -142,10 +154,11 @@ public class SubstudyTest {
         researcherSignUp.roles(ImmutableList.of(Role.RESEARCHER));
         researcherSignUp.substudyIds(ImmutableList.of(id1));
 
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         String researcherId = adminApi.createUser(researcherSignUp).execute().body().getId();
         userIdsToDelete.add(researcherId);
         
-        ParticipantsApi participantApi = admin.getClient(ParticipantsApi.class);
+        ParticipantsApi participantApi = testResearcher.getClient(ParticipantsApi.class);
         StudyParticipant researcher = participantApi.getParticipantById(researcherId, false).execute().body();
         assertEquals(id1, researcher.getSubstudyIds().get(0));
         
