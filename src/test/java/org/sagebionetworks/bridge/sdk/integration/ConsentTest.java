@@ -402,6 +402,7 @@ public class ConsentTest {
         assertEquals(participant.getHealthCode(), message.getHealthCode());
 
         // Verify the SMS message log was written to health data.
+        Thread.sleep(2000);
         DateTime messageSentOn = message.getSentOn();
         List<HealthDataRecord> recordList = phoneOnlyTestUser.getClient(InternalApi.class).getHealthDataByCreatedOn(
                 messageSentOn, messageSentOn).execute().body().getItems();
