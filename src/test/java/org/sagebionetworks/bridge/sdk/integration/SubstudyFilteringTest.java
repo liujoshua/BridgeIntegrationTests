@@ -27,8 +27,19 @@ import org.sagebionetworks.bridge.util.IntegTestUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 public class SubstudyFilteringTest {
+    public static class UserInfo {
+        private final String userId;
+        private final SignIn signIn;
+        public UserInfo(String userId, String email) {
+            this.userId = userId;
+            this.signIn = new SignIn().email(email).password(Tests.PASSWORD).study(IntegTestUtils.STUDY_ID);
+        }
+        public String getUserId() { return userId; }
+        public SignIn getSignIn() { return signIn; }
+    }
 
     private TestUser admin;
     private SubstudiesApi substudiesApi;
@@ -43,9 +54,9 @@ public class SubstudyFilteringTest {
         substudyIdsToDelete = new HashSet<>();
         userIdsToDelete = new HashSet<>();
     }
-    
+
     @After
-    public void deleteUsers() {
+    public void after() {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         for (String userId : userIdsToDelete) {
             try {
@@ -54,11 +65,6 @@ public class SubstudyFilteringTest {
                 e.printStackTrace();
             }
         }
-    }
-    
-    @After
-    public void deleteSubstudies() {
-        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         for (String substudyId : substudyIdsToDelete) {
             try {
                 adminsApi.deleteSubstudy(substudyId, true).execute();    
@@ -67,7 +73,7 @@ public class SubstudyFilteringTest {
             }
         }
     }
-    
+
     @Test
     public void test() throws Exception { 
         // Create two substudies
@@ -75,13 +81,13 @@ public class SubstudyFilteringTest {
         String idB = createSubstudy();
         
         // Create a researcher in substudy A
-        SignIn researcherA = createAdmin(Role.RESEARCHER, idA);
-        SignIn researcherB = createAdmin(Role.RESEARCHER, idB);
+        SignIn researcherA = createUser(Role.RESEARCHER, idA).getSignIn();
+        SignIn researcherB = createUser(Role.RESEARCHER, idB).getSignIn();
         
         // Create three accounts, one A, one B, one AB, one with nothing
-        String userIdA = createUser(idA);
-        String userIdB = createUser(idB);
-        String userIdAB = createUser(idA, idB);
+        String userIdA = createUser(null, idA).getUserId();
+        String userIdB = createUser(null, idB).getUserId();
+        String userIdAB = createUser(null, idA, idB).getUserId();
         
         // researcherA
         ClientManager manager = new ClientManager.Builder().withSignIn(researcherA).build();
@@ -122,7 +128,8 @@ public class SubstudyFilteringTest {
     
     private void assertAccountHasSubstudies(Set<String> substudies, List<AccountSummary> summaries) {
         for (AccountSummary summary : summaries) {
-            if (summary.getSubstudyIds().containsAll(substudies)) {
+            Set<String> summaryIds = ImmutableSet.copyOf(summary.getSubstudyIds());
+            if (Sets.symmetricDifference(summaryIds, substudies).isEmpty()) {
                 return;
             }
         }
@@ -137,7 +144,7 @@ public class SubstudyFilteringTest {
         return id;
     }
     
-    private SignIn createAdmin(Role role, String... substudyIds) throws Exception {
+    private UserInfo createUser(Role role, String... substudyIds) throws Exception {
         String email = IntegTestUtils.makeEmail(SubstudyTest.class);
         SignUp signUp = new SignUp().email(email).password(Tests.PASSWORD).study(IntegTestUtils.STUDY_ID);
         if (role != null) {
@@ -148,18 +155,6 @@ public class SubstudyFilteringTest {
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         String userId = adminApi.createUser(signUp).execute().body().getId();
         userIdsToDelete.add(userId);
-        return new SignIn().email(email).password(Tests.PASSWORD).study(IntegTestUtils.STUDY_ID);
+        return new UserInfo(userId, email);
     }
-    
-    private String createUser(String... substudyIds) throws Exception {
-        String email = IntegTestUtils.makeEmail(SubstudyTest.class);
-        SignUp signUp = new SignUp().email(email).password(Tests.PASSWORD).study(IntegTestUtils.STUDY_ID);
-        signUp.substudyIds(ImmutableList.copyOf(substudyIds));
-                
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        String userId = adminApi.createUser(signUp).execute().body().getId();
-        userIdsToDelete.add(userId);
-        return userId;
-    }
-    
 }
