@@ -129,7 +129,7 @@ public class SubstudyFilteringTest {
     private void assertAccountHasSubstudies(Set<String> substudies, List<AccountSummary> summaries) {
         for (AccountSummary summary : summaries) {
             Set<String> summaryIds = ImmutableSet.copyOf(summary.getSubstudyIds());
-            if (Sets.symmetricDifference(summaryIds, substudies).isEmpty()) {
+            if (summaryIds.equals(substudies)) {
                 return;
             }
         }
