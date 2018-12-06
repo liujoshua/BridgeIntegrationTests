@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.HashSet;
@@ -19,15 +20,13 @@ import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 
 public class SubstudyFilteringTest {
     public static class UserInfo {
@@ -91,49 +90,57 @@ public class SubstudyFilteringTest {
         
         // researcherA
         ClientManager manager = new ClientManager.Builder().withSignIn(researcherA).build();
-        ForResearchersApi researcherApi = manager.getClient(ForResearchersApi.class);
+        ForResearchersApi researcherApiForA = manager.getClient(ForResearchersApi.class);
         
         // This researcher sees A substudy users only
-        AccountSummaryList list = researcherApi.getParticipants(null, null, null, null, null, null).execute().body();
-        assertAccountHasSubstudies(ImmutableSet.of(idA), list.getItems());
-        assertAccountHasSubstudies(ImmutableSet.of(idA, idB), list.getItems());
+        AccountSummaryList list = researcherApiForA.getParticipants(null, null, null, null, null, null).execute().body();
+        assertListContainsAccount(list.getItems(), idA, userIdA);
+        assertListContainsAccount(list.getItems(), idA, userIdAB);
         
         // researcherB
         manager = new ClientManager.Builder().withSignIn(researcherB).build();
-        researcherApi = manager.getClient(ForResearchersApi.class);
+        ForResearchersApi researcherApiForB = manager.getClient(ForResearchersApi.class);
         
         // This researcher sees B substudy users only
-        list = researcherApi.getParticipants(null, null, null, null, null, null).execute().body();
-        assertAccountHasSubstudies(ImmutableSet.of(idB), list.getItems());
-        assertAccountHasSubstudies(ImmutableSet.of(idA, idB), list.getItems());
+        list = researcherApiForB.getParticipants(null, null, null, null, null, null).execute().body();
+        assertListContainsAccount(list.getItems(), idB, userIdB);
+        assertListContainsAccount(list.getItems(), idB, userIdAB);
         
         // Researcher B should not be able to get a substudy A account
         try {
-            researcherApi.getParticipantById(userIdA, false).execute();
+            researcherApiForB.getParticipantById(userIdA, false).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
         }
         // Researcher B should be able to get only substudy B accounts (even if mixed)
-        researcherApi.getParticipantById(userIdB, false).execute().body();
-        researcherApi.getParticipantById(userIdAB, false).execute().body();
+        researcherApiForB.getParticipantById(userIdB, false).execute().body();
+        researcherApiForB.getParticipantById(userIdAB, false).execute().body();
         
         // This should apply to any call involving user in another substudy, try one (fully tested in 
         // the unit tests)
         try {
-            researcherApi.getActivityEvents(userIdA).execute();
+            researcherApiForB.getActivityEvents(userIdA).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
         }
+        
+        // Researcher A should not be able to save and destroy the mapping to substudy B
+        StudyParticipant participant = researcherApiForA.getParticipantById(userIdAB, false).execute().body();
+        researcherApiForA.updateParticipant(userIdAB, participant);
+        
+        participant = researcherApiForB.getParticipantById(userIdAB, false).execute().body();
+        assertTrue(participant.getSubstudyIds().contains(idB)); // this wasn't wiped out by the update.
     }
     
-    private void assertAccountHasSubstudies(Set<String> substudies, List<AccountSummary> summaries) {
+    private void assertListContainsAccount(List<AccountSummary> summaries, String callerSubstudyId, String userId) {
         for (AccountSummary summary : summaries) {
-            Set<String> summaryIds = ImmutableSet.copyOf(summary.getSubstudyIds());
-            if (summaryIds.equals(substudies)) {
+            if (summary.getId().equals(userId) &&
+                summary.getSubstudyIds().size() == 1 &&
+                summary.getSubstudyIds().contains(callerSubstudyId)) {
                 return;
             }
         }
-        fail("Did not find account with substudies: " + Joiner.on(", ").join(substudies));
+        fail("Did not find account with ID or the account contains an invalid substudy: " + userId);
     }
     
     private String createSubstudy() throws Exception {
