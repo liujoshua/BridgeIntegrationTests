@@ -11,6 +11,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.model.Environment;
@@ -37,8 +38,10 @@ public class HttpTest {
     public void before() {
         this.testBaseUrl = TestUserHelper.getSignedInAdmin().getClientManager().getHostUrl();
     }
-    
+
+    // CORS cannot work in BridgePF and BridgeServer2 simultaneously. Disable this test until the migration is complete.
     @Test
+    @Ignore
     public void testPreflight() throws Exception {
         HttpResponse response = Request.Options(testBaseUrl+"/v3/studies?summary=true")
             .setHeader(ACCESS_CONTROL_REQUEST_HEADERS, "accept, content-type")
