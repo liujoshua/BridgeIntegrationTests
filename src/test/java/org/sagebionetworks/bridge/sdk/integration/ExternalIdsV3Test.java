@@ -22,7 +22,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 import com.google.common.collect.Lists;
 
-public class ExternalIdsTest {
+public class ExternalIdsV3Test {
 
     private static final int LIST_SIZE = 10;
     private static final int PAGE_SIZE = (LIST_SIZE/2);
@@ -30,7 +30,7 @@ public class ExternalIdsTest {
     
     @Before
     public void before() throws IOException {
-        developer = TestUserHelper.createAndSignInUser(ExternalIdsTest.class, false, Role.DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(ExternalIdsV3Test.class, false, Role.DEVELOPER);
     }
     
     @After
@@ -51,7 +51,7 @@ public class ExternalIdsTest {
             identifiers.add(prefix+RandomStringUtils.randomAlphabetic(10));
         }
         ExternalIdentifiersApi externalIdsClient = developer.getClient(ExternalIdentifiersApi.class);
-        externalIdsClient.addExternalIds(identifiers).execute();
+        externalIdsClient.addExternalIdsV3(identifiers).execute();
         try {
             ExternalIdentifierList page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, prefix, null)
                     .execute().body();
@@ -79,7 +79,7 @@ public class ExternalIdsTest {
                     .execute().body();
             assertEquals(0, page1.getItems().size());
         } finally {
-            externalIdsClient.deleteExternalIds(identifiers).execute();
+            externalIdsClient.deleteExternalIdsV3(identifiers).execute();
         }
         ExternalIdentifierList page = externalIdsClient.getExternalIds(null, null, prefix, null).execute().body();
         assertEquals(0, page.getItems().size());

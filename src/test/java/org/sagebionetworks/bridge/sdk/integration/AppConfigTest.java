@@ -71,7 +71,7 @@ public class AppConfigTest {
     
     @Before
     public void before() throws IOException {
-        developer = TestUserHelper.createAndSignInUser(ExternalIdsTest.class, false, Role.DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(ExternalIdsV3Test.class, false, Role.DEVELOPER);
         admin = TestUserHelper.getSignedInAdmin();
         
         adminApi = admin.getClient(ForAdminsApi.class);

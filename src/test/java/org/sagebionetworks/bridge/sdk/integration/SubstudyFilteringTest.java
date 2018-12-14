@@ -145,7 +145,7 @@ public class SubstudyFilteringTest {
     
     private String createSubstudy() throws Exception {
         String id = Tests.randomIdentifier(SubstudyTest.class);
-        Substudy substudyA = new Substudy().id(id).name("Substudy Filtering Test");
+        Substudy substudyA = new Substudy().id(id).name("Substudy " + id);
         substudiesApi.createSubstudy(substudyA).execute();
         substudyIdsToDelete.add(id);
         return id;

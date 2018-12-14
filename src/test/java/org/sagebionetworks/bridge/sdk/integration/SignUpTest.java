@@ -112,11 +112,11 @@ public class SignUpTest {
                 signUp.setExternalId("ABC");
                 authApi.signUp(signUp).execute();
                 fail("Should have thrown exception");
-            }catch(InvalidEntityException e) {
+            } catch(InvalidEntityException e) {
                 assertEquals("externalId is not a valid external ID", e.getErrors().get("externalId").get(0));
             }
         } finally {
-            adminApi.deleteStudy(study.getIdentifier(), true).execute();
+            //adminApi.deleteStudy(study.getIdentifier(), true).execute();
         }
     }
 }
