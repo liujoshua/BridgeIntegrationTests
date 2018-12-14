@@ -116,7 +116,7 @@ public class SignUpTest {
                 assertEquals("externalId is not a valid external ID", e.getErrors().get("externalId").get(0));
             }
         } finally {
-            //adminApi.deleteStudy(study.getIdentifier(), true).execute();
+            adminApi.deleteStudy(study.getIdentifier(), true).execute();
         }
     }
 }
