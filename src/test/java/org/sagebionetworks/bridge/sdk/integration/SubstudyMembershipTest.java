@@ -18,7 +18,6 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
-import org.sagebionetworks.bridge.rest.model.ActivityEventList;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -60,8 +59,9 @@ public class SubstudyMembershipTest {
     }
 
     @After
-    public void cleanupStudy() throws Exception {
-        Study study = admin.getClient(ForAdminsApi.class).getUsersStudy().execute().body();
+    public void after() throws Exception {
+        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+        Study study = adminsApi.getUsersStudy().execute().body();
         study.setExternalIdRequiredOnSignup(false);
         study.setExternalIdValidationEnabled(false);
         admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute();
@@ -70,24 +70,28 @@ public class SubstudyMembershipTest {
         if (studyAdmin != null) {
             ExternalIdentifiersApi extIdsApi = studyAdmin.getClient(ExternalIdentifiersApi.class);
             for (String externalId : externalIdsToDelete) {
-                extIdsApi.deleteExternalId(externalId).execute();
+                try {
+                    extIdsApi.deleteExternalId(externalId).execute();    
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
             }
             studyAdmin.signOutAndDeleteUser();
         }
-    }
-
-    @After
-    public void deleteSubstudies() throws Exception {
-        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         for (String substudyId : substudyIdsToDelete) {
-            adminsApi.deleteSubstudy(substudyId, true).execute();
+            try {
+                adminsApi.deleteSubstudy(substudyId, true).execute();    
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+            
         }
-    }
-
-    @After
-    public void deleteUsers() throws Exception {
         for (TestUser user : usersToDelete) {
-            user.signOutAndDeleteUser();
+            try {
+                user.signOutAndDeleteUser();
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

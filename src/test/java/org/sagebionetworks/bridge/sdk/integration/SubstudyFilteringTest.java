@@ -58,18 +58,19 @@ public class SubstudyFilteringTest {
     public void after() throws Exception {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         for (String userId : userIdsToDelete) {
-            adminsApi.deleteUser(userId).execute();    
+            try {
+                adminsApi.deleteUser(userId).execute();    
+            } catch(Exception e) {
+            }
+        }
+        for (String substudyId : substudyIdsToDelete) {
+            try {
+                adminsApi.deleteSubstudy(substudyId, true).execute();    
+            } catch(Exception e) {
+            }
         }
     }
     
-    @After
-    public void after2() throws Exception {
-        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
-        for (String substudyId : substudyIdsToDelete) {
-            adminsApi.deleteSubstudy(substudyId, true).execute();    
-        }
-    }
-
     @Test
     public void test() throws Exception { 
         // Create two substudies
