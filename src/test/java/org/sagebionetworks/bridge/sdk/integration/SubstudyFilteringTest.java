@@ -55,21 +55,18 @@ public class SubstudyFilteringTest {
     }
 
     @After
-    public void after() {
+    public void after() throws Exception {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         for (String userId : userIdsToDelete) {
-            try {
-                adminsApi.deleteUser(userId).execute();    
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
+            adminsApi.deleteUser(userId).execute();    
         }
+    }
+    
+    @After
+    public void after2() throws Exception {
+        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         for (String substudyId : substudyIdsToDelete) {
-            try {
-                adminsApi.deleteSubstudy(substudyId, true).execute();    
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
+            adminsApi.deleteSubstudy(substudyId, true).execute();    
         }
     }
 
@@ -108,7 +105,8 @@ public class SubstudyFilteringTest {
         
         // Researcher B should not be able to get a substudy A account
         try {
-            researcherApiForB.getParticipantById(userIdA, false).execute();
+            StudyParticipant p = researcherApiForB.getParticipantById(userIdA, false).execute().body();
+            System.out.println(p);
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
         }

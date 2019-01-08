@@ -77,6 +77,8 @@ public class SubstudyTest {
         
         SubstudiesApi substudiesApi = admin.getClient(SubstudiesApi.class);
         
+        int initialCount = substudiesApi.getSubstudies(false).execute().body().getItems().size();
+        
         String id = Tests.randomIdentifier(SubstudyTest.class);
         Substudy substudy = new Substudy().id(id).name("Substudy " + id);
         
@@ -100,17 +102,17 @@ public class SubstudyTest {
         assertNotEquals(lastModified1, retrieved2.getModifiedOn());
         
         SubstudyList list = substudiesApi.getSubstudies(false).execute().body();
-        assertEquals(1, list.getItems().size());
+        assertEquals(initialCount+1, list.getItems().size());
         assertFalse(list.getRequestParams().isIncludeDeleted());
         
         // logically delete it
         substudiesApi.deleteSubstudy(id, false).execute();
         
         list = substudiesApi.getSubstudies(false).execute().body();
-        assertTrue(list.getItems().isEmpty());
+        assertEquals(initialCount, list.getItems().size());
         
         list = substudiesApi.getSubstudies(true).execute().body();
-        assertEquals(1, list.getItems().size());
+        assertEquals(initialCount+1, list.getItems().size());
         assertTrue(list.getRequestParams().isIncludeDeleted());
         
         // you can still retrieve it
@@ -122,7 +124,7 @@ public class SubstudyTest {
         
         // Now it's really gone
         list = substudiesApi.getSubstudies(true).execute().body();
-        assertTrue(list.getItems().isEmpty());
+        assertEquals(initialCount, list.getItems().size());
         
         try {
             substudiesApi.getSubstudy(id).execute();
