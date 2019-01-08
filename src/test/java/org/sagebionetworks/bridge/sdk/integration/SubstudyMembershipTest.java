@@ -67,6 +67,13 @@ public class SubstudyMembershipTest {
         admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute();
 
         // This can only happen after external ID management is disabled.
+        for (TestUser user : usersToDelete) {
+            try {
+                user.signOutAndDeleteUser();
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+        }
         if (studyAdmin != null) {
             ExternalIdentifiersApi extIdsApi = studyAdmin.getClient(ExternalIdentifiersApi.class);
             for (String externalId : externalIdsToDelete) {
@@ -85,13 +92,6 @@ public class SubstudyMembershipTest {
                 e.printStackTrace();
             }
             
-        }
-        for (TestUser user : usersToDelete) {
-            try {
-                user.signOutAndDeleteUser();
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -164,11 +164,10 @@ public class SubstudyMembershipTest {
         
         userApi.withdrawFromStudy(new Withdrawal().reason("Testing external IDs")).execute();
         
-        // Can only get by ID at this point
+        // External IDs are not erased
         StudyParticipant withdrawn = participantsApi.getParticipantById(userId, true).execute().body();
-        assertNull(withdrawn.getExternalId());
-        assertTrue(withdrawn.getExternalIds().isEmpty());
-        assertTrue(withdrawn.getSubstudyIds().isEmpty());
+        assertEquals(1, withdrawn.getExternalIds().size());
+        assertEquals(extIdB, withdrawn.getExternalIds().get(idB));
     }
 
     private String createSubstudy() throws Exception {
