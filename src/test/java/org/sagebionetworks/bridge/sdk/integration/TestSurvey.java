@@ -9,6 +9,7 @@ import org.joda.time.LocalDate;
 
 import org.sagebionetworks.bridge.rest.model.BloodPressureConstraints;
 import org.sagebionetworks.bridge.rest.model.BooleanConstraints;
+import org.sagebionetworks.bridge.rest.model.CountryCode;
 import org.sagebionetworks.bridge.rest.model.DataType;
 import org.sagebionetworks.bridge.rest.model.DateConstraints;
 import org.sagebionetworks.bridge.rest.model.DateTimeConstraints;
@@ -19,6 +20,7 @@ import org.sagebionetworks.bridge.rest.model.Image;
 import org.sagebionetworks.bridge.rest.model.IntegerConstraints;
 import org.sagebionetworks.bridge.rest.model.MultiValueConstraints;
 import org.sagebionetworks.bridge.rest.model.Operator;
+import org.sagebionetworks.bridge.rest.model.PostalCodeConstraints;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyElement;
@@ -29,6 +31,7 @@ import org.sagebionetworks.bridge.rest.model.TimeConstraints;
 import org.sagebionetworks.bridge.rest.model.UIHint;
 import org.sagebionetworks.bridge.rest.model.Unit;
 import org.sagebionetworks.bridge.rest.model.WeightConstraints;
+import org.sagebionetworks.bridge.rest.model.YearMonthConstraints;
 
 import com.google.common.collect.Lists;
 
@@ -48,6 +51,8 @@ public class TestSurvey {
     public static final String BLOODPRESSURE_ID = "bloodpressure";
     public static final String HEIGHT_ID = "height";
     public static final String WEIGHT_ID = "weight";
+    public static final String YEARMONTH_ID = "yearmonth";
+    public static final String POSTALCODE_ID = "postalcode";
 
     private static Image image(String url, int width, int height) {
         Image image = new Image();
@@ -223,6 +228,25 @@ public class TestSurvey {
         weightQuestion.setUiHint(UIHint.WEIGHT);
         weightQuestion.setType("SurveyQuestion");
         
+        SurveyQuestion yearMonthQuestion = new SurveyQuestion();
+        YearMonthConstraints c11 = new YearMonthConstraints();
+        c11.setDataType(DataType.YEARMONTH);
+        yearMonthQuestion.setConstraints(c11);
+        yearMonthQuestion.setPrompt("What year and month?");
+        yearMonthQuestion.setIdentifier(YEARMONTH_ID);
+        yearMonthQuestion.setUiHint(UIHint.YEARMONTH);
+        yearMonthQuestion.setType("SurveyQuestion");
+
+        SurveyQuestion postalCodeQuestion = new SurveyQuestion();
+        PostalCodeConstraints pcc = new PostalCodeConstraints();
+        pcc.setCountryCode(CountryCode.US);
+        pcc.setDataType(DataType.POSTALCODE);
+        postalCodeQuestion.setConstraints(pcc);
+        postalCodeQuestion.setPrompt("Postal code?");
+        postalCodeQuestion.setIdentifier(POSTALCODE_ID);
+        postalCodeQuestion.setUiHint(UIHint.POSTALCODE);
+        postalCodeQuestion.setType("SurveyQuestion");
+        
         survey.setName(cls.getSimpleName() + " Survey");
         survey.setIdentifier(Tests.randomIdentifier(cls));
         List<SurveyElement> elements = survey.getElements();
@@ -238,6 +262,8 @@ public class TestSurvey {
         elements.add(bloodpressureQuestion);
         elements.add(heightQuestion);
         elements.add(weightQuestion);
+        elements.add(yearMonthQuestion);
+        elements.add(postalCodeQuestion);
 
         survey.setCopyrightNotice(COPYRIGHT_NOTICE);
 
