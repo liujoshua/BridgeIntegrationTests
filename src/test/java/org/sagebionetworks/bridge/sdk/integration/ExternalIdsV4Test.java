@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.After;
 import org.junit.Before;
@@ -184,7 +185,6 @@ public class ExternalIdsV4Test {
             }
             
             // Create a researcher in study B, and run this stuff again, it should be filtered
-            String substudyId = ids.get(0).getSubstudyId();
             SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID);
             signUp.setExternalId(ids.get(0).getIdentifier());
             user = new TestUserHelper.Builder(ExternalIdsV4Test.class)
@@ -194,18 +194,16 @@ public class ExternalIdsV4Test {
             ForResearchersApi scopedResearcherApi = user.getClient(ForResearchersApi.class);
             ExternalIdentifierList scopedList = scopedResearcherApi.getExternalIds(null, null, null, null)
                     .execute().body();
-            assertEquals(5, scopedList.getItems().size());
-            for (int i=0; i < 5; i++) {
-                assertEquals(substudyId, scopedList.getItems().get(i).getSubstudyId());
-            }
+            
+            // Only five of them have the substudy ID
+            assertEquals(5, scopedList.getItems().stream()
+                    .filter(id -> id.getSubstudyId() != null).collect(Collectors.toList()).size());
             
             // You can also filter the ids and it maintains the substudy scoping
             scopedList = scopedResearcherApi.getExternalIds(null, null, prefix+"-foo-", null).execute().body();
-            assertEquals(2, scopedList.getItems().size()); // only two that are also suffixed with -foo-
-            for (int i=0; i < 2; i++) {
-                assertEquals(substudyId, scopedList.getItems().get(i).getSubstudyId());
-            }
             
+            assertEquals(2, scopedList.getItems().stream()
+                    .filter(id -> id.getSubstudyId() != null).collect(Collectors.toList()).size());
         } finally {
             if (user != null) {
                 user.signOutAndDeleteUser();    

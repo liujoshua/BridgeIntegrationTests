@@ -45,7 +45,7 @@ public class SubstudyMembershipTest {
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         studyAdmin = TestUserHelper.createAndSignInUser(SubstudyMembershipTest.class, false, Role.DEVELOPER,
-                Role.RESEARCHER);
+                Role.RESEARCHER, Role.ADMIN); // to change substudy membership, user must also be an admin.
         substudiesApi = admin.getClient(SubstudiesApi.class);
 
         Study study = admin.getClient(ForAdminsApi.class).getUsersStudy().execute().body();
@@ -155,6 +155,9 @@ public class SubstudyMembershipTest {
         participantsApi.updateParticipant(info.getId(), participant).execute();
 
         StudyParticipant updatedParticipant = participantsApi.getParticipantById(info.getId(), false).execute().body();
+        
+        System.out.println("idA: " + idA + ", idB: " + idB);
+        System.out.println(updatedParticipant.getExternalIds());
         assertEquals(1, updatedParticipant.getExternalIds().size());
         assertEquals(extIdB, updatedParticipant.getExternalIds().get(idB));
         assertNull(updatedParticipant.getExternalId()); // odd, but acceptable during migration period
