@@ -156,8 +156,6 @@ public class SubstudyMembershipTest {
 
         StudyParticipant updatedParticipant = participantsApi.getParticipantById(info.getId(), false).execute().body();
         
-        System.out.println("idA: " + idA + ", idB: " + idB);
-        System.out.println(updatedParticipant.getExternalIds());
         assertEquals(1, updatedParticipant.getExternalIds().size());
         assertEquals(extIdB, updatedParticipant.getExternalIds().get(idB));
         assertNull(updatedParticipant.getExternalId()); // odd, but acceptable during migration period
