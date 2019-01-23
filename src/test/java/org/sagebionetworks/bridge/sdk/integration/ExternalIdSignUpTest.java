@@ -88,7 +88,7 @@ public class ExternalIdSignUpTest {
         try {
             // Enable validation, and an account with just an external ID will succeed
             changeExternalIdValidation(true);
-            devIdsClient.addExternalIds(ImmutableList.of(externalId1, externalId2, externalId3)).execute();
+            devIdsClient.addExternalIdsV3(ImmutableList.of(externalId1, externalId2, externalId3)).execute();
             
             SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
             signUp.externalId(externalId1);
@@ -173,7 +173,7 @@ public class ExternalIdSignUpTest {
             if (userId3 != null) {
                 adminClient.deleteUser(userId3).execute();
             }
-            devIdsClient.deleteExternalIds(ImmutableList.of(externalId1, externalId2, externalId3)).execute();
+            devIdsClient.deleteExternalIdsV3(ImmutableList.of(externalId1, externalId2, externalId3)).execute();
         }
     }
 }
