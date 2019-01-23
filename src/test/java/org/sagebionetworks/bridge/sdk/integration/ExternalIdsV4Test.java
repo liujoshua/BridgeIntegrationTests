@@ -83,6 +83,20 @@ public class ExternalIdsV4Test {
             researcherApi.createExternalId(extId1).execute();
             researcherApi.createExternalId(extId2).execute();
 
+            // Verify these were both created.
+            ExternalIdentifierList list = researcherApi.getExternalIds(null, null, null, false).execute().body();
+            boolean foundExtId1 = false;
+            boolean foundExtId2 = false;
+            for (ExternalIdentifier id : list.getItems()) {
+                if (id.getIdentifier().equals(extId1.getIdentifier())) {
+                    foundExtId1 = true;
+                }
+                if (id.getIdentifier().equals(extId2.getIdentifier())) {
+                    foundExtId2 = true;
+                }
+            }
+            assertTrue(foundExtId1 & foundExtId2);
+            
             // Sign up a user with an external ID specified. Just one of them: we don't have plans to
             // allow the assignment of multiple external IDs on sign up. Adding new substudies is probably
             // going to happen by signing additional consents, but that's TBD.
