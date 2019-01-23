@@ -1,7 +1,9 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.List;
@@ -103,6 +105,23 @@ public class ExternalIdsV4Test {
 
             StudyParticipant participant2 = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();
             assertEquals(userId, participant2.getId());
+            
+            // verify filtering by assignment since we have assigned one record
+            ExternalIdentifierList all = researcherApi.getExternalIds(null, 50, null, null).execute().body();
+            
+            ExternalIdentifierList assigned = researcherApi.getExternalIds(null, 50, null, true).execute().body();
+            assertEquals(1, assigned.getItems().size());
+            for (ExternalIdentifier id : assigned.getItems()) {
+                assertTrue(id.isAssigned());
+            }
+
+            // In this test only, all=2 so assigned and unassigned are both 1, but there can be external IDs
+            // in the test study left over from test failures, manual testing, etc.
+            ExternalIdentifierList unassigned = researcherApi.getExternalIds(null, 50, null, false).execute().body();
+            assertEquals(all.getItems().size()-1, unassigned.getItems().size());
+            for (ExternalIdentifier id : unassigned.getItems()) {
+                assertFalse(id.isAssigned());
+            }
 
         } finally {
             Study study = adminClient.getUsersStudy().execute().body();

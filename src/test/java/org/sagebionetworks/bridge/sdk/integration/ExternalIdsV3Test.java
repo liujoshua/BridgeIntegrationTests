@@ -53,14 +53,14 @@ public class ExternalIdsV3Test {
         ExternalIdentifiersApi externalIdsClient = developer.getClient(ExternalIdentifiersApi.class);
         externalIdsClient.addExternalIdsV3(identifiers).execute();
         try {
-            ExternalIdentifierList page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, prefix, null)
+            ExternalIdentifierList page1 = externalIdsClient.getExternalIdsV3(null, PAGE_SIZE, prefix, null)
                     .execute().body();
             assertEquals(PAGE_SIZE, page1.getItems().size());
             assertNotNull(page1.getNextPageOffsetKey());
             
             String offsetKey = page1.getNextPageOffsetKey();
             ExternalIdentifierList page2 = externalIdsClient
-                    .getExternalIds(offsetKey, PAGE_SIZE, prefix, null).execute().body();
+                    .getExternalIdsV3(offsetKey, PAGE_SIZE, prefix, null).execute().body();
             assertEquals(PAGE_SIZE, page2.getItems().size());
             assertNull(page2.getNextPageOffsetKey()); // no more pages
             
@@ -68,20 +68,20 @@ public class ExternalIdsV3Test {
             assertTrue(Collections.disjoint(page1.getItems(), page2.getItems()));
             
             // assignment filter test
-            page1 = externalIdsClient.getExternalIds(null, null, prefix, Boolean.FALSE).execute().body();
+            page1 = externalIdsClient.getExternalIdsV3(null, null, prefix, Boolean.FALSE).execute().body();
             assertEquals(LIST_SIZE, page1.getItems().size());
 
-            page1 = externalIdsClient.getExternalIds(null, null, prefix, Boolean.TRUE).execute().body();
+            page1 = externalIdsClient.getExternalIdsV3(null, null, prefix, Boolean.TRUE).execute().body();
             assertEquals(0, page1.getItems().size());
             
             // different idFilter test (than the use of idFilter in all the tests. This time nothing should match.
-            page1 = externalIdsClient.getExternalIds(null, PAGE_SIZE, RandomStringUtils.randomAlphabetic(5), null)
+            page1 = externalIdsClient.getExternalIdsV3(null, PAGE_SIZE, RandomStringUtils.randomAlphabetic(5), null)
                     .execute().body();
             assertEquals(0, page1.getItems().size());
         } finally {
             externalIdsClient.deleteExternalIdsV3(identifiers).execute();
         }
-        ExternalIdentifierList page = externalIdsClient.getExternalIds(null, null, prefix, null).execute().body();
+        ExternalIdentifierList page = externalIdsClient.getExternalIdsV3(null, null, prefix, null).execute().body();
         assertEquals(0, page.getItems().size());
     }
     
