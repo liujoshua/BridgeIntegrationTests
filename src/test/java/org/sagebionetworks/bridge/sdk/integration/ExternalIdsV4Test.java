@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,11 +35,13 @@ import retrofit2.Response;
 
 public class ExternalIdsV4Test {
 
+    private String prefix;
     private TestUser admin;
     private TestUser researcher;
 
     @Before
     public void before() throws Exception {
+        prefix = RandomStringUtils.randomAlphabetic(5);
         admin = TestUserHelper.getSignedInAdmin();
         researcher = TestUserHelper.createAndSignInUser(ExternalIdsV4Test.class, true, Role.RESEARCHER);
     }
@@ -53,8 +56,8 @@ public class ExternalIdsV4Test {
         final String idA = Tests.randomIdentifier(ExternalIdsV4Test.class);
         final String idB = Tests.randomIdentifier(ExternalIdsV4Test.class);
 
-        final String extIdA = Tests.randomIdentifier(ExternalIdsV4Test.class);
-        final String extIdB = Tests.randomIdentifier(ExternalIdsV4Test.class);
+        final String extIdA = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
+        final String extIdB = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
 
         ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
@@ -84,7 +87,7 @@ public class ExternalIdsV4Test {
             researcherApi.createExternalId(extId2).execute();
 
             // Verify these were both created.
-            ExternalIdentifierList list = researcherApi.getExternalIds(null, null, null, false).execute().body();
+            ExternalIdentifierList list = researcherApi.getExternalIds(null, null, prefix, false).execute().body();
             boolean foundExtId1 = false;
             boolean foundExtId2 = false;
             for (ExternalIdentifier id : list.getItems()) {
@@ -121,9 +124,9 @@ public class ExternalIdsV4Test {
             assertEquals(userId, participant2.getId());
             
             // verify filtering by assignment since we have assigned one record
-            ExternalIdentifierList all = researcherApi.getExternalIds(null, 50, null, null).execute().body();
+            ExternalIdentifierList all = researcherApi.getExternalIds(null, 50, prefix, null).execute().body();
             
-            ExternalIdentifierList assigned = researcherApi.getExternalIds(null, 50, null, true).execute().body();
+            ExternalIdentifierList assigned = researcherApi.getExternalIds(null, 50, prefix, true).execute().body();
             assertEquals(1, assigned.getItems().size());
             for (ExternalIdentifier id : assigned.getItems()) {
                 assertTrue(id.isAssigned());
@@ -131,7 +134,7 @@ public class ExternalIdsV4Test {
 
             // In this test only, all=2 so assigned and unassigned are both 1, but there can be external IDs
             // in the test study left over from test failures, manual testing, etc.
-            ExternalIdentifierList unassigned = researcherApi.getExternalIds(null, 50, null, false).execute().body();
+            ExternalIdentifierList unassigned = researcherApi.getExternalIds(null, 50, prefix, false).execute().body();
             assertEquals(all.getItems().size()-1, unassigned.getItems().size());
             for (ExternalIdentifier id : unassigned.getItems()) {
                 assertFalse(id.isAssigned());
@@ -155,7 +158,6 @@ public class ExternalIdsV4Test {
         final String idA = Tests.randomIdentifier(ExternalIdsV4Test.class);
         final String idB = Tests.randomIdentifier(ExternalIdsV4Test.class);
         
-        final String prefix = Tests.randomIdentifier(ExternalIdsV4Test.class);
         List<ExternalIdentifier> ids = Lists.newArrayListWithCapacity(10);
         for (int i=0; i < 10; i++) {
             String substudyId = (i % 2 == 0) ? idA : idB;
