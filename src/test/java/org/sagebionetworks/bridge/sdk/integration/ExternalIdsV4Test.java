@@ -178,6 +178,7 @@ public class ExternalIdsV4Test {
             adminClient.deleteUser(userId).execute();
             researcherApi.deleteExternalId(extIdA).execute();
             researcherApi.deleteExternalId(extIdB1).execute();
+            researcherApi.deleteExternalId(extIdB2).execute();
             adminClient.deleteSubstudy(idA, true).execute();
             adminClient.deleteSubstudy(idB, true).execute();
         }
