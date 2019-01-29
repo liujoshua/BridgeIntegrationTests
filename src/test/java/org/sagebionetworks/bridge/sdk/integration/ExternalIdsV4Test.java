@@ -13,14 +13,19 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
+import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -57,7 +62,8 @@ public class ExternalIdsV4Test {
         final String idB = Tests.randomIdentifier(ExternalIdsV4Test.class);
 
         final String extIdA = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
-        final String extIdB = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
+        final String extIdB1 = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
+        final String extIdB2 = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
 
         ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
@@ -82,14 +88,17 @@ public class ExternalIdsV4Test {
 
             // Create a couple of external IDs related to different substudies.
             ExternalIdentifier extId1 = new ExternalIdentifier().identifier(extIdA).substudyId(idA);
-            ExternalIdentifier extId2 = new ExternalIdentifier().identifier(extIdB).substudyId(idB);
+            ExternalIdentifier extId2 = new ExternalIdentifier().identifier(extIdB1).substudyId(idB);
+            ExternalIdentifier extId3 = new ExternalIdentifier().identifier(extIdB2).substudyId(idB);
             researcherApi.createExternalId(extId1).execute();
             researcherApi.createExternalId(extId2).execute();
+            researcherApi.createExternalId(extId3).execute();
 
-            // Verify these were both created.
+            // Verify all were created
             ExternalIdentifierList list = researcherApi.getExternalIds(null, null, prefix, false).execute().body();
             boolean foundExtId1 = false;
             boolean foundExtId2 = false;
+            boolean foundExtId3 = false;
             for (ExternalIdentifier id : list.getItems()) {
                 if (id.getIdentifier().equals(extId1.getIdentifier())) {
                     foundExtId1 = true;
@@ -97,13 +106,17 @@ public class ExternalIdsV4Test {
                 if (id.getIdentifier().equals(extId2.getIdentifier())) {
                     foundExtId2 = true;
                 }
+                if (id.getIdentifier().equals(extId3.getIdentifier())) {
+                    foundExtId3 = true;
+                }
             }
-            assertTrue(foundExtId1 & foundExtId2);
+            assertTrue(foundExtId1 & foundExtId2 & foundExtId3);
             
             // Sign up a user with an external ID specified. Just one of them: we don't have plans to
             // allow the assignment of multiple external IDs on sign up. Adding new substudies is probably
             // going to happen by signing additional consents, but that's TBD.
             SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID);
+            signUp.setPassword(Tests.PASSWORD);
             signUp.setExternalId(extIdA);
             researcher.getClient(AuthenticationApi.class).signUp(signUp).execute();
 
@@ -140,6 +153,23 @@ public class ExternalIdsV4Test {
                 assertFalse(id.isAssigned());
             }
 
+            // Assign a second external ID to an existing account. This should work, and then both IDs should 
+            // be usable to retrieve the account (demonstrating that this is not simply because in the interim 
+            // while migrating, we're writing the external ID to the singular externalId field).
+            
+            SignIn signIn = new SignIn().study(IntegTestUtils.STUDY_ID);
+            signIn.setExternalId(extIdA);
+            signIn.setPassword(Tests.PASSWORD);
+            
+            ClientManager userManager = new ClientManager.Builder().withSignIn(signIn).build();
+            
+            IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).externalIdUpdate(extIdB2);
+            userManager.getClient(ParticipantsApi.class).updateUsersIdentifiers(identifierUpdate).execute();
+
+            StudyParticipant found1 = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();
+            StudyParticipant found2 = researcherApi.getParticipantByExternalId(extIdB2, false).execute().body();
+            assertEquals(userId, found1.getId());
+            assertEquals(userId, found2.getId());
         } finally {
             Study study = adminClient.getUsersStudy().execute().body();
             study.setExternalIdValidationEnabled(false);
@@ -147,7 +177,7 @@ public class ExternalIdsV4Test {
 
             adminClient.deleteUser(userId).execute();
             researcherApi.deleteExternalId(extIdA).execute();
-            researcherApi.deleteExternalId(extIdB).execute();
+            researcherApi.deleteExternalId(extIdB1).execute();
             adminClient.deleteSubstudy(idA, true).execute();
             adminClient.deleteSubstudy(idB, true).execute();
         }
