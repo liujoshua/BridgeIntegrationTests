@@ -20,9 +20,11 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.RecordExportStatusRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -51,6 +53,8 @@ import com.google.common.collect.Lists;
 public class UploadTest {
     
     private static final String SUBSTUDY_ID = "upload-test-substudy";
+    
+    private static final String EXTERNAL_ID = "upload-test-extid";
     
     // On a cold server, validation could take up to 8 seconds (most of this is downloading and caching the encryption
     // certs for the first time). Subsequent validation attempts take about 2 seconds. 5 second delay is a good
@@ -84,9 +88,13 @@ public class UploadTest {
         developer = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.DEVELOPER);
         researcher = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.RESEARCHER);
         
+        ExternalIdentifier extId = new ExternalIdentifier().identifier(EXTERNAL_ID).substudyId(SUBSTUDY_ID);
+        ForResearchersApi researchersApi = researcher.getClient(ForResearchersApi.class);
+        researchersApi.createExternalId(extId).execute().body();
+        
         String emailAddress = IntegTestUtils.makeEmail(UploadTest.class);
         SignUp signUp = new SignUp().email(emailAddress).password(Tests.PASSWORD);
-        signUp.substudyIds(ImmutableList.of(SUBSTUDY_ID));
+        signUp.setExternalId(EXTERNAL_ID); // which should, in turn, associate account to SUBSTUDY_ID.
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true, signUp);
         
         // ensure schemas exist, so we have something to upload against
@@ -171,6 +179,7 @@ public class UploadTest {
     @AfterClass
     public static void deleteResearcher() throws Exception {
         if (researcher != null) {
+            researcher.getClient(ForResearchersApi.class).deleteExternalId(EXTERNAL_ID).execute();
             researcher.signOutAndDeleteUser();
         }
     }
@@ -301,7 +310,7 @@ public class UploadTest {
         HealthDataRecord record = status.getRecord();
         assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, record.getUserSharingScope());
         assertEquals(1, record.getUserSubstudyMemberships().size());
-        assertEquals("", record.getUserSubstudyMemberships().get(SUBSTUDY_ID));
+        assertEquals(EXTERNAL_ID, record.getUserSubstudyMemberships().get(SUBSTUDY_ID));
 
         Map<String, Object> data = RestUtils.toType(record.getData(), Map.class);
         assertEquals(2, data.size());
