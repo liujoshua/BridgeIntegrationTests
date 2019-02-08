@@ -55,24 +55,22 @@ public class SubstudyFilteringTest {
     }
 
     @After
-    public void after() {
+    public void after() throws Exception {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         for (String userId : userIdsToDelete) {
             try {
                 adminsApi.deleteUser(userId).execute();    
             } catch(Exception e) {
-                e.printStackTrace();
             }
         }
         for (String substudyId : substudyIdsToDelete) {
             try {
                 adminsApi.deleteSubstudy(substudyId, true).execute();    
             } catch(Exception e) {
-                e.printStackTrace();
             }
         }
     }
-
+    
     @Test
     public void test() throws Exception { 
         // Create two substudies
@@ -108,7 +106,8 @@ public class SubstudyFilteringTest {
         
         // Researcher B should not be able to get a substudy A account
         try {
-            researcherApiForB.getParticipantById(userIdA, false).execute();
+            StudyParticipant p = researcherApiForB.getParticipantById(userIdA, false).execute().body();
+            System.out.println(p);
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
         }
@@ -145,7 +144,7 @@ public class SubstudyFilteringTest {
     
     private String createSubstudy() throws Exception {
         String id = Tests.randomIdentifier(SubstudyTest.class);
-        Substudy substudyA = new Substudy().id(id).name("Substudy Filtering Test");
+        Substudy substudyA = new Substudy().id(id).name("Substudy " + id);
         substudiesApi.createSubstudy(substudyA).execute();
         substudyIdsToDelete.add(id);
         return id;

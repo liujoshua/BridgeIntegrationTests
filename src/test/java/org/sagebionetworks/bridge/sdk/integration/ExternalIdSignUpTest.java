@@ -15,18 +15,18 @@ import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
 import org.sagebionetworks.bridge.rest.model.GeneratedPassword;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
-
-import com.google.common.collect.ImmutableList;
 
 public class ExternalIdSignUpTest {
     
@@ -85,10 +85,18 @@ public class ExternalIdSignUpTest {
         String userId1 = null;
         String userId2 = null;
         String userId3 = null;
+        String idA = null;
         try {
             // Enable validation, and an account with just an external ID will succeed
             changeExternalIdValidation(true);
-            devIdsClient.addExternalIds(ImmutableList.of(externalId1, externalId2, externalId3)).execute();
+            
+            idA = Tests.randomIdentifier(ExternalIdSignUpTest.class);
+            Substudy substudyA = new Substudy().id(idA).name("Substudy " + idA);
+            adminClient.createSubstudy(substudyA).execute();
+            
+            devIdsClient.createExternalId(new ExternalIdentifier().substudyId(idA).identifier(externalId1)).execute();
+            devIdsClient.createExternalId(new ExternalIdentifier().substudyId(idA).identifier(externalId2)).execute();
+            devIdsClient.createExternalId(new ExternalIdentifier().substudyId(idA).identifier(externalId3)).execute();
             
             SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
             signUp.externalId(externalId1);
@@ -173,7 +181,10 @@ public class ExternalIdSignUpTest {
             if (userId3 != null) {
                 adminClient.deleteUser(userId3).execute();
             }
-            devIdsClient.deleteExternalIds(ImmutableList.of(externalId1, externalId2, externalId3)).execute();
+            devIdsClient.deleteExternalId(externalId1).execute();
+            devIdsClient.deleteExternalId(externalId2).execute();
+            devIdsClient.deleteExternalId(externalId3).execute();
+            adminClient.deleteSubstudy(idA, true).execute();
         }
     }
 }

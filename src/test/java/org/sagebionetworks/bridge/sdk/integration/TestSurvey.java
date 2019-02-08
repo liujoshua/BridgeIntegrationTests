@@ -36,6 +36,29 @@ import org.sagebionetworks.bridge.rest.model.YearMonthConstraints;
 import com.google.common.collect.Lists;
 
 public class TestSurvey {
+    public static final String YEARMONTH_QUESTION_LATEST_VALUE = "2020-12";
+    public static final String YEARMONTH_QUESTION_EARLIEST_VALUE = "2018-01";
+    public static final boolean YEARMONTH_QUESTION_ALLOW_FUTURE = true;
+    public static final String STRING_QUESTION_PLACEHOLDER = "###-###-####";
+    public static final String STRING_QUESTION_ERROR_MESSAGE = "Please enter phone number";
+    public static final String STRING_QUESTION_PATTERN = "\\d{3}-\\d{3}-\\d{4}";
+    public static final Integer STRING_QUESTION_MAX_LENGTH = 255;
+    public static final Integer STRING_QUESTION_MIN_LENGTH = 2;
+    public static final Unit DURATION_QUESTION_UNIT = Unit.MINUTES;
+    public static final Integer DURATION_QUESTION_STEP = 5;
+    public static final Integer DURATION_QUESTION_MAX_VALUE = 120;
+    public static final Integer DURATION_QUESTION_MIN_VALUE = 1;
+    public static final Integer INT_QUESTION_MAX_VALUE = 8;
+    public static final Integer INT_QUESTION_MIN_VALUE = 0;
+    public static final Integer INT_QUESTION_STEP = 1;
+    public static final Unit INT_QUESTION_UNIT = Unit.DAYS;
+    public static final BigDecimal DECIMAL_QUESTION_STEP = BigDecimal.valueOf(0.1d);
+    public static final BigDecimal DECIMAL_QUESTION_MAX_VALUE = BigDecimal.valueOf(10.0d);
+    public static final BigDecimal DECIMAL_QUESTION_MIN_VALUE = BigDecimal.valueOf(0.0d);
+    public static final DateTime DATETIME_LATEST_VALUE = DateTime.parse("2020-12-31").withZone(DateTimeZone.UTC);
+    public static final DateTime DATETIME_EARLIEST_VALUE = DateTime.parse("2000-01-01").withZone(DateTimeZone.UTC);
+    public static final LocalDate DATE_QUESTION_LATEST_VALUE = LocalDate.parse("2020-12-31");
+    public static final LocalDate DATE_QUESTION_EARLIEST_VALUE = LocalDate.parse("2000-01-01");
     public static final String COPYRIGHT_NOTICE = "Copyright notice";
     public static final String MODULE_ID = "test-survey-module";
     public static final int MODULE_VERSION = 3;
@@ -90,11 +113,11 @@ public class TestSurvey {
         Image great = image("http://great.svg", 600, 300);
         MultiValueConstraints mvc = new MultiValueConstraints();
         List<SurveyQuestionOption> options = Lists.newArrayList(
-                option("Terrible", null, "1", terrible), 
-                option("Poor", null, "2", poor),
-                option("OK", null, "3", ok), 
-                option("Good", null, "4", good),
-                option("Great", null, "5", great));
+                option("Terrible", "Terrible Detail", "1", terrible), 
+                option("Poor", "Poor Detail", "2", poor),
+                option("OK", "OK Detail", "3", ok), 
+                option("Good", "Good Detail", "4", good),
+                option("Great", "Great Detail", "5", great));
         mvc.setEnumeration(options);
         mvc.setAllowOther(false);
         mvc.setAllowMultiple(true);
@@ -107,11 +130,11 @@ public class TestSurvey {
         
         SurveyQuestion stringQuestion = new SurveyQuestion();
         StringConstraints c = new StringConstraints();
-        c.setMinLength(2);
-        c.setMaxLength(255);
-        c.setPattern("\\d{3}-\\d{3}-\\d{4}");
-        c.setPatternErrorMessage("Please enter phone number");
-        c.setPatternPlaceholder("###-###-####");
+        c.setMinLength(STRING_QUESTION_MIN_LENGTH);
+        c.setMaxLength(STRING_QUESTION_MAX_LENGTH);
+        c.setPattern(STRING_QUESTION_PATTERN);
+        c.setPatternErrorMessage(STRING_QUESTION_ERROR_MESSAGE);
+        c.setPatternPlaceholder(STRING_QUESTION_PLACEHOLDER);
         c.setDataType(DataType.STRING);
         stringQuestion.setPrompt("Please enter an emergency phone number (###-###-####)?");
         stringQuestion.setPromptDetail("This should be someone else's number.");
@@ -132,8 +155,8 @@ public class TestSurvey {
         SurveyQuestion dateQuestion = new SurveyQuestion();
         DateConstraints c2 = new DateConstraints();
         c2.setDataType(DataType.DATE);
-        c2.setEarliestValue(LocalDate.parse("2000-01-01"));
-        c2.setLatestValue(LocalDate.parse("2020-12-31"));
+        c2.setEarliestValue(DATE_QUESTION_EARLIEST_VALUE);
+        c2.setLatestValue(DATE_QUESTION_LATEST_VALUE);
         c2.setAllowFuture(true);
         dateQuestion.setPrompt("When did you last have a medical check-up?");
         dateQuestion.setIdentifier(DATE_ID);
@@ -144,8 +167,8 @@ public class TestSurvey {
         SurveyQuestion dateTimeQuestion = new SurveyQuestion();
         DateTimeConstraints c3 = new DateTimeConstraints();
         c3.setAllowFuture(true);
-        c3.setEarliestValue(DateTime.parse("2000-01-01").withZone(DateTimeZone.UTC));
-        c3.setLatestValue(DateTime.parse("2020-12-31").withZone(DateTimeZone.UTC));
+        c3.setEarliestValue(DATETIME_EARLIEST_VALUE);
+        c3.setLatestValue(DATETIME_LATEST_VALUE);
         c3.setDataType(DataType.DATETIME);
         dateTimeQuestion.setPrompt("When is your next medical check-up scheduled?");
         dateTimeQuestion.setIdentifier(DATETIME_ID);
@@ -155,9 +178,10 @@ public class TestSurvey {
         
         SurveyQuestion decimalQuestion = new SurveyQuestion();
         DecimalConstraints c4 = new DecimalConstraints();
-        c4.setMinValue(BigDecimal.valueOf(0.0d));
-        c4.setMaxValue(BigDecimal.valueOf(10.0d));
-        c4.setStep(BigDecimal.valueOf(0.1d));
+        c4.setMinValue(DECIMAL_QUESTION_MIN_VALUE);
+        c4.setMaxValue(DECIMAL_QUESTION_MAX_VALUE);
+        c4.setStep(DECIMAL_QUESTION_STEP);
+        c4.setUnit(Unit.GRAMS);
         c4.setDataType(DataType.DECIMAL);
         decimalQuestion.setPrompt("What dosage (in grams) do you take of deleuterium each day?");
         decimalQuestion.setIdentifier(DECIMAL_ID);
@@ -167,9 +191,10 @@ public class TestSurvey {
         
         SurveyQuestion durationQuestion = new SurveyQuestion();
         DurationConstraints c5 = new DurationConstraints();
-        c5.setMinValue(1);
-        c5.setMaxValue(120);
-        c5.setUnit(Unit.MINUTES);
+        c5.setMinValue(DURATION_QUESTION_MIN_VALUE);
+        c5.setMaxValue(DURATION_QUESTION_MAX_VALUE);
+        c5.setStep(DURATION_QUESTION_STEP);
+        c5.setUnit(DURATION_QUESTION_UNIT);
         c5.setDataType(DataType.DURATION);
         durationQuestion.setPrompt("How log does your appointment take, on average?");
         durationQuestion.setIdentifier(DURATION_ID);
@@ -182,8 +207,10 @@ public class TestSurvey {
         
         SurveyQuestion integerQuestion = new SurveyQuestion();
         IntegerConstraints c6 = new IntegerConstraints();
-        c6.setMinValue(0);
-        c6.setMaxValue(8);
+        c6.setMinValue(INT_QUESTION_MIN_VALUE);
+        c6.setMaxValue(INT_QUESTION_MAX_VALUE);
+        c6.setStep(INT_QUESTION_STEP);
+        c6.setUnit(INT_QUESTION_UNIT);
         c6.setDataType(DataType.INTEGER);
         integerQuestion.setPrompt("How many times a day do you take your blood pressure?");
         integerQuestion.setIdentifier(INTEGER_ID);
@@ -204,6 +231,7 @@ public class TestSurvey {
         SurveyQuestion bloodpressureQuestion = new SurveyQuestion();
         BloodPressureConstraints c8 = new BloodPressureConstraints();
         c8.setDataType(DataType.BLOODPRESSURE);
+        c8.setUnit(Unit.CUBIC_CENTIMETERS);
         bloodpressureQuestion.setConstraints(c8);
         bloodpressureQuestion.setPrompt("What is your blood pressure?");
         bloodpressureQuestion.setIdentifier(BLOODPRESSURE_ID);
@@ -213,6 +241,8 @@ public class TestSurvey {
         SurveyQuestion heightQuestion = new SurveyQuestion();
         HeightConstraints c9 = new HeightConstraints();
         c9.setDataType(DataType.HEIGHT);
+        c9.setUnit(Unit.CENTIMETERS);
+        c9.setForInfant(true);
         heightQuestion.setConstraints(c9);
         heightQuestion.setPrompt("What is your height?");
         heightQuestion.setIdentifier(HEIGHT_ID);
@@ -222,6 +252,8 @@ public class TestSurvey {
         SurveyQuestion weightQuestion = new SurveyQuestion();
         WeightConstraints c10 = new WeightConstraints();
         c10.setDataType(DataType.WEIGHT);
+        c10.setUnit(Unit.KILOGRAMS);
+        c10.setForInfant(true);
         weightQuestion.setConstraints(c10);
         weightQuestion.setPrompt("What is your weight?");
         weightQuestion.setIdentifier(WEIGHT_ID);
@@ -231,6 +263,9 @@ public class TestSurvey {
         SurveyQuestion yearMonthQuestion = new SurveyQuestion();
         YearMonthConstraints c11 = new YearMonthConstraints();
         c11.setDataType(DataType.YEARMONTH);
+        c11.setAllowFuture(YEARMONTH_QUESTION_ALLOW_FUTURE);
+        c11.setEarliestValue(YEARMONTH_QUESTION_EARLIEST_VALUE);
+        c11.setLatestValue(YEARMONTH_QUESTION_LATEST_VALUE);
         yearMonthQuestion.setConstraints(c11);
         yearMonthQuestion.setPrompt("What year and month?");
         yearMonthQuestion.setIdentifier(YEARMONTH_ID);
