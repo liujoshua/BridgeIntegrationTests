@@ -174,8 +174,10 @@ public class ExternalIdsV4Test {
             Study study = adminClient.getUsersStudy().execute().body();
             study.setExternalIdValidationEnabled(false);
             adminClient.updateStudy(study.getIdentifier(), study).execute();
-
-            adminClient.deleteUser(userId).execute();
+            
+            if (userId != null) {
+                adminClient.deleteUser(userId).execute();    
+            }
             researcherApi.deleteExternalId(extIdA).execute();
             researcherApi.deleteExternalId(extIdB1).execute();
             researcherApi.deleteExternalId(extIdB2).execute();

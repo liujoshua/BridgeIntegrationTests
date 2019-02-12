@@ -20,14 +20,18 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.RecordExportStatusRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.SynapseExporterStatus;
 import org.sagebionetworks.bridge.rest.model.Upload;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
@@ -38,14 +42,20 @@ import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.UploadStatus;
 import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
+import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.Lists;
 
 @Category(IntegrationSmokeTest.class)
 @SuppressWarnings("unchecked")
 public class UploadTest {
-
+    
+    private static final String SUBSTUDY_ID = "upload-test-substudy";
+    
+    private static final String EXTERNAL_ID = "upload-test-extid";
+    
     // On a cold server, validation could take up to 8 seconds (most of this is downloading and caching the encryption
     // certs for the first time). Subsequent validation attempts take about 2 seconds. 5 second delay is a good
     // compromise between fast tests and not having to retry a bunch of times.
@@ -53,19 +63,39 @@ public class UploadTest {
 
     // Retry up to 6 times, so we don't spend more than 30 seconds per test.
     private static final int UPLOAD_STATUS_DELAY_RETRIES = 6;
-
+    
     private static TestUserHelper.TestUser worker;
     private static TestUserHelper.TestUser developer;
+    private static TestUserHelper.TestUser researcher;
     private static TestUserHelper.TestUser user;
     private static TestUserHelper.TestUser admin;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
+        admin = TestUserHelper.getSignedInAdmin();
+        
+        Substudy substudy = null;
+        try {
+            substudy = admin.getClient(ForAdminsApi.class).getSubstudy(SUBSTUDY_ID).execute().body();
+        } catch(EntityNotFoundException e) {
+            substudy = new Substudy().name(SUBSTUDY_ID).id(SUBSTUDY_ID);
+            VersionHolder version = admin.getClient(ForAdminsApi.class).createSubstudy(substudy).execute().body();
+            substudy.setVersion(version.getVersion());
+        }
+        
         // developer is to ensure schemas exist. user is to do uploads
         worker = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.WORKER);
         developer = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.DEVELOPER);
-        user = TestUserHelper.createAndSignInUser(UploadTest.class, true);
-        admin = TestUserHelper.getSignedInAdmin();
+        researcher = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.RESEARCHER);
+        
+        ExternalIdentifier extId = new ExternalIdentifier().identifier(EXTERNAL_ID).substudyId(SUBSTUDY_ID);
+        ForResearchersApi researchersApi = researcher.getClient(ForResearchersApi.class);
+        researchersApi.createExternalId(extId).execute().body();
+        
+        String emailAddress = IntegTestUtils.makeEmail(UploadTest.class);
+        SignUp signUp = new SignUp().email(emailAddress).password(Tests.PASSWORD);
+        signUp.setExternalId(EXTERNAL_ID); // which should, in turn, associate account to SUBSTUDY_ID.
+        user = TestUserHelper.createAndSignInUser(UploadTest.class, true, signUp);
         
         // ensure schemas exist, so we have something to upload against
         UploadSchemasApi uploadSchemasApi = developer.getClient(UploadSchemasApi.class);
@@ -146,6 +176,14 @@ public class UploadTest {
         }
     }
 
+    @AfterClass
+    public static void deleteResearcher() throws Exception {
+        if (researcher != null) {
+            researcher.getClient(ForResearchersApi.class).deleteExternalId(EXTERNAL_ID).execute();
+            researcher.signOutAndDeleteUser();
+        }
+    }
+    
     @AfterClass
     public static void deleteUser() throws Exception {
         if (user != null) {
@@ -271,6 +309,8 @@ public class UploadTest {
         // Validate the record data.
         HealthDataRecord record = status.getRecord();
         assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, record.getUserSharingScope());
+        assertEquals(1, record.getUserSubstudyMemberships().size());
+        assertEquals(EXTERNAL_ID, record.getUserSubstudyMemberships().get(SUBSTUDY_ID));
 
         Map<String, Object> data = RestUtils.toType(record.getData(), Map.class);
         assertEquals(2, data.size());
