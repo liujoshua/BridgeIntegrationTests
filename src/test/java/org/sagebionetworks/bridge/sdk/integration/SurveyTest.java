@@ -16,8 +16,11 @@ import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DURATION_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.HEIGHT_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.INTEGER_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.MULTIVALUE_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.STRING_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.TIME_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.WEIGHT_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.POSTALCODE_ID;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -31,7 +34,6 @@ import retrofit2.Call;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -51,15 +53,22 @@ import org.sagebionetworks.bridge.rest.exceptions.PublishedSurveyException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ActivityType;
-import org.sagebionetworks.bridge.rest.model.Constraints;
+import org.sagebionetworks.bridge.rest.model.BloodPressureConstraints;
+import org.sagebionetworks.bridge.rest.model.BooleanConstraints;
+import org.sagebionetworks.bridge.rest.model.CountryCode;
 import org.sagebionetworks.bridge.rest.model.DataType;
+import org.sagebionetworks.bridge.rest.model.DateConstraints;
 import org.sagebionetworks.bridge.rest.model.DateTimeConstraints;
+import org.sagebionetworks.bridge.rest.model.DecimalConstraints;
+import org.sagebionetworks.bridge.rest.model.DurationConstraints;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
+import org.sagebionetworks.bridge.rest.model.HeightConstraints;
 import org.sagebionetworks.bridge.rest.model.Image;
 import org.sagebionetworks.bridge.rest.model.IntegerConstraints;
 import org.sagebionetworks.bridge.rest.model.MultiValueConstraints;
 import org.sagebionetworks.bridge.rest.model.Operator;
+import org.sagebionetworks.bridge.rest.model.PostalCodeConstraints;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
@@ -76,7 +85,11 @@ import org.sagebionetworks.bridge.rest.model.SurveyQuestion;
 import org.sagebionetworks.bridge.rest.model.SurveyQuestionOption;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.rest.model.SurveyRule;
+import org.sagebionetworks.bridge.rest.model.TimeConstraints;
 import org.sagebionetworks.bridge.rest.model.UIHint;
+import org.sagebionetworks.bridge.rest.model.Unit;
+import org.sagebionetworks.bridge.rest.model.WeightConstraints;
+import org.sagebionetworks.bridge.rest.model.YearMonthConstraints;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
@@ -153,6 +166,151 @@ public class SurveyTest {
         if (worker != null) {
             worker.signOutAndDeleteUser();
         }
+    }
+    
+    // One test to verify that all the fields of the test survey can be persisted and retrieved.
+    // Info screen is still tested separately. 
+    @Test
+    public void canRountripSurvey() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        
+        GuidCreatedOnVersionHolder key = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        Survey survey = surveysApi.getSurvey(key.getGuid(), key.getCreatedOn()).execute().body();
+        
+        // Boolean question
+        SurveyQuestion booleanQuestion = getQuestion(survey, BOOLEAN_ID);
+        assertEquals("SurveyQuestion", booleanQuestion.getType());
+        BooleanConstraints booleanConstraints = (BooleanConstraints)booleanQuestion.getConstraints();
+        assertEquals("BooleanConstraints", booleanConstraints.getType());
+        assertEquals(DataType.BOOLEAN, booleanConstraints.getDataType());
+
+        // Date question
+        SurveyQuestion dateQuestion = getQuestion(survey, DATE_ID);
+        DateConstraints dateConstraints = (DateConstraints)dateQuestion.getConstraints();
+        assertEquals(DataType.DATE, dateConstraints.getDataType());
+        assertEquals("DateConstraints", dateConstraints.getType());
+        assertEquals(TestSurvey.DATE_QUESTION_EARLIEST_VALUE, dateConstraints.getEarliestValue());
+        assertEquals(TestSurvey.DATE_QUESTION_LATEST_VALUE, dateConstraints.getLatestValue());
+        
+        // DateTime question
+        SurveyQuestion dateTimeQuestion = getQuestion(survey, DATETIME_ID);
+        DateTimeConstraints dateTimeConstraints = (DateTimeConstraints)dateTimeQuestion.getConstraints();
+        assertEquals(DataType.DATETIME, dateTimeConstraints.getDataType());
+        assertEquals("DateTimeConstraints", dateTimeConstraints.getType());
+        assertEquals(TestSurvey.DATETIME_EARLIEST_VALUE.toString(), dateTimeConstraints.getEarliestValue().toString());
+        assertEquals(TestSurvey.DATETIME_LATEST_VALUE.toString(), dateTimeConstraints.getLatestValue().toString());
+        
+        // Decimal question
+        SurveyQuestion decimalQuestion = getQuestion(survey, DECIMAL_ID);
+        DecimalConstraints decimalConstraints = (DecimalConstraints)decimalQuestion.getConstraints();
+        assertEquals(DataType.DECIMAL, decimalConstraints.getDataType());
+        assertEquals("DecimalConstraints", decimalConstraints.getType());
+        assertEquals(TestSurvey.DECIMAL_QUESTION_MIN_VALUE, decimalConstraints.getMinValue());
+        assertEquals(TestSurvey.DECIMAL_QUESTION_MAX_VALUE, decimalConstraints.getMaxValue());
+        assertEquals(TestSurvey.DECIMAL_QUESTION_STEP, decimalConstraints.getStep());
+        assertEquals(Unit.GRAMS, decimalConstraints.getUnit());
+        
+        // Integer question
+        SurveyQuestion intQuestion = getQuestion(survey, INTEGER_ID);
+        IntegerConstraints intConstraints = (IntegerConstraints)intQuestion.getConstraints();
+        assertEquals(DataType.INTEGER, intConstraints.getDataType());
+        assertEquals("IntegerConstraints", intConstraints.getType());
+        assertEquals(TestSurvey.INT_QUESTION_MIN_VALUE, intConstraints.getMinValue());
+        assertEquals(TestSurvey.INT_QUESTION_MAX_VALUE, intConstraints.getMaxValue());
+        assertEquals(TestSurvey.INT_QUESTION_STEP, intConstraints.getStep());
+        assertEquals(TestSurvey.INT_QUESTION_UNIT, intConstraints.getUnit());
+        
+        // Duration question
+        SurveyQuestion durationQuestion = getQuestion(survey, DURATION_ID);
+        DurationConstraints durationConstraints = (DurationConstraints)durationQuestion.getConstraints();
+        assertEquals(DataType.DURATION, durationConstraints.getDataType());
+        assertEquals("DurationConstraints", durationConstraints.getType());
+        assertEquals(TestSurvey.DURATION_QUESTION_MIN_VALUE, durationConstraints.getMinValue());
+        assertEquals(TestSurvey.DURATION_QUESTION_MAX_VALUE, durationConstraints.getMaxValue());
+        assertEquals(TestSurvey.DURATION_QUESTION_STEP, durationConstraints.getStep());
+        assertEquals(TestSurvey.DURATION_QUESTION_UNIT, durationConstraints.getUnit());
+        
+        // Time question
+        SurveyQuestion timeQuestion = getQuestion(survey, TIME_ID);
+        TimeConstraints timeConstraints = (TimeConstraints)timeQuestion.getConstraints();
+        assertEquals(DataType.TIME, timeConstraints.getDataType());
+        assertEquals("TimeConstraints", timeConstraints.getType());
+        
+        // MultiValue question
+        SurveyQuestion multiValueQuestion = getQuestion(survey, MULTIVALUE_ID);
+        MultiValueConstraints multiValueConstraints = (MultiValueConstraints)multiValueQuestion.getConstraints();
+        assertEquals(DataType.STRING, multiValueConstraints.getDataType());
+        assertEquals("MultiValueConstraints", multiValueConstraints.getType());
+        List<SurveyQuestionOption> options = multiValueConstraints.getEnumeration();
+        assertEquals(5, options.size());
+        SurveyQuestionOption option = options.get(0);
+        assertEquals("Terrible", option.getLabel());
+        assertEquals("Terrible Detail", option.getDetail());
+        assertEquals("1", option.getValue());
+        assertEquals("http://terrible.svg", option.getImage().getSource());
+        assertEquals(new Integer(600), option.getImage().getWidth());
+        assertEquals(new Integer(300), option.getImage().getHeight());
+        
+        // String question
+        SurveyQuestion stringQuestion = getQuestion(survey, STRING_ID);
+        StringConstraints stringConstraints = (StringConstraints)stringQuestion.getConstraints();
+        assertEquals(DataType.STRING, stringConstraints.getDataType());
+        assertEquals("StringConstraints", stringConstraints.getType());
+        assertEquals(TestSurvey.STRING_QUESTION_MIN_LENGTH, stringConstraints.getMinLength());
+        assertEquals(TestSurvey.STRING_QUESTION_MAX_LENGTH, stringConstraints.getMaxLength());
+        assertEquals(TestSurvey.STRING_QUESTION_PATTERN, stringConstraints.getPattern());
+        assertEquals(TestSurvey.STRING_QUESTION_ERROR_MESSAGE, stringConstraints.getPatternErrorMessage());
+        assertEquals(TestSurvey.STRING_QUESTION_PLACEHOLDER, stringConstraints.getPatternPlaceholder());
+        
+        // Blood pressure question
+        SurveyQuestion bloodPressureQuestion = getQuestion(survey, BLOODPRESSURE_ID);
+        BloodPressureConstraints bloodPressureConstraints = (BloodPressureConstraints)bloodPressureQuestion.getConstraints();
+        assertEquals(DataType.BLOODPRESSURE, bloodPressureConstraints.getDataType());
+        assertEquals("BloodPressureConstraints", bloodPressureConstraints.getType());
+        assertEquals(Unit.CUBIC_CENTIMETERS, bloodPressureConstraints.getUnit());
+        
+        // Height question
+        SurveyQuestion heightQuestion = getQuestion(survey, HEIGHT_ID);
+        HeightConstraints heightConstraints = (HeightConstraints)heightQuestion.getConstraints();
+        assertEquals(DataType.HEIGHT, heightConstraints.getDataType());
+        assertEquals("HeightConstraints", heightConstraints.getType());
+        assertEquals(Unit.CENTIMETERS, heightConstraints.getUnit());
+        assertEquals(true, heightConstraints.isForInfant());
+        
+        // Weight question
+        SurveyQuestion weightQuestion = getQuestion(survey, WEIGHT_ID);
+        WeightConstraints weightConstraints = (WeightConstraints)weightQuestion.getConstraints();
+        assertEquals(DataType.WEIGHT, weightConstraints.getDataType());
+        assertEquals("WeightConstraints", weightConstraints.getType());
+        assertEquals(Unit.KILOGRAMS, weightConstraints.getUnit());
+        assertEquals(true, weightConstraints.isForInfant());
+        
+        // YearMonth question
+        SurveyQuestion yearMonthQuestion = getQuestion(survey, YEARMONTH_ID);
+        YearMonthConstraints yearMonthConstraints = (YearMonthConstraints)yearMonthQuestion.getConstraints();
+        assertEquals(DataType.YEARMONTH, yearMonthConstraints.getDataType());
+        assertEquals("YearMonthConstraints", yearMonthConstraints.getType());
+        assertEquals(TestSurvey.YEARMONTH_QUESTION_ALLOW_FUTURE, yearMonthConstraints.isAllowFuture());
+        assertEquals(TestSurvey.YEARMONTH_QUESTION_EARLIEST_VALUE, yearMonthConstraints.getEarliestValue());
+        assertEquals(TestSurvey.YEARMONTH_QUESTION_LATEST_VALUE, yearMonthConstraints.getLatestValue());
+        
+        // Postal Code question
+        SurveyQuestion postalCodeQuestion = getQuestion(survey, POSTALCODE_ID);
+        PostalCodeConstraints postalCodeConstraints = (PostalCodeConstraints)postalCodeQuestion.getConstraints();
+        assertEquals(DataType.POSTALCODE, postalCodeConstraints.getDataType());
+        assertEquals("PostalCodeConstraints", postalCodeConstraints.getType());
+        assertEquals(CountryCode.US, postalCodeConstraints.getCountryCode());
+        assertEquals(17, postalCodeConstraints.getSparseZipCodePrefixes().size());
+        assertEquals("036", postalCodeConstraints.getSparseZipCodePrefixes().get(0));
+    }
+    
+    private SurveyQuestion getQuestion(Survey survey, String questionId) {
+        for (SurveyElement element : survey.getElements()) {
+            if (element.getIdentifier().equals(questionId)) {
+                return (SurveyQuestion)element;
+            }
+        }
+        return null; 
     }
 
     @Test
@@ -339,32 +497,12 @@ public class SurveyTest {
     }
 
     @Test
-    public void canUpdateASurveyAndTypesAreCorrect() throws Exception {
+    public void canUpdateASurvey() throws Exception {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
         
         GuidCreatedOnVersionHolder key = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
         Survey survey = surveysApi.getSurvey(key.getGuid(), key.getCreatedOn()).execute().body();
         assertEquals("Type is Survey.", survey.getClass(), Survey.class);
-
-        List<SurveyElement> questions = survey.getElements();
-        assertEquals("Type is SurveyQuestion.", SurveyQuestion.class, questions.get(0).getClass());
-
-        assertEquals("Type is BooleanConstraints.", DataType.BOOLEAN, getConstraints(survey, BOOLEAN_ID).getDataType());
-        assertEquals("Type is DateConstraints", DataType.DATE, getConstraints(survey, DATE_ID).getDataType());
-        assertEquals("Type is DateTimeConstraints", DataType.DATETIME, getConstraints(survey, DATETIME_ID).getDataType());
-        assertEquals("Type is DecimalConstraints", DataType.DECIMAL, getConstraints(survey, DECIMAL_ID).getDataType());
-        Constraints intCon = getConstraints(survey, INTEGER_ID);
-        assertEquals("Type is IntegerConstraints", DataType.INTEGER, intCon.getDataType());
-        SurveyElement intElement = getSurveyElement(survey, INTEGER_ID);
-        assertEquals("Has a rule of type SurveyRule", SurveyRule.class, intElement.getAfterRules().get(0).getClass());
-        assertEquals("Type is DurationConstraints", DataType.DURATION, getConstraints(survey, DURATION_ID).getDataType());
-        assertEquals("Type is TimeConstraints", DataType.TIME, getConstraints(survey, TIME_ID).getDataType());
-        assertEquals("Type is BloodPressureConstraints", DataType.BLOODPRESSURE, getConstraints(survey, BLOODPRESSURE_ID).getDataType());
-        assertEquals("Type is HeightConstraints", DataType.HEIGHT, getConstraints(survey, HEIGHT_ID).getDataType());
-        assertEquals("Type is WeightConstraints", DataType.WEIGHT, getConstraints(survey, WEIGHT_ID).getDataType());
-        MultiValueConstraints multiCon = (MultiValueConstraints)getConstraints(survey, MULTIVALUE_ID);
-        assertTrue("Type is MultiValueConstraints", multiCon.isAllowMultiple());
-        assertEquals("Type is SurveyQuestionOption", SurveyQuestionOption.class, multiCon.getEnumeration().get(0).getClass());
 
         survey.setName("New name");
         GuidCreatedOnVersionHolder holder = surveysApi.updateSurvey(survey.getGuid(), survey.getCreatedOn(), survey).execute().body();
@@ -375,22 +513,6 @@ public class SurveyTest {
         assertEquals("Name should have changed.", survey.getName(), "New name");
     }
     
-    @Test
-    public void dateBasedConstraintsPersistedCorrectly() throws Exception {
-        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
-
-        GuidCreatedOnVersionHolder key = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
-        Survey survey = surveysApi.getSurvey(key.getGuid(), key.getCreatedOn()).execute().body();
-
-        DateTimeConstraints dateCon = (DateTimeConstraints)getConstraints(survey, DATETIME_ID);
-        DateTime earliest = dateCon.getEarliestValue();
-        DateTime latest = dateCon.getLatestValue();
-        assertNotNull("Earliest has been set", earliest);
-        assertEquals("Date is correct", DateTime.parse("2000-01-01").withZone(DateTimeZone.UTC), earliest);
-        assertNotNull("Latest has been set", latest);
-        assertEquals("Date is correct", DateTime.parse("2020-12-31").withZone(DateTimeZone.UTC), latest);
-    }
-
     @Test
     public void researcherCannotUpdatePublishedSurvey() throws Exception {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
@@ -940,11 +1062,6 @@ public class SurveyTest {
         return null;
     }
     
-    private Constraints getConstraints(Survey survey, String id) {
-        SurveyElement el = getSurveyElement(survey, id);
-        return (el == null) ? null : ((SurveyQuestion)el).getConstraints();
-    }
-
     private void containsAll(List<Survey> surveys, GuidCreatedOnVersionHolder... keys) {
         // The server may have more surveys than the ones we created, if more than one person is running tests
         // (unit or integration), or if there are persistent tests unrelated to this test.
