@@ -36,6 +36,7 @@ import org.sagebionetworks.bridge.rest.model.YearMonthConstraints;
 import com.google.common.collect.Lists;
 
 public class TestSurvey {
+    public static final DateTimeZone MST = DateTimeZone.forOffsetHours(3); 
     public static final String YEARMONTH_QUESTION_LATEST_VALUE = "2020-12";
     public static final String YEARMONTH_QUESTION_EARLIEST_VALUE = "2018-01";
     public static final boolean YEARMONTH_QUESTION_ALLOW_FUTURE = true;
@@ -55,8 +56,8 @@ public class TestSurvey {
     public static final BigDecimal DECIMAL_QUESTION_STEP = BigDecimal.valueOf(0.1d);
     public static final BigDecimal DECIMAL_QUESTION_MAX_VALUE = BigDecimal.valueOf(10.0d);
     public static final BigDecimal DECIMAL_QUESTION_MIN_VALUE = BigDecimal.valueOf(0.0d);
-    public static final DateTime DATETIME_LATEST_VALUE = DateTime.parse("2020-12-31").withZone(DateTimeZone.UTC);
-    public static final DateTime DATETIME_EARLIEST_VALUE = DateTime.parse("2000-01-01").withZone(DateTimeZone.UTC);
+    public static final DateTime DATETIME_LATEST_VALUE = DateTime.parse("2020-12-31").withZone(MST);
+    public static final DateTime DATETIME_EARLIEST_VALUE = DateTime.parse("2000-01-01").withZone(MST);
     public static final LocalDate DATE_QUESTION_LATEST_VALUE = LocalDate.parse("2020-12-31");
     public static final LocalDate DATE_QUESTION_EARLIEST_VALUE = LocalDate.parse("2000-01-01");
     public static final String COPYRIGHT_NOTICE = "Copyright notice";

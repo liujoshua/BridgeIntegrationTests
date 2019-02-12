@@ -197,8 +197,8 @@ public class SurveyTest {
         DateTimeConstraints dateTimeConstraints = (DateTimeConstraints)dateTimeQuestion.getConstraints();
         assertEquals(DataType.DATETIME, dateTimeConstraints.getDataType());
         assertEquals("DateTimeConstraints", dateTimeConstraints.getType());
-        assertEquals(TestSurvey.DATETIME_EARLIEST_VALUE, dateTimeConstraints.getEarliestValue());
-        assertEquals(TestSurvey.DATETIME_LATEST_VALUE, dateTimeConstraints.getLatestValue());
+        assertEquals(TestSurvey.DATETIME_EARLIEST_VALUE.toString(), dateTimeConstraints.getEarliestValue().toString());
+        assertEquals(TestSurvey.DATETIME_LATEST_VALUE.toString(), dateTimeConstraints.getLatestValue().toString());
         
         // Decimal question
         SurveyQuestion decimalQuestion = getQuestion(survey, DECIMAL_ID);
