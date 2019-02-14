@@ -97,6 +97,9 @@ public class SharedModuleMetadataTest {
         // modify member var to fit with real survey info
         surveyGuid = retSurvey.getGuid();
         surveyCreatedOn = retSurvey.getCreatedOn();
+
+        // Ensure all tests are consistent by having the admin start in the API study.
+        adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
     }
 
     @After
@@ -120,7 +123,7 @@ public class SharedModuleMetadataTest {
     public void testNonAuthUserGetAndQueryCalls() throws Exception {
         // first create a test metadata
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(1)
-                .name(MODULE_NAME).notes("A note").schemaId(schemaId).schemaRevision(SCHEMA_REV);
+                .name(moduleId + "name").notes(moduleId + "note").schemaId(schemaId).schemaRevision(SCHEMA_REV);
         SharedModuleMetadata metadata = sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
                 .body();
         // execute query and get
@@ -131,13 +134,13 @@ public class SharedModuleMetadataTest {
         retMetadata = nonAuthSharedModulesApi.getMetadataByIdLatestVersion(metadata.getId()).execute().body();
         assertEquals(metadata, retMetadata);
 
-        SharedModuleMetadataList retMetadataList = nonAuthSharedModulesApi
-                .queryAllMetadata(false, false, null, "A note", null, true).execute().body();
+        SharedModuleMetadataList retMetadataList = nonAuthSharedModulesApi.queryAllMetadata(false,
+                false, null, moduleId + "note", null,true).execute().body();
         assertEquals(1, retMetadataList.getItems().size());
         assertEquals(metadata, retMetadataList.getItems().get(0));
 
-        retMetadataList = nonAuthSharedModulesApi
-                .queryAllMetadata(false, false, MODULE_NAME, null, null, true).execute().body();
+        retMetadataList = nonAuthSharedModulesApi.queryAllMetadata(false, false,
+                moduleId + "name", null, null, true).execute().body();
         assertEquals(1, retMetadataList.getItems().size());
         assertEquals(metadata, retMetadataList.getItems().get(0));
         
@@ -573,6 +576,7 @@ public class SharedModuleMetadataTest {
 
     @Test(expected = EntityNotFoundException.class)
     public void deleteByIdAllVersions404() throws Exception {
+        adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
         adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
     }
 
