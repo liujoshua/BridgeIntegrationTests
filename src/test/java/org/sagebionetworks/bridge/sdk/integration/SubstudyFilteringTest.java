@@ -1,26 +1,22 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeNoException;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ClientManager;
-import org.sagebionetworks.bridge.rest.RestUtils;
-import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
@@ -32,7 +28,6 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Activity;
-import org.sagebionetworks.bridge.rest.model.AppConfig;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.CriteriaScheduleStrategy;
@@ -40,10 +35,9 @@ import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.ScheduleCriteria;
-import org.sagebionetworks.bridge.rest.model.ScheduleList;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
-import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -57,7 +51,6 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 
 public class SubstudyFilteringTest {
     public static class UserInfo {
@@ -213,6 +206,8 @@ public class SubstudyFilteringTest {
     
     @Test
     public void filterScheduling() throws Exception {
+        String activityLabel = Tests.randomIdentifier(SubstudyFilteringTest.class);
+        
         Study study = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
         if (study.getTaskIdentifiers().isEmpty()) {
             study.setTaskIdentifiers(ImmutableList.of("task1"));
@@ -226,7 +221,7 @@ public class SubstudyFilteringTest {
         TaskReference ref = new TaskReference();
         ref.setIdentifier(taskId);
         Activity activity = new Activity();
-        activity.setLabel("Task " + taskId + " activity");
+        activity.setLabel(activityLabel);
         activity.setTask(ref);
         
         Schedule schedule = new Schedule();
@@ -256,22 +251,27 @@ public class SubstudyFilteringTest {
             ClientManager abClient = new ClientManager.Builder().withSignIn(userAB.getSignIn()).build();
             ScheduledActivityListV4 abList = abClient.getClient(ForConsentedUsersApi.class)
                     .getScheduledActivitiesByDateRange(startOn, endOn).execute().body();
-            assertFalse(abList.getItems().isEmpty());
+            assertFalse(someMatchActivityLabel(abList.getItems(), activityLabel));
             
             ClientManager aClient = new ClientManager.Builder().withSignIn(userA.getSignIn()).build();
             ScheduledActivityListV4 aList = aClient.getClient(ForConsentedUsersApi.class)
                     .getScheduledActivitiesByDateRange(startOn, endOn).execute().body();
-            assertTrue(aList.getItems().isEmpty());
+            assertTrue(someMatchActivityLabel(aList.getItems(), activityLabel));
             
             ClientManager bClient = new ClientManager.Builder().withSignIn(userB.getSignIn()).build();
             ScheduledActivityListV4 bList = bClient.getClient(ForConsentedUsersApi.class)
                     .getScheduledActivitiesByDateRange(startOn, endOn).execute().body();
-            assertTrue(bList.getItems().isEmpty());
+            assertTrue(someMatchActivityLabel(bList.getItems(), activityLabel));
         } finally {
             if (keys != null) {
                 admin.getClient(ForAdminsApi.class).deleteSchedulePlan(keys.getGuid(), true).execute();
             }
         }
+    }
+    
+    private boolean someMatchActivityLabel(List<ScheduledActivity> activities, String activityLabel) {
+        return activities.stream().filter((act) -> act.getActivity()
+                .getLabel().equals(activityLabel)).count() == 0;
     }
     
     private void assertListContainsAccount(List<AccountSummary> summaries, String callerSubstudyId, String userId) {
