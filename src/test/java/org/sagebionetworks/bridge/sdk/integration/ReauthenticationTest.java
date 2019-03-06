@@ -5,6 +5,9 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -103,37 +106,54 @@ public class ReauthenticationTest {
         // You can re-authenticate.
         String oldSessionToken = session.getSessionToken();
         String reauthToken = session.getReauthToken();
-        SignIn request = new SignIn().study(user.getStudyId())
+        SignIn signIn = new SignIn().study(user.getStudyId())
                 .email(user.getSession().getEmail()).reauthToken(reauthToken);
         
-        // Pause because we're now caching the reauth token and we can't verify it 
-        // rotates without waiting
-        Thread.sleep(REAUTH_CACHE_IN_MILLIS);
-        
+        Set<String> sessionTokens = new HashSet<>();
+        Set<String> reauthTokens = new HashSet<>();
         AuthenticationApi authApi = user.getClient(AuthenticationApi.class);
-        UserSessionInfo newSession = authApi.reauthenticate(request).execute().body();
+
+        UserSessionInfo firstSession = authApi.reauthenticate(signIn).execute().body();
+        sessionTokens.add(firstSession.getSessionToken());
+        reauthTokens.add(firstSession.getReauthToken());
         
-        assertNotEquals(reauthToken, newSession.getReauthToken());
-        assertNotEquals(oldSessionToken, newSession.getSessionToken());
+        assertNotEquals(reauthToken, firstSession.getReauthToken());
+        assertNotEquals(oldSessionToken, firstSession.getSessionToken());
         
-        // Using the same token again right away returns the same session.
-        UserSessionInfo duplicateSession = authApi.reauthenticate(request).execute().body();
-        assertEquals(newSession.getSessionToken(), duplicateSession.getSessionToken());
-        assertEquals(newSession.getReauthToken(), duplicateSession.getReauthToken());
+        // Using the same token also returns a session.
+        UserSessionInfo secondSession = authApi.reauthenticate(signIn).execute().body();
+        sessionTokens.add(secondSession.getSessionToken());
+        reauthTokens.add(secondSession.getReauthToken());
         
+        UserSessionInfo thirdSession = authApi.reauthenticate(signIn).execute().body();
+        sessionTokens.add(thirdSession.getSessionToken());
+        reauthTokens.add(thirdSession.getReauthToken());
+
         // User should be able to make this call without incident.
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         usersApi.getActivityEvents().execute();
         
-        user.signOut();
+        // All three sign-ins got back unique session tokens and reauth tokens
+        assertEquals(3, sessionTokens.size());
+        assertEquals(3, reauthTokens.size());
         
         try {
-            request = new SignIn().study(user.getStudyId()).email(newSession.getEmail())
-                    .reauthToken(newSession.getReauthToken());
-            authApi.reauthenticate(request).execute().body();
+            // The first reauth token should now be rotated out and no longer usable.
+            authApi.reauthenticate(signIn).execute().body();
             fail("Should have thrown exception.");
         } catch(EntityNotFoundException e) {
 
+        }
+        
+        // If you sign out, all reauthentication tokens are destroyed, even the most recent token.
+        String email = user.getSession().getEmail();
+        user.signOut();
+        
+        try {
+            signIn = new SignIn().study(user.getStudyId()).email(email).reauthToken(thirdSession.getReauthToken());
+            authApi.reauthenticate(signIn).execute().body();
+            fail("Should have thrown exception.");
+        } catch(EntityNotFoundException e) {
         }
     }
     
