@@ -1,6 +1,5 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
@@ -106,20 +105,29 @@ public class ReauthenticationTest {
         SignIn request = new SignIn().study(user.getStudyId())
                 .email(user.getSession().getEmail()).reauthToken(reauthToken);
         
-        // Pause because we're now caching the reauth token and we can't verify it 
-        // rotates without waiting
+        AuthenticationApi authApi = user.getClient(AuthenticationApi.class);
+        
+        // Pause because we're caching the reauth token issued
         Thread.sleep(REAUTH_CACHE_IN_MILLIS);
         
-        AuthenticationApi authApi = user.getClient(AuthenticationApi.class);
-        UserSessionInfo newSession = authApi.reauthenticate(request).execute().body();
+        UserSessionInfo sessionOne = authApi.reauthenticate(request).execute().body();
+        assertNotEquals(reauthToken, sessionOne.getReauthToken());
+        assertNotEquals(oldSessionToken, sessionOne.getSessionToken());
+
+        Thread.sleep(REAUTH_CACHE_IN_MILLIS);
         
-        assertNotEquals(reauthToken, newSession.getReauthToken());
-        assertNotEquals(oldSessionToken, newSession.getSessionToken());
+        // Using the same token again right away now returns a fresh session.
+        UserSessionInfo sessionTwo = authApi.reauthenticate(request).execute().body();
+        assertNotEquals(sessionOne.getSessionToken(), sessionTwo.getSessionToken());
+        assertNotEquals(sessionOne.getReauthToken(), sessionTwo.getReauthToken());
+
+        Thread.sleep(REAUTH_CACHE_IN_MILLIS);
         
-        // Using the same token again right away returns the same session.
-        UserSessionInfo duplicateSession = authApi.reauthenticate(request).execute().body();
-        assertEquals(newSession.getSessionToken(), duplicateSession.getSessionToken());
-        assertEquals(newSession.getReauthToken(), duplicateSession.getReauthToken());
+        // And we can use the new tokens
+        SignIn secondRequest = new SignIn().study(user.getStudyId())
+                .email(user.getSession().getEmail()).reauthToken(sessionTwo.getReauthToken());
+        UserSessionInfo sessionThree = authApi.reauthenticate(secondRequest).execute().body();
+        assertNotNull(sessionThree);
         
         // User should be able to make this call without incident.
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
@@ -128,8 +136,8 @@ public class ReauthenticationTest {
         user.signOut();
         
         try {
-            request = new SignIn().study(user.getStudyId()).email(newSession.getEmail())
-                    .reauthToken(newSession.getReauthToken());
+            request = new SignIn().study(user.getStudyId()).email(sessionOne.getEmail())
+                    .reauthToken(sessionOne.getReauthToken());
             authApi.reauthenticate(request).execute().body();
             fail("Should have thrown exception.");
         } catch(EntityNotFoundException e) {
