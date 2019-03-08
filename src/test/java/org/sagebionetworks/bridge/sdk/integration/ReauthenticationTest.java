@@ -167,7 +167,7 @@ public class ReauthenticationTest {
             String reauthToken = testUser.getSession().getReauthToken();
             
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
-            StudyParticipant participant = userApi.getUsersParticipantRecord().execute().body();
+            StudyParticipant participant = userApi.getUsersParticipantRecord(false).execute().body();
             participant.setFirstName("Lacy");
             participant.setLastName("Loo");
             

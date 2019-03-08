@@ -111,7 +111,7 @@ public class ConsentTest {
             participant.sharingScope(SharingScope.SPONSORS_AND_PARTNERS);
             userApi.updateUsersParticipantRecord(participant).execute();
             
-            participant = userApi.getUsersParticipantRecord().execute().body();
+            participant = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, participant.getSharingScope());
 
             // Do the same thing in reverse, setting to no sharing
@@ -120,9 +120,19 @@ public class ConsentTest {
 
             userApi.updateUsersParticipantRecord(participant).execute();
 
-            participant = userApi.getUsersParticipantRecord().execute().body();
+            participant = userApi.getUsersParticipantRecord(true).execute().body();
             assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
-
+            
+            Map<String,List<UserConsentHistory>> map = participant.getConsentHistories();
+            UserConsentHistory history = map.get(IntegTestUtils.STUDY_ID).get(0);
+            
+            assertEquals(IntegTestUtils.STUDY_ID, history.getSubpopulationGuid());
+            assertNotNull(history.getConsentCreatedOn());
+            assertNotNull(history.getName());
+            assertNotNull(history.getBirthdate());
+            assertTrue(history.getSignedOn().isAfter(DateTime.now().minusHours(1)));
+            assertTrue(history.isHasSignedActiveConsent());
+            
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             authApi.signOut().execute();
         } finally {
@@ -306,7 +316,7 @@ public class ConsentTest {
             assertTrue(status.isSignedMostRecentConsent());
             
             // Participant record includes the sharing scope that was set
-            StudyParticipant participant = userApi.getUsersParticipantRecord().execute().body();
+            StudyParticipant participant = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, participant.getSharingScope());
             
             // Session now shows consent...
@@ -319,6 +329,7 @@ public class ConsentTest {
             assertEquals("birthdate matches", birthdate, sigFromServer.getBirthdate());
             assertEquals("imageData matches", imageData, sigFromServer.getImageData());
             assertEquals("imageMimeType matches", imageMimeType, sigFromServer.getImageMimeType());
+            assertNotNull(sigFromServer.getSignedOn());
             
             // giving consent again will throw
             try {
@@ -350,6 +361,7 @@ public class ConsentTest {
             status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
             assertFalse(status.isConsented());
             assertFalse(status.isSignedMostRecentConsent());
+            assertNull(status.getSignedOn());
             
             // This method should now (immediately) throw a ConsentRequiredException
             try {

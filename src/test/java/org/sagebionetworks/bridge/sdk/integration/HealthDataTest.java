@@ -147,7 +147,7 @@ public class HealthDataTest {
                 .createAndSignInUser();
         ParticipantsApi participantsApi = user.getClient(ParticipantsApi.class);
 
-        StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
+        StudyParticipant participant = participantsApi.getUsersParticipantRecord(false).execute().body();
         participant.setDataGroups(ImmutableList.of("group1"));
         participant.setSharingScope(SharingScope.SPONSORS_AND_PARTNERS);
         participantsApi.updateUsersParticipantRecord(participant).execute();

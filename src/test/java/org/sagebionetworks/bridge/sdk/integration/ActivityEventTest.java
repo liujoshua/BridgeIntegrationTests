@@ -99,7 +99,7 @@ public class ActivityEventTest {
         ActivityEventList activityEventList = usersApi.getActivityEvents().execute().body();
         List<ActivityEvent> activityEvents = activityEventList.getItems();
 
-        StudyParticipant participant = usersApi.getUsersParticipantRecord().execute().body();
+        StudyParticipant participant = usersApi.getUsersParticipantRecord(false).execute().body();
 
         // Create custom event
         DateTime timestamp = DateTime.now(DateTimeZone.UTC);
