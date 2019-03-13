@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
@@ -116,10 +117,11 @@ public class ReauthenticationTest {
 
         Thread.sleep(REAUTH_CACHE_IN_MILLIS);
         
-        // Using the same token again right away now returns a fresh session.
+        // Using the same token again right away now returns a fresh session, but the
+        // tokens need to be the same.
         UserSessionInfo sessionTwo = authApi.reauthenticate(request).execute().body();
-        assertNotEquals(sessionOne.getSessionToken(), sessionTwo.getSessionToken());
-        assertNotEquals(sessionOne.getReauthToken(), sessionTwo.getReauthToken());
+        assertEquals(sessionOne.getSessionToken(), sessionTwo.getSessionToken());
+        assertEquals(sessionOne.getReauthToken(), sessionTwo.getReauthToken());
 
         Thread.sleep(REAUTH_CACHE_IN_MILLIS);
         
