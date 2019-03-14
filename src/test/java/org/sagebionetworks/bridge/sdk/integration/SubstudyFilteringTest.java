@@ -121,6 +121,12 @@ public class SubstudyFilteringTest {
                 e.printStackTrace();
             }
         }
+
+        try {
+            developer.signOutAndDeleteUser();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
     @Test
