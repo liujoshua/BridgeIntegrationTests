@@ -118,7 +118,7 @@ public class ReauthenticationTest {
         reauthTokens.add(firstSession.getReauthToken());
         
         assertNotEquals(reauthToken, firstSession.getReauthToken());
-        assertNotEquals(oldSessionToken, firstSession.getSessionToken());
+        assertEquals(oldSessionToken, firstSession.getSessionToken());
         
         // Using the same token also returns a session.
         UserSessionInfo secondSession = authApi.reauthenticate(signIn).execute().body();
@@ -134,7 +134,7 @@ public class ReauthenticationTest {
         usersApi.getActivityEvents().execute();
         
         // All three sign-ins got back unique session tokens and reauth tokens
-        assertEquals(3, sessionTokens.size());
+        assertEquals(1, sessionTokens.size());
         assertEquals(3, reauthTokens.size());
         
         try {
