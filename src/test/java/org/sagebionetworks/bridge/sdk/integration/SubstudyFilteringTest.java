@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -120,6 +119,12 @@ public class SubstudyFilteringTest {
             } catch(Exception e) {
                 e.printStackTrace();
             }
+        }
+
+        try {
+            developer.signOutAndDeleteUser();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
     

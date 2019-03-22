@@ -636,11 +636,11 @@ public class StudyTest {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         TestUser user2 = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
-            UploadsApi devUploadsApi = developer.getClient(UploadsApi.class);
+            UploadsApi adminUploadsApi = admin.getClient(UploadsApi.class);
             DateTime startTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
             DateTime endTime = startTime.plusHours(4);
 
-            int count = devUploadsApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body().getItems().size();
+            int count = adminUploadsApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body().getItems().size();
 
             // Create a REQUESTED record that we can retrieve through the reporting API.
             UploadRequest request = new UploadRequest();
@@ -659,7 +659,7 @@ public class StudyTest {
             // This should retrieve both of the user's uploads.
             // NOTE: This assumes that there aren't more than a few dozen uploads in the API study in the last few
             // hours.
-            StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+            StudiesApi studiesApi = admin.getClient(StudiesApi.class);
 
             UploadList results = studiesApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body();
           

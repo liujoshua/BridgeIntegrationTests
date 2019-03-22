@@ -389,11 +389,11 @@ public class AuthenticationTest {
         verifySession(401, newSession.getSessionToken());
         verifySession(200, newSessionV4.getSessionToken());
 
-        // Test again with reauth.
+        // Reauth will reacquire the same session because the token has not expired
         SignIn reauth = new SignIn().study(IntegTestUtils.STUDY_ID).email(testUser.getEmail())
                 .reauthToken(newSessionV4.getReauthToken());
         UserSessionInfo newSessionReauth = authApi.reauthenticate(reauth).execute().body();
-        verifySession(401, newSessionV4.getSessionToken());
+        verifySession(200, newSessionV4.getSessionToken());
         verifySession(200, newSessionReauth.getSessionToken());
     }
 
