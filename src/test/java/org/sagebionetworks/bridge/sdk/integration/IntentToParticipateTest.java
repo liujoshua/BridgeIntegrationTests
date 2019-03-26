@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableMap;
 import org.joda.time.DateTime;
@@ -121,8 +120,6 @@ public class IntentToParticipateTest {
             
             ConsentStatus status = session.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
             assertTrue(status.isConsented());
-        } catch(Exception e) {
-            fail("This should not have thrown an exception");
         } finally {
             if (user != null) {
                 user.signOutAndDeleteUser();
@@ -174,8 +171,6 @@ public class IntentToParticipateTest {
             
             ConsentStatus status = session.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
             assertTrue(status.isConsented());
-        } catch(Exception e) {
-            fail("This should not have thrown an exception");
         } finally {
             if (user != null) {
                 user.signOutAndDeleteUser();

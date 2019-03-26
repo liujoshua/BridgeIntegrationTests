@@ -54,6 +54,8 @@ public class Tests {
             .body("<p>${host}/${token}</p>").mimeType(MimeType.TEXT_HTML);
     public static final EmailTemplate TEST_ACCOUNT_EXISTS_TEMPLATE = new EmailTemplate().subject("Your ${studyName} account")
             .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
+    public static final EmailTemplate APP_INSTALL_LINK_TEMPLATE = new EmailTemplate().subject("Your ${studyName} dl link").body("body ${appInstallUrl}")
+            .mimeType(MimeType.TEXT_PLAIN);
     public static final SmsTemplate RESET_PASSWORD_SMS_TEMPLATE = new SmsTemplate().message("resetPasswordSmsTemplate ${resetPasswordUrl}");
     public static final SmsTemplate PHONE_SIGNIN_SMS_TEMPLATE = new SmsTemplate().message("phoneSignInSmsTemplate ${token}");
     public static final SmsTemplate APP_INSTALL_LINK_SMS_TEMPLATE = new SmsTemplate().message("appInstallLinkSmsTemplate ${appInstallUrl}");
@@ -235,6 +237,7 @@ public class Tests {
         study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
         study.setEmailSignInTemplate(Tests.TEST_EMAIL_SIGNIN_TEMPLATE);
         study.setAccountExistsTemplate(Tests.TEST_ACCOUNT_EXISTS_TEMPLATE);
+        study.setAppInstallLinkTemplate(Tests.APP_INSTALL_LINK_TEMPLATE);
         study.setResetPasswordSmsTemplate(RESET_PASSWORD_SMS_TEMPLATE);
         study.setPhoneSignInSmsTemplate(PHONE_SIGNIN_SMS_TEMPLATE);
         study.setAppInstallLinkSmsTemplate(APP_INSTALL_LINK_SMS_TEMPLATE);
