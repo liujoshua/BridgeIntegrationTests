@@ -58,7 +58,7 @@ public class IntentToParticipateTest {
     }
 
     @Test
-    public void testIntentToParticipate() throws Exception {
+    public void testIntentToParticipateWithPhone() throws Exception {
         TestUser user = null;
         try {
             ConsentSignature sig = new ConsentSignature()
@@ -126,5 +126,56 @@ public class IntentToParticipateTest {
             }
         }
     }
+    
+    @Test
+    public void testIntentToParticipateWithEmail() throws Exception {
+        String email = IntegTestUtils.makeEmail(IntentToParticipateTest.class);
+        TestUser user = null;
+        try {
+            ConsentSignature sig = new ConsentSignature()
+                    .name("Test User")
+                    .scope(SharingScope.ALL_QUALIFIED_RESEARCHERS)
+                    .birthdate(LocalDate.parse("1980-01-01"));
+            
+            IntentToParticipate intent = new IntentToParticipate()
+                    .email(email)
+                    .studyId(IntegTestUtils.STUDY_ID)
+                    .subpopGuid(IntegTestUtils.STUDY_ID)
+                    .osName("iPhone")
+                    .consentSignature(sig);
+            
+            Config config = new Config();
+            String baseUrl = ClientManager.getUrl(config.getEnvironment());
+            String clientInfo = RestUtils.getUserAgent(admin.getClientManager().getClientInfo());
+            String lang = RestUtils.getAcceptLanguage(admin.getClientManager().getAcceptedLanguages());
+            
+            ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang, IntegTestUtils.STUDY_ID);
+            
+            IntentToParticipateApi intentApi = provider.getClient(IntentToParticipateApi.class);
+            intentApi.submitIntentToParticipate(intent).execute();
+            
+            SignUp signUp = new SignUp()
+                    .study(IntegTestUtils.STUDY_ID)
+                    .email(email)
+                    .password(Tests.PASSWORD)
+                    .checkForConsent(true);
+            user = new TestUserHelper.Builder(IntentToParticipate.class)
+                .withSignUp(signUp)
+                .withConsentUser(false) // important, the ITP must do this.
+                .createUser();
+            
+            // This does not throw a consent exception.
+            AuthenticationApi authApi = provider.getClient(AuthenticationApi.class);
+            UserSessionInfo session = authApi.signInV4(user.getSignIn()).execute().body();
+            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
+            
+            ConsentStatus status = session.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
+            assertTrue(status.isConsented());
+        } finally {
+            if (user != null) {
+                user.signOutAndDeleteUser();
+            }
+        }
+    }    
     
 }

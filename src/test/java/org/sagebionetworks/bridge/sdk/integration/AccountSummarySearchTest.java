@@ -164,7 +164,7 @@ public class AccountSummarySearchTest {
         listsMatch(Lists.newArrayList("sdk-int-2"), list.getRequestParams().getAllOfGroups());
         
         // Successful "noneOfGroups" search
-        search = new AccountSummarySearch().noneOfGroups(Lists.newArrayList("group1"));
+        search = new AccountSummarySearch().noneOfGroups(Lists.newArrayList("group1")).pageSize(100);
         list = supplier.apply(search);
         userIds = mapUserIds(list);
         assertTrue(userIds.contains(testUser.getUserId()));
@@ -182,7 +182,7 @@ public class AccountSummarySearchTest {
         listsMatch(FRENCH_USER_GROUPS, list.getRequestParams().getNoneOfGroups());
         
         // This pulls up everything we're looking for
-        search = new AccountSummarySearch().noneOfGroups(Lists.newArrayList("sdk-int-2"));
+        search = new AccountSummarySearch().noneOfGroups(Lists.newArrayList("sdk-int-2")).pageSize(100);
         list = supplier.apply(search);
         userIds = mapUserIds(list);
         assertTrue(userIds.contains(testUser.getUserId()));

@@ -145,7 +145,9 @@ public class ActivityEventTest {
         ActivityEvent twoWeeksAfterEvent = activityEventMap.get("custom:" + TWO_WEEKS_AFTER_KEY);
         assertNotNull(twoWeeksAfterEvent);
         DateTime twoWeeksAfterTime = twoWeeksAfterEvent.getTimestamp();
-        Period twoWeeksAfterPeriod = new Period(enrollmentTime, twoWeeksAfterTime);
+        // This can fail when you're near the time zone change to DST. Add one hour to overshoot 
+        // and compensate for the time zone change.
+        Period twoWeeksAfterPeriod = new Period(enrollmentTime, twoWeeksAfterTime.plusHours(1));
         assertEquals(2, twoWeeksAfterPeriod.getWeeks());
     }
 }
