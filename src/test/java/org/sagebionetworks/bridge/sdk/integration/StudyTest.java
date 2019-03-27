@@ -46,6 +46,7 @@ import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.UploadsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.exceptions.UnsupportedVersionException;
 import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
@@ -495,6 +496,42 @@ public class StudyTest {
             study = studiesApi.getUsersStudy().execute().body();
             UploadFieldDefinition returnedFieldDef = getFieldDefByName(fieldName, study);
             assertEqualFieldDefs(originalField, returnedFieldDef);
+
+            // One large text exceeds the metadata byte limit.
+            String largeFieldName = "large-" + fieldName;
+            UploadFieldDefinition largeTextField = new UploadFieldDefinition().name(largeFieldName).type(
+                    UploadFieldType.LARGE_TEXT_ATTACHMENT);
+            try {
+                appendToStudy(study, largeTextField);
+                studiesApi.updateUsersStudy(study).execute();
+                fail("expected exception");
+            } catch (InvalidEntityException ex) {
+                assertTrue(ex.getMessage().contains("cannot be greater than 2500 bytes combined"));
+            }
+            study = studiesApi.getUsersStudy().execute().body();
+            assertNotNull(study);
+            returnedFieldDef = getFieldDefByName(largeFieldName, study);
+            assertNull(returnedFieldDef);
+
+            // One multi-choice field with 21 answers exceeds the column limit.
+            List<String> answerList = new ArrayList<>();
+            for (int i = 0; i < 21; i++) {
+                answerList.add("answer-" + i);
+            }
+            String multiChoiceFieldName = "multi-choice-" + fieldName;
+            UploadFieldDefinition multiChoiceField = new UploadFieldDefinition().name(multiChoiceFieldName)
+                    .type(UploadFieldType.MULTI_CHOICE).multiChoiceAnswerList(answerList);
+            try {
+                appendToStudy(study, multiChoiceField);
+                studiesApi.updateUsersStudy(study).execute();
+                fail("expected exception");
+            } catch (InvalidEntityException ex) {
+                assertTrue(ex.getMessage().contains("cannot be greater than 20 columns combined"));
+            }
+            study = studiesApi.getUsersStudy().execute().body();
+            assertNotNull(study);
+            returnedFieldDef = getFieldDefByName(multiChoiceFieldName, study);
+            assertNull(returnedFieldDef);
 
             // Non-admin can't modify the field.
             try {

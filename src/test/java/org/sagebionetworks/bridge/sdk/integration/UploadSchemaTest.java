@@ -33,6 +33,7 @@ import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConcurrentModificationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
@@ -508,6 +509,66 @@ public class UploadSchemaTest {
     @Test(expected=UnauthorizedException.class)
     public void unauthorizedTest() throws Exception {
         user.getClient(UploadSchemasApi.class).getMostRecentUploadSchemas(false).execute();
+    }
+
+    @Test
+    public void cannotCreateSchemasWithTooManyBytes() throws Exception {
+        // 17 LargeTextFields will exceed the byte limit.
+        List<UploadFieldDefinition> fieldDefList = new ArrayList<>();
+        for (int i = 0; i < 17; i++) {
+            UploadFieldDefinition fieldDef = new UploadFieldDefinition().name("field-" + i).type(
+                    UploadFieldType.LARGE_TEXT_ATTACHMENT);
+            fieldDefList.add(fieldDef);
+        }
+        cannotCreateSchemasThatAreTooLarge("cannot be greater than 50000 bytes combined",
+                fieldDefList);
+    }
+
+    @Test
+    public void cannotCreateSchemasWithTooManyColumns() throws Exception {
+        // 11 Multi-Choice fields with 11 answers will exceed the column limit.
+        List<String> answerList = new ArrayList<>();
+        for (int i = 0; i < 11; i++) {
+            answerList.add("answer-" + i);
+        }
+
+        List<UploadFieldDefinition> fieldDefList = new ArrayList<>();
+        for (int i = 0; i < 11; i++) {
+            UploadFieldDefinition fieldDef = new UploadFieldDefinition().name("field-" + i)
+                    .type(UploadFieldType.MULTI_CHOICE).multiChoiceAnswerList(answerList);
+            fieldDefList.add(fieldDef);
+        }
+        cannotCreateSchemasThatAreTooLarge("cannot be greater than 100 columns combined",
+                fieldDefList);
+    }
+
+    private void cannotCreateSchemasThatAreTooLarge(String expectedErrorMessage,
+            List<UploadFieldDefinition> fieldDefList) throws Exception {
+        // Create schema with fields (expected exception).
+        UploadSchema schema = new UploadSchema().name(schemaId).schemaId(schemaId).schemaType(
+                UploadSchemaType.IOS_DATA);
+        schema.getFieldDefinitions().addAll(fieldDefList);
+        try {
+            devUploadSchemasApi.createUploadSchema(schema).execute();
+            fail("expected exception");
+        } catch (InvalidEntityException ex) {
+            assertTrue(ex.getMessage().contains(expectedErrorMessage));
+        }
+
+        // Create a valid schema.
+        schema.getFieldDefinitions().clear();
+        schema.addFieldDefinitionsItem(new UploadFieldDefinition().name("field").type(UploadFieldType.BOOLEAN));
+        schema = devUploadSchemasApi.createUploadSchema(schema).execute().body();
+        assertNotNull(schema);
+
+        // Now attempt to update it with fields (expected exception).
+        schema.getFieldDefinitions().addAll(fieldDefList);
+        try {
+            devUploadSchemasApi.updateUploadSchema(schemaId, 1L, schema).execute();
+            fail("expected exception");
+        } catch (InvalidEntityException ex) {
+            assertTrue(ex.getMessage().contains(expectedErrorMessage));
+        }
     }
 
     private UploadFieldDefinition field(String name, boolean required, UploadFieldType type) {
