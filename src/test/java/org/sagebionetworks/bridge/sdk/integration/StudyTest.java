@@ -325,6 +325,10 @@ public class StudyTest {
         assertEquals("<p>${url}</p>", newerStudy.getAccountExistsTemplate().getBody());
         assertEquals(MimeType.TEXT_HTML, newerStudy.getAccountExistsTemplate().getMimeType());
         
+        assertEquals("Your ${studyName} dl link", newerStudy.getAppInstallLinkTemplate().getSubject());
+        assertEquals("body ${appInstallUrl}", newerStudy.getAppInstallLinkTemplate().getBody());
+        assertEquals(MimeType.TEXT_PLAIN, newerStudy.getAppInstallLinkTemplate().getMimeType());
+        
         assertEquals("endpoint2", newerStudy.getOAuthProviders().get("myProvider").getEndpoint());
         assertEquals("callbackUrl2", newerStudy.getOAuthProviders().get("myProvider").getCallbackUrl());
         
