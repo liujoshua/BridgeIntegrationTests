@@ -36,7 +36,7 @@ public class SessionTest {
         UserSessionInfo session = user.getSession();
         assertNotNull(session.getId());
         assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
-        assertTrue(session.getCreatedOn().isAfter(startOfTest));
+        assertTrue(session.getCreatedOn().isAfter(startOfTest.minusHours(1)));
         assertEquals(AccountStatus.ENABLED, session.getStatus());
         assertEquals("en", session.getLanguages().get(0));
         assertEquals(1, session.getLanguages().size());
@@ -52,7 +52,7 @@ public class SessionTest {
         assertTrue(status.isRequired());
         assertTrue(status.isConsented());
         assertTrue(status.isSignedMostRecentConsent());
-        assertTrue(status.getSignedOn().isAfter(startOfTest));
+        assertTrue(status.getSignedOn().isAfter(startOfTest.minusHours(1)));
         
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         

@@ -370,7 +370,7 @@ public class ConsentTest {
             StudyParticipant retrieved = participantsApi.getParticipantById(testUser.getUserId(), true).execute().body();
             
             List<UserConsentHistory> history = retrieved.getConsentHistories().get(testUser.getDefaultSubpopulation());
-            assertTrue( history.get(0).getWithdrewOn().isAfter(DateTime.now().minusMinutes(2)) );
+            assertTrue( history.get(0).getWithdrewOn().isAfter(DateTime.now().minusHours(1)) );
             
             // This method should now (immediately) throw a ConsentRequiredException
             try {
