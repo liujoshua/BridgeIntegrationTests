@@ -31,7 +31,7 @@ public class SignUpTest {
         try {
             ParticipantsApi participantsApi = testUser.getClientManager().getClient(ParticipantsApi.class);
 
-            StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
+            StudyParticipant participant = participantsApi.getUsersParticipantRecord(false).execute().body();
             assertTrue(participant.isNotifyByEmail());
             assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
         } finally {

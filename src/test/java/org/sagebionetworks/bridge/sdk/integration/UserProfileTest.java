@@ -63,7 +63,7 @@ public class UserProfileTest {
         // Now get the participant record and verify that notifyByEmail is true (the default)
         ParticipantsApi participantsApi = testUser.getClient(ParticipantsApi.class);
         
-        StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
+        StudyParticipant participant = participantsApi.getUsersParticipantRecord(false).execute().body();
         
         assertEquals("FirstName2", participant.getFirstName());
         assertEquals("LastName2", participant.getLastName());

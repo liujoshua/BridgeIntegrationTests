@@ -154,7 +154,7 @@ public class SmsNotificationRegistrationTest {
         assertTrue(subscriptionsByGuid.get(manualTopicGuid));
 
         // Switch to data group sdk-int-2. This flips the auto topics, but doesn't touch the manual topic.
-        StudyParticipant participant = api.getUsersParticipantRecord().execute().body();
+        StudyParticipant participant = api.getUsersParticipantRecord(false).execute().body();
         participant.setDataGroups(ImmutableList.of("sdk-int-2"));
         api.updateUsersParticipantRecord(participant).execute();
 

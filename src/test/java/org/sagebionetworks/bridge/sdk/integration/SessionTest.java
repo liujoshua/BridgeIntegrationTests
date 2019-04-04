@@ -2,27 +2,71 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import org.joda.time.DateTime;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
+import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.Lists;
 
-// This test has gotten less useful since we no longer manipulate the session in the client 
-// api classes. Still I've rewritten it to examine updates on the server.
 public class SessionTest {
+    @Test
+    public void verifySession() throws Exception {
+        DateTime startOfTest = DateTime.now();
+        
+        TestUser user = TestUserHelper.createAndSignInUser(SessionTest.class, true);
+        
+        UserSessionInfo session = user.getSession();
+        assertNotNull(session.getId());
+        assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
+        assertTrue(session.getCreatedOn().isAfter(startOfTest.minusHours(1)));
+        assertEquals(AccountStatus.ENABLED, session.getStatus());
+        assertEquals("en", session.getLanguages().get(0));
+        assertEquals(1, session.getLanguages().size());
+        assertTrue(session.isAuthenticated());
+        assertNotNull(session.getSessionToken());
+        assertNotNull(session.getEmail());
+        assertEquals(user.getEmail(), session.getEmail());
+        assertTrue(session.isConsented());
+        
+        ConsentStatus status = session.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
+        assertEquals("Default Consent Group", status.getName());
+        assertEquals(IntegTestUtils.STUDY_ID, status.getSubpopulationGuid());
+        assertTrue(status.isRequired());
+        assertTrue(status.isConsented());
+        assertTrue(status.isSignedMostRecentConsent());
+        assertTrue(status.getSignedOn().isAfter(startOfTest.minusHours(1)));
+        
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+        
+        Withdrawal withdrawal = new Withdrawal().reason("No longer want to be a test subject");
+        UserSessionInfo session2 = usersApi.withdrawConsentFromSubpopulation(IntegTestUtils.STUDY_ID, withdrawal).execute().body();
+        
+        ConsentStatus status2 = session2.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
+        assertEquals("Default Consent Group", status2.getName());
+        assertEquals(IntegTestUtils.STUDY_ID, status2.getSubpopulationGuid());
+        assertTrue(status2.isRequired());
+        assertFalse(status2.isConsented());
+        assertFalse(status2.isSignedMostRecentConsent());
+        assertNull(status2.getSignedOn());
+    }
     
     @Test
     public void canGetStudyParticipantWithAllData() throws Exception {
@@ -34,7 +78,7 @@ public class SessionTest {
             
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
 
-            StudyParticipant updated = usersApi.getUsersParticipantRecord().execute().body();
+            StudyParticipant updated = usersApi.getUsersParticipantRecord(false).execute().body();
             updated.setFirstName("TestFirstName");
             updated.setDataGroups(dataGroups);
             updated.setNotifyByEmail(false);
@@ -46,7 +90,7 @@ public class SessionTest {
             
             usersApi.updateUsersParticipantRecord(updated).execute();
             
-            StudyParticipant asUpdated = usersApi.getUsersParticipantRecord().execute().body();
+            StudyParticipant asUpdated = usersApi.getUsersParticipantRecord(false).execute().body();
             
             assertEquals("TestFirstName", asUpdated.getFirstName());
             assertEquals("TestLastName", asUpdated.getLastName());

@@ -30,7 +30,7 @@ public class SessionRefreshTest {
     @Test
     public void testReauthenticationThrowsConsentException() throws Exception {
         // User starts out signed in. Initial call succeeds.
-        user.getClient(ParticipantsApi.class).getUsersParticipantRecord().execute();
+        user.getClient(ParticipantsApi.class).getUsersParticipantRecord(false).execute();
 
         // Sign user out.
         user.signOut();
@@ -49,12 +49,12 @@ public class SessionRefreshTest {
     public void testReauthenticationAcrossStudies() throws Exception {
         // Use developer from the Shared study to test across studies. Initial call succeeds.
         TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
-        sharedDeveloper.getClient(ParticipantsApi.class).getUsersParticipantRecord().execute();
+        sharedDeveloper.getClient(ParticipantsApi.class).getUsersParticipantRecord(false).execute();
 
         // Sign user out.
         sharedDeveloper.signOut();
 
         // Call should succeed again. Sign-in happens again behind the scenes
-        sharedDeveloper.getClient(ParticipantsApi.class).getUsersParticipantRecord().execute();
+        sharedDeveloper.getClient(ParticipantsApi.class).getUsersParticipantRecord(false).execute();
     }
 }

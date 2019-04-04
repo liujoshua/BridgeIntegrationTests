@@ -291,7 +291,7 @@ public class UploadTest {
 
         // Set user sharing scope, just to test metadata in upload validation.
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
-        StudyParticipant participant = usersApi.getUsersParticipantRecord().execute().body();
+        StudyParticipant participant = usersApi.getUsersParticipantRecord(false).execute().body();
         participant.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
         usersApi.updateUsersParticipantRecord(participant).execute();
 
