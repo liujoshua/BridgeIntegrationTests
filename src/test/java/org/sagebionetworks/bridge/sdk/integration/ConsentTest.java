@@ -19,6 +19,7 @@ import retrofit2.Response;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ConsentsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
@@ -362,6 +363,14 @@ public class ConsentTest {
             assertFalse(status.isConsented());
             assertFalse(status.isSignedMostRecentConsent());
             assertNull(status.getSignedOn());
+            
+            // Get the consent signature and verify it is withdrawn. You can't get it as the test 
+            // user... the user is withdrawn! 
+            ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
+            StudyParticipant retrieved = participantsApi.getParticipantById(testUser.getUserId(), true).execute().body();
+            
+            List<UserConsentHistory> history = retrieved.getConsentHistories().get(testUser.getDefaultSubpopulation());
+            assertTrue( history.get(0).getWithdrewOn().isAfter(DateTime.now().minusMinutes(2)) );
             
             // This method should now (immediately) throw a ConsentRequiredException
             try {
