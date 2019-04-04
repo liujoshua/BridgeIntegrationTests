@@ -12,6 +12,7 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.BooleanConstraints;
 import org.sagebionetworks.bridge.rest.model.DataType;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
@@ -19,6 +20,8 @@ import org.sagebionetworks.bridge.rest.model.MultiValueConstraints;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
 import org.sagebionetworks.bridge.rest.model.Survey;
+import org.sagebionetworks.bridge.rest.model.SurveyElement;
+import org.sagebionetworks.bridge.rest.model.SurveyInfoScreen;
 import org.sagebionetworks.bridge.rest.model.SurveyQuestion;
 import org.sagebionetworks.bridge.rest.model.SurveyQuestionOption;
 import org.sagebionetworks.bridge.rest.model.UIHint;
@@ -32,13 +35,16 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class SurveySchemaTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveySchemaTest.class);
@@ -347,6 +353,94 @@ public class SurveySchemaTest {
         assertEquals(UploadSchemaType.IOS_SURVEY, schema.getSchemaType());
         assertEquals(surveyKeys.getGuid(), schema.getSurveyGuid());
         assertEquals(surveyKeys.getCreatedOn(), schema.getSurveyCreatedOn());
+    }
+
+    @Test
+    public void cannotCreateSurveysThatHaveTooManyBytes() throws Exception {
+        // 17 LargeTextFields (string questions w/o max length) will exceed the byte limit.
+        StringConstraints stringConstraints = new StringConstraints();
+        stringConstraints.setDataType(DataType.STRING);
+        stringConstraints.setMaxLength(null);
+
+        List<SurveyElement> elementList = new ArrayList<>();
+        for (int i = 0; i < 17; i++) {
+            SurveyQuestion question = new SurveyQuestion();
+            question.setIdentifier("question-"+i);
+            question.setUiHint(UIHint.TEXTFIELD);
+            question.setPrompt("prompt");
+            question.setConstraints(stringConstraints);
+            question.setType("SurveyQuestion");
+            elementList.add(question);
+        }
+        cannotCreateSurveysThatAreTooLarge("cannot be greater than 50000 bytes combined",
+                elementList);
+    }
+
+    @Test
+    public void cannotCreateSurveysThatHaveTooManyColumns() throws Exception {
+        // 11 Multi-Choice fields with 11 answers will exceed the column limit.
+        List<SurveyQuestionOption> answerList = new ArrayList<>();
+        for (int i = 0; i < 11; i++) {
+            String answer = "answer-" + i;
+            answerList.add(new SurveyQuestionOption().label(answer).value(answer));
+        }
+        MultiValueConstraints multiValueConstraints = new MultiValueConstraints();
+        multiValueConstraints.setAllowMultiple(true);
+        multiValueConstraints.setDataType(DataType.STRING);
+        multiValueConstraints.setEnumeration(answerList);
+
+        List<SurveyElement> elementList = new ArrayList<>();
+        for (int i = 0; i < 11; i++) {
+            SurveyQuestion question = new SurveyQuestion();
+            question.setIdentifier("question-"+i);
+            question.setUiHint(UIHint.CHECKBOX);
+            question.setPrompt("prompt");
+            question.setConstraints(multiValueConstraints);
+            question.setType("SurveyQuestion");
+            elementList.add(question);
+        }
+        cannotCreateSurveysThatAreTooLarge("cannot be greater than 100 columns combined",
+                elementList);
+    }
+
+    private void cannotCreateSurveysThatAreTooLarge(String expectedErrorMessage, List<SurveyElement> elementList)
+    throws Exception {
+        // Create and publish survey with fields (expected exception).
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
+        survey.getElements().addAll(elementList);
+        GuidCreatedOnVersionHolder key = createSurvey(survey);
+        try {
+            surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), false).execute();
+            fail("expected exception");
+        } catch (InvalidEntityException ex) {
+            assertTrue(ex.getMessage().contains(expectedErrorMessage));
+        }
+
+        // Publish the survey with just an info screen.
+        SurveyInfoScreen infoScreen = new SurveyInfoScreen();
+        infoScreen.setIdentifier("infoscreen");
+        infoScreen.setTitle("title");
+        infoScreen.setPrompt("prompt");
+
+        survey = surveysApi.getSurvey(key.getGuid(), key.getCreatedOn()).execute().body();
+        assertNotNull(survey);
+        survey.getElements().clear();
+        survey.addElementsItem(infoScreen);
+        surveysApi.updateSurvey(key.getGuid(), key.getCreatedOn(), survey).execute();
+        surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), false).execute();
+
+        // Version the survey and attempt to publish the a new version with fields (expected exception).
+        key = versionSurvey(key);
+        survey = surveysApi.getSurvey(key.getGuid(), key.getCreatedOn()).execute().body();
+        assertNotNull(survey);
+        survey.getElements().addAll(elementList);
+        surveysApi.updateSurvey(key.getGuid(), key.getCreatedOn(), survey).execute();
+        try {
+            surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), false).execute();
+            fail("expected exception");
+        } catch (InvalidEntityException ex) {
+            assertTrue(ex.getMessage().contains(expectedErrorMessage));
+        }
     }
 
     // Helper methods to ensure we always record these calls for cleanup
