@@ -12,16 +12,12 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.BooleanConstraints;
 import org.sagebionetworks.bridge.rest.model.DataType;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.MultiValueConstraints;
 import org.sagebionetworks.bridge.rest.model.Role;
-import org.sagebionetworks.bridge.rest.model.StringConstraints;
 import org.sagebionetworks.bridge.rest.model.Survey;
-import org.sagebionetworks.bridge.rest.model.SurveyElement;
-import org.sagebionetworks.bridge.rest.model.SurveyInfoScreen;
 import org.sagebionetworks.bridge.rest.model.SurveyQuestion;
 import org.sagebionetworks.bridge.rest.model.SurveyQuestionOption;
 import org.sagebionetworks.bridge.rest.model.UIHint;
@@ -35,17 +31,15 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
+@SuppressWarnings("ConstantConditions")
 public class SurveySchemaTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveySchemaTest.class);
 
@@ -111,6 +105,7 @@ public class SurveySchemaTest {
 
     @Test
     public void createAndUpdateSurveySchema() throws Exception {
+        // Test Case 1: Create the survey schema.
         // Create original survey.
         GuidCreatedOnVersionHolder keys = setupSurveySchemaTest();
 
@@ -120,7 +115,41 @@ public class SurveySchemaTest {
         assertEquals(1, schema.getRevision().intValue());
 
         List<UploadFieldDefinition> fieldDefList = schema.getFieldDefinitions();
-        assertEquals(2, fieldDefList.size());
+        assertEquals(1, fieldDefList.size());
+
+        assertEquals("answers", fieldDefList.get(0).getName());
+        assertTrue(fieldDefList.get(0).isRequired());
+        assertEquals(UploadFieldType.LARGE_TEXT_ATTACHMENT, fieldDefList.get(0).getType());
+
+        // Test Case 2: Old survey schema format updated to thew new format. The "answers" field will be appended to
+        // the old schema.
+        schema.setRevision(null);
+        fieldDefList.clear();
+
+        UploadFieldDefinition q1FieldDef = new UploadFieldDefinition().name("q1").required(false)
+                .type(UploadFieldType.MULTI_CHOICE).allowOtherChoices(true).addMultiChoiceAnswerListItem("foo")
+                .addMultiChoiceAnswerListItem("bar");
+        fieldDefList.add(q1FieldDef);
+
+        UploadFieldDefinition q2FieldDef = new UploadFieldDefinition().name("q2").required(false)
+                .type(UploadFieldType.BOOLEAN);
+        fieldDefList.add(q2FieldDef);
+
+        schema = schemasApi.createUploadSchema(schema).execute().body();
+        validateCommonSchemaProperties(schema, keys);
+        assertEquals(2, schema.getRevision().intValue());
+
+        // Now version and publish the survey again. The schema will now have the answers field appended to the
+        // old fields.
+        keys = versionSurvey(keys);
+        surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
+
+        schema = schemasApi.getMostRecentUploadSchema(surveyId).execute().body();
+        validateCommonSchemaProperties(schema, keys);
+        assertEquals(2, schema.getRevision().intValue());
+
+        fieldDefList = schema.getFieldDefinitions();
+        assertEquals(3, fieldDefList.size());
 
         assertEquals("q1", fieldDefList.get(0).getName());
         assertFalse(fieldDefList.get(0).isRequired());
@@ -132,176 +161,83 @@ public class SurveySchemaTest {
         assertFalse(fieldDefList.get(1).isRequired());
         assertEquals(UploadFieldType.BOOLEAN, fieldDefList.get(1).getType());
 
-        // Update the survey. You can delete answer choices, fields, make compatible changes to fields.
-        MultiValueConstraints updatedQ1Con = new MultiValueConstraints();
-        updatedQ1Con.setAllowMultiple(true);
-        updatedQ1Con.setAllowOther(false);
-        updatedQ1Con.setDataType(DataType.STRING);
-        
-        SurveyQuestionOption option1 = new SurveyQuestionOption();
-        option1.setLabel("asdf");
-        
-        SurveyQuestionOption option2 = new SurveyQuestionOption();
-        option2.setLabel("qwerty");
-        
-        updatedQ1Con.setEnumeration(ImmutableList.of(option1, option2));
+        assertEquals("answers", fieldDefList.get(2).getName());
+        assertTrue(fieldDefList.get(2).isRequired());
+        assertEquals(UploadFieldType.LARGE_TEXT_ATTACHMENT, fieldDefList.get(2).getType());
 
-        SurveyQuestion updatedQ1 = new SurveyQuestion();
-        updatedQ1.setIdentifier("q1");
-        updatedQ1.setUiHint(UIHint.CHECKBOX);
-        updatedQ1.setPrompt("Choose one or more or fewer");
-        updatedQ1.setConstraints(updatedQ1Con);
-        updatedQ1.setType("SurveyQuestion");
+        // Test Case 3: Schema has a different but compatible "answers" field.
+        // Update the schema to have the "answers" field as an unbounded string instead of a large text attachment.
+        // Make the field non-required to show that this doesn't matter.
+        schema.setRevision(null);
+        fieldDefList.clear();
 
-        SurveyQuestion q3 = new SurveyQuestion();
-        q3.setIdentifier("q3");
-        q3.setUiHint(UIHint.TEXTFIELD);
-        q3.setPrompt("Write something:");
-        
-        StringConstraints sc = new StringConstraints();
-        sc.setDataType(DataType.STRING);
-        
-        q3.setConstraints(sc);
-        q3.setType("SurveyQuestion");
-        
-        GuidCreatedOnVersionHolder keysV2 = versionSurvey(keys);
+        UploadFieldDefinition answersUnboundedStringFieldDef = new UploadFieldDefinition().name("answers")
+                .required(false).type(UploadFieldType.STRING).unboundedText(true);
+        fieldDefList.add(answersUnboundedStringFieldDef);
 
-        Survey surveyToUpdate = surveysApi.getSurvey(keysV2.getGuid(), keysV2.getCreatedOn()).execute().body();
-        surveyToUpdate.getElements().clear();
-        surveyToUpdate.getElements().add(updatedQ1);
-        surveyToUpdate.getElements().add(q3);
+        schema = schemasApi.createUploadSchema(schema).execute().body();
+        validateCommonSchemaProperties(schema, keys);
+        assertEquals(3, schema.getRevision().intValue());
 
-        surveysApi.updateSurvey(surveyToUpdate.getGuid(), surveyToUpdate.getCreatedOn(), surveyToUpdate).execute();
-        surveysApi.publishSurvey(keysV2.getGuid(), keysV2.getCreatedOn(), false).execute();
+        // Now version and publish the survey again. The schema will be unchanged.
+        keys = versionSurvey(keys);
+        surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
 
-        // Fetch and validate schema. It should have been edited in-place, with new fields added.
-        UploadSchema updatedSchema = schemasApi.getMostRecentUploadSchema(surveyId).execute().body();
-        validateCommonSchemaProperties(updatedSchema, keysV2);
-        assertEquals(1, updatedSchema.getRevision().intValue());
+        schema = schemasApi.getMostRecentUploadSchema(surveyId).execute().body();
+        validateCommonSchemaProperties(schema, keys);
+        assertEquals(3, schema.getRevision().intValue());
 
-        List<UploadFieldDefinition> updatedFieldDefList = updatedSchema.getFieldDefinitions();
-        assertEquals(3, updatedFieldDefList.size());
+        fieldDefList = schema.getFieldDefinitions();
+        assertEquals(1, fieldDefList.size());
 
-        assertEquals("q1", updatedFieldDefList.get(0).getName());
-        assertFalse(updatedFieldDefList.get(0).isRequired());
-        assertEquals(UploadFieldType.MULTI_CHOICE, updatedFieldDefList.get(0).getType());
-        assertTrue(updatedFieldDefList.get(0).isAllowOtherChoices());
-        assertEquals(ImmutableList.of("asdf", "qwerty", "foo", "bar"), updatedFieldDefList.get(0)
-                .getMultiChoiceAnswerList());
+        assertEquals("answers", fieldDefList.get(0).getName());
+        assertFalse(fieldDefList.get(0).isRequired());
+        assertEquals(UploadFieldType.STRING, fieldDefList.get(0).getType());
+        assertTrue(fieldDefList.get(0).isUnboundedText());
 
-        assertEquals("q3", updatedFieldDefList.get(1).getName());
-        assertFalse(updatedFieldDefList.get(1).isRequired());
-        assertEquals(UploadFieldType.STRING, updatedFieldDefList.get(1).getType());
-        assertTrue(updatedFieldDefList.get(1).isUnboundedText());
+        // Test Case 4: Schema has a different and incompatible "answers" field. This will force a new schema rev.
+        // Update the schema to have the "answers" field as a 1000-char "short" string.
+        schema.setRevision(null);
+        fieldDefList.clear();
 
-        // q2 was deleted, but was appended to the end of the schema for compatibility. This should be identical to the
-        // original q2.
-        assertEquals(fieldDefList.get(1), updatedFieldDefList.get(2));
-    }
+        UploadFieldDefinition answersShortStringFieldDef = new UploadFieldDefinition().name("answers")
+                .type(UploadFieldType.STRING).maxLength(1000);
+        fieldDefList.add(answersShortStringFieldDef);
 
-    @Test
-    public void incompatibleUpdate() throws Exception {
-        // Create original survey. No need to validate, since this is validated in createAndUpdateSurveySchema().
-        GuidCreatedOnVersionHolder keys = setupSurveySchemaTest();
+        schema = schemasApi.createUploadSchema(schema).execute().body();
+        validateCommonSchemaProperties(schema, keys);
+        assertEquals(4, schema.getRevision().intValue());
 
-        // Update the survey. We want an incompatible change, so delete q1 and modify q2's type.
-        SurveyQuestion updatedQ2 = new SurveyQuestion();
-        updatedQ2.setIdentifier("q2");
-        updatedQ2.setUiHint(UIHint.TEXTFIELD);
-        updatedQ2.setPrompt("Write something:");
-        updatedQ2.setType("SurveyQuestion");
-        
-        StringConstraints sc = new StringConstraints();
-        sc.setDataType(DataType.STRING);
-        updatedQ2.setConstraints(sc);
-        updatedQ2.setType("SurveyQuestion");
+        // Now version and publish the survey again. We end up with a new schema rev.
+        keys = versionSurvey(keys);
+        surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
 
-        GuidCreatedOnVersionHolder keysV2 = versionSurvey(keys);
+        schema = schemasApi.getMostRecentUploadSchema(surveyId).execute().body();
+        validateCommonSchemaProperties(schema, keys);
+        assertEquals(5, schema.getRevision().intValue());
 
-        Survey surveyToUpdate = surveysApi.getSurvey(keysV2.getGuid(), keysV2.getCreatedOn()).execute().body();
-        surveyToUpdate.getElements().clear();
-        surveyToUpdate.getElements().add(updatedQ2);
+        fieldDefList = schema.getFieldDefinitions();
+        assertEquals(1, fieldDefList.size());
 
-        surveysApi.updateSurvey(surveyToUpdate.getGuid(), surveyToUpdate.getCreatedOn(), surveyToUpdate).execute();
-        surveysApi.publishSurvey(keysV2.getGuid(), keysV2.getCreatedOn(), false).execute();
+        assertEquals("answers", fieldDefList.get(0).getName());
+        assertTrue(fieldDefList.get(0).isRequired());
+        assertEquals(UploadFieldType.LARGE_TEXT_ATTACHMENT, fieldDefList.get(0).getType());
 
-        // Fetch and validate schema. It should have been bumped to rev2. Deleted fields are not present.
-        UploadSchema updatedSchema = schemasApi.getMostRecentUploadSchema(surveyId).execute().body();
-        validateCommonSchemaProperties(updatedSchema, keysV2);
-        assertEquals(2, updatedSchema.getRevision().intValue());
+        // Test Case 5: newSchemaRev=true. Even though the new schema rev is identical to the old one, this test that
+        // the server cuts a new schema if we pass in the flag.
+        keys = versionSurvey(keys);
+        surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), true).execute();
 
-        List<UploadFieldDefinition> updatedFieldDefList = updatedSchema.getFieldDefinitions();
-        assertEquals(1, updatedFieldDefList.size());
+        schema = schemasApi.getMostRecentUploadSchema(surveyId).execute().body();
+        validateCommonSchemaProperties(schema, keys);
+        assertEquals(6, schema.getRevision().intValue());
 
-        assertEquals("q2", updatedFieldDefList.get(0).getName());
-        assertFalse(updatedFieldDefList.get(0).isRequired());
-        assertEquals(UploadFieldType.STRING, updatedFieldDefList.get(0).getType());
-        assertTrue(updatedFieldDefList.get(0).isUnboundedText());
-    }
+        fieldDefList = schema.getFieldDefinitions();
+        assertEquals(1, fieldDefList.size());
 
-    @Test
-    public void explicitNewSchemaRev() throws Exception {
-        // Create original survey. Again, we don't need to validate.
-        GuidCreatedOnVersionHolder keys = setupSurveySchemaTest();
-
-        // Update the survey. This is a compatible change, but we ask for a new schema rev anyway.
-        MultiValueConstraints updatedQ1Con = new MultiValueConstraints();
-        updatedQ1Con.setAllowMultiple(true);
-        updatedQ1Con.setAllowOther(false);
-        
-        SurveyQuestionOption option1 = new SurveyQuestionOption();
-        option1.setLabel("asdf");
-        SurveyQuestionOption option2 = new SurveyQuestionOption();
-        option2.setLabel("qwerty");
-        updatedQ1Con.setEnumeration(ImmutableList.of(option1, option2));
-        updatedQ1Con.setDataType(DataType.STRING);
-
-        SurveyQuestion updatedQ1 = new SurveyQuestion();
-        updatedQ1.setIdentifier("q1");
-        updatedQ1.setUiHint(UIHint.CHECKBOX);
-        updatedQ1.setPrompt("Choose one or more or fewer");
-        updatedQ1.setConstraints(updatedQ1Con);
-        updatedQ1.setType("SurveyQuestion");
-        
-        StringConstraints sc = new StringConstraints();
-        sc.setDataType(DataType.STRING);
-
-        SurveyQuestion q3 = new SurveyQuestion();
-        q3.setIdentifier("q3");
-        q3.setUiHint(UIHint.TEXTFIELD);
-        q3.setPrompt("Write something:");
-        q3.setConstraints(sc);
-        q3.setType("SurveyQuestion");
-        
-        GuidCreatedOnVersionHolder keysV2 = versionSurvey(keys);
-
-        Survey surveyToUpdate = surveysApi.getSurvey(keysV2.getGuid(), keysV2.getCreatedOn()).execute().body();
-        surveyToUpdate.getElements().clear();
-        surveyToUpdate.getElements().add(updatedQ1);
-        surveyToUpdate.getElements().add(q3);
-
-        keysV2 = surveysApi.updateSurvey(surveyToUpdate.getGuid(), surveyToUpdate.getCreatedOn(), surveyToUpdate).execute().body();
-        keysV2 = surveysApi.publishSurvey(keysV2.getGuid(), keysV2.getCreatedOn(), true).execute().body();
-
-        // Fetch and validate schema. We should get rev2, because we asked to bump the rev. We also shouldn't get any
-        // of the rev 1 choices and fields.
-        UploadSchema updatedSchema = schemasApi.getMostRecentUploadSchema(surveyId).execute().body();
-        validateCommonSchemaProperties(updatedSchema, keysV2);
-        assertEquals(2, updatedSchema.getRevision().intValue());
-
-        List<UploadFieldDefinition> updatedFieldDefList = updatedSchema.getFieldDefinitions();
-        assertEquals(2, updatedFieldDefList.size());
-
-        assertEquals("q1", updatedFieldDefList.get(0).getName());
-        assertFalse(updatedFieldDefList.get(0).isRequired());
-        assertEquals(UploadFieldType.MULTI_CHOICE, updatedFieldDefList.get(0).getType());
-        assertFalse(updatedFieldDefList.get(0).isAllowOtherChoices());
-        assertEquals(ImmutableList.of("asdf", "qwerty"), updatedFieldDefList.get(0).getMultiChoiceAnswerList());
-
-        assertEquals("q3", updatedFieldDefList.get(1).getName());
-        assertFalse(updatedFieldDefList.get(1).isRequired());
-        assertEquals(UploadFieldType.STRING, updatedFieldDefList.get(1).getType());
-        assertTrue(updatedFieldDefList.get(1).isUnboundedText());
+        assertEquals("answers", fieldDefList.get(0).getName());
+        assertTrue(fieldDefList.get(0).isRequired());
+        assertEquals(UploadFieldType.LARGE_TEXT_ATTACHMENT, fieldDefList.get(0).getType());
     }
 
     private GuidCreatedOnVersionHolder setupSurveySchemaTest() throws Exception {
@@ -353,94 +289,6 @@ public class SurveySchemaTest {
         assertEquals(UploadSchemaType.IOS_SURVEY, schema.getSchemaType());
         assertEquals(surveyKeys.getGuid(), schema.getSurveyGuid());
         assertEquals(surveyKeys.getCreatedOn(), schema.getSurveyCreatedOn());
-    }
-
-    @Test
-    public void cannotCreateSurveysThatHaveTooManyBytes() throws Exception {
-        // 17 LargeTextFields (string questions w/o max length) will exceed the byte limit.
-        StringConstraints stringConstraints = new StringConstraints();
-        stringConstraints.setDataType(DataType.STRING);
-        stringConstraints.setMaxLength(null);
-
-        List<SurveyElement> elementList = new ArrayList<>();
-        for (int i = 0; i < 17; i++) {
-            SurveyQuestion question = new SurveyQuestion();
-            question.setIdentifier("question-"+i);
-            question.setUiHint(UIHint.TEXTFIELD);
-            question.setPrompt("prompt");
-            question.setConstraints(stringConstraints);
-            question.setType("SurveyQuestion");
-            elementList.add(question);
-        }
-        cannotCreateSurveysThatAreTooLarge("cannot be greater than 50000 bytes combined",
-                elementList);
-    }
-
-    @Test
-    public void cannotCreateSurveysThatHaveTooManyColumns() throws Exception {
-        // 11 Multi-Choice fields with 11 answers will exceed the column limit.
-        List<SurveyQuestionOption> answerList = new ArrayList<>();
-        for (int i = 0; i < 11; i++) {
-            String answer = "answer-" + i;
-            answerList.add(new SurveyQuestionOption().label(answer).value(answer));
-        }
-        MultiValueConstraints multiValueConstraints = new MultiValueConstraints();
-        multiValueConstraints.setAllowMultiple(true);
-        multiValueConstraints.setDataType(DataType.STRING);
-        multiValueConstraints.setEnumeration(answerList);
-
-        List<SurveyElement> elementList = new ArrayList<>();
-        for (int i = 0; i < 11; i++) {
-            SurveyQuestion question = new SurveyQuestion();
-            question.setIdentifier("question-"+i);
-            question.setUiHint(UIHint.CHECKBOX);
-            question.setPrompt("prompt");
-            question.setConstraints(multiValueConstraints);
-            question.setType("SurveyQuestion");
-            elementList.add(question);
-        }
-        cannotCreateSurveysThatAreTooLarge("cannot be greater than 100 columns combined",
-                elementList);
-    }
-
-    private void cannotCreateSurveysThatAreTooLarge(String expectedErrorMessage, List<SurveyElement> elementList)
-    throws Exception {
-        // Create and publish survey with fields (expected exception).
-        Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
-        survey.getElements().addAll(elementList);
-        GuidCreatedOnVersionHolder key = createSurvey(survey);
-        try {
-            surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), false).execute();
-            fail("expected exception");
-        } catch (InvalidEntityException ex) {
-            assertTrue(ex.getMessage().contains(expectedErrorMessage));
-        }
-
-        // Publish the survey with just an info screen.
-        SurveyInfoScreen infoScreen = new SurveyInfoScreen();
-        infoScreen.setIdentifier("infoscreen");
-        infoScreen.setTitle("title");
-        infoScreen.setPrompt("prompt");
-
-        survey = surveysApi.getSurvey(key.getGuid(), key.getCreatedOn()).execute().body();
-        assertNotNull(survey);
-        survey.getElements().clear();
-        survey.addElementsItem(infoScreen);
-        surveysApi.updateSurvey(key.getGuid(), key.getCreatedOn(), survey).execute();
-        surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), false).execute();
-
-        // Version the survey and attempt to publish the a new version with fields (expected exception).
-        key = versionSurvey(key);
-        survey = surveysApi.getSurvey(key.getGuid(), key.getCreatedOn()).execute().body();
-        assertNotNull(survey);
-        survey.getElements().addAll(elementList);
-        surveysApi.updateSurvey(key.getGuid(), key.getCreatedOn(), survey).execute();
-        try {
-            surveysApi.publishSurvey(key.getGuid(), key.getCreatedOn(), false).execute();
-            fail("expected exception");
-        } catch (InvalidEntityException ex) {
-            assertTrue(ex.getMessage().contains(expectedErrorMessage));
-        }
     }
 
     // Helper methods to ensure we always record these calls for cleanup

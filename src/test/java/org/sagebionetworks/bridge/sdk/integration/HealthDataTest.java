@@ -10,6 +10,7 @@ import static org.junit.Assert.fail;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -21,6 +22,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.sagebionetworks.bridge.json.DefaultObjectMapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.HealthDataApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
@@ -50,7 +52,7 @@ import org.sagebionetworks.bridge.rest.model.UploadValidationStrictness;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 
 @Category(IntegrationSmokeTest.class)
-@SuppressWarnings("unchecked")
+@SuppressWarnings({ "ConstantConditions", "unchecked" })
 public class HealthDataTest {
     private static final String APP_VERSION = "version 1.0.0, build 2";
     private static final DateTimeZone CREATED_ON_TIMEZONE = DateTimeZone.forOffsetHours(9);
@@ -134,9 +136,29 @@ public class HealthDataTest {
             // Create and publish the survey and get its guid/createdOn.
             SurveysApi surveysApi = developer.getClient(SurveysApi.class);
             GuidCreatedOnVersionHolder surveyKeys = surveysApi.createSurvey(survey).execute().body();
+            surveysApi.publishSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), false).execute();
+
+            // Remake the survey schema to include the old format survey fields, so that we can test for backwards
+            // compatibility. Also, remake the "answers" field as an unbounded string to make it easier to test.
+            surveySchema = uploadSchemasApi.getMostRecentUploadSchema(SURVEY_ID).execute().body();
+            surveySchema.setRevision(null);
+            surveySchema.getFieldDefinitions().clear();
+
+            UploadFieldDefinition surveyQuestionFieldDef = new UploadFieldDefinition().name("answer-me")
+                    .required(false).type(UploadFieldType.STRING).maxLength(24);
+            surveySchema.addFieldDefinitionsItem(surveyQuestionFieldDef);
+
+            UploadFieldDefinition answersFieldDef = new UploadFieldDefinition().name("answers").required(true)
+                    .type(UploadFieldType.STRING).unboundedText(true);
+            surveySchema.addFieldDefinitionsItem(answersFieldDef);
+
+            uploadSchemasApi.createUploadSchema(surveySchema).execute();
+
+            // Version and bump the survey to ensure that it points to the most up-to-date version of our schema.
+            surveyKeys = surveysApi.versionSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn()).execute().body();
             surveyGuid = surveyKeys.getGuid();
             surveyCreatedOn = surveyKeys.getCreatedOn();
-            surveysApi.publishSurvey(surveyGuid, surveyCreatedOn, null).execute();
+            surveysApi.publishSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), false).execute();
         }
         assertNotNull(surveyGuid);
         assertNotNull(surveyCreatedOn);
@@ -258,8 +280,13 @@ public class HealthDataTest {
         assertNotNull(record.getSchemaRevision());
 
         Map<String, String> returnedDataMap = RestUtils.toType(record.getData(), Map.class);
-        assertEquals(1, returnedDataMap.size());
+        assertEquals(2, returnedDataMap.size());
         assertEquals("C", returnedDataMap.get("answer-me"));
+
+        // For some bizarre reason, GSON won't parse the data.get("answers"). Use Jackson to parse it into a JsonNode.
+        JsonNode rawAnswersNode = DefaultObjectMapper.INSTANCE.readTree(returnedDataMap.get("answers"));
+        assertEquals(1, rawAnswersNode.size());
+        assertEquals("C", rawAnswersNode.get("answer-me").textValue());
     }
 
     @Test
@@ -278,8 +305,9 @@ public class HealthDataTest {
         assertNotNull(record.getSchemaRevision());
 
         Map<String, String> returnedDataMap = RestUtils.toType(record.getData(), Map.class);
-        assertEquals(1, returnedDataMap.size());
+        assertEquals(2, returnedDataMap.size());
         assertEquals("C", returnedDataMap.get("answer-me"));
+        assertNotNull(returnedDataMap.get("answers"));
 
         // User can get the health data too.
         Thread.sleep(2000);
