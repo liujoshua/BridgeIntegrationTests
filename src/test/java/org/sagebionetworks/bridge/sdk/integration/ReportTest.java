@@ -488,6 +488,17 @@ public class ReportTest {
         
         ReportDataList list = reportsApi.getStudyReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
         assertEquals(2, list.getItems().size());
+        ReportData retrieved1 = list.getItems().get(0);
+        assertEquals(DATE1.toString(), retrieved1.getDate());
+        assertEquals(DATE1, retrieved1.getLocalDate());
+        assertEquals("A", ((Map<String,String>)retrieved1.getData()).get("asdf"));
+        assertNull(retrieved1.getSubstudyIds());
+        
+        ReportData retrieved2 = list.getItems().get(1);
+        assertEquals(DATE2.toString(), retrieved2.getDate());
+        assertEquals(DATE2, retrieved2.getLocalDate());
+        assertEquals("B", ((Map<String,String>)retrieved2.getData()).get("asdf"));
+        assertNull(retrieved2.getSubstudyIds());
         
         // You cannot change the substudies of this report after the fact
         ReportData data3 = makeReportData(DATE3, "asdf", "C");
@@ -511,22 +522,43 @@ public class ReportTest {
         String healthCode = worker.getClient(ParticipantsApi.class)
                 .getParticipantById(substudyScopedUser.getUserId(), false).execute().body().getHealthCode();
 
+        // Note that the first record saved, sets the substudies in the index and applies to all records after
+        // that. So the scoped user cannot then retrieve the records because they are not in substudy1.
         ForWorkersApi workerApi = worker.getClient(ForWorkersApi.class);
         ReportDataForWorker data1 = makeReportDataForWorker(healthCode, DATE1, "asdf", "A");
-        data1.setHealthCode(healthCode);
         data1.setSubstudyIds(ImmutableList.of(substudy1.getId()));
         ReportDataForWorker data2 = makeReportDataForWorker(healthCode, DATE2, "asdf", "B");
-        data2.setHealthCode(healthCode);
         workerApi.addParticipantReportRecord(reportId, data1).execute();
         workerApi.addParticipantReportRecord(reportId, data2).execute();
-
+        
+        // The index now exists and can be retrieved.
+        ParticipantReportsApi reportsApi = substudyScopedUser.getClient(ParticipantReportsApi.class);
+        ReportIndex index = reportsApi.getParticipantReportIndex(reportId).execute().body();
+        assertTrue(index.getSubstudyIds().contains(substudy1.getId()));
+        
         try {
-            ParticipantReportsApi reportsApi = substudyScopedUser.getClient(ParticipantReportsApi.class);
             reportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
             fail("Should have thrown an exception");
         } catch(UnauthorizedException e) {
             // expected, and from the correct call.
         }
+        
+        String studyId = substudyScopedUser.getStudyId();
+        String userId = substudyScopedUser.getUserId();
+        // The worker, which is not in any substudies, can get these reports
+        ReportDataList list = workerApi.getParticipantReportsForParticipant(studyId, userId, reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+        assertEquals(2, list.getItems().size());
+        ReportData retrieved1 = list.getItems().get(0);
+        assertEquals(DATE1.toString(), retrieved1.getDate());
+        assertEquals(DATE1, retrieved1.getLocalDate());
+        assertEquals("A", ((Map<String,String>)retrieved1.getData()).get("asdf"));
+        assertNull(retrieved1.getSubstudyIds());
+        
+        ReportData retrieved2 = list.getItems().get(1);
+        assertEquals(DATE2.toString(), retrieved2.getDate());
+        assertEquals(DATE2, retrieved2.getLocalDate());
+        assertEquals("B", ((Map<String,String>)retrieved2.getData()).get("asdf"));
+        assertNull(retrieved2.getSubstudyIds());
     }
     
     private static ReportData makeReportData(LocalDate date, String key, String value) {
