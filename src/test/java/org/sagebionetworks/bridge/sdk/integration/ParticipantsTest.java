@@ -110,7 +110,7 @@ public class ParticipantsTest {
         try {
             ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
 
-            StudyParticipant self = userApi.getUsersParticipantRecord().execute().body();
+            StudyParticipant self = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(user.getEmail(), self.getEmail());
 
             // Update and verify changes. Right now there's not a lot that can be changed
@@ -139,7 +139,7 @@ public class ParticipantsTest {
             assertEquals("B", capturedData.get(1));
             assertEquals("C", capturedData.get(2));
             
-            self = userApi.getUsersParticipantRecord().execute().body();
+            self = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
             assertEquals(Lists.newArrayList("group1"), self.getDataGroups());
             assertTrue(self.isNotifyByEmail());  // BRIDGE-1604: true value returned

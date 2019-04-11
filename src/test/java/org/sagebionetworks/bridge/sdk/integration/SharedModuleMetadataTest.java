@@ -48,7 +48,6 @@ public class SharedModuleMetadataTest {
     private static final String OS = "Unix";
     private static final int SCHEMA_REV = 1;
     private static final String SURVEY_NAME = "dummy-survey-name";
-    private static final String SURVEY_IDENTIFIER = "dummy-survey-identifier";
     private static final Long SCHEMA_VERSION = 0L;
 
     // Note that this is canonically a set. However, Swagger only supports a list, so some wonkiness happens.
@@ -91,7 +90,7 @@ public class SharedModuleMetadataTest {
         UploadSchema uploadSchema = makeSimpleSchema(schemaId, (long) SCHEMA_REV, SCHEMA_VERSION);
         devUploadSchemasApi.createUploadSchema(uploadSchema).execute().body();
 
-        Survey survey = new Survey().name(SURVEY_NAME).identifier(SURVEY_IDENTIFIER);
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(Tests.randomIdentifier(this.getClass()));
         GuidCreatedOnVersionHolder retSurvey = devSurveysApi.createSurvey(survey).execute().body();
 
         // modify member var to fit with real survey info

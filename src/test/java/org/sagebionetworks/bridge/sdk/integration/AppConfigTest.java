@@ -140,7 +140,7 @@ public class AppConfigTest {
     @Test
     public void crudAppConfig() throws Exception {
         Survey survey = TestSurvey.getSurvey(AppConfigTest.class);
-        survey.setIdentifier("survey1");
+        survey.setIdentifier(Tests.randomIdentifier(this.getClass()));
         surveyKeys = surveysApi.createSurvey(survey).execute().body();
         surveysApi.publishSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), false).execute();
         

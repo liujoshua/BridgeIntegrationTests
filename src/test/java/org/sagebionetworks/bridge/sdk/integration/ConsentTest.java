@@ -19,6 +19,7 @@ import retrofit2.Response;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ConsentsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
@@ -111,7 +112,7 @@ public class ConsentTest {
             participant.sharingScope(SharingScope.SPONSORS_AND_PARTNERS);
             userApi.updateUsersParticipantRecord(participant).execute();
             
-            participant = userApi.getUsersParticipantRecord().execute().body();
+            participant = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, participant.getSharingScope());
 
             // Do the same thing in reverse, setting to no sharing
@@ -120,9 +121,19 @@ public class ConsentTest {
 
             userApi.updateUsersParticipantRecord(participant).execute();
 
-            participant = userApi.getUsersParticipantRecord().execute().body();
+            participant = userApi.getUsersParticipantRecord(true).execute().body();
             assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
-
+            
+            Map<String,List<UserConsentHistory>> map = participant.getConsentHistories();
+            UserConsentHistory history = map.get(IntegTestUtils.STUDY_ID).get(0);
+            
+            assertEquals(IntegTestUtils.STUDY_ID, history.getSubpopulationGuid());
+            assertNotNull(history.getConsentCreatedOn());
+            assertNotNull(history.getName());
+            assertNotNull(history.getBirthdate());
+            assertTrue(history.getSignedOn().isAfter(DateTime.now().minusHours(1)));
+            assertTrue(history.isHasSignedActiveConsent());
+            
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             authApi.signOut().execute();
         } finally {
@@ -306,7 +317,7 @@ public class ConsentTest {
             assertTrue(status.isSignedMostRecentConsent());
             
             // Participant record includes the sharing scope that was set
-            StudyParticipant participant = userApi.getUsersParticipantRecord().execute().body();
+            StudyParticipant participant = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, participant.getSharingScope());
             
             // Session now shows consent...
@@ -319,6 +330,7 @@ public class ConsentTest {
             assertEquals("birthdate matches", birthdate, sigFromServer.getBirthdate());
             assertEquals("imageData matches", imageData, sigFromServer.getImageData());
             assertEquals("imageMimeType matches", imageMimeType, sigFromServer.getImageMimeType());
+            assertNotNull(sigFromServer.getSignedOn());
             
             // giving consent again will throw
             try {
@@ -350,6 +362,15 @@ public class ConsentTest {
             status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
             assertFalse(status.isConsented());
             assertFalse(status.isSignedMostRecentConsent());
+            assertNull(status.getSignedOn());
+            
+            // Get the consent signature and verify it is withdrawn. You can't get it as the test 
+            // user... the user is withdrawn! 
+            ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
+            StudyParticipant retrieved = participantsApi.getParticipantById(testUser.getUserId(), true).execute().body();
+            
+            List<UserConsentHistory> history = retrieved.getConsentHistories().get(testUser.getDefaultSubpopulation());
+            assertTrue( history.get(0).getWithdrewOn().isAfter(DateTime.now().minusHours(1)) );
             
             // This method should now (immediately) throw a ConsentRequiredException
             try {
