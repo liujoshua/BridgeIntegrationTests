@@ -9,7 +9,10 @@ import static org.junit.Assert.fail;
 
 import java.util.Map;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.After;
@@ -25,9 +28,12 @@ import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantReportsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudyReportsApi;
+import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.api.UsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorReportDataList;
 import org.sagebionetworks.bridge.rest.model.ReportData;
 import org.sagebionetworks.bridge.rest.model.ReportDataForWorker;
@@ -37,6 +43,8 @@ import org.sagebionetworks.bridge.rest.model.ReportIndexList;
 import org.sagebionetworks.bridge.rest.model.ReportType;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.Substudy;
+import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -60,14 +68,31 @@ public class ReportTest {
     private static TestUser admin;
     private static TestUser developer;
     private static TestUser worker;
+    
+    private static Substudy substudy1;
+    private static Substudy substudy2;
 
     private String reportId;
     private TestUser user;
+    private TestUser substudyScopedUser;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
+        String id1 = Tests.randomIdentifier(SubstudyTest.class);
+        String id2 = Tests.randomIdentifier(SubstudyTest.class);
+        
         admin = TestUserHelper.getSignedInAdmin();
-        developer = TestUserHelper.createAndSignInUser(ReportTest.class, false, Role.DEVELOPER);
+        SubstudiesApi substudiesApi = admin.getClient(SubstudiesApi.class);
+        substudy1 = new Substudy().id(id1).name("Substudy " + id1);
+        VersionHolder holder = substudiesApi.createSubstudy(substudy1).execute().body();
+        substudy1.setVersion(holder.getVersion());
+        
+        substudy2 = new Substudy().id(id2).name("Substudy " + id2);
+        holder = substudiesApi.createSubstudy(substudy2).execute().body();
+        substudy2.setVersion(holder.getVersion());
+        
+        developer = new TestUserHelper.Builder(ReportTest.class).withRoles(Role.DEVELOPER)
+                .withSubstudyIds(ImmutableSet.of(substudy1.getId())).createAndSignInUser();
 
         // Make this worker a researcher solely for the purpose of getting the healthCode needed to user the worker
         // API
@@ -93,16 +118,26 @@ public class ReportTest {
         developerApi.deleteAllStudyReportRecords(reportId).execute();
 
         admin.getClient(ForAdminsApi.class).deleteParticipantReportIndex(reportId).execute();
-
+        
         if (user != null) {
             user.signOutAndDeleteUser();
         }
+        if (substudyScopedUser != null) {
+            substudyScopedUser.signOutAndDeleteUser();
+        }
     }
-
+    
     @AfterClass
     public static void deleteDeveloper() throws Exception {
         if (developer != null) {
             developer.signOutAndDeleteUser();
+        }
+        // The substudy must be deleted after the developer because we put them in the substudy.
+        if (substudy1 != null) {
+            admin.getClient(SubstudiesApi.class).deleteSubstudy(substudy1.getId(), true).execute();
+        }
+        if (substudy2 != null) {
+            admin.getClient(SubstudiesApi.class).deleteSubstudy(substudy2.getId(), true).execute();
         }
     }
 
@@ -424,7 +459,108 @@ public class ReportTest {
                 .getParticipantReportRecordsV4("foo", SEARCH_START_TIME, SEARCH_END_TIME, 20, null).execute().body();
         assertTrue(results.getItems().isEmpty());
     }
+    
+    @Test
+    public void studyReportsNotVisibleOutsideOfSubstudy() throws Exception {
+        StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
+        ReportData data1 = makeReportData(DATE1, "asdf", "A");
+        data1.setSubstudyIds(ImmutableList.of(substudy1.getId()));
+        ReportData data2 = makeReportData(DATE2, "asdf", "B");
+        devReportClient.addStudyReportRecord(reportId, data1).execute();
+        devReportClient.addStudyReportRecord(reportId, data2).execute();
+        
+        // Not a member of the substudy used for these report records
+        substudyScopedUser = new TestUserHelper.Builder(ReportTest.class).withConsentUser(true)
+                .withSubstudyIds(ImmutableSet.of(substudy2.getId())).createAndSignInUser();
+        StudyReportsApi reportsApi = substudyScopedUser.getClient(StudyReportsApi.class);
+        ReportIndex index = reportsApi.getStudyReportIndex(reportId).execute().body();
+        assertTrue(index.getSubstudyIds().contains(substudy1.getId()));
+        try {
+            reportsApi.getStudyReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+            fail("Should have thrown an exception");
+        } catch(UnauthorizedException e) {
+            // expected, and from the correct call.
+        }
+        
+        // Make it public, and the user *can* see it
+        index.setPublic(true);
+        devReportClient.updateStudyReportIndex(index.getIdentifier(), index).execute();
+        
+        ReportDataList list = reportsApi.getStudyReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+        assertEquals(2, list.getItems().size());
+        ReportData retrieved1 = list.getItems().get(0);
+        assertEquals(DATE1.toString(), retrieved1.getDate());
+        assertEquals(DATE1, retrieved1.getLocalDate());
+        assertEquals("A", ((Map<String,String>)retrieved1.getData()).get("asdf"));
+        assertNull(retrieved1.getSubstudyIds());
+        
+        ReportData retrieved2 = list.getItems().get(1);
+        assertEquals(DATE2.toString(), retrieved2.getDate());
+        assertEquals(DATE2, retrieved2.getLocalDate());
+        assertEquals("B", ((Map<String,String>)retrieved2.getData()).get("asdf"));
+        assertNull(retrieved2.getSubstudyIds());
+        
+        // You cannot change the substudies of this report after the fact
+        ReportData data3 = makeReportData(DATE3, "asdf", "C");
+        data3.setSubstudyIds(ImmutableList.of(substudy2.getId()));
+        try {
+            devReportClient.addStudyReportRecord(reportId, data3).execute();
+            fail("Should have thrown an exception");
+        } catch(InvalidEntityException e) {
+            assertEquals("substudyIds cannot be changed once created for a report", 
+                    e.getErrors().get("substudyIds").get(0));
+        }
+    }
+    
+    @Test
+    public void participantReportsNotVisibleOutsideOfSubstudy() throws Exception {
+        // It would seem to be dumb to create reports for a participant that are associated to substudies such that the 
+        // user will not be able to see them. Nevertheless, if it happens, we enforce visibility constraints.
+        substudyScopedUser = new TestUserHelper.Builder(ReportTest.class).withConsentUser(true)
+                .withSubstudyIds(ImmutableSet.of(substudy2.getId())).createAndSignInUser();
+        
+        String healthCode = worker.getClient(ParticipantsApi.class)
+                .getParticipantById(substudyScopedUser.getUserId(), false).execute().body().getHealthCode();
 
+        // Note that the first record saved, sets the substudies in the index and applies to all records after
+        // that. So the scoped user cannot then retrieve the records because they are not in substudy1.
+        ForWorkersApi workerApi = worker.getClient(ForWorkersApi.class);
+        ReportDataForWorker data1 = makeReportDataForWorker(healthCode, DATE1, "asdf", "A");
+        data1.setSubstudyIds(ImmutableList.of(substudy1.getId()));
+        ReportDataForWorker data2 = makeReportDataForWorker(healthCode, DATE2, "asdf", "B");
+        workerApi.addParticipantReportRecord(reportId, data1).execute();
+        workerApi.addParticipantReportRecord(reportId, data2).execute();
+        
+        // The index now exists and can be retrieved.
+        ParticipantReportsApi reportsApi = substudyScopedUser.getClient(ParticipantReportsApi.class);
+        ReportIndex index = reportsApi.getParticipantReportIndex(reportId).execute().body();
+        assertTrue(index.getSubstudyIds().contains(substudy1.getId()));
+        
+        try {
+            reportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+            fail("Should have thrown an exception");
+        } catch(UnauthorizedException e) {
+            // expected, and from the correct call.
+        }
+        
+        String studyId = substudyScopedUser.getStudyId();
+        String userId = substudyScopedUser.getUserId();
+        // The worker, which is not in any substudies, can get these reports
+        ReportDataList list = workerApi.getParticipantReportsForParticipant(studyId, userId, reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+        assertEquals(2, list.getItems().size());
+        ReportData retrieved1 = list.getItems().get(0);
+        assertEquals(DATE1.toString(), retrieved1.getDate());
+        assertEquals(DATE1, retrieved1.getLocalDate());
+        assertEquals("A", ((Map<String,String>)retrieved1.getData()).get("asdf"));
+        assertNull(retrieved1.getSubstudyIds());
+        
+        ReportData retrieved2 = list.getItems().get(1);
+        assertEquals(DATE2.toString(), retrieved2.getDate());
+        assertEquals(DATE2, retrieved2.getLocalDate());
+        assertEquals("B", ((Map<String,String>)retrieved2.getData()).get("asdf"));
+        assertNull(retrieved2.getSubstudyIds());
+    }
+    
     private static ReportData makeReportData(LocalDate date, String key, String value) {
         ReportData reportData = new ReportData();
         reportData.setLocalDate(date);
