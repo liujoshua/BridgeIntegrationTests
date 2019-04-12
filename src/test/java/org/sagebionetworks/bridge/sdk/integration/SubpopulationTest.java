@@ -61,21 +61,14 @@ public class SubpopulationTest {
     }
     
     @After
-    public void deleteSubpop1() throws Exception {
+    public void deleteEntities() throws Exception {
+        // These now need to be deleted in a specific order
         if (subpop1 != null) {
             admin.getClient(ForAdminsApi.class).deleteSubpopulation(subpop1.getGuid(), true).execute();
         }
-    }
-    
-    @After
-    public void deleteSubpop2() throws Exception {
         if (subpop2 != null) {
             admin.getClient(ForAdminsApi.class).deleteSubpopulation(subpop2.getGuid(), true).execute();
         }
-    }
-    
-    @After
-    public void deleteSubstudy() throws Exception {
         if (substudy != null) {
             admin.getClient(SubstudiesApi.class).deleteSubstudy(substudy.getId(), true).execute();
         }
