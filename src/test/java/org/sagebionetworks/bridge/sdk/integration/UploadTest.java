@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -17,6 +18,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.sagebionetworks.bridge.json.DefaultObjectMapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -49,7 +51,7 @@ import org.sagebionetworks.bridge.util.IntegTestUtils;
 import com.google.common.collect.Lists;
 
 @Category(IntegrationSmokeTest.class)
-@SuppressWarnings("unchecked")
+@SuppressWarnings({ "ConstantConditions", "unchecked" })
 public class UploadTest {
     
     private static final String SUBSTUDY_ID = "upload-test-substudy";
@@ -73,12 +75,11 @@ public class UploadTest {
     @BeforeClass
     public static void beforeClass() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        
-        Substudy substudy = null;
+
         try {
-            substudy = admin.getClient(ForAdminsApi.class).getSubstudy(SUBSTUDY_ID).execute().body();
+            admin.getClient(ForAdminsApi.class).getSubstudy(SUBSTUDY_ID).execute().body();
         } catch(EntityNotFoundException e) {
-            substudy = new Substudy().name(SUBSTUDY_ID).id(SUBSTUDY_ID);
+            Substudy substudy = new Substudy().name(SUBSTUDY_ID).id(SUBSTUDY_ID);
             VersionHolder version = admin.getClient(ForAdminsApi.class).createSubstudy(substudy).execute().body();
             substudy.setVersion(version.getVersion());
         }
@@ -116,13 +117,20 @@ public class UploadTest {
             def2.setAllowOtherChoices(Boolean.FALSE);
             def2.setType(UploadFieldType.MULTI_CHOICE);
             def2.setMultiChoiceAnswerList(Lists.newArrayList("fencing", "football", "running", "swimming", "3"));
-            
+
+            // For backwards compatibility, include the new "answers" field side-by-side with the old fields. However,
+            // make this an unbounded string instead of a large_text_attachment to make it easier to test.
+            UploadFieldDefinition def3 = new UploadFieldDefinition().name("answers").required(true)
+                    .type(UploadFieldType.STRING).unboundedText(true);
+
             legacySurveySchema = new UploadSchema();
             legacySurveySchema.setSchemaId("legacy-survey");
             legacySurveySchema.setRevision(1L);
             legacySurveySchema.setName("Legacy (RK/AC) Survey");
             legacySurveySchema.setSchemaType(UploadSchemaType.IOS_SURVEY);
-            legacySurveySchema.setFieldDefinitions(Lists.newArrayList(def1,def2));
+            legacySurveySchema.addFieldDefinitionsItem(def1);
+            legacySurveySchema.addFieldDefinitionsItem(def2);
+            legacySurveySchema.addFieldDefinitionsItem(def3);
             uploadSchemasApi.createUploadSchema(legacySurveySchema).execute();
         }
 
@@ -201,9 +209,10 @@ public class UploadTest {
         testSurvey("generic-survey-encrypted");
     }
 
+    @SuppressWarnings("RedundantCast")
     private static void testSurvey(String fileLeafName) throws Exception {
         Map<String, Object> data = testUpload(fileLeafName);
-        assertEquals(2, data.size());
+        assertEquals(3, data.size());
         assertEquals("Yes", data.get("AAA"));
 
         List<String> bbbAnswerList = RestUtils.toType(data.get("BBB"), List.class);
@@ -211,6 +220,22 @@ public class UploadTest {
         assertEquals("fencing", bbbAnswerList.get(0));
         assertEquals("running", bbbAnswerList.get(1));
         assertEquals("3", bbbAnswerList.get(2));
+
+        // Answers node has all the same fields as data, except without its own answers field. Note that the answers
+        // field doesn't go through canonicalization.
+        // For some bizarre reason, GSON won't parse the data.get("answers"). Use Jackson to parse it into a JsonNode.
+        JsonNode rawAnswerNode = DefaultObjectMapper.INSTANCE.readTree((String) data.get("answers"));
+        assertEquals(2, rawAnswerNode.size());
+
+        JsonNode rawAaaNode = rawAnswerNode.get("AAA");
+        assertEquals(1, rawAaaNode.size());
+        assertEquals("Yes", rawAaaNode.get(0).textValue());
+
+        JsonNode rawBbbNode = rawAnswerNode.get("BBB");
+        assertEquals(3, rawBbbNode.size());
+        assertEquals("fencing", rawBbbNode.get(0).textValue());
+        assertEquals("running", rawBbbNode.get(1).textValue());
+        assertEquals(3, rawBbbNode.get(2).intValue());
     }
 
     @Test
@@ -291,7 +316,7 @@ public class UploadTest {
 
         // Set user sharing scope, just to test metadata in upload validation.
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
-        StudyParticipant participant = usersApi.getUsersParticipantRecord().execute().body();
+        StudyParticipant participant = usersApi.getUsersParticipantRecord(false).execute().body();
         participant.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
         usersApi.updateUsersParticipantRecord(participant).execute();
 
@@ -313,7 +338,8 @@ public class UploadTest {
         assertEquals(EXTERNAL_ID, record.getUserSubstudyMemberships().get(SUBSTUDY_ID));
 
         Map<String, Object> data = RestUtils.toType(record.getData(), Map.class);
-        assertEquals(2, data.size());
+        assertEquals(3, data.size());
+        assertNotNull(data.get("answers"));
         assertEquals("Yes", data.get("AAA"));
 
         List<String> bbbAnswerList = RestUtils.toType(data.get("BBB"), List.class);

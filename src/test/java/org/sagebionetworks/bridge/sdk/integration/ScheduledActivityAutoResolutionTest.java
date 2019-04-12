@@ -55,7 +55,6 @@ public class ScheduledActivityAutoResolutionTest {
     private static final String SCHEMA_ID = "schedule-test-schema";
     private static final UploadFieldDefinition SIMPLE_FIELD_DEF = new UploadFieldDefinition()
             .name("record.json.test-field").type(UploadFieldType.STRING).maxLength(10);
-    private static final String SURVEY_ID = "schedule-test-survey";
     private static final String TASK_ID = "task:AAA";
 
     private static CompoundActivityDefinitionsApi compoundActivityDefinitionsApi;
@@ -70,6 +69,7 @@ public class ScheduledActivityAutoResolutionTest {
     private String compoundTaskId;
     private String compoundTaskIdToDelete;
     private String schedulePlanGuidToDelete;
+    private String surveyId;
     private TestUserHelper.TestUser user;
 
     @BeforeClass
@@ -121,6 +121,7 @@ public class ScheduledActivityAutoResolutionTest {
         // generate IDs
         activityLabel = ACTIVITY_LABEL_PREFIX + RandomStringUtils.randomAlphabetic(4);
         compoundTaskId = COMPOUND_TASK_ID_PREFIX + RandomStringUtils.randomAlphabetic(4);
+        surveyId = Tests.randomIdentifier(this.getClass());
 
         // init "to delete" holders
         compoundTaskIdToDelete = null;
@@ -208,7 +209,7 @@ public class ScheduledActivityAutoResolutionTest {
         surveyApi.publishSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), false).execute();
 
         // Similarly, create a schedule plan with a "published survey" ref, or a ref without a createdOn.
-        SurveyReference surveyRef = new SurveyReference().guid(surveyKeys.getGuid()).identifier(SURVEY_ID);
+        SurveyReference surveyRef = new SurveyReference().guid(surveyKeys.getGuid()).identifier(surveyId);
         Activity activity = new Activity().label(activityLabel).survey(surveyRef);
         schedulePlanGuidToDelete = createSchedulePlanWithActivity(activity);
 
@@ -222,7 +223,7 @@ public class ScheduledActivityAutoResolutionTest {
             SurveyReference gettedSurveyRef = gettedScheduledActivity.getActivity().getSurvey();
             assertEquals(surveyKeys.getGuid(), gettedSurveyRef.getGuid());
             assertEquals(surveyKeys.getCreatedOn(), gettedSurveyRef.getCreatedOn());
-            assertEquals(SURVEY_ID, gettedSurveyRef.getIdentifier());
+            assertEquals(surveyId, gettedSurveyRef.getIdentifier());
         }
 
         // Version and publish the survey.
@@ -241,7 +242,7 @@ public class ScheduledActivityAutoResolutionTest {
             SurveyReference gettedSurveyRef = gettedScheduledActivity.getActivity().getSurvey();
             assertEquals(surveyKeys2.getGuid(), gettedSurveyRef.getGuid());
             assertEquals(surveyKeys2.getCreatedOn(), gettedSurveyRef.getCreatedOn());
-            assertEquals(SURVEY_ID, gettedSurveyRef.getIdentifier());
+            assertEquals(surveyId, gettedSurveyRef.getIdentifier());
         }
     }
 
@@ -255,7 +256,7 @@ public class ScheduledActivityAutoResolutionTest {
 
         // Compound activity definition has references to both the schema and the survey.
         SchemaReference schemaRef = new SchemaReference().id(SCHEMA_ID);
-        SurveyReference surveyRef = new SurveyReference().guid(surveyKeys.getGuid()).identifier(SURVEY_ID);
+        SurveyReference surveyRef = new SurveyReference().guid(surveyKeys.getGuid()).identifier(surveyId);
         CompoundActivityDefinition compoundActivityDefinition = new CompoundActivityDefinition()
                 .addSchemaListItem(schemaRef).addSurveyListItem(surveyRef).taskId(compoundTaskId);
         CompoundActivityDefinitionsApi compoundActivityDefinitionsApi = developer.getClient(
@@ -286,7 +287,7 @@ public class ScheduledActivityAutoResolutionTest {
             SurveyReference gettedSurveyRef = gettedCompoundActivity.getSurveyList().get(0);
             assertEquals(surveyKeys.getGuid(), gettedSurveyRef.getGuid());
             assertEquals(surveyKeys.getCreatedOn(), gettedSurveyRef.getCreatedOn());
-            assertEquals(SURVEY_ID, gettedSurveyRef.getIdentifier());
+            assertEquals(surveyId, gettedSurveyRef.getIdentifier());
         }
 
         // Update the compound activity definition. Simplest update, just remove the survey and leave the schema.
@@ -328,12 +329,12 @@ public class ScheduledActivityAutoResolutionTest {
                 .findFirst().orElse(null);
     }
 
-    private static GuidCreatedOnVersionHolder createSimpleSurvey() throws Exception {
+    private GuidCreatedOnVersionHolder createSimpleSurvey() throws Exception {
         Constraints constraints = new IntegerConstraints().dataType(DataType.INTEGER);
         SurveyElement surveyQuestion = new SurveyQuestion().constraints(constraints)
                 .prompt("Pick a Number").uiHint(UIHint.NUMBERFIELD).identifier("test-survey-q")
                 .type("SurveyQuestion");
-        Survey survey = new Survey().name(SURVEY_ID).identifier(SURVEY_ID).addElementsItem(surveyQuestion);
+        Survey survey = new Survey().name(surveyId).identifier(surveyId).addElementsItem(surveyQuestion);
         return surveyApi.createSurvey(survey).execute().body();
     }
 }

@@ -51,7 +51,7 @@ public class UserParticipantTest {
         try {
             ParticipantsApi participantsApi = user.getClient(ParticipantsApi.class);
 
-            StudyParticipant participant = participantsApi.getUsersParticipantRecord().execute().body();
+            StudyParticipant participant = participantsApi.getUsersParticipantRecord(false).execute().body();
 
             // This should be true by default, once a participant is created:
             assertTrue(participant.isNotifyByEmail());
@@ -62,7 +62,7 @@ public class UserParticipantTest {
             participant.setNotifyByEmail(null); // this should have no effect
             participantsApi.updateUsersParticipantRecord(participant).execute().body();
 
-            participant = participantsApi.getUsersParticipantRecord().execute().body();
+            participant = participantsApi.getUsersParticipantRecord(false).execute().body();
             assertEquals("Davey", participant.getFirstName());
             assertEquals("Crockett", participant.getLastName());
             assertEquals("true", participant.getAttributes().get("can_be_recontacted"));
@@ -70,13 +70,13 @@ public class UserParticipantTest {
             assertTrue(participant.isNotifyByEmail());
             
             // Now update only some of the record but verify the map is still there
-            participant = participantsApi.getUsersParticipantRecord().execute().body();
+            participant = participantsApi.getUsersParticipantRecord(false).execute().body();
             participant.setFirstName("Davey2");
             participant.setLastName("Crockett2");
             participant.setNotifyByEmail(false);
             participantsApi.updateUsersParticipantRecord(participant).execute().body();
             
-            participant = participantsApi.getUsersParticipantRecord().execute().body();
+            participant = participantsApi.getUsersParticipantRecord(false).execute().body();
             assertEquals("First name updated", "Davey2", participant.getFirstName());
             assertEquals("Last name updated", "Crockett2", participant.getLastName());
             assertEquals("true", participant.getAttributes().get("can_be_recontacted"));
@@ -90,19 +90,19 @@ public class UserParticipantTest {
     public void canAddButNotChangeExternalIdentifier() throws Exception {
         ForConsentedUsersApi usersApi = developer.getClient(ForConsentedUsersApi.class);
 
-        StudyParticipant participant = usersApi.getUsersParticipantRecord().execute().body();
+        StudyParticipant participant = usersApi.getUsersParticipantRecord(false).execute().body();
         participant.setExternalId("ABC-123-XYZ");
 
         usersApi.updateUsersParticipantRecord(participant).execute();
 
-        participant = usersApi.getUsersParticipantRecord().execute().body();
+        participant = usersApi.getUsersParticipantRecord(false).execute().body();
         assertEquals(developer.getEmail(), participant.getEmail());
         assertEquals("ABC-123-XYZ", participant.getExternalId());
         
         participant.setExternalId("ThisWillNotWork");
         usersApi.updateUsersParticipantRecord(participant).execute();
 
-        participant = usersApi.getUsersParticipantRecord().execute().body();
+        participant = usersApi.getUsersParticipantRecord(false).execute().body();
         assertEquals("ABC-123-XYZ", participant.getExternalId());
     }
     
@@ -119,7 +119,7 @@ public class UserParticipantTest {
         developer.signOut();
         developer.signInAgain();
         
-        participant = usersApi.getUsersParticipantRecord().execute().body();
+        participant = usersApi.getUsersParticipantRecord(false).execute().body();
         assertListsEqualIgnoringOrder(dataGroups, participant.getDataGroups());
 
         // now clear the values, it should be possible to remove them.
@@ -129,7 +129,7 @@ public class UserParticipantTest {
         developer.signOut();
         developer.signInAgain();
 
-        participant = usersApi.getUsersParticipantRecord().execute().body();
+        participant = usersApi.getUsersParticipantRecord(false).execute().body();
         assertTrue(participant.getDataGroups().isEmpty());
     }
 

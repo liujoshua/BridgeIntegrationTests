@@ -10,7 +10,6 @@ import static org.junit.Assert.fail;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -46,7 +45,6 @@ import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.rest.model.Substudy;
-import org.sagebionetworks.bridge.rest.model.SubstudyList;
 import org.sagebionetworks.bridge.rest.model.UserConsentHistory;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
@@ -106,7 +104,6 @@ public class ConsentTest {
     }
 
     @Test
-    @Ignore
     public void canToggleDataSharing() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
@@ -120,8 +117,8 @@ public class ConsentTest {
 
             participant.sharingScope(SharingScope.SPONSORS_AND_PARTNERS);
             userApi.updateUsersParticipantRecord(participant).execute();
-
-            participant = userApi.getUsersParticipantRecord().execute().body();
+            
+            participant = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, participant.getSharingScope());
 
             // Do the same thing in reverse, setting to no sharing
@@ -130,9 +127,19 @@ public class ConsentTest {
 
             userApi.updateUsersParticipantRecord(participant).execute();
 
-            participant = userApi.getUsersParticipantRecord().execute().body();
+            participant = userApi.getUsersParticipantRecord(true).execute().body();
             assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
-
+            
+            Map<String,List<UserConsentHistory>> map = participant.getConsentHistories();
+            UserConsentHistory history = map.get(IntegTestUtils.STUDY_ID).get(0);
+            
+            assertEquals(IntegTestUtils.STUDY_ID, history.getSubpopulationGuid());
+            assertNotNull(history.getConsentCreatedOn());
+            assertNotNull(history.getName());
+            assertNotNull(history.getBirthdate());
+            assertTrue(history.getSignedOn().isAfter(DateTime.now().minusHours(1)));
+            assertTrue(history.isHasSignedActiveConsent());
+            
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             authApi.signOut().execute();
         } finally {
@@ -142,7 +149,6 @@ public class ConsentTest {
 
     // BRIDGE-1594
     @Test
-    @Ignore
     public void giveConsentAndWithdrawTwice() throws Exception {
         TestUser developer = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.DEVELOPER);
         TestUser user = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
@@ -169,7 +175,6 @@ public class ConsentTest {
 
             usersApi.createConsentSignature(user.getStudyId(), signature).execute();
             usersApi.createConsentSignature(keys.getGuid(), signature).execute();
-
             // Withdrawing the optional consent first, you should then be able to get the second consent
             usersApi.withdrawConsentFromSubpopulation(keys.getGuid(), withdrawal).execute();
 
@@ -197,19 +202,16 @@ public class ConsentTest {
     }
 
     @Test
-    @Ignore
     public void giveAndGetConsent() throws Exception {
         giveAndGetConsentHelper("Eggplant McTester", new LocalDate(1970, 1, 1), null, null);
     }
 
     @Test
-    @Ignore
     public void giveAndGetConsentWithSignatureImage() throws Exception {
         giveAndGetConsentHelper("Eggplant McTester", new LocalDate(1970, 1, 1), FAKE_IMAGE_DATA, "image/fake");
     }
 
     @Test
-    @Ignore
     public void signedInUserMustGiveConsent() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
         try {
@@ -238,7 +240,6 @@ public class ConsentTest {
     }
 
     @Test(expected = InvalidEntityException.class)
-    @Ignore
     public void userMustMeetMinAgeRequirements() throws Exception {
         TestUser user = null;
         try {
@@ -263,11 +264,12 @@ public class ConsentTest {
     }
 
     @Test
-    @Ignore
     public void jsonSerialization() throws Exception {
         // setup
-        String sigJson = "{\n" + "   \"name\":\"Jason McSerializer\",\n" + "   \"birthdate\":\"1985-12-31\",\n"
-                + "   \"imageData\":\"" + FAKE_IMAGE_DATA + "\",\n" + "   \"imageMimeType\":\"image/fake\"\n" + "}";
+        String sigJson = "{\"name\":\"Jason McSerializer\"," + 
+                "\"birthdate\":\"1985-12-31\"," +
+                "\"imageData\":\"" + FAKE_IMAGE_DATA + "\"," + 
+                "\"imageMimeType\":\"image/fake\"}";
 
         // de-serialize and validate
         ConsentSignature sig = RestUtils.GSON.fromJson(sigJson, ConsentSignature.class);
@@ -319,7 +321,7 @@ public class ConsentTest {
             assertTrue(status.isSignedMostRecentConsent());
 
             // Participant record includes the sharing scope that was set
-            StudyParticipant participant = userApi.getUsersParticipantRecord().execute().body();
+            StudyParticipant participant = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, participant.getSharingScope());
 
             // Session now shows consent...
@@ -333,7 +335,8 @@ public class ConsentTest {
             assertEquals("birthdate matches", birthdate, sigFromServer.getBirthdate());
             assertEquals("imageData matches", imageData, sigFromServer.getImageData());
             assertEquals("imageMimeType matches", imageMimeType, sigFromServer.getImageMimeType());
-
+            assertNotNull(sigFromServer.getSignedOn());
+            
             // giving consent again will throw
             try {
                 // See BRIDGE-1568
@@ -364,7 +367,16 @@ public class ConsentTest {
             status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
             assertFalse(status.isConsented());
             assertFalse(status.isSignedMostRecentConsent());
-
+            assertNull(status.getSignedOn());
+            
+            // Get the consent signature and verify it is withdrawn. You can't get it as the test 
+            // user... the user is withdrawn! 
+            ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
+            StudyParticipant retrieved = participantsApi.getParticipantById(testUser.getUserId(), true).execute().body();
+            
+            List<UserConsentHistory> history = retrieved.getConsentHistories().get(testUser.getDefaultSubpopulation());
+            assertTrue( history.get(0).getWithdrewOn().isAfter(DateTime.now().minusHours(1)) );
+            
             // This method should now (immediately) throw a ConsentRequiredException
             try {
                 userApi.getSchedules().execute();
@@ -378,7 +390,6 @@ public class ConsentTest {
     }
 
     @Test
-    @Ignore
     public void canResendConsentAgreement() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
@@ -390,12 +401,11 @@ public class ConsentTest {
     }
 
     @Test
-    @Ignore
     public void canResendConsentAgreementForPhone() throws Exception {
         // Request phone consent.
         Response<Message> response = phoneOnlyTestUser.getClient(ForConsentedUsersApi.class)
                 .resendConsentAgreement(phoneOnlyTestUser.getDefaultSubpopulation()).execute();
-        assertEquals(200, response.code());
+        assertEquals(202, response.code());
 
         // Verify message logs contains the expected message.
         SmsMessage message = adminUser.getClient(InternalApi.class)
@@ -438,7 +448,6 @@ public class ConsentTest {
     }
 
     @Test
-    @Ignore
     public void canWithdrawFromStudy() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
@@ -464,7 +473,6 @@ public class ConsentTest {
     }
 
     @Test
-    @Ignore
     public void canWithdrawParticipantFromStudy() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         String userId = testUser.getSession().getId();
@@ -532,6 +540,8 @@ public class ConsentTest {
         Substudy substudy = null;
         Subpopulation subpop = null;
         TestUser devUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.DEVELOPER);
+        SubstudiesApi substudiesApi = adminUser.getClient(SubstudiesApi.class);
+        SubpopulationsApi subpopApi = devUser.getClient(SubpopulationsApi.class);
         try {
             StudiesApi studiesApi = devUser.getClient(StudiesApi.class);
             Study study = studiesApi.getUsersStudy().execute().body();
@@ -539,21 +549,13 @@ public class ConsentTest {
             String dataGroup = Iterables.getFirst(study.getDataGroups(), null);
             List<String> dataGroupList = ImmutableList.of(dataGroup);
 
-            // Get or create a substudy, if needed
-            SubstudiesApi substudiesApi = adminUser.getClient(SubstudiesApi.class);
-            SubstudyList substudies = substudiesApi.getSubstudies(false).execute().body();
-            if (!substudies.getItems().isEmpty()) {
-                substudy = substudies.getItems().get(0);
-            } else {
-                String substudyId = Tests.randomIdentifier(ConsentTest.class);
-                substudy = new Substudy().id(substudyId).name("Substudy " + substudyId);
-                substudiesApi.createSubstudy(substudy).execute().body();
-            }
+            // Csreate a substudy, if needed
+            String substudyId = Tests.randomIdentifier(ConsentTest.class);
+            substudy = new Substudy().id(substudyId).name("Substudy " + substudyId);
+            substudiesApi.createSubstudy(substudy).execute().body();
             List<String> substudyIds = ImmutableList.of(substudy.getId());
 
             // Create an (optional) subpopulation that associates both to a user
-            SubpopulationsApi subpopApi = devUser.getClient(SubpopulationsApi.class);
-            
             subpop = new Subpopulation().name("Test Subpopulation").required(false);
             subpop.setSubstudyIdsAssignedOnConsent(substudyIds);
             subpop.setDataGroupsAssignedWhileConsented(dataGroupList);
@@ -574,21 +576,19 @@ public class ConsentTest {
 
             // withdraw and verify
             withdrawMethod.withdraw(user, substudyIds, subpop);
-        } catch(Exception e) {
-            e.printStackTrace();
         } finally {
-            devUser.signOutAndDeleteUser();
             // delete the user
             if (user != null) {
                 user.signOutAndDeleteUser();
             }
             // delete the subpopulation
-            if (subpop != null) {
-                adminUser.getClient(SubpopulationsApi.class).deleteSubpopulation(subpop.getGuid(), true).execute();
+            if (subpop != null && subpop.getGuid() != null) {
+                subpopApi.deleteSubpopulation(subpop.getGuid(), true).execute();
             }
             if (substudy != null) {
-                adminUser.getClient(SubstudiesApi.class).deleteSubstudy(substudy.getId(), true).execute();
+                substudiesApi.deleteSubstudy(substudy.getId(), true).execute();
             }
+            devUser.signOutAndDeleteUser();
         }
     }
 }

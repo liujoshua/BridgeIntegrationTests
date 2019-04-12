@@ -47,6 +47,7 @@ import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
+import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.exceptions.PublishedSurveyException;
@@ -96,11 +97,11 @@ import org.sagebionetworks.bridge.util.IntegTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("ConstantConditions")
 public class SurveyTest {
     private static final Logger LOG = LoggerFactory.getLogger(SurveyTest.class);
     
     private static final String SURVEY_NAME = "dummy-survey-name";
-    private static final String SURVEY_IDENTIFIER = "dummy-survey-identifier";
 
     //private static TestUser admin;
     private static TestUser developer;
@@ -109,6 +110,8 @@ public class SurveyTest {
     private static SharedModulesApi sharedDeveloperModulesApi;
     private static SurveysApi sharedSurveysApi;
     private static ForAdminsApi adminsApi;
+
+    private String surveyId;
 
     // We use SimpleGuidCreatedOnVersionHolder, because we need to use an immutable version holder, to ensure we're
     // deleting the correct surveys.
@@ -129,6 +132,7 @@ public class SurveyTest {
 
     @Before
     public void before() {
+        surveyId = Tests.randomIdentifier(this.getClass());
         surveysToDelete = new HashSet<>();
     }
 
@@ -318,7 +322,7 @@ public class SurveyTest {
         // create test survey and test shared module
         String moduleId = "integ-test-module-delete" + RandomStringUtils.randomAlphabetic(4);;
 
-        Survey survey = new Survey().name(SURVEY_NAME).identifier(SURVEY_IDENTIFIER);
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
         GuidCreatedOnVersionHolder retSurvey = sharedSurveysApi.createSurvey(survey).execute().body();
 
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
@@ -348,7 +352,7 @@ public class SurveyTest {
         // create test survey and test shared module
         String moduleId = "integ-test-module-delete" + RandomStringUtils.randomAlphabetic(4);;
 
-        Survey survey = new Survey().name(SURVEY_NAME).identifier(SURVEY_IDENTIFIER);
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
         GuidCreatedOnVersionHolder retSurvey = sharedSurveysApi.createSurvey(survey).execute().body();
 
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
@@ -373,9 +377,45 @@ public class SurveyTest {
         assertNotNull(thrownEx);
     }
 
+    @Test
+    public void cannotCreateSurveyWithDuplicateId() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+
+        // Create survey. This succeeds.
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
+        createSurvey(surveysApi, survey);
+
+        // Create another identical survey with the same ID. This fails.
+        Survey survey2 = new Survey().name(SURVEY_NAME).identifier(surveyId);
+        try {
+            createSurvey(surveysApi, survey2);
+            fail("expected exception");
+        } catch (EntityAlreadyExistsException ex) {
+            assertTrue(ex.getMessage().contains("Survey identifier " + surveyId + " is already used by survey"));
+        }
+    }
+
     @Test(expected=UnauthorizedException.class)
     public void cannotSubmitAsNormalUser() throws Exception {
         user.getClient(SurveysApi.class).getMostRecentSurveys(false).execute().body();
+    }
+
+    @Test
+    public void cannotUpdateSurveyId() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+
+        // Create survey.
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
+        GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, survey);
+
+        // Attempt to update the survey ID.
+        survey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+        survey.setIdentifier(surveyId + "-2");
+        surveysApi.updateSurvey(keys.getGuid(), keys.getCreatedOn(), survey).execute();
+
+        // Survey ID remains unchanged.
+        survey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+        assertEquals(surveyId, survey.getIdentifier());
     }
 
     @Test
