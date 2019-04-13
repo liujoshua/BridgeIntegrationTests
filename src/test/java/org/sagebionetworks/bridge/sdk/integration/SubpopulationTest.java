@@ -106,11 +106,11 @@ public class SubpopulationTest {
         subpop1 = new Subpopulation();
         subpop1.setName("Later Consent Group");
         subpop1.setCriteria(criteria);
+        subpop1.setSubstudyIdsAssignedOnConsent(substudyIds);
+        subpop1.setDataGroupsAssignedWhileConsented(dataGroupList);
         GuidVersionHolder keys = subpopulationsApi.createSubpopulation(subpop1).execute().body();
         subpop1.setGuid(keys.getGuid());
         subpop1.setVersion(keys.getVersion());
-        subpop1.setSubstudyIdsAssignedOnConsent(substudyIds);
-        subpop1.setDataGroupsAssignedWhileConsented(dataGroupList);
         
         // Read it back
         Subpopulation retrieved = subpopulationsApi.getSubpopulation(subpop1.getGuid()).execute().body();
@@ -119,8 +119,8 @@ public class SubpopulationTest {
         assertEquals(criteria, retrieved.getCriteria());
         assertEquals(keys.getGuid(), retrieved.getGuid());
         assertEquals(keys.getVersion(), retrieved.getVersion());
-        assertEquals(substudyIds, subpop1.getSubstudyIdsAssignedOnConsent());
-        assertEquals(dataGroupList, subpop1.getDataGroupsAssignedWhileConsented());
+        assertEquals(substudyIds, retrieved.getSubstudyIdsAssignedOnConsent());
+        assertEquals(dataGroupList, retrieved.getDataGroupsAssignedWhileConsented());
         
         // Update it
         retrieved.setDescription("Adding a description");
