@@ -583,10 +583,10 @@ public class ConsentTest {
             }
             // delete the subpopulation
             if (subpop != null && subpop.getGuid() != null) {
-                subpopApi.deleteSubpopulation(subpop.getGuid(), true).execute();
+                adminUser.getClient(SubpopulationsApi.class).deleteSubpopulation(subpop.getGuid(), true).execute();
             }
             if (substudy != null) {
-                substudiesApi.deleteSubstudy(substudy.getId(), true).execute();
+                adminUser.getClient(SubstudiesApi.class).deleteSubstudy(substudy.getId(), true).execute();
             }
             devUser.signOutAndDeleteUser();
         }
