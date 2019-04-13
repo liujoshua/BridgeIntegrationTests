@@ -117,7 +117,7 @@ public class ConsentTest {
 
             participant.sharingScope(SharingScope.SPONSORS_AND_PARTNERS);
             userApi.updateUsersParticipantRecord(participant).execute();
-            
+
             participant = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(SharingScope.SPONSORS_AND_PARTNERS, participant.getSharingScope());
 
@@ -129,17 +129,17 @@ public class ConsentTest {
 
             participant = userApi.getUsersParticipantRecord(true).execute().body();
             assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
-            
-            Map<String,List<UserConsentHistory>> map = participant.getConsentHistories();
+
+            Map<String, List<UserConsentHistory>> map = participant.getConsentHistories();
             UserConsentHistory history = map.get(IntegTestUtils.STUDY_ID).get(0);
-            
+
             assertEquals(IntegTestUtils.STUDY_ID, history.getSubpopulationGuid());
             assertNotNull(history.getConsentCreatedOn());
             assertNotNull(history.getName());
             assertNotNull(history.getBirthdate());
             assertTrue(history.getSignedOn().isAfter(DateTime.now().minusHours(1)));
             assertTrue(history.isHasSignedActiveConsent());
-            
+
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             authApi.signOut().execute();
         } finally {
@@ -266,10 +266,8 @@ public class ConsentTest {
     @Test
     public void jsonSerialization() throws Exception {
         // setup
-        String sigJson = "{\"name\":\"Jason McSerializer\"," + 
-                "\"birthdate\":\"1985-12-31\"," +
-                "\"imageData\":\"" + FAKE_IMAGE_DATA + "\"," + 
-                "\"imageMimeType\":\"image/fake\"}";
+        String sigJson = "{\"name\":\"Jason McSerializer\"," + "\"birthdate\":\"1985-12-31\"," + "\"imageData\":\""
+                + FAKE_IMAGE_DATA + "\"," + "\"imageMimeType\":\"image/fake\"}";
 
         // de-serialize and validate
         ConsentSignature sig = RestUtils.GSON.fromJson(sigJson, ConsentSignature.class);
@@ -336,7 +334,7 @@ public class ConsentTest {
             assertEquals("imageData matches", imageData, sigFromServer.getImageData());
             assertEquals("imageMimeType matches", imageMimeType, sigFromServer.getImageMimeType());
             assertNotNull(sigFromServer.getSignedOn());
-            
+
             // giving consent again will throw
             try {
                 // See BRIDGE-1568
@@ -368,15 +366,16 @@ public class ConsentTest {
             assertFalse(status.isConsented());
             assertFalse(status.isSignedMostRecentConsent());
             assertNull(status.getSignedOn());
-            
-            // Get the consent signature and verify it is withdrawn. You can't get it as the test 
-            // user... the user is withdrawn! 
+
+            // Get the consent signature and verify it is withdrawn. You can't get it as the test
+            // user... the user is withdrawn!
             ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
-            StudyParticipant retrieved = participantsApi.getParticipantById(testUser.getUserId(), true).execute().body();
-            
+            StudyParticipant retrieved = participantsApi.getParticipantById(testUser.getUserId(), true).execute()
+                    .body();
+
             List<UserConsentHistory> history = retrieved.getConsentHistories().get(testUser.getDefaultSubpopulation());
-            assertTrue( history.get(0).getWithdrewOn().isAfter(DateTime.now().minusHours(1)) );
-            
+            assertTrue(history.get(0).getWithdrewOn().isAfter(DateTime.now().minusHours(1)));
+
             // This method should now (immediately) throw a ConsentRequiredException
             try {
                 userApi.getSchedules().execute();
@@ -511,21 +510,21 @@ public class ConsentTest {
     public void consentAndWithdrawFromSubpopUpdatesDataGroupsAndSubstudies() throws Exception {
         withdrawalTest((user, substudyIds, subpop) -> {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
-            UserSessionInfo updatedSession = usersApi.withdrawConsentFromSubpopulation(
-                    subpop.getGuid(), WITHDRAWAL).execute().body();
-            
+            UserSessionInfo updatedSession = usersApi.withdrawConsentFromSubpopulation(subpop.getGuid(), WITHDRAWAL)
+                    .execute().body();
+
             // verify that the session contains all the correct information
             assertEquals(substudyIds, updatedSession.getSubstudyIds());
             assertTrue(updatedSession.getDataGroups().isEmpty());
         });
     }
-    
+
     @Test
     public void consentAndWithdrawFromStudyUpdatesDataGroupsAndSubstudies() throws Exception {
         withdrawalTest((user, substudyIds, subpop) -> {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             usersApi.withdrawFromStudy(WITHDRAWAL).execute();
-            
+
             ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
 
             // verify the participant contains all the correct information
@@ -534,7 +533,7 @@ public class ConsentTest {
             assertTrue(participant.getDataGroups().isEmpty());
         });
     }
-    
+
     private void withdrawalTest(WithdrawMethod withdrawMethod) throws Exception {
         TestUser user = null;
         Substudy substudy = null;
@@ -566,8 +565,8 @@ public class ConsentTest {
             user = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
 
-            ConsentSignature sig = new ConsentSignature().name("Test User")
-                    .birthdate(LocalDate.parse("2000-01-01")).scope(SharingScope.NO_SHARING);
+            ConsentSignature sig = new ConsentSignature().name("Test User").birthdate(LocalDate.parse("2000-01-01"))
+                    .scope(SharingScope.NO_SHARING);
             UserSessionInfo session = usersApi.createConsentSignature(subpop.getGuid(), sig).execute().body();
 
             // verify that the session contains all the correct information
@@ -583,10 +582,10 @@ public class ConsentTest {
             }
             // delete the subpopulation
             if (subpop != null && subpop.getGuid() != null) {
-                subpopApi.deleteSubpopulation(subpop.getGuid(), true).execute();
+                adminUser.getClient(SubpopulationsApi.class).deleteSubpopulation(subpop.getGuid(), true).execute();
             }
             if (substudy != null) {
-                substudiesApi.deleteSubstudy(substudy.getId(), true).execute();
+                adminUser.getClient(SubstudiesApi.class).deleteSubstudy(substudy.getId(), true).execute();
             }
             devUser.signOutAndDeleteUser();
         }
