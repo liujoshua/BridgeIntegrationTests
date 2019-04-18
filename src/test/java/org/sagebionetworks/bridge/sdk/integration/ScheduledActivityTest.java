@@ -5,17 +5,15 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertDatesWithTimeZoneEqual;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
@@ -26,7 +24,6 @@ import org.junit.experimental.categories.Category;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
-import com.google.common.collect.Sets;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -66,7 +63,11 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 @SuppressWarnings("ConstantConditions")
 public class ScheduledActivityTest {
     
+    private static final String TASK_ID = "task:AAA";
     private static final DateTimeZone EST = DateTimeZone.forOffsetHours(-5);
+    // Ensure (using withHourOfDay) that we get four days of tasks despite the time of the test.
+    private static final DateTime STARTS_ON = DateTime.now(EST).withHourOfDay(2);
+    private static final DateTime ENDS_ON = STARTS_ON.plusDays(3).withHourOfDay(22);
     
     public static class ClientData {
         final String name;
@@ -122,7 +123,7 @@ public class ScheduledActivityTest {
         usersApi = user.getClient(ForConsentedUsersApi.class);
 
         // Run ID is a random string, used to uniquely identify schedules for this test.
-        runId = RandomStringUtils.randomAlphabetic(4);
+        runId = Tests.randomIdentifier(ScheduledActivityTest.class);
     }
 
     private void monthlyAfterOneMonthSchedule() throws IOException {
@@ -166,7 +167,7 @@ public class ScheduledActivityTest {
         schedule.setTimes(Lists.newArrayList("10:00"));
         
         TaskReference taskReference = new TaskReference();
-        taskReference.setIdentifier("task:AAA");
+        taskReference.setIdentifier(TASK_ID);
         
         Activity activity = new Activity();
         activity.setLabel(oneTimeActivityLabel);
@@ -194,10 +195,10 @@ public class ScheduledActivityTest {
         schedule.setTimes(Lists.newArrayList("06:00", "10:00", "14:00", "18:00"));
         
         TaskReference taskReference = new TaskReference();
-        taskReference.setIdentifier("task:AAA");
+        taskReference.setIdentifier(TASK_ID);
         
         Activity activity = new Activity();
-        activity.setLabel("task:AAA activity");
+        activity.setLabel(runId);
         activity.setTask(taskReference);
         
         schedule.setActivities(Lists.newArrayList(activity));
@@ -219,13 +220,13 @@ public class ScheduledActivityTest {
         fieldDef.setType(UploadFieldType.STRING);
         UploadSchema schema = new UploadSchema();
         schema.setName("Schema");
-        schema.setSchemaId("schemaId"+RandomStringUtils.randomAlphabetic(4));
+        schema.setSchemaId(Tests.randomIdentifier(ScheduledActivityTest.class));
         schema.setSchemaType(UploadSchemaType.IOS_DATA);
         schema.setFieldDefinitions(Lists.newArrayList(fieldDef));
         
         // create it
         UploadSchemasApi schemasApi = developer.getClient(UploadSchemasApi.class);
-        schemaKeys = schemasApi.createOrUpdateUploadSchema(schema).execute().body();
+        schemaKeys = schemasApi.createUploadSchema(schema).execute().body();
         
         Schedule schedule = new Schedule();
         schedule.setLabel("Once Daily Task");
@@ -239,11 +240,11 @@ public class ScheduledActivityTest {
         schemaRef.setRevision(schemaKeys.getRevision());
         
         CompoundActivity compoundActivity = new CompoundActivity();
-        compoundActivity.setTaskIdentifier("task:AAA");
+        compoundActivity.setTaskIdentifier(TASK_ID);
         compoundActivity.setSchemaList(ImmutableList.of(schemaRef));
         
         Activity activity = new Activity();
-        activity.setLabel("task:AAA activity");
+        activity.setLabel(runId);
         activity.setCompoundActivity(compoundActivity);
         
         schedule.setActivities(Lists.newArrayList(activity));
@@ -280,7 +281,7 @@ public class ScheduledActivityTest {
         surveyRef.setIdentifier(survey.getIdentifier());
         
         Activity activity = new Activity();
-        activity.setLabel("task:AAA activity");
+        activity.setLabel(runId);
         activity.setSurvey(surveyRef);
         
         schedule.setActivities(Lists.newArrayList(activity));
@@ -307,7 +308,7 @@ public class ScheduledActivityTest {
         schedule.setTimes(ImmutableList.of("06:00"));
 
         TaskReference taskReference = new TaskReference();
-        taskReference.setIdentifier("task:AAA");
+        taskReference.setIdentifier(TASK_ID);
 
         Activity activity = new Activity();
         activity.setLabel("mini-study-burst-" + runId);
@@ -337,10 +338,6 @@ public class ScheduledActivityTest {
             for (String oneSchedulePlanGuid : schedulePlanGuidList) {
                 schedulesApi.deleteSchedulePlan(oneSchedulePlanGuid, true).execute();
             }
-            if (surveyKeys != null) {
-                admin.getClient(SurveysApi.class)
-                        .deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true).execute();
-            }
         } finally {
             if (researcher != null) {
                 researcher.signOutAndDeleteUser();
@@ -352,43 +349,31 @@ public class ScheduledActivityTest {
                 user.signOutAndDeleteUser();
             }
         }
+        if (surveyKeys != null) {
+            admin.getClient(SurveysApi.class)
+                    .deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true).execute();
+        }
     }
     
     @Test
-    public void getScheduledActivityHistoryV4() throws InterruptedException, IOException {
+    public void getScheduledActivityHistoryV4() throws Exception {
         dailyTaskAt4Times();
         
-        DateTime startTime = DateTime.now(EST);
-        DateTime endTime = DateTime.now(EST).plusDays(4);
-        
-        usersApi.getScheduledActivitiesByDateRange(startTime, endTime).execute();
+        usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
 
         // getTaskHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index is consistent.
         Thread.sleep(2000);
 
         // Now we should see those in the latest API:
-        ForwardCursorScheduledActivityList list = usersApi.getTaskHistory("task:AAA", startTime, endTime, null, 10)
-                .execute().body();
+        ForwardCursorScheduledActivityList list = filterPages(false, (offsetKey) ->
+            usersApi.getTaskHistory(TASK_ID, STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
         
         // Joda DateTime equality is only object instance equality, use strings to compare
         assertNotNull(list.getNextPageOffsetKey()); 
-        assertEquals(startTime.toString(), list.getRequestParams().getScheduledOnStart().toString());
-        assertEquals(endTime.toString(), list.getRequestParams().getScheduledOnEnd().toString());
+        assertEquals(STARTS_ON.toString(), list.getRequestParams().getScheduledOnStart().toString());
+        assertEquals(ENDS_ON.toString(), list.getRequestParams().getScheduledOnEnd().toString());
         assertEquals(10, list.getRequestParams().getPageSize().intValue());
-        assertNull(list.getRequestParams().getOffsetKey());
-        
-        Set<String> guids = Sets.newHashSet();
-        
-        int pageOneCount = list.getItems().size();
-        list.getItems().stream().map(ScheduledActivity::getGuid).forEach(guids::add);
-        
-        list = usersApi.getTaskHistory("task:AAA", startTime, endTime, list.getNextPageOffsetKey(), 10).execute()
-                .body();
-        int pageTwoCount = list.getItems().size();
-        list.getItems().stream().map(ScheduledActivity::getGuid).forEach(guids::add);
-        
-        assertEquals(pageOneCount+pageTwoCount, guids.size());
-        assertNull(list.getNextPageOffsetKey());
+        assertEquals(16, list.getItems().size());
     }
     
     @Test
@@ -407,7 +392,7 @@ public class ScheduledActivityTest {
         Activity activity = schActivity.getActivity();
         assertEquals(ActivityType.TASK, activity.getActivityType());
         assertEquals(oneTimeActivityLabel, activity.getLabel());
-        assertEquals("task:AAA", activity.getTask().getIdentifier());
+        assertEquals(TASK_ID, activity.getTask().getIdentifier());
 
         DateTime startDateTime = DateTime.now(EST).minusDays(10);
         DateTime endDateTime = DateTime.now(EST).plusDays(10);
@@ -479,10 +464,9 @@ public class ScheduledActivityTest {
         monthlyAfterOneMonthSchedule();
         
         // Get scheduled activities. Validate basic properties.
-        DateTime startsOn = DateTime.now(EST);
-        DateTime endsOn = startsOn.plusDays(4);
         
-        ScheduledActivityListV4 scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
+        ScheduledActivityListV4 scheduledActivities = usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON)
+                .execute().body();
         ScheduledActivity schActivity = findOneTimeActivity(scheduledActivities.getItems());
         assertNotNull(schActivity);
         assertEquals(ScheduleStatus.SCHEDULED, schActivity.getStatus());
@@ -492,12 +476,12 @@ public class ScheduledActivityTest {
         Activity activity = schActivity.getActivity();
         assertEquals(ActivityType.TASK, activity.getActivityType());
         assertEquals(oneTimeActivityLabel, activity.getLabel());
-        assertEquals("task:AAA", activity.getTask().getIdentifier());
+        assertEquals(TASK_ID, activity.getTask().getIdentifier());
 
         // Historical items should come back with the same time zone as get() method, and so activities should
         // be strictly equal.
-        DateTime startDateTime = startsOn.minusDays(10);
-        DateTime endDateTime = startsOn.plusDays(10);
+        DateTime startDateTime = STARTS_ON.minusDays(10);
+        DateTime endDateTime = STARTS_ON.plusDays(10);
 
         // You can see this activity in history...
         ForwardCursorScheduledActivityList list = usersApi.getActivityHistory(activity.getGuid(),
@@ -533,7 +517,7 @@ public class ScheduledActivityTest {
 
         // Get activities back and validate that it's started.
         // It's delayed by three days, so ask for four
-        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
+        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute().body();
         schActivity = findOneTimeActivity(scheduledActivities.getItems());
         assertNotNull(schActivity);
         ClientData clientData = RestUtils.toType(schActivity.getClientData(), ClientData.class);
@@ -547,7 +531,7 @@ public class ScheduledActivityTest {
         usersApi.updateScheduledActivities(scheduledActivities.getItems()).execute();
 
         // Get activities back. Verify the activity is there and it is finished
-        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
+        scheduledActivities = usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute().body();
         schActivity = findOneTimeActivity(scheduledActivities.getItems());
         assertNotNull(schActivity.getStartedOn());
         assertNotNull(schActivity.getFinishedOn());
@@ -583,6 +567,9 @@ public class ScheduledActivityTest {
         idCounts = getActivityLabels(scheduledActivities);
         assertEquals(1, idCounts.count(oneTimeActivityLabel));
         assertEquals(5, idCounts.count(monthlyActivityLabel));
+        
+        // Because this endpoint was deprecated before we addedRequestParams, the parameters are not
+        // returned. /v3/activities is still in heavy use so maybe we should add them.
     }
 
     @Test
@@ -617,221 +604,210 @@ public class ScheduledActivityTest {
     
     @Test
     public void getCompoundActivityHistory() throws Exception {
-        DateTime startsOn = DateTime.now(EST);
-        DateTime endsOn = startsOn.plusDays(4);
-        
-        String taskId = "task:AAA";
         compoundDailyTask();
         
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         
-        ScheduledActivityListV4 actList = userApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
-        for (ScheduledActivity act : actList.getItems()) {
-            act.setStartedOn(DateTime.now());
-            act.setFinishedOn(DateTime.now());
-        }
-        userApi.updateScheduledActivities(actList.getItems()).execute();
+        usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
         
-        Set<String> guids = new HashSet<>();
-        
-        ForwardCursorScheduledActivityList list = userApi.getCompoundActivityHistory(
-                taskId, startsOn, endsOn, null, 10).execute().body();
-        assertEquals(10, list.getItems().size());
+        ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
+            userApi.getCompoundActivityHistory(TASK_ID, STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
+
         for (ScheduledActivity act : list.getItems()) {
-            assertEquals("task:AAA", act.getActivity().getCompoundActivity().getTaskIdentifier());
-            guids.add(act.getGuid());
+            assertEquals(TASK_ID, act.getActivity().getCompoundActivity().getTaskIdentifier());
+            assertEquals(EST, act.getScheduledOn().getZone());
         }
         
-        list = userApi.getCompoundActivityHistory(
-                taskId, startsOn, endsOn, list.getNextPageOffsetKey(), 10).execute().body();
-        assertEquals(6, list.getItems().size());
-        for (ScheduledActivity act : list.getItems()) {
-            assertEquals("task:AAA", act.getActivity().getCompoundActivity().getTaskIdentifier());
-            guids.add(act.getGuid());
-        }
-        
-        assertEquals(16, guids.size());
+        assertEquals(16, list.getItems().size());
+        assertEquals(STARTS_ON, list.getRequestParams().getScheduledOnStart());
+        assertEquals(ENDS_ON, list.getRequestParams().getScheduledOnEnd());
+        assertNotNull(list.getNextPageOffsetKey());
         
         // And these tasks don't show up through any of the other methods
-        ForwardCursorScheduledActivityList list2 = userApi.getCompoundActivityHistory(
-                "not the right ID", startsOn, endsOn, null, null).execute().body();
+        ForwardCursorScheduledActivityList list2 = filterPages(false, (key) ->
+            userApi.getCompoundActivityHistory("not the right ID", STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list2.getItems().isEmpty());
         
-        ForwardCursorScheduledActivityList list3 = userApi.getSurveyHistory(
-                taskId, startsOn, endsOn, null, null).execute().body();
+        ForwardCursorScheduledActivityList list3 = filterPages(false, (key) -> 
+            userApi.getSurveyHistory(TASK_ID, STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list3.getItems().isEmpty());
 
-        ForwardCursorScheduledActivityList list4 = userApi.getTaskHistory(
-                taskId, startsOn, endsOn, null, null).execute().body();
+        ForwardCursorScheduledActivityList list4 = filterPages(false, (key) -> 
+            userApi.getTaskHistory(TASK_ID, STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list4.getItems().isEmpty());
     }
     
     @Test
     public void getSurveyHistory() throws Exception {
-        DateTime startsOn = DateTime.now(EST);
-        DateTime endsOn = startsOn.plusDays(4);
-        
         dailySurvey();
         
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         
-        ScheduledActivityListV4 actList = userApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
-        for (ScheduledActivity act : actList.getItems()) {
-            act.setStartedOn(DateTime.now());
-            act.setFinishedOn(DateTime.now());
-        }
-        userApi.updateScheduledActivities(actList.getItems()).execute();
+        usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
         
-        Set<String> guids = new HashSet<>();
-        
-        ForwardCursorScheduledActivityList list = userApi.getSurveyHistory(
-                surveyKeys.getGuid(), startsOn, endsOn, null, 10).execute().body();
-        assertEquals(10, list.getItems().size());
+        ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
+            userApi.getSurveyHistory(surveyKeys.getGuid(), STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
+
         for (ScheduledActivity act : list.getItems()) {
             assertEquals(surveyKeys.getGuid(), act.getActivity().getSurvey().getGuid());
             assertEquals(surveyKeys.getCreatedOn(), act.getActivity().getSurvey().getCreatedOn());
-            guids.add(act.getGuid());
+            assertEquals(EST, act.getScheduledOn().getZone());
         }
-        
-        list = userApi.getSurveyHistory(
-                surveyKeys.getGuid(), startsOn, endsOn, list.getNextPageOffsetKey(), 10).execute().body();        
-        assertEquals(6, list.getItems().size());
-        for (ScheduledActivity act : list.getItems()) {
-            assertEquals(surveyKeys.getGuid(), act.getActivity().getSurvey().getGuid());
-            assertEquals(surveyKeys.getCreatedOn(), act.getActivity().getSurvey().getCreatedOn());
-            guids.add(act.getGuid());
-        }
-        
-        assertEquals(16, guids.size());
+        assertEquals(16, list.getItems().size());
+        assertEquals(STARTS_ON, list.getRequestParams().getScheduledOnStart());
+        assertEquals(ENDS_ON, list.getRequestParams().getScheduledOnEnd());
+        assertNotNull(list.getNextPageOffsetKey());
         
         // And these tasks don't show up through any of the other methods
         ForwardCursorScheduledActivityList list2 = userApi.getSurveyHistory(
-                "not the right ID", startsOn, endsOn, null, null).execute().body();
+                "not the right ID", STARTS_ON, ENDS_ON, null, null).execute().body();
         assertTrue(list2.getItems().isEmpty());
         
         ForwardCursorScheduledActivityList list3 = userApi
-                .getCompoundActivityHistory(surveyKeys.getGuid(), startsOn, endsOn, null, null).execute().body();
+                .getCompoundActivityHistory(surveyKeys.getGuid(), STARTS_ON, ENDS_ON, null, null).execute().body();
         assertTrue(list3.getItems().isEmpty());
 
-        ForwardCursorScheduledActivityList list4 = userApi.getTaskHistory(surveyKeys.getGuid(), startsOn, endsOn, null, null)
+        ForwardCursorScheduledActivityList list4 = userApi.getTaskHistory(surveyKeys.getGuid(), STARTS_ON, ENDS_ON, null, null)
                 .execute().body();
         assertTrue(list4.getItems().isEmpty());
     }
     
     @Test
     public void getTaskHistory() throws Exception {
-        DateTime startsOn = DateTime.now(EST);
-        DateTime endsOn = startsOn.plusDays(4);
-        
         dailyTaskAt4Times();
         
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         
-        ScheduledActivityListV4 actList = userApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
-        for (ScheduledActivity act : actList.getItems()) {
-            act.setStartedOn(DateTime.now());
-            act.setFinishedOn(DateTime.now());
-        }
-        userApi.updateScheduledActivities(actList.getItems()).execute();
+        usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
         
-        Set<String> guids = new HashSet<>();
+        ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
+            userApi.getTaskHistory(TASK_ID, STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
         
-        ForwardCursorScheduledActivityList list = userApi.getTaskHistory(
-                "task:AAA", startsOn, endsOn, null, 10).execute().body();
-        assertEquals(10, list.getItems().size());
         for (ScheduledActivity act : list.getItems()) {
-            assertEquals("task:AAA", act.getActivity().getTask().getIdentifier());
-            guids.add(act.getGuid());
+            assertEquals(TASK_ID, act.getActivity().getTask().getIdentifier());
+            assertEquals(EST, act.getScheduledOn().getZone());
         }
         
-        list = userApi.getTaskHistory(
-                "task:AAA", startsOn, endsOn, list.getNextPageOffsetKey(), 10).execute().body();
-        assertEquals(6, list.getItems().size());
-        for (ScheduledActivity act : list.getItems()) {
-            assertEquals("task:AAA", act.getActivity().getTask().getIdentifier());
-            guids.add(act.getGuid());
-        }
-        
-        assertEquals(16, guids.size());
+        assertEquals(16, list.getItems().size());
         
         // And these tasks don't show up through any of the other methods
-        ForwardCursorScheduledActivityList list2 = userApi
-                .getTaskHistory("not the right ID", startsOn, endsOn, null, null).execute().body();
+        ForwardCursorScheduledActivityList list2 = filterPages(false, (key) ->
+            userApi.getTaskHistory("not the right ID", STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list2.getItems().isEmpty());
         
-        ForwardCursorScheduledActivityList list3 = userApi
-                .getCompoundActivityHistory("task:AAA", startsOn, endsOn, null, null).execute().body();
+        ForwardCursorScheduledActivityList list3 = filterPages(false, (key) ->
+            userApi.getCompoundActivityHistory(TASK_ID, STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list3.getItems().isEmpty());
 
-        ForwardCursorScheduledActivityList list4 = userApi.getSurveyHistory("task:AAA", startsOn, endsOn, null, null)
-                .execute().body();
+        ForwardCursorScheduledActivityList list4 = filterPages(false, (key) ->
+            userApi.getSurveyHistory(TASK_ID, STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list4.getItems().isEmpty());
     }
     
     @Test(expected = BadRequestException.class)
     public void getScheduledActivityHistoryV3InvalidOffsetKey() throws Exception {
-        DateTime startsOn = DateTime.now(EST);
-        DateTime endsOn = startsOn.plusDays(4);
-        
         dailyTaskAt4Times();
         
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         
-        ScheduledActivityListV4 actList = userApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
-        for (ScheduledActivity act : actList.getItems()) {
-            act.setStartedOn(DateTime.now());
-            act.setFinishedOn(DateTime.now());
-        }
-        userApi.updateScheduledActivities(actList.getItems()).execute();
-        
-        userApi.getTaskHistory("task:AAA", startsOn, endsOn, "bad-key:key", 10).execute();
+        userApi.getTaskHistory(TASK_ID, STARTS_ON, ENDS_ON, "bad-key:key", 10).execute();
     }
     
     @Test
     public void getScheduledActivityHistoryV3NormalPaging() throws Exception {
-        DateTime startsOn = DateTime.now(EST);
-        DateTime endsOn = startsOn.plusDays(4);
-        
         dailyTaskAt4Times();
         
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         
-        String activityGuid = null;
+        ScheduledActivityListV4 actList = filterPagesV4((offsetKey) -> 
+            userApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute().body());
         
-        ScheduledActivityListV4 actList = userApi.getScheduledActivitiesByDateRange(startsOn, endsOn).execute().body();
-        for (ScheduledActivity act : actList.getItems()) {
-            activityGuid = act.getGuid().split(":")[0];
-            act.setStartedOn(DateTime.now());
-            act.setFinishedOn(DateTime.now());
-        }
-        userApi.updateScheduledActivities(actList.getItems()).execute();
+        final String activityGuid = actList.getItems().get(0).getGuid().split(":")[0];
         
-        Set<String> guids = new HashSet<>();
+        ForwardCursorScheduledActivityList list = filterPages(true, (nextPageOffset) -> 
+            userApi.getActivityHistory(activityGuid, STARTS_ON, ENDS_ON, nextPageOffset, 10).execute().body());
         
-        ForwardCursorScheduledActivityList list = userApi.getActivityHistory(
-                activityGuid, startsOn, endsOn, null, 10).execute().body();
-        assertEquals(10, list.getItems().size());
         for (ScheduledActivity act : list.getItems()) {
-            guids.add(act.getGuid());
+            assertEquals(EST, act.getScheduledOn().getZone());
         }
-        
-        list = userApi.getActivityHistory(
-                activityGuid, startsOn, endsOn, list.getNextPageOffsetKey(), 10).execute().body();
-        assertEquals(6, list.getItems().size());
-        for (ScheduledActivity act : list.getItems()) {
-            guids.add(act.getGuid());
-        }
-        
-        assertEquals(16, guids.size());
+        assertEquals(16, list.getItems().size());
+        assertEquals(STARTS_ON, list.getRequestParams().getScheduledOnStart());
+        assertEquals(ENDS_ON, list.getRequestParams().getScheduledOnEnd());
+        assertNotNull(list.getNextPageOffsetKey());
     }
     
     @Test(expected = BadRequestException.class)
     public void getScheduledActivityHistoryV3PathologicalPaging() throws Exception {
-        DateTime startsOn = DateTime.now(EST);
-        DateTime endsOn = startsOn.plusDays(4);
-        
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
-        userApi.getTaskHistory("task:AAA", startsOn, endsOn, null, -10).execute();
+        userApi.getTaskHistory(TASK_ID, STARTS_ON, ENDS_ON, null, -10).execute();
+    }
+    
+    @FunctionalInterface
+    public static interface ExceptionThrowingFunction<T, R> {
+       R apply(T t) throws Exception;
+    }
+    
+    /**
+     * Iterate through all pages and return an activity list with only the current tests activities and the FIRST
+     * request params object returned from the server. If pagesExpected is true, we also assert that we receive at 
+     * least two pages. This method will also fail after 100 pages in case of defects.
+     */
+    private ForwardCursorScheduledActivityList filterPages(boolean pagesExpected,
+            ExceptionThrowingFunction<String, ForwardCursorScheduledActivityList> caller) throws Exception {
+        ForwardCursorScheduledActivityList filteredList = new ForwardCursorScheduledActivityList();
+        
+        List<ScheduledActivity> activities = new ArrayList<>();
+        String nextPageOffsetKey = null;
+        int tries = 1;
+        do {
+            
+            ForwardCursorScheduledActivityList results = caller.apply(nextPageOffsetKey);
+            for (ScheduledActivity act : results.getItems()) {
+                if (act.getActivity().getLabel().equals(runId)) {
+                    activities.add(act);    
+                }
+            }
+            // What was sent is returned back.
+            assertEquals(nextPageOffsetKey, results.getRequestParams().getOffsetKey());
+            
+            nextPageOffsetKey = results.getNextPageOffsetKey();
+            tries++;
+            // Take the first request values to examine in origin test
+            if (filteredList.getNextPageOffsetKey() == null) {
+                filteredList.nextPageOffsetKey(nextPageOffsetKey);        
+            }
+            if (filteredList.getRequestParams() == null) {
+                filteredList.requestParams(results.getRequestParams());    
+            }
+            
+        } while(nextPageOffsetKey != null && tries < 100);
+        if (tries >= 100) {
+            fail("Test failed due to a pathological number of scheduled activity pages");
+        } else if (pagesExpected && tries == 1) {
+            fail("Expected more than one page of results, but only one page was returned");
+        }
+        
+        filteredList.items(activities);
+        return filteredList;
+    }
+    
+    private ScheduledActivityListV4 filterPagesV4(ExceptionThrowingFunction<String, ScheduledActivityListV4> caller)
+            throws Exception {
+        ScheduledActivityListV4 filteredList = new ScheduledActivityListV4();
+        
+        List<ScheduledActivity> activities = new ArrayList<>();
+        ScheduledActivityListV4 results = caller.apply(null);
+        for (ScheduledActivity act : results.getItems()) {
+            if (act.getActivity().getLabel().equals(runId)) {
+                activities.add(act);    
+            }
+        }
+        // Take the first request values to examine in origin test
+        if (filteredList.getRequestParams() == null) {
+            filteredList.requestParams(results.getRequestParams());    
+        }
+        filteredList.items(activities);
+        return filteredList;
     }
     
     // api study may have other schedule plans in it with other scheduled activities. To prevent tests from
