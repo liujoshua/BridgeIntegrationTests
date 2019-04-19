@@ -689,6 +689,9 @@ public class ScheduledActivityTest {
         }
         
         assertEquals(16, list.getItems().size());
+        assertEquals(STARTS_ON, list.getRequestParams().getScheduledOnStart());
+        assertEquals(ENDS_ON, list.getRequestParams().getScheduledOnEnd());
+        assertEquals(10, list.getRequestParams().getPageSize().intValue());
         
         // And these tasks don't show up through any of the other methods
         ForwardCursorScheduledActivityList list2 = filterPages(false, (key) ->
