@@ -365,7 +365,7 @@ public class ScheduledActivityTest {
         Thread.sleep(2000);
 
         // Now we should see those in the latest API:
-        ForwardCursorScheduledActivityList list = filterPages(false, (offsetKey) ->
+        ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
             usersApi.getTaskHistory(TASK_ID, STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
         
         // Joda DateTime equality is only object instance equality, use strings to compare
