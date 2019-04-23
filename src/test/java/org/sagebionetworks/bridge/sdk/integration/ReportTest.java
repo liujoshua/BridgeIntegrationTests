@@ -161,11 +161,11 @@ public class ReportTest {
         String userId = user.getSession().getId();
         ParticipantReportsApi reportsApi = developer.getClient(ParticipantReportsApi.class);
 
-        reportsApi.addParticipantReportRecord(userId, reportId, makeReportData(DATE1, "foo", "A"))
+        reportsApi.addParticipantReportRecordV4(userId, reportId, makeReportData(DATE1, "foo", "A"))
                 .execute();
-        reportsApi.addParticipantReportRecord(userId, reportId, makeReportData(DATE2, "bar", "B"))
+        reportsApi.addParticipantReportRecordV4(userId, reportId, makeReportData(DATE2, "bar", "B"))
                 .execute();
-        reportsApi.addParticipantReportRecord(userId, reportId, makeReportData(DATE3, "baz", "C"))
+        reportsApi.addParticipantReportRecordV4(userId, reportId, makeReportData(DATE3, "baz", "C"))
                 .execute();
 
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);

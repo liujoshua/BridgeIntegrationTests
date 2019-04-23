@@ -269,7 +269,7 @@ public class ScheduledActivityTest {
         surveyKeys = surveysApi.publishSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), false).execute().body();
         
         Schedule schedule = new Schedule();
-        schedule.setLabel("Once Daily Task");
+        schedule.setLabel("Four Times Daily Task");
         schedule.setExpires("P1D");
         schedule.setInterval("P1D");
         schedule.setScheduleType(ScheduleType.RECURRING);
@@ -291,7 +291,7 @@ public class ScheduledActivityTest {
         strategy.setType("SimpleScheduleStrategy");
         
         SchedulePlan plan = new SchedulePlan();
-        plan.setLabel("Daily survey schedule plan");
+        plan.setLabel("Four times daily survey schedule plan");
         plan.setStrategy(strategy);
         String planGuid = schedulePlansApi.createSchedulePlan(plan).execute().body().getGuid();
         schedulePlanGuidList.add(planGuid);
@@ -777,10 +777,10 @@ public class ScheduledActivityTest {
             tries++;
             // Take the first request values to examine in origin test
             if (filteredList.getNextPageOffsetKey() == null) {
-                filteredList.nextPageOffsetKey(nextPageOffsetKey);        
+                Tests.setVariableValueInObject(filteredList,  "nextPageOffsetKey", nextPageOffsetKey);
             }
             if (filteredList.getRequestParams() == null) {
-                filteredList.requestParams(results.getRequestParams());    
+                Tests.setVariableValueInObject(filteredList,  "requestParams", results.getRequestParams());
             }
             
         } while(nextPageOffsetKey != null && tries < 100);
@@ -789,8 +789,7 @@ public class ScheduledActivityTest {
         } else if (pagesExpected && tries == 1) {
             fail("Expected more than one page of results, but only one page was returned");
         }
-        
-        filteredList.items(activities);
+        Tests.setVariableValueInObject(filteredList, "items", activities);
         return filteredList;
     }
     
@@ -807,7 +806,7 @@ public class ScheduledActivityTest {
         }
         // Take the first request values to examine in origin test
         if (filteredList.getRequestParams() == null) {
-            filteredList.requestParams(results.getRequestParams());    
+            Tests.setVariableValueInObject(filteredList, "requestParams", results.getRequestParams());
         }
         filteredList.items(activities);
         return filteredList;
