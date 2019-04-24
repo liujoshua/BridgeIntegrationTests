@@ -161,7 +161,7 @@ public class SubstudyFilteringTest {
         // This should apply to any call involving user in another substudy, try one (fully tested in 
         // the unit tests)
         try {
-            researcherApiForB.getActivityEvents(userA.getId()).execute();
+            researcherApiForB.getActivityEventsForParticipant(userA.getId()).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
         }

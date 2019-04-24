@@ -470,7 +470,7 @@ public class StudyTest {
         // that our Java SDK is set up correctly.
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         try {
-            studiesApi.verifyEmail(IntegTestUtils.STUDY_ID, "dummy-token", "consent_notification").execute();
+            studiesApi.verifyEmailForStudy(IntegTestUtils.STUDY_ID, "dummy-token", "consent_notification").execute();
             fail("expected exception");
         } catch (BadRequestException ex) {
             assertTrue(ex.getMessage().contains("Email verification token has expired (or already been used)."));

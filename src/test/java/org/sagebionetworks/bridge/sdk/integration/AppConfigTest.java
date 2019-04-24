@@ -213,7 +213,7 @@ public class AppConfigTest {
         assertNotEquals(secondOneRetrieved.getModifiedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
         
         // You can get it as the user
-        AppConfig userAppConfig = studiesApi.getAppConfig(developer.getStudyId()).execute().body();
+        AppConfig userAppConfig = studiesApi.getAppConfigForStudy(developer.getStudyId()).execute().body();
         assertNotNull(userAppConfig);
         
         // Create a second app config
@@ -238,7 +238,7 @@ public class AppConfigTest {
         
         try {
             // This should not match the clientInfo provided
-            publicApi.getAppConfig(developer.getStudyId()).execute().body();
+            publicApi.getAppConfigForStudy(developer.getStudyId()).execute().body();
             fail("Should have thrown an exception");
         } catch(EntityNotFoundException e) {
             // None have matched
@@ -248,7 +248,7 @@ public class AppConfigTest {
         appConfigsApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
         
         // Having changed the config to match the criteria, we should be able to retrieve it.
-        AppConfig config = publicApi.getAppConfig(developer.getStudyId()).execute().body();
+        AppConfig config = publicApi.getAppConfigForStudy(developer.getStudyId()).execute().body();
         assertEquals(appConfig.getGuid(), config.getGuid());
         
         // test logical deletion
@@ -332,7 +332,7 @@ public class AppConfigTest {
         
         // Verify that for the user, the config is included in the app config itself
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
-        AppConfig usersAppConfig = userApi.getAppConfig(user.getStudyId()).execute().body();
+        AppConfig usersAppConfig = userApi.getAppConfigForStudy(user.getStudyId()).execute().body();
         
         SchedulePlan plan = RestUtils.toType(usersAppConfig.getConfigElements().get(elementId), SchedulePlan.class);        
         assertEquals("Cron-based schedule", plan.getLabel());
@@ -343,7 +343,7 @@ public class AppConfigTest {
         element.setVersion(version.getVersion());
         
         // The user's config has been correctly updated
-        usersAppConfig = userApi.getAppConfig(user.getStudyId()).execute().body();
+        usersAppConfig = userApi.getAppConfigForStudy(user.getStudyId()).execute().body();
         SchedulePlan secondPlan = RestUtils.toType(usersAppConfig.getConfigElements().get(elementId), SchedulePlan.class);
         assertEquals("Persistent schedule", secondPlan.getLabel());
 
