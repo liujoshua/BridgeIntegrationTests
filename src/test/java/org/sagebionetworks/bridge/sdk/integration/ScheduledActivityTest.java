@@ -66,9 +66,10 @@ public class ScheduledActivityTest {
     private static final String TASK_ID = "task:AAA";
     private static final DateTimeZone EST = DateTimeZone.forOffsetHours(-5);
     // Ensure (using withHourOfDay) that we get four days of tasks despite the time of the test.
-    private static final DateTime STARTS_ON = DateTime.now(EST).withHourOfDay(2);
-    private static final DateTime ENDS_ON = STARTS_ON.plusDays(3).withHourOfDay(22);
-    
+    private static final DateTime NOW = DateTime.now();
+    private static final DateTime STARTS_ON = NOW.withZone(EST).withTimeAtStartOfDay();
+    private static final DateTime ENDS_ON = STARTS_ON.plusDays(4).withTimeAtStartOfDay();
+
     public static class ClientData {
         final String name;
         final boolean enabled;
