@@ -310,10 +310,16 @@ public class ConsentTest {
             } catch (ConsentRequiredException ex) {
                 // expected
             }
-
+            
+            // Verify this does not change for older versions of the SDK that were not mapped
+            // to intercept and update the session from this call.
+            String existingSessionToken = testUser.getSession().getSessionToken();
+            
             // give consent
             UserSessionInfo session = userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute()
                     .body();
+            
+            assertEquals(existingSessionToken, session.getSessionToken());
 
             // Session should be updated to reflect this consent.
             ConsentStatus status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
@@ -354,6 +360,8 @@ public class ConsentTest {
             authApi.signOut().execute();
 
             session = testUser.signInAgain();
+            existingSessionToken = session.getSessionToken();
+            
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
             assertTrue(RestUtils.isUserConsented(session));
 
@@ -362,6 +370,9 @@ public class ConsentTest {
             userApi = testUser.getClient(ForConsentedUsersApi.class);
             session = userApi.withdrawConsentFromSubpopulation(testUser.getDefaultSubpopulation(), withdrawal).execute()
                     .body();
+            
+            // Again, the session token should not change as a result of withdrawing.
+            assertEquals(existingSessionToken, session.getSessionToken());
 
             // Session should reflect the withdrawal of consent
             status = session.getConsentStatuses().get(testUser.getDefaultSubpopulation());
