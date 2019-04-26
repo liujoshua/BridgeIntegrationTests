@@ -105,16 +105,16 @@ public class WorkerApiTest {
                 DateTime.now(TEST_USER_TIME_ZONE).plusDays(1)).execute();
 
         // Get all participants
-        AccountSummaryList list = workersApi.getParticipants("api", 0, 5, "", null, null, null).execute().body();
+        AccountSummaryList list = workersApi.getParticipantsForStudy("api", 0, 5, "", null, null, null).execute().body();
         assertTrue(list.getTotal() > 0);
 
         // Get worker participant.
-        list = workersApi.getParticipants("api", 0, 5, worker.getEmail(), null, null, null).execute().body();
+        list = workersApi.getParticipantsForStudy("api", 0, 5, worker.getEmail(), null, null, null).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(worker.getEmail(), list.getItems().get(0).getEmail());
         
         // Get user participant. Include consent history in this call.
-        StudyParticipant participant = workersApi.getParticipantById("api", user.getSession().getId(), true)
+        StudyParticipant participant = workersApi.getParticipantByIdForStudy("api", user.getSession().getId(), true)
                 .execute().body();
         assertEquals(user.getEmail(), participant.getEmail());
         assertEquals(TEST_USER_TIME_ZONE_STRING, participant.getTimeZone());
@@ -122,13 +122,13 @@ public class WorkerApiTest {
         assertNotNull(participant.getConsentHistories().get("api").get(0));
         
         // get by health code, also verify we do not include consent histories.
-        StudyParticipant participant2 = workersApi.getParticipantByHealthCode("api", participant.getHealthCode(), false)
+        StudyParticipant participant2 = workersApi.getParticipantByHealthCodeForStudy("api", participant.getHealthCode(), false)
                 .execute().body();
         assertEquals(participant.getId(), participant2.getId());
         assertNull(participant2.getConsentHistories().get("api"));
         
         // get by external Id, also verify we do not include consent histories.
-        StudyParticipant participant3 = workersApi.getParticipantByExternalId("api", externalId, false)
+        StudyParticipant participant3 = workersApi.getParticipantByExternalIdForStudy("api", externalId, false)
                 .execute().body();
         assertEquals(participant.getId(), participant3.getId());
         assertNull(participant3.getConsentHistories().get("api"));
@@ -141,12 +141,12 @@ public class WorkerApiTest {
         SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1");
         phoneUser = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, signUp);
         
-        AccountSummaryList list = workersApi.getParticipants("api", 0, 5, null, "248-6796", null, null).execute().body();
+        AccountSummaryList list = workersApi.getParticipantsForStudy("api", 0, 5, null, "248-6796", null, null).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(phoneUser.getPhone().getNumber(), list.getItems().get(0).getPhone().getNumber());
         
         String userId = list.getItems().get(0).getId();
-        StudyParticipant participant = workersApi.getParticipantById("api", userId, false).execute().body();
+        StudyParticipant participant = workersApi.getParticipantByIdForStudy("api", userId, false).execute().body();
         
         assertEquals(phoneUser.getPhone().getNumber(), participant.getPhone().getNumber());
         assertNotNull(participant.getHealthCode());
@@ -160,7 +160,7 @@ public class WorkerApiTest {
         try {
             guid = planApi.createSchedulePlan(plan).execute().body();
             
-            SchedulePlanList plans = workersApi.getSchedulePlans("api", false).execute().body();
+            SchedulePlanList plans = workersApi.getSchedulePlansForStudy("api", false).execute().body();
             
             final String theGuid = guid.getGuid();
             if (!plans.getItems().stream().anyMatch((onePlan) -> onePlan.getGuid().equals(theGuid))) {
@@ -176,7 +176,7 @@ public class WorkerApiTest {
     @Test
     public void retrieveUsersActivityEvents() throws Exception {
         ActivityEventList list = workersApi
-                .getActivityEventsForParticipant(worker.getStudyId(), worker.getSession().getId()).execute().body();
+                .getActivityEventsForParticipantAndStudy(worker.getStudyId(), worker.getSession().getId()).execute().body();
         
         assertFalse(list.getItems().isEmpty());
     }
@@ -198,7 +198,7 @@ public class WorkerApiTest {
             
             String activityGuid = ((SimpleScheduleStrategy) plan.getStrategy())
                     .getSchedule().getActivities().get(0).getGuid();
-            ForwardCursorScheduledActivityList list = workersApi.getParticipantActivityHistory(
+            ForwardCursorScheduledActivityList list = workersApi.getParticipantActivityHistoryForStudy(
                     user.getStudyId(), user.getSession().getId(), activityGuid, DateTime.now().minusDays(2), 
                     DateTime.now().plusDays(2), null, 50).execute().body();
 
@@ -228,7 +228,7 @@ public class WorkerApiTest {
             // Sleep to wait for global secondary index
             Thread.sleep(2000);
 
-            ForwardCursorScheduledActivityList list = workersApi.getParticipantTaskHistory(user.getStudyId(), 
+            ForwardCursorScheduledActivityList list = workersApi.getParticipantTaskHistoryForStudy(user.getStudyId(), 
                     user.getSession().getId(), "task:CCC", DateTime.now().minusDays(2), DateTime.now().plusDays(2), 
                     null, 50).execute().body();
 
@@ -257,7 +257,7 @@ public class WorkerApiTest {
 
         // Test sending SMS from worker.
         String messageFromWorker = "Test message from worker.";
-        workersApi.sendSmsMessageToParticipant(user.getStudyId(), user.getSession().getId(),
+        workersApi.sendSmsMessageToParticipantForStudy(user.getStudyId(), user.getSession().getId(),
                 new SmsTemplate().message(messageFromWorker)).execute();
         verifyPromotionalMessage(messageFromWorker);
 
@@ -284,7 +284,7 @@ public class WorkerApiTest {
         assertTrue(message.getSentOn().isAfter(DateTime.now().minusHours(1)));
 
         // Verify the health code matches.
-        StudyParticipant participant = workersApi.getParticipantById(user.getStudyId(), user.getUserId(),
+        StudyParticipant participant = workersApi.getParticipantByIdForStudy(user.getStudyId(), user.getUserId(),
                 false).execute().body();
         assertEquals(participant.getHealthCode(), message.getHealthCode());
 

@@ -124,7 +124,7 @@ public class ActivityEventTest {
         assertEquals(timestamp, event.getTimestamp());
 
         // Verify researcher's view of created event
-        activityEventList = researchersApi.getActivityEvents(participant.getId()).execute().body();
+        activityEventList = researchersApi.getActivityEventsForParticipant(participant.getId()).execute().body();
         assertEquals(updatedActivityEvents, activityEventList.getItems());
     }
 

@@ -109,7 +109,7 @@ public class AccountSummarySearchTest {
     @Test
     public void testSearchingApiForWorker() throws Exception {
         ForWorkersApi workerApi = worker.getClient(ForWorkersApi.class);
-        testSuite(search -> workerApi.searchAccountSummaries("api", search).execute().body());
+        testSuite(search -> workerApi.searchAccountSummariesForStudy("api", search).execute().body());
     }
     
     @FunctionalInterface
