@@ -610,7 +610,11 @@ public class ScheduledActivityTest {
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         
         usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
-        
+
+        // getCompoundActivityHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index
+        // is consistent.
+        Thread.sleep(2000);
+
         ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
             userApi.getCompoundActivityHistory(TASK_ID, STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
 
@@ -645,7 +649,11 @@ public class ScheduledActivityTest {
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         
         usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
-        
+
+        // getSurveyHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index
+        // is consistent.
+        Thread.sleep(2000);
+
         ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
             userApi.getSurveyHistory(surveyKeys.getGuid(), STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
 
@@ -680,7 +688,11 @@ public class ScheduledActivityTest {
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         
         usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
-        
+
+        // getTaskHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index
+        // is consistent.
+        Thread.sleep(2000);
+
         ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
             userApi.getTaskHistory(TASK_ID, STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
         
