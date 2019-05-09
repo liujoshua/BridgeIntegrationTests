@@ -29,43 +29,48 @@ import com.google.common.collect.Lists;
 public class SessionTest {
     @Test
     public void verifySession() throws Exception {
-        DateTime startOfTest = DateTime.now();
-        
         TestUser user = TestUserHelper.createAndSignInUser(SessionTest.class, true);
-        
-        UserSessionInfo session = user.getSession();
-        assertNotNull(session.getId());
-        assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
-        assertTrue(session.getCreatedOn().isAfter(startOfTest.minusHours(1)));
-        assertEquals(AccountStatus.ENABLED, session.getStatus());
-        assertEquals("en", session.getLanguages().get(0));
-        assertEquals(1, session.getLanguages().size());
-        assertTrue(session.isAuthenticated());
-        assertNotNull(session.getSessionToken());
-        assertNotNull(session.getEmail());
-        assertEquals(user.getEmail(), session.getEmail());
-        assertTrue(session.isConsented());
-        
-        ConsentStatus status = session.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
-        assertEquals("Default Consent Group", status.getName());
-        assertEquals(IntegTestUtils.STUDY_ID, status.getSubpopulationGuid());
-        assertTrue(status.isRequired());
-        assertTrue(status.isConsented());
-        assertTrue(status.isSignedMostRecentConsent());
-        assertTrue(status.getSignedOn().isAfter(startOfTest.minusHours(1)));
-        
-        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
-        
-        Withdrawal withdrawal = new Withdrawal().reason("No longer want to be a test subject");
-        UserSessionInfo session2 = usersApi.withdrawConsentFromSubpopulation(IntegTestUtils.STUDY_ID, withdrawal).execute().body();
-        
-        ConsentStatus status2 = session2.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
-        assertEquals("Default Consent Group", status2.getName());
-        assertEquals(IntegTestUtils.STUDY_ID, status2.getSubpopulationGuid());
-        assertTrue(status2.isRequired());
-        assertFalse(status2.isConsented());
-        assertFalse(status2.isSignedMostRecentConsent());
-        assertNull(status2.getSignedOn());
+        try {
+            DateTime startOfTest = DateTime.now();
+
+            UserSessionInfo session = user.getSession();
+            assertNotNull(session.getId());
+            assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
+            assertTrue(session.getCreatedOn().isAfter(startOfTest.minusHours(1)));
+            assertEquals(AccountStatus.ENABLED, session.getStatus());
+            assertEquals("en", session.getLanguages().get(0));
+            assertEquals(1, session.getLanguages().size());
+            assertTrue(session.isAuthenticated());
+            assertNotNull(session.getSessionToken());
+            assertNotNull(session.getEmail());
+            assertEquals(user.getEmail(), session.getEmail());
+            assertTrue(session.isConsented());
+
+            ConsentStatus status = session.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
+            assertEquals("Default Consent Group", status.getName());
+            assertEquals(IntegTestUtils.STUDY_ID, status.getSubpopulationGuid());
+            assertTrue(status.isRequired());
+            assertTrue(status.isConsented());
+            assertTrue(status.isSignedMostRecentConsent());
+            assertTrue(status.getSignedOn().isAfter(startOfTest.minusHours(1)));
+
+            ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+
+            Withdrawal withdrawal = new Withdrawal().reason("No longer want to be a test subject");
+            UserSessionInfo session2 = usersApi.withdrawConsentFromSubpopulation(IntegTestUtils.STUDY_ID, withdrawal).execute().body();
+
+            ConsentStatus status2 = session2.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
+            assertEquals("Default Consent Group", status2.getName());
+            assertEquals(IntegTestUtils.STUDY_ID, status2.getSubpopulationGuid());
+            assertTrue(status2.isRequired());
+            assertFalse(status2.isConsented());
+            assertFalse(status2.isSignedMostRecentConsent());
+            assertNull(status2.getSignedOn());
+        } finally {
+            if (user != null) {
+                user.signOutAndDeleteUser();
+            }
+        }
     }
     
     @Test
