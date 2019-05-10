@@ -19,7 +19,6 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ActivitiesApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
@@ -239,14 +238,14 @@ public class WorkerApiTest {
             }
         }
     }
-    
+
     @Test
     public void sendUserSmsMessage() throws Exception {
         SignUp signUp = new SignUp();
         signUp.setPhone(IntegTestUtils.PHONE);
         signUp.setStudy(IntegTestUtils.STUDY_ID);
         signUp.setConsent(true);
-        
+
         user = new TestUserHelper.Builder(WorkerApiTest.class).withSignUp(signUp).withConsentUser(true)
                 .createAndSignInUser();
 
@@ -260,13 +259,6 @@ public class WorkerApiTest {
         workersApi.sendSmsMessageToParticipantForStudy(user.getStudyId(), user.getSession().getId(),
                 new SmsTemplate().message(messageFromWorker)).execute();
         verifyPromotionalMessage(messageFromWorker);
-
-        // Test sending SMS from researcher.
-        String messageFromResearcher = "Test message from researcher";
-        ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
-        researcherApi.sendSmsMessageToParticipant(user.getSession().getId(),
-                new SmsTemplate().message(messageFromResearcher)).execute();
-        verifyPromotionalMessage(messageFromResearcher);
     }
 
     private void verifyPromotionalMessage(String expectedMessageBody) throws Exception {
