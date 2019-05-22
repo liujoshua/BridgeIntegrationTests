@@ -135,6 +135,9 @@ public class SmsNotificationRegistrationTest {
         assertEquals(NotificationProtocol.SMS, registration.getProtocol());
         assertEquals(IntegTestUtils.PHONE.getNumber(), registration.getEndpoint());
 
+        // Sleep for eventual consistency.
+        Thread.sleep(2000);
+
         // We automatically subscribed to autoTopic1.
         Map<String, Boolean> subscriptionsByGuid = api.getTopicSubscriptions(registrationGuid).execute().body()
                 .getItems().stream()
@@ -147,6 +150,9 @@ public class SmsNotificationRegistrationTest {
         SubscriptionRequest subscriptionRequest = new SubscriptionRequest().addTopicGuidsItem(manualTopicGuid);
         api.subscribeToTopics(registrationGuid, subscriptionRequest).execute();
 
+        // Sleep for eventual consistency.
+        Thread.sleep(2000);
+
         subscriptionsByGuid = api.getTopicSubscriptions(registrationGuid).execute().body().getItems().stream()
                 .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed));
         assertTrue(subscriptionsByGuid.get(autoTopicGuid1));
@@ -157,6 +163,9 @@ public class SmsNotificationRegistrationTest {
         StudyParticipant participant = api.getUsersParticipantRecord(false).execute().body();
         participant.setDataGroups(ImmutableList.of("sdk-int-2"));
         api.updateUsersParticipantRecord(participant).execute();
+
+        // Sleep for eventual consistency.
+        Thread.sleep(2000);
 
         subscriptionsByGuid = api.getTopicSubscriptions(registrationGuid).execute().body().getItems().stream()
                 .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed));
