@@ -385,6 +385,10 @@ public class SurveyTest {
         Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
         createSurvey(surveysApi, survey);
 
+        // createSurvey() uses a global secondary index to check for duplicate IDs. Sleep 2 seconds to ensure the index
+        // is consistent.
+        Thread.sleep(2000);
+
         // Create another identical survey with the same ID. This fails.
         Survey survey2 = new Survey().name(SURVEY_NAME).identifier(surveyId);
         try {
