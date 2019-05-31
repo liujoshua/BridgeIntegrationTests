@@ -1,11 +1,8 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.ScheduleType.RECURRING;
-
-import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 
