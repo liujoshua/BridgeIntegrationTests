@@ -68,8 +68,6 @@ public class ScheduleActivityOnceTest {
     
     @Test
     public void test() throws Exception {
-        // Not sure we really need to do this initial config since this is supposed to be 
-        // the default settings of the study.
         Study study = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
         if (study.isExternalIdRequiredOnSignup() || study.isExternalIdValidationEnabled()) {
             study.setExternalIdRequiredOnSignup(false);
