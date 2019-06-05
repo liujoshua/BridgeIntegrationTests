@@ -290,6 +290,23 @@ public class HealthDataTest {
     }
 
     @Test
+    public void schemalessHealthData() throws Exception {
+        // make health data to submit - Use a map instead of a Jackson JSON node, because mixing JSON libraries causes
+        // bad things to happen.
+        Map<String, String> data = ImmutableMap.<String, String>builder().put("foo", "bar").build();
+        HealthDataSubmission submission = new HealthDataSubmission().appVersion(APP_VERSION).createdOn(createdOn)
+                .data(data).phoneInfo(PHONE_INFO);
+
+        // submit and validate - Most of the record attributes are already validated in previous tests. Just validate
+        // that the record was successfully submitted, has no schema, and has raw data.
+        HealthDataRecord record = user.getClient(HealthDataApi.class).submitHealthData(submission).execute().body();
+        assertNotNull(record);
+        assertNull(record.getSchemaId());
+        assertNull(record.getSchemaRevision());
+        assertEquals(record.getId() + "-raw.json", record.getRawDataAttachmentId());
+    }
+
+    @Test
     public void developerCanSubmitHealthData() throws Exception {
         // make health data to submit - Use a map instead of a Jackson JSON node, because mixing JSON libraries causes
         // bad things to happen.

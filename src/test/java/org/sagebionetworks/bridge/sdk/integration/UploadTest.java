@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -77,7 +78,7 @@ public class UploadTest {
         admin = TestUserHelper.getSignedInAdmin();
 
         try {
-            admin.getClient(ForAdminsApi.class).getSubstudy(SUBSTUDY_ID).execute().body();
+            admin.getClient(ForAdminsApi.class).getSubstudy(SUBSTUDY_ID).execute();
         } catch(EntityNotFoundException e) {
             Substudy substudy = new Substudy().name(SUBSTUDY_ID).id(SUBSTUDY_ID);
             VersionHolder version = admin.getClient(ForAdminsApi.class).createSubstudy(substudy).execute().body();
@@ -91,7 +92,7 @@ public class UploadTest {
         
         ExternalIdentifier extId = new ExternalIdentifier().identifier(EXTERNAL_ID).substudyId(SUBSTUDY_ID);
         ForResearchersApi researchersApi = researcher.getClient(ForResearchersApi.class);
-        researchersApi.createExternalId(extId).execute().body();
+        researchersApi.createExternalId(extId).execute();
         
         String emailAddress = IntegTestUtils.makeEmail(UploadTest.class);
         SignUp signUp = new SignUp().email(emailAddress).password(Tests.PASSWORD);
@@ -211,7 +212,8 @@ public class UploadTest {
 
     @SuppressWarnings("RedundantCast")
     private static void testSurvey(String fileLeafName) throws Exception {
-        Map<String, Object> data = testUpload(fileLeafName);
+        HealthDataRecord record = testUpload(fileLeafName);
+        Map<String, Object> data = RestUtils.toType(record.getData(), Map.class);
         assertEquals(3, data.size());
         assertEquals("Yes", data.get("AAA"));
 
@@ -249,7 +251,8 @@ public class UploadTest {
     }
 
     private static void testNonSurvey(String fileLeafName) throws Exception {
-        Map<String, Object> data = testUpload(fileLeafName);
+        HealthDataRecord record = testUpload(fileLeafName);
+        Map<String, Object> data = RestUtils.toType(record.getData(), Map.class);
         assertEquals(5, data.size());
 
         assertEquals("1337", data.get("record.json.PPP"));
@@ -261,7 +264,17 @@ public class UploadTest {
         assertTrue(data.containsKey("record.json.HHH"));
     }
 
-    private static Map<String, Object> testUpload(String fileLeafName) throws Exception {
+    @Test
+    public void schemaless() throws Exception {
+        // Just test that the record was successfully submitted, has no schema, and has raw data.
+        HealthDataRecord record = testUpload("schemaless-encrypted");
+        assertNotNull(record);
+        assertNull(record.getSchemaId());
+        assertNull(record.getSchemaRevision());
+        assertEquals(record.getId() + "-raw.zip", record.getRawDataAttachmentId());
+    }
+
+    private static HealthDataRecord testUpload(String fileLeafName) throws Exception {
         // set up request
         File file = resolveFilePath(fileLeafName);
         
@@ -301,9 +314,7 @@ public class UploadTest {
 
         status = usersApi.getUploadStatus(session.getId()).execute().body();
         assertEquals(SynapseExporterStatus.NOT_EXPORTED, status.getRecord().getSynapseExporterStatus());
-
-        // Return data, so individual tests can validate.
-        return RestUtils.toType(record.getData(), Map.class);
+        return record;
     }
 
     @Test
