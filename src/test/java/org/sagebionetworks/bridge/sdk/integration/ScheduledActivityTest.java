@@ -821,7 +821,7 @@ public class ScheduledActivityTest {
         if (filteredList.getRequestParams() == null) {
             Tests.setVariableValueInObject(filteredList, "requestParams", results.getRequestParams());
         }
-        filteredList.items(activities);
+        Tests.setVariableValueInObject(filteredList, "items", activities);
         return filteredList;
     }
     
