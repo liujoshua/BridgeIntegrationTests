@@ -3,6 +3,9 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import com.google.common.collect.ImmutableList;
 
 import org.junit.After;
@@ -33,9 +36,11 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 public class ScheduleActivityOnceTest {
+    private static final String FILTERED_LABEL = "ScheduleActivityOnceTest";
     private TestUser admin;
     private TestUser developer;
     private TestUser user;
+    private SchedulePlan schedulePlan;
     
     @Before
     public void before() throws Exception {
@@ -47,7 +52,9 @@ public class ScheduleActivityOnceTest {
         
         SchedulePlanList list = developer.getClient(SchedulesApi.class).getSchedulePlans(true).execute().body();
         for (SchedulePlan plan : list.getItems()) {
-            admin.getClient(ForAdminsApi.class).deleteSchedulePlan(plan.getGuid(), true).execute();
+            if (plan.getLabel().contains(FILTERED_LABEL)) {
+                admin.getClient(ForAdminsApi.class).deleteSchedulePlan(plan.getGuid(), true).execute();    
+            }
         }
     }
     
@@ -63,8 +70,6 @@ public class ScheduleActivityOnceTest {
             admin.getClient(SchedulesApi.class).deleteSchedulePlan(schedulePlan.getGuid(), true).execute();
         }
     }
-    
-    private SchedulePlan schedulePlan;
     
     @Test
     public void test() throws Exception {
@@ -90,7 +95,7 @@ public class ScheduleActivityOnceTest {
         strategy.addScheduleCriteriaItem(schCriteria);
         
         schedulePlan = new SchedulePlan();
-        schedulePlan.setLabel("Label");
+        schedulePlan.setLabel(FILTERED_LABEL);
         schedulePlan.setStrategy(strategy);
         
         GuidVersionHolder keys = developer.getClient(SchedulesApi.class).createSchedulePlan(schedulePlan).execute().body();
@@ -98,8 +103,8 @@ public class ScheduleActivityOnceTest {
         schedulePlan.setVersion(keys.getVersion());
         
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
-        ScheduledActivityList first = userApi.getScheduledActivities("-07:00", 4, null).execute().body();
-        ScheduledActivityList second = userApi.getScheduledActivities("+03:00", 4, null).execute().body();
+        ScheduledActivityList first = filterList(userApi.getScheduledActivities("-07:00", 4, null).execute().body(), keys.getGuid());
+        ScheduledActivityList second = filterList(userApi.getScheduledActivities("+03:00", 4, null).execute().body(), keys.getGuid());
         assertEquals(1, first.getItems().size());
         assertEquals(1, second.getItems().size());
         
@@ -109,5 +114,12 @@ public class ScheduleActivityOnceTest {
         // The time portion should 13:11 because that's what we set, regardless of time zone.
         assertEquals("13:11:00.000", act1.getScheduledOn().toLocalTime().toString());
         assertEquals("13:11:00.000", act2.getScheduledOn().toLocalTime().toString());
+    }
+    
+    private ScheduledActivityList filterList(ScheduledActivityList list, String guid) throws Exception {
+        List<ScheduledActivity> activities = list.getItems().stream()
+                .filter((activity) -> guid.equals(activity.getSchedulePlanGuid())).collect(Collectors.toList());
+        Tests.setVariableValueInObject(list, "items", activities);
+        return list;
     }
 }
