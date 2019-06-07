@@ -4,6 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.ScheduleType.RECURRING;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import com.google.common.collect.ImmutableList;
 
 import org.joda.time.DateTime;
@@ -24,6 +27,7 @@ import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.ScheduleCriteria;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -34,6 +38,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 public class ScheduledActivityRecurringTest {
+    private static final String FILTERED_LABEL = "ScheduledActivityRecurringTest";
     private static final String M_TIME_OF_DAY = "T00:00:00.000+12:00"; // Gilbert Islands, +12:00, offset M
     private static final String Y_TIME_OF_DAY = "T00:00:00.000-12:00"; // Baker Island, -12:00, offset Y
     private static final DateTimeZone MTZ = DateTimeZone.forOffsetHours(12);
@@ -86,7 +91,7 @@ public class ScheduledActivityRecurringTest {
         strategy.addScheduleCriteriaItem(schCriteria);
         
         schedulePlan = new SchedulePlan();
-        schedulePlan.setLabel("Label");
+        schedulePlan.setLabel(FILTERED_LABEL);
         schedulePlan.setStrategy(strategy);
         
         GuidVersionHolder keys = developer.getClient(SchedulesApi.class).createSchedulePlan(schedulePlan).execute().body();
@@ -132,7 +137,8 @@ public class ScheduledActivityRecurringTest {
         String ytz4 = now.withZone(YTZ).plusDays(3).toLocalDate().toString()+Y_TIME_OF_DAY;
         
         // Get three tasks in the Gilbert Island for today and next 2 days
-        ScheduledActivityList activities = usersApi.getScheduledActivities("+12:00", 2, null).execute().body();
+        ScheduledActivityList activities = filterList(
+                usersApi.getScheduledActivities("+12:00", 2, null).execute().body(), schedulePlan.getGuid());
         assertEquals(3, activities.getItems().size());
         assertEquals(mtz1, activities.getItems().get(0).getScheduledOn().toString());
         assertEquals(mtz2, activities.getItems().get(1).getScheduledOn().toString());
@@ -141,7 +147,8 @@ public class ScheduledActivityRecurringTest {
         // Cross the dateline to the prior day. You get 4 activities (yesterday, today, tomorrow and the next day). 
         // One activity was created beyond the window, in +12:00 land.... that is not returned because although it 
         // exists, we filter it out from the persisted activities retrieved from the db.
-        activities = usersApi.getScheduledActivities("-12:00", 2, null).execute().body();
+        activities = filterList(usersApi.getScheduledActivities("-12:00", 2, null).execute().body(),
+                schedulePlan.getGuid());
         assertEquals(4, activities.getItems().size());
         assertEquals(ytz1, activities.getItems().get(0).getScheduledOn().toString());
         assertEquals(ytz2, activities.getItems().get(1).getScheduledOn().toString());
@@ -149,9 +156,10 @@ public class ScheduledActivityRecurringTest {
         assertEquals(ytz4, activities.getItems().get(3).getScheduledOn().toString());
         
         // Return to +12:00 land and ask for activites for three days, but one day in the future
-        ScheduledActivityListV4 activitiesV4 = usersApi
+        // TODO
+        ScheduledActivityListV4 activitiesV4 = filterList(usersApi
                 .getScheduledActivitiesByDateRange(now.plusDays(1).withZone(MTZ), now.plusDays(3).plusMinutes(1).withZone(MTZ))
-                .execute().body();
+                .execute().body(), schedulePlan.getGuid());
         
         // Back to 3 activities, starting with tomorrow's activity
         assertEquals(3, activitiesV4.getItems().size());
@@ -165,7 +173,8 @@ public class ScheduledActivityRecurringTest {
         usersApi.updateScheduledActivities(activitiesV4.getItems()).execute();
         
         // Now retrieve activities for today and the next three days
-        activities = usersApi.getScheduledActivities("+12:00", 3, null).execute().body();
+        activities = filterList(usersApi.getScheduledActivities("+12:00", 3, null).execute().body(),
+                schedulePlan.getGuid());
         
         // Today and three days from now are not finished and are returned
         assertEquals(2, activities.getItems().size());
@@ -173,9 +182,24 @@ public class ScheduledActivityRecurringTest {
         assertEquals(mtz4, activities.getItems().get(1).getScheduledOn().toString());
         
         // Neither of the first two tasks in -12 land (yesterday, today) are finished.
-        activities = usersApi.getScheduledActivities("-12:00", 2, null).execute().body();
+        activities = filterList(usersApi.getScheduledActivities("-12:00", 2, null).execute().body(),
+                schedulePlan.getGuid());
         assertEquals(2, activities.getItems().size());
         assertEquals(ytz1, activities.getItems().get(0).getScheduledOn().toString());
         assertEquals(ytz2, activities.getItems().get(1).getScheduledOn().toString());
+    }
+    
+    private ScheduledActivityList filterList(ScheduledActivityList list, String guid) throws Exception {
+        List<ScheduledActivity> activities = list.getItems().stream()
+                .filter((activity) -> guid.equals(activity.getSchedulePlanGuid())).collect(Collectors.toList());
+        Tests.setVariableValueInObject(list, "items", activities);
+        return list;
+    }
+
+    private ScheduledActivityListV4 filterList(ScheduledActivityListV4 list, String guid) throws Exception {
+        List<ScheduledActivity> activities = list.getItems().stream()
+                .filter((activity) -> guid.equals(activity.getSchedulePlanGuid())).collect(Collectors.toList());
+        Tests.setVariableValueInObject(list, "items", activities);
+        return list;
     }
 }
