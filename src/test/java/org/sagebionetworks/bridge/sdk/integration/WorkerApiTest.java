@@ -64,7 +64,7 @@ public class WorkerApiTest {
         developer = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, Role.DEVELOPER);
         workersApi = worker.getClient(ForWorkersApi.class);
         
-        // Turn on healthcode sharing, if need be
+        // Turn on healthcode sharing, it is usually off 
         ForAdminsApi studiesApi = admin.getClient(ForAdminsApi.class);
         Study study = studiesApi.getStudy(STUDY_ID).execute().body();
         if (!study.isHealthCodeExportEnabled()) {
@@ -79,7 +79,7 @@ public class WorkerApiTest {
             worker.signOutAndDeleteUser();
         }
 
-        // Turn off healthcode sharing, if need be
+        // Turn off healthcode sharing to clean up
         ForAdminsApi studiesApi = admin.getClient(ForAdminsApi.class);
         Study study = studiesApi.getStudy(STUDY_ID).execute().body();
         if (study.isHealthCodeExportEnabled()) {
