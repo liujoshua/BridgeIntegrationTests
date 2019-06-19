@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ActivitiesApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
@@ -35,6 +37,7 @@ import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
 import org.sagebionetworks.bridge.rest.model.SmsTemplate;
 import org.sagebionetworks.bridge.rest.model.SmsType;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -60,12 +63,28 @@ public class WorkerApiTest {
         researcher = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, Role.RESEARCHER);
         developer = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, Role.DEVELOPER);
         workersApi = worker.getClient(ForWorkersApi.class);
+        
+        // Turn on healthcode sharing, it is usually off 
+        ForAdminsApi studiesApi = admin.getClient(ForAdminsApi.class);
+        Study study = studiesApi.getStudy(STUDY_ID).execute().body();
+        if (!study.isHealthCodeExportEnabled()) {
+            study.setHealthCodeExportEnabled(true);
+            studiesApi.updateStudy(STUDY_ID, study).execute();
+        }
     }
 
     @After
     public void deleteWorker() throws Exception {
         if (worker != null) {
             worker.signOutAndDeleteUser();
+        }
+
+        // Turn off healthcode sharing to clean up
+        ForAdminsApi studiesApi = admin.getClient(ForAdminsApi.class);
+        Study study = studiesApi.getStudy(STUDY_ID).execute().body();
+        if (study.isHealthCodeExportEnabled()) {
+            study.setHealthCodeExportEnabled(false);
+            studiesApi.updateStudy(STUDY_ID, study).execute();
         }
     }
     @After
