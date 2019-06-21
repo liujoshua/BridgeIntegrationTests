@@ -103,7 +103,7 @@ public class TestSurvey {
         return rule;
     }
     
-    public static Survey getSurvey(Class<?> cls) {
+    public static Survey getSurvey(Class<?> cls) throws Exception {
         Survey survey = new Survey();
         
         SurveyQuestion multiValueQuestion = new SurveyQuestion();
@@ -127,8 +127,8 @@ public class TestSurvey {
         multiValueQuestion.setPrompt("How do you feel today?");
         multiValueQuestion.setIdentifier(MULTIVALUE_ID);
         multiValueQuestion.setUiHint(UIHint.LIST);
-        multiValueQuestion.setType("SurveyQuestion");
-        
+        Tests.setVariableValueInObject(multiValueQuestion, "type", "SurveyQuestion");
+
         SurveyQuestion stringQuestion = new SurveyQuestion();
         StringConstraints c = new StringConstraints();
         c.setMinLength(STRING_QUESTION_MIN_LENGTH);
@@ -142,7 +142,7 @@ public class TestSurvey {
         stringQuestion.setIdentifier(STRING_ID);
         stringQuestion.setConstraints(c);
         stringQuestion.setUiHint(UIHint.TEXTFIELD);
-        stringQuestion.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(stringQuestion, "type", "SurveyQuestion");
         
         SurveyQuestion booleanQuestion = new SurveyQuestion();
         BooleanConstraints c1 = new BooleanConstraints();
@@ -151,7 +151,7 @@ public class TestSurvey {
         booleanQuestion.setIdentifier(BOOLEAN_ID);
         booleanQuestion.setConstraints(c1);
         booleanQuestion.setUiHint(UIHint.CHECKBOX);
-        booleanQuestion.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(booleanQuestion, "type", "SurveyQuestion");
         
         SurveyQuestion dateQuestion = new SurveyQuestion();
         DateConstraints c2 = new DateConstraints();
@@ -163,7 +163,7 @@ public class TestSurvey {
         dateQuestion.setIdentifier(DATE_ID);
         dateQuestion.setConstraints(c2);
         dateQuestion.setUiHint(UIHint.DATEPICKER);
-        dateQuestion.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(dateQuestion, "type", "SurveyQuestion");
         
         SurveyQuestion dateTimeQuestion = new SurveyQuestion();
         DateTimeConstraints c3 = new DateTimeConstraints();
@@ -175,8 +175,8 @@ public class TestSurvey {
         dateTimeQuestion.setIdentifier(DATETIME_ID);
         dateTimeQuestion.setConstraints(c3);
         dateTimeQuestion.setUiHint(UIHint.DATETIMEPICKER);
-        dateTimeQuestion.setType("SurveyQuestion");
-        
+        Tests.setVariableValueInObject(dateTimeQuestion, "type", "SurveyQuestion");
+
         SurveyQuestion decimalQuestion = new SurveyQuestion();
         DecimalConstraints c4 = new DecimalConstraints();
         c4.setMinValue(DECIMAL_QUESTION_MIN_VALUE);
@@ -188,8 +188,8 @@ public class TestSurvey {
         decimalQuestion.setIdentifier(DECIMAL_ID);
         decimalQuestion.setConstraints(c4);
         decimalQuestion.setUiHint(UIHint.NUMBERFIELD);
-        decimalQuestion.setType("SurveyQuestion");
-        
+        Tests.setVariableValueInObject(decimalQuestion, "type", "SurveyQuestion");
+
         SurveyQuestion durationQuestion = new SurveyQuestion();
         DurationConstraints c5 = new DurationConstraints();
         c5.setMinValue(DURATION_QUESTION_MIN_VALUE);
@@ -201,7 +201,7 @@ public class TestSurvey {
         durationQuestion.setIdentifier(DURATION_ID);
         durationQuestion.setConstraints(c5);
         durationQuestion.setUiHint(UIHint.SLIDER);
-        durationQuestion.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(durationQuestion, "type", "SurveyQuestion");
         
         SurveyRule rule1 = rule(Operator.LE, "2", "phone_number");
         SurveyRule rule2 = rule(Operator.DE, null, "phone_number");
@@ -217,7 +217,7 @@ public class TestSurvey {
         integerQuestion.setIdentifier(INTEGER_ID);
         integerQuestion.setConstraints(c6);
         integerQuestion.setUiHint(UIHint.NUMBERFIELD);
-        integerQuestion.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(integerQuestion, "type", "SurveyQuestion");
         integerQuestion.setAfterRules(Lists.newArrayList(rule1, rule2));
         
         SurveyQuestion timeQuestion = new SurveyQuestion();
@@ -227,7 +227,7 @@ public class TestSurvey {
         timeQuestion.setIdentifier(TIME_ID);
         timeQuestion.setConstraints(c7);
         timeQuestion.setUiHint(UIHint.TIMEPICKER);
-        timeQuestion.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(timeQuestion, "type", "SurveyQuestion");
 
         SurveyQuestion bloodpressureQuestion = new SurveyQuestion();
         BloodPressureConstraints c8 = new BloodPressureConstraints();
@@ -237,7 +237,7 @@ public class TestSurvey {
         bloodpressureQuestion.setPrompt("What is your blood pressure?");
         bloodpressureQuestion.setIdentifier(BLOODPRESSURE_ID);
         bloodpressureQuestion.setUiHint(UIHint.BLOODPRESSURE);
-        bloodpressureQuestion.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(bloodpressureQuestion, "type", "SurveyQuestion");
 
         SurveyQuestion heightQuestion = new SurveyQuestion();
         HeightConstraints c9 = new HeightConstraints();
@@ -248,7 +248,7 @@ public class TestSurvey {
         heightQuestion.setPrompt("What is your height?");
         heightQuestion.setIdentifier(HEIGHT_ID);
         heightQuestion.setUiHint(UIHint.HEIGHT);
-        heightQuestion.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(heightQuestion, "type", "SurveyQuestion");
 
         SurveyQuestion weightQuestion = new SurveyQuestion();
         WeightConstraints c10 = new WeightConstraints();
@@ -259,7 +259,7 @@ public class TestSurvey {
         weightQuestion.setPrompt("What is your weight?");
         weightQuestion.setIdentifier(WEIGHT_ID);
         weightQuestion.setUiHint(UIHint.WEIGHT);
-        weightQuestion.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(weightQuestion, "type", "SurveyQuestion");
         
         SurveyQuestion yearMonthQuestion = new SurveyQuestion();
         YearMonthConstraints c11 = new YearMonthConstraints();
@@ -271,7 +271,7 @@ public class TestSurvey {
         yearMonthQuestion.setPrompt("What year and month?");
         yearMonthQuestion.setIdentifier(YEARMONTH_ID);
         yearMonthQuestion.setUiHint(UIHint.YEARMONTH);
-        yearMonthQuestion.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(yearMonthQuestion, "type", "SurveyQuestion");
 
         SurveyQuestion postalCodeQuestion = new SurveyQuestion();
         PostalCodeConstraints pcc = new PostalCodeConstraints();
@@ -281,8 +281,8 @@ public class TestSurvey {
         postalCodeQuestion.setPrompt("Postal code?");
         postalCodeQuestion.setIdentifier(POSTALCODE_ID);
         postalCodeQuestion.setUiHint(UIHint.POSTALCODE);
-        postalCodeQuestion.setType("SurveyQuestion");
-        
+        Tests.setVariableValueInObject(postalCodeQuestion, "type", "SurveyQuestion");
+
         survey.setName(cls.getSimpleName() + " Survey");
         survey.setIdentifier(Tests.randomIdentifier(cls));
         List<SurveyElement> elements = survey.getElements();

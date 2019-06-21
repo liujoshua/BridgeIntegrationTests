@@ -635,7 +635,7 @@ public class SurveyTest {
         screen.setTitle("Title");
         screen.setPrompt("Prompt");
         screen.setPromptDetail("Prompt detail");
-        screen.setType("SurveyInfoScreen");
+        Tests.setVariableValueInObject(survey, "type", "SurveyInfoScreen");
         
         Image image = new Image();
         image.setSource("https://pbs.twimg.com/profile_images/1642204340/ReferencePear_400x400.PNG");
@@ -652,7 +652,7 @@ public class SurveyTest {
         StringConstraints sc = new StringConstraints();
         sc.setDataType(DataType.STRING);
         question.setConstraints(sc);
-        question.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(question, "type", "SurveyQuestion");
         survey.getElements().add(question);
         
         GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, survey);
@@ -754,7 +754,7 @@ public class SurveyTest {
         question.setPrompt("Prompt");
         question.setUiHint(UIHint.TEXTFIELD);
         question.setConstraints(constraints);
-        question.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(question, "type", "SurveyQuestion");
         question.getAfterRules().add(rule); // end survey
         survey.getElements().add(question);
         

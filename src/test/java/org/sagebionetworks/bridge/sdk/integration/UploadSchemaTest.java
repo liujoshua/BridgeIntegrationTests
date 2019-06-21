@@ -173,7 +173,9 @@ public class UploadSchemaTest {
         assertSchemaFilledIn(workerSchemaV2);
 
         UploadSchema workerSchemaV2MinusStudyId = copy(null, workerSchemaV2);
-        workerSchemaV2MinusStudyId.setStudyId(null);
+        workerSchemaV2MinusStudyId.setMaxAppVersions(ImmutableMap.of());
+        workerSchemaV2MinusStudyId.setMinAppVersions(ImmutableMap.of());
+        Tests.setVariableValueInObject(workerSchemaV2MinusStudyId, "studyId", null);
         
         assertEquals(updatedSchemaV2, workerSchemaV2MinusStudyId);
 
@@ -479,7 +481,7 @@ public class UploadSchemaTest {
         schemaV2.setRevision(fetchedSchemaV1.getRevision());
         schemaV2.setSchemaId(fetchedSchemaV1.getSchemaId());
         schemaV2.setSchemaType(fetchedSchemaV1.getSchemaType());
-        schemaV2.setStudyId(fetchedSchemaV1.getStudyId());
+        Tests.setVariableValueInObject(schemaV2, "studyId", fetchedSchemaV1.getStudyId());
         schemaV2.setSurveyGuid(fetchedSchemaV1.getSurveyGuid());
         schemaV2.setSurveyCreatedOn(fetchedSchemaV1.getSurveyCreatedOn());
         schemaV2.setVersion(fetchedSchemaV1.getVersion());
@@ -605,11 +607,12 @@ public class UploadSchemaTest {
         destination.setRevision(source.getRevision());
         destination.setSchemaId(source.getSchemaId());
         destination.setSchemaType(source.getSchemaType());
-        destination.setStudyId(source.getStudyId());
+        
         destination.setSurveyCreatedOn(source.getSurveyCreatedOn());
         destination.setSurveyGuid(source.getSurveyGuid());
         destination.setDeleted(source.isDeleted());
         destination.setVersion(source.getVersion());
+        Tests.setVariableValueInObject(destination, "studyId", source.getStudyId());
         Tests.setVariableValueInObject(destination, "type", source.getType());
         return destination;
     }

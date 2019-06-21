@@ -259,7 +259,7 @@ public class SurveySchemaTest {
         q1.setUiHint(UIHint.CHECKBOX);
         q1.setPrompt("Choose one or more or fewer");
         q1.setConstraints(con);
-        q1.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(q1, "type", "SurveyQuestion");
         
         BooleanConstraints bc = new BooleanConstraints();
         bc.setDataType(DataType.BOOLEAN);
@@ -270,7 +270,7 @@ public class SurveySchemaTest {
         q2.setPrompt("Yes or No?");
         bc.setDataType(DataType.BOOLEAN);
         q2.setConstraints(bc);
-        q2.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(q2, "type", "SurveyQuestion");
 
         Survey survey = new Survey();
         survey.setName(SURVEY_NAME);
