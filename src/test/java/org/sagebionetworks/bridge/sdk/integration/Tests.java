@@ -230,14 +230,14 @@ public class Tests {
         study.setConsentNotificationEmail("bridge-testing+test2@sagebase.org");
         study.setTechnicalEmail("test3@test.com");
         study.setUsesCustomExportSchedule(true);
-        study.getUserProfileAttributes().add("new_profile_attribute");
+        study.setUserProfileAttributes(Lists.newArrayList("new_profile_attribute"));
         study.setTaskIdentifiers(Lists.newArrayList("taskA")); // setting it differently just for the heck of it 
         study.setDataGroups(Lists.newArrayList("beta_users", "production_users"));
-        study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
-        study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
-        study.setEmailSignInTemplate(Tests.TEST_EMAIL_SIGNIN_TEMPLATE);
-        study.setAccountExistsTemplate(Tests.TEST_ACCOUNT_EXISTS_TEMPLATE);
-        study.setAppInstallLinkTemplate(Tests.APP_INSTALL_LINK_TEMPLATE);
+        study.setResetPasswordTemplate(TEST_RESET_PASSWORD_TEMPLATE);
+        study.setVerifyEmailTemplate(TEST_VERIFY_EMAIL_TEMPLATE);
+        study.setEmailSignInTemplate(TEST_EMAIL_SIGNIN_TEMPLATE);
+        study.setAccountExistsTemplate(TEST_ACCOUNT_EXISTS_TEMPLATE);
+        study.setAppInstallLinkTemplate(APP_INSTALL_LINK_TEMPLATE);
         study.setResetPasswordSmsTemplate(RESET_PASSWORD_SMS_TEMPLATE);
         study.setPhoneSignInSmsTemplate(PHONE_SIGNIN_SMS_TEMPLATE);
         study.setAppInstallLinkSmsTemplate(APP_INSTALL_LINK_SMS_TEMPLATE);

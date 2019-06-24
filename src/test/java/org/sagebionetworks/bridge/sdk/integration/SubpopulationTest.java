@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
 import org.junit.After;
@@ -100,7 +101,13 @@ public class SubpopulationTest {
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));
         
         Criteria criteria = new Criteria();
-        criteria.getMinAppVersions().put("Android", 10);
+        // Set empty collections so this object is equal to the object returned by the API
+        criteria.setAllOfGroups(ImmutableList.of());
+        criteria.setNoneOfGroups(ImmutableList.of());
+        criteria.setAllOfSubstudyIds(ImmutableList.of());
+        criteria.setNoneOfSubstudyIds(ImmutableList.of());
+        criteria.setMaxAppVersions(ImmutableMap.of());        
+        criteria.setMinAppVersions(ImmutableMap.of("Android", 10));
         
         // Create a new one
         subpop1 = new Subpopulation();
@@ -191,15 +198,15 @@ public class SubpopulationTest {
         user.signOut();
         try {
             Criteria criteria1 = new Criteria();
-            criteria1.getMinAppVersions().put("Android", 0);
-            criteria1.getMaxAppVersions().put("Android", 10);
+            criteria1.setMinAppVersions(ImmutableMap.of("Android", 0));
+            criteria1.setMaxAppVersions(ImmutableMap.of("Android", 10));
             subpop1 = new Subpopulation();
             subpop1.setName("Consent Group 1");
             subpop1.setCriteria(criteria1);
             subpop1.setRequired(true);
             
             Criteria criteria2 = new Criteria();
-            criteria2.getMinAppVersions().put("Android", 11);
+            criteria2.setMinAppVersions(ImmutableMap.of("Android", 11));
             subpop2 = new Subpopulation();
             subpop2.setName("Consent Group 2");
             subpop2.setCriteria(criteria2);

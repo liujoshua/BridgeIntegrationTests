@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import retrofit2.Call;
@@ -635,7 +636,7 @@ public class SurveyTest {
         screen.setTitle("Title");
         screen.setPrompt("Prompt");
         screen.setPromptDetail("Prompt detail");
-        screen.setType("SurveyInfoScreen");
+        Tests.setVariableValueInObject(screen, "type", "SurveyInfoScreen");
         
         Image image = new Image();
         image.setSource("https://pbs.twimg.com/profile_images/1642204340/ReferencePear_400x400.PNG");
@@ -652,7 +653,7 @@ public class SurveyTest {
         StringConstraints sc = new StringConstraints();
         sc.setDataType(DataType.STRING);
         question.setConstraints(sc);
-        question.setType("SurveyQuestion");
+        Tests.setVariableValueInObject(question, "type", "SurveyQuestion");
         survey.getElements().add(question);
         
         GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, survey);
@@ -754,8 +755,8 @@ public class SurveyTest {
         question.setPrompt("Prompt");
         question.setUiHint(UIHint.TEXTFIELD);
         question.setConstraints(constraints);
-        question.setType("SurveyQuestion");
-        question.getAfterRules().add(rule); // end survey
+        Tests.setVariableValueInObject(question, "type", "SurveyQuestion");
+        question.setAfterRules(ImmutableList.of(rule)); // end survey
         survey.getElements().add(question);
         
         GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, survey);
