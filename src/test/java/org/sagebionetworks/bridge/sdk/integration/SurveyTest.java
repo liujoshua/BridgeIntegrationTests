@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import retrofit2.Call;
@@ -755,7 +756,7 @@ public class SurveyTest {
         question.setUiHint(UIHint.TEXTFIELD);
         question.setConstraints(constraints);
         Tests.setVariableValueInObject(question, "type", "SurveyQuestion");
-        question.getAfterRules().add(rule); // end survey
+        question.setAfterRules(ImmutableList.of(rule)); // end survey
         survey.getElements().add(question);
         
         GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, survey);

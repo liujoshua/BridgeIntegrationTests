@@ -217,8 +217,8 @@ public class TestSurvey {
         integerQuestion.setIdentifier(INTEGER_ID);
         integerQuestion.setConstraints(c6);
         integerQuestion.setUiHint(UIHint.NUMBERFIELD);
-        Tests.setVariableValueInObject(integerQuestion, "type", "SurveyQuestion");
         integerQuestion.setAfterRules(Lists.newArrayList(rule1, rule2));
+        Tests.setVariableValueInObject(integerQuestion, "type", "SurveyQuestion");
         
         SurveyQuestion timeQuestion = new SurveyQuestion();
         TimeConstraints c7 = new TimeConstraints();

@@ -607,12 +607,13 @@ public class UploadSchemaTest {
         destination.setRevision(source.getRevision());
         destination.setSchemaId(source.getSchemaId());
         destination.setSchemaType(source.getSchemaType());
-        
         destination.setSurveyCreatedOn(source.getSurveyCreatedOn());
         destination.setSurveyGuid(source.getSurveyGuid());
         destination.setDeleted(source.isDeleted());
         destination.setVersion(source.getVersion());
         Tests.setVariableValueInObject(destination, "studyId", source.getStudyId());
+        destination.setMinAppVersions(source.getMinAppVersions());
+        destination.setMaxAppVersions(source.getMaxAppVersions());
         Tests.setVariableValueInObject(destination, "type", source.getType());
         return destination;
     }

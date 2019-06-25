@@ -48,6 +48,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -166,7 +167,7 @@ public class AppConfigTest {
         participant.setExternalId("externalId");
         
         Criteria criteria = new Criteria();
-        criteria.getMaxAppVersions().put("Android", 10);
+        criteria.setMaxAppVersions(ImmutableMap.of("Android", 10));
         
         AppConfig appConfig = new AppConfig();
         appConfig.setLabel(Tests.randomIdentifier(AppConfigTest.class));
