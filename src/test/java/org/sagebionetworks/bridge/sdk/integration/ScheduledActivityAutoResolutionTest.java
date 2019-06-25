@@ -332,8 +332,8 @@ public class ScheduledActivityAutoResolutionTest {
     private GuidCreatedOnVersionHolder createSimpleSurvey() throws Exception {
         Constraints constraints = new IntegerConstraints().dataType(DataType.INTEGER);
         SurveyElement surveyQuestion = new SurveyQuestion().constraints(constraints)
-                .prompt("Pick a Number").uiHint(UIHint.NUMBERFIELD).identifier("test-survey-q")
-                .type("SurveyQuestion");
+                .prompt("Pick a Number").uiHint(UIHint.NUMBERFIELD).identifier("test-survey-q");
+        Tests.setVariableValueInObject(surveyQuestion, "type", "SurveyQuestion");
         Survey survey = new Survey().name(surveyId).identifier(surveyId).addElementsItem(surveyQuestion);
         return surveyApi.createSurvey(survey).execute().body();
     }

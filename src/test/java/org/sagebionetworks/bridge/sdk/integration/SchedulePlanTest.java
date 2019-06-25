@@ -40,6 +40,7 @@ import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
@@ -215,13 +216,20 @@ public class SchedulePlanTest {
             schedule2.setActivities(Lists.newArrayList(activity));
             
             Criteria criteria1 = new Criteria();
-            
-            criteria1.setMinAppVersions(new ImmutableMap.Builder<String, Integer>().put("Android", 2).build());
-            criteria1.setMaxAppVersions(new ImmutableMap.Builder<String, Integer>().put("Android", 5).build());
+            criteria1.setMinAppVersions(ImmutableMap.of("Android", 2));
+            criteria1.setMaxAppVersions(ImmutableMap.of("Android", 5));
+            criteria1.setAllOfGroups(ImmutableList.of());
+            criteria1.setNoneOfGroups(ImmutableList.of());
+            criteria1.setAllOfSubstudyIds(ImmutableList.of());
+            criteria1.setNoneOfSubstudyIds(ImmutableList.of());
             
             Criteria criteria2 = new Criteria();
-            criteria2.setMinAppVersions(new ImmutableMap.Builder<String, Integer>().put("Android", 6).build());
-            criteria2.setMaxAppVersions(new ImmutableMap.Builder<String, Integer>().put("Android", 10).build());
+            criteria2.setMinAppVersions(ImmutableMap.of("Android", 6));
+            criteria2.setMaxAppVersions(ImmutableMap.of("Android", 10));
+            criteria2.setAllOfGroups(ImmutableList.of());
+            criteria2.setNoneOfGroups(ImmutableList.of());
+            criteria2.setAllOfSubstudyIds(ImmutableList.of());
+            criteria2.setNoneOfSubstudyIds(ImmutableList.of());
             
             ScheduleCriteria scheduleCriteria1 = new ScheduleCriteria();
             scheduleCriteria1.setCriteria(criteria1);
