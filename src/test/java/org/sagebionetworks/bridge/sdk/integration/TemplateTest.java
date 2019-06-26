@@ -6,7 +6,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.TemplateType.EMAIL_ACCOUNT_EXISTS;
-import static org.sagebionetworks.bridge.rest.model.TemplateType.SMS_APP_INSTALL_LINK;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -41,7 +40,11 @@ public class TemplateTest {
         // in case of earlier test failure, clean up
         if (template != null && template.getGuid() != null) {
             ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
-            adminsApi.deleteTemplate(template.getGuid(), true).execute();
+            try {
+                adminsApi.deleteTemplate(template.getGuid(), true).execute();    
+            } catch(EntityNotFoundException e) {
+                // this is okay
+            }
         }
         developer.signOutAndDeleteUser();
     }
