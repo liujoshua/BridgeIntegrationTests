@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -7,6 +8,10 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.TemplateType.EMAIL_ACCOUNT_EXISTS;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import org.junit.After;
@@ -48,7 +53,7 @@ public class TemplateTest {
         }
         developer.signOutAndDeleteUser();
     }
-    
+
     @Test
     public void crudTemplate() throws Exception {
         Criteria criteria = new Criteria();
@@ -118,18 +123,14 @@ public class TemplateTest {
         retrieved = devsApi.getTemplate(template.getGuid()).execute().body();
         assertTrue(retrieved.isDeleted());
         
-        // get a page of templates with logical deletes
+        // get a page of templates without logical deletes
         TemplateList list = devsApi.getTemplates(EMAIL_ACCOUNT_EXISTS.name(), null, null, false).execute()
                 .body();
-        assertTrue(list.getItems().isEmpty());
+        assertTrue(list.getItems().stream().noneMatch((template -> template.getGuid().equals(template.getGuid()))));
         
-        // get a page of templates without logical deletes
+        // get a page of templates with logical deletes
         list = devsApi.getTemplates(EMAIL_ACCOUNT_EXISTS.name(), null, null, true).execute().body();
-        
-        final String guid = keys.getGuid(); 
-        if (!list.getItems().stream().anyMatch(template -> template.getGuid().equals(guid))) {
-            fail("Should have found template");
-        }
+        assertTrue(list.getItems().stream().anyMatch((template -> template.getGuid().equals(template.getGuid()))));
         
         // physically delete
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
