@@ -128,7 +128,7 @@ public class TestSurvey {
         multiValueQuestion.setIdentifier(MULTIVALUE_ID);
         multiValueQuestion.setUiHint(UIHint.LIST);
         Tests.setVariableValueInObject(multiValueQuestion, "type", "SurveyQuestion");
-        
+
         SurveyQuestion stringQuestion = new SurveyQuestion();
         StringConstraints c = new StringConstraints();
         c.setMinLength(STRING_QUESTION_MIN_LENGTH);
@@ -176,7 +176,7 @@ public class TestSurvey {
         dateTimeQuestion.setConstraints(c3);
         dateTimeQuestion.setUiHint(UIHint.DATETIMEPICKER);
         Tests.setVariableValueInObject(dateTimeQuestion, "type", "SurveyQuestion");
-        
+
         SurveyQuestion decimalQuestion = new SurveyQuestion();
         DecimalConstraints c4 = new DecimalConstraints();
         c4.setMinValue(DECIMAL_QUESTION_MIN_VALUE);
@@ -189,7 +189,7 @@ public class TestSurvey {
         decimalQuestion.setConstraints(c4);
         decimalQuestion.setUiHint(UIHint.NUMBERFIELD);
         Tests.setVariableValueInObject(decimalQuestion, "type", "SurveyQuestion");
-        
+
         SurveyQuestion durationQuestion = new SurveyQuestion();
         DurationConstraints c5 = new DurationConstraints();
         c5.setMinValue(DURATION_QUESTION_MIN_VALUE);
@@ -282,7 +282,7 @@ public class TestSurvey {
         postalCodeQuestion.setIdentifier(POSTALCODE_ID);
         postalCodeQuestion.setUiHint(UIHint.POSTALCODE);
         Tests.setVariableValueInObject(postalCodeQuestion, "type", "SurveyQuestion");
-        
+
         survey.setName(cls.getSimpleName() + " Survey");
         survey.setIdentifier(Tests.randomIdentifier(cls));
         List<SurveyElement> elements = survey.getElements();

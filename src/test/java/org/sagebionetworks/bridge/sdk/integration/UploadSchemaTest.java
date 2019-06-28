@@ -173,6 +173,8 @@ public class UploadSchemaTest {
         assertSchemaFilledIn(workerSchemaV2);
 
         UploadSchema workerSchemaV2MinusStudyId = copy(null, workerSchemaV2);
+        workerSchemaV2MinusStudyId.setMaxAppVersions(ImmutableMap.of());
+        workerSchemaV2MinusStudyId.setMinAppVersions(ImmutableMap.of());
         Tests.setVariableValueInObject(workerSchemaV2MinusStudyId, "studyId", null);
         
         assertEquals(updatedSchemaV2, workerSchemaV2MinusStudyId);
@@ -605,11 +607,11 @@ public class UploadSchemaTest {
         destination.setRevision(source.getRevision());
         destination.setSchemaId(source.getSchemaId());
         destination.setSchemaType(source.getSchemaType());
-        Tests.setVariableValueInObject(destination, "studyId", source.getStudyId());
         destination.setSurveyCreatedOn(source.getSurveyCreatedOn());
         destination.setSurveyGuid(source.getSurveyGuid());
         destination.setDeleted(source.isDeleted());
         destination.setVersion(source.getVersion());
+        Tests.setVariableValueInObject(destination, "studyId", source.getStudyId());
         destination.setMinAppVersions(source.getMinAppVersions());
         destination.setMaxAppVersions(source.getMaxAppVersions());
         Tests.setVariableValueInObject(destination, "type", source.getType());

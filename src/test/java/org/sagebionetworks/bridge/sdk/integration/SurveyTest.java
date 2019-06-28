@@ -636,7 +636,7 @@ public class SurveyTest {
         screen.setTitle("Title");
         screen.setPrompt("Prompt");
         screen.setPromptDetail("Prompt detail");
-        Tests.setVariableValueInObject(screen, "type", "SurveyInfoScreen");
+        Tests.setVariableValueInObject(survey, "type", "SurveyInfoScreen");
         
         Image image = new Image();
         image.setSource("https://pbs.twimg.com/profile_images/1642204340/ReferencePear_400x400.PNG");
