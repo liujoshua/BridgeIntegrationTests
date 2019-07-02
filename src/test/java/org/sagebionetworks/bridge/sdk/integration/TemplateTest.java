@@ -1,19 +1,16 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
-import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.MimeType.TEXT_PLAIN;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.TemplateType.EMAIL_ACCOUNT_EXISTS;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,6 +22,8 @@ import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Template;
 import org.sagebionetworks.bridge.rest.model.TemplateList;
+import org.sagebionetworks.bridge.rest.model.TemplateRevision;
+import org.sagebionetworks.bridge.rest.model.TemplateRevisionList;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -144,5 +143,52 @@ public class TemplateTest {
 
         }
     }
+    
+    @Test
+    public void templateRevisionTest() throws Exception {
+        template = new Template();
+        template.setName("TestTemplate Name");
+        template.setDescription("TestTemplate Description");
+        template.setTemplateType(EMAIL_ACCOUNT_EXISTS);
 
+        ForDevelopersApi devsApi = developer.getClient(ForDevelopersApi.class);
+        
+        GuidVersionHolder keys = devsApi.createTemplate(template).execute().body();
+        template.setGuid(keys.getGuid());
+        template.setVersion(keys.getVersion());
+        
+        TemplateRevision revision1 = new TemplateRevision();
+        revision1.setSubject("Subject 1");
+        revision1.setDocumentContent("Content 1");
+        revision1.setMimeType(TEXT_PLAIN);
+        DateTime timestamp1 = devsApi.createTemplateRevision(template.getGuid(), revision1).execute().body().getCreatedOn();
+        
+        TemplateRevision revision2 = new TemplateRevision();
+        revision2.setSubject("Subject 2");
+        revision2.setDocumentContent("Content 2");
+        revision2.setMimeType(TEXT_PLAIN);
+        DateTime timestamp2 = devsApi.createTemplateRevision(template.getGuid(), revision2).execute().body().getCreatedOn();
+        
+        TemplateRevisionList list = devsApi.getTemplateRevisions(template.getGuid(), 0, 5).execute().body();
+        assertEquals(list.getItems().size(), 2);
+        
+        // publish the second one.
+        TemplateRevision pubRevision = devsApi.getTemplateRevision(
+                template.getGuid(), list.getItems().get(1).getCreatedOn()).execute().body();
+        assertEquals("Subject 1", pubRevision.getSubject());
+        assertEquals("Content 1", pubRevision.getDocumentContent());
+        assertEquals(developer.getUserId(), pubRevision.getCreatedBy());
+        assertEquals(TEXT_PLAIN, pubRevision.getMimeType());
+        assertEquals(timestamp1, pubRevision.getCreatedOn());
+        
+        devsApi.publishTemplateRevision(template.getGuid(), timestamp1).execute();
+        
+        Template retrieved = devsApi.getTemplate(template.getGuid()).execute().body();
+        assertEquals(retrieved.getPublishedCreatedOn(), timestamp1);
+        
+        // Finally, we can move the publication timestamp.
+        devsApi.publishTemplateRevision(template.getGuid(), timestamp2).execute();
+        retrieved = devsApi.getTemplate(template.getGuid()).execute().body();
+        assertEquals(retrieved.getPublishedCreatedOn(), timestamp2);
+    }
 }
