@@ -1,12 +1,20 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static java.lang.Boolean.TRUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.AccountStatus.DISABLED;
+import static org.sagebionetworks.bridge.rest.model.AccountStatus.ENABLED;
+import static org.sagebionetworks.bridge.rest.model.AccountStatus.UNVERIFIED;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
+import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
@@ -31,6 +39,7 @@ import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
@@ -69,15 +78,22 @@ import java.util.stream.Collectors;
 
 public class ParticipantsTest {
     private TestUser admin;
+    private TestUser developer;
     private TestUser researcher;
     private TestUser phoneUser;
     private TestUser emailUser;
+    private ExternalIdentifier externalId;
     
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(Role.RESEARCHER).withConsentUser(true)
-                .withExternalId(Tests.randomIdentifier(ParticipantsTest.class)).createAndSignInUser();
+        developer = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(Role.DEVELOPER).withConsentUser(true)
+                .createAndSignInUser();
+        researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(RESEARCHER).withConsentUser(true)
+                .createAndSignInUser();
+        
+        externalId = Tests.createExternalId(ParticipantsTest.class, developer);
+        
         IntegTestUtils.deletePhoneUser(researcher);
         
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
@@ -91,6 +107,10 @@ public class ParticipantsTest {
     
     @After
     public void after() throws Exception {
+        Tests.deleteExternalId(externalId);
+        if (developer != null) {
+            developer.signOutAndDeleteUser();
+        }
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
         }
@@ -120,7 +140,7 @@ public class ParticipantsTest {
 
             self.setLanguages(set);
             self.setDataGroups(Lists.newArrayList("group1"));
-            self.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
+            self.setSharingScope(ALL_QUALIFIED_RESEARCHERS);
             self.setNotifyByEmail(null); // BRIDGE-1604: should use default value: true
             
             List<String> clientData = new ArrayList<>();
@@ -140,7 +160,7 @@ public class ParticipantsTest {
             assertEquals("C", capturedData.get(2));
             
             self = userApi.getUsersParticipantRecord(false).execute().body();
-            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
+            assertEquals(ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
             assertEquals(Lists.newArrayList("group1"), self.getDataGroups());
             assertTrue(self.isNotifyByEmail());  // BRIDGE-1604: true value returned
             
@@ -157,31 +177,39 @@ public class ParticipantsTest {
     
     @Test
     public void retrieveParticipant() throws Exception {
-        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        TestUser user = new TestUserHelper.Builder(ParticipantsTest.class)
+                .withExternalId(externalId.getIdentifier()).createAndSignInUser();
+        
+        ParticipantsApi researcherParticipantsApi = researcher.getClient(ParticipantsApi.class);
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         Study study = adminApi.getStudy(admin.getStudyId()).execute().body();
+        
         try {
             study.setHealthCodeExportEnabled(true);
             VersionHolder version = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
             study.version(version.getVersion());
             
-            StudyParticipant participant = participantsApi.getParticipantById(researcher.getSession().getId(), true).execute().body();
+            StudyParticipant participant = researcherParticipantsApi.getParticipantById(
+                    user.getSession().getId(), true).execute().body();
             // Verify that what we know about this test user exists in the record
-            assertEquals(researcher.getEmail(), participant.getEmail());
-            assertEquals(researcher.getSession().getId(), participant.getId());
-            assertTrue(participant.getRoles().contains(Role.RESEARCHER));
-            assertFalse(participant.getConsentHistories().get("api").isEmpty());
+            assertEquals(user.getEmail(), participant.getEmail());
+            assertEquals(user.getSession().getId(), participant.getId());
+            assertFalse(participant.getConsentHistories().isEmpty());
             
-            StudyParticipant participant2 = participantsApi.getParticipantByHealthCode(participant.getHealthCode(), false).execute().body();
-            assertEquals(participant.getId(), participant2.getId());
-            assertNull(participant2.getConsentHistories().get("api"));
+            StudyParticipant participant2 = researcherParticipantsApi.getParticipantByHealthCode(
+                    participant.getHealthCode(), false).execute().body();
+            assertEquals(user.getEmail(), participant2.getEmail());
+            assertEquals(user.getSession().getId(), participant2.getId());
+            assertTrue(participant2.getConsentHistories().isEmpty());
             
             // Get this participant using an external ID
-            StudyParticipant participant3 = participantsApi
-                    .getParticipantByExternalId(participant.getExternalId(), false).execute().body();
-            assertEquals(participant.getId(), participant3.getId());
-            assertNull(participant3.getConsentHistories().get("api"));
+            StudyParticipant participant3 = researcherParticipantsApi.getParticipantByExternalId(
+                    participant.getExternalId(), false).execute().body();
+            assertEquals(user.getEmail(), participant3.getEmail());
+            assertEquals(user.getSession().getId(), participant3.getId());
+            assertTrue(participant2.getConsentHistories().isEmpty());
         } finally {
+            user.signOutAndDeleteUser();
             study.setHealthCodeExportEnabled(false);
             VersionHolder version = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
             study.version(version.getVersion());
@@ -267,13 +295,13 @@ public class ParticipantsTest {
         participant.setLastName("LastName");
         participant.setPassword("P@ssword1!");
         participant.setEmail(email);
-        participant.setPhone(IntegTestUtils.PHONE);
-        participant.setExternalId("externalID");
-        participant.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
+        participant.setPhone(PHONE);
+        participant.setExternalId(externalId.getIdentifier());
+        participant.setSharingScope(ALL_QUALIFIED_RESEARCHERS);
         // BRIDGE-1604: leave notifyByEmail to its default value (should be true)
         participant.setDataGroups(dataGroups);
         participant.setLanguages(languages);
-        participant.setStatus(AccountStatus.DISABLED); // should be ignored
+        participant.setStatus(DISABLED); // should be ignored
         participant.setAttributes(attributes);
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
@@ -296,17 +324,17 @@ public class ParticipantsTest {
             assertEquals("FirstName", retrieved.getFirstName());
             assertEquals("LastName", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail());
-            assertEquals("externalID", retrieved.getExternalId());
-            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
+            assertEquals(externalId.getIdentifier(), retrieved.getExternalId());
+            assertEquals(ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
             assertTrue(retrieved.isNotifyByEmail());
             assertListsEqualIgnoringOrder(dataGroups, retrieved.getDataGroups());
             assertListsEqualIgnoringOrder(languages, retrieved.getLanguages());
             assertEquals(attributes.get("can_be_recontacted"), retrieved.getAttributes().get("can_be_recontacted"));
-            assertEquals(AccountStatus.UNVERIFIED, retrieved.getStatus());
+            assertEquals(UNVERIFIED, retrieved.getStatus());
             assertNotNull(retrieved.getCreatedOn());
             assertNotNull(retrieved.getId());
             Phone retrievedPhone = retrieved.getPhone();
-            assertEquals(IntegTestUtils.PHONE.getNumber(), retrievedPhone.getNumber());
+            assertEquals(PHONE.getNumber(), retrievedPhone.getNumber());
             // Tests.PHONE.getNationalFormat() isn't formatted on the client, so we have to hard-code it.
             assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
             assertEquals("US", retrievedPhone.getRegionCode());
@@ -323,16 +351,15 @@ public class ParticipantsTest {
             newParticipant.setFirstName("FirstName2");
             newParticipant.setLastName("LastName2");
             newParticipant.setEmail(email);
-            newParticipant.setExternalId("externalID2");
-            newParticipant.setSharingScope(SharingScope.NO_SHARING);
+            newParticipant.setSharingScope(NO_SHARING);
             newParticipant.setNotifyByEmail(null);
             newParticipant.setDataGroups(newDataGroups);
             newParticipant.setLanguages(newLanguages);
             newParticipant.setAttributes(newAttributes);
-            newParticipant.setStatus(AccountStatus.ENABLED);
+            newParticipant.setStatus(ENABLED);
             // This should not work.
-            newParticipant.setEmailVerified(Boolean.TRUE);
-            newParticipant.setPhoneVerified(Boolean.TRUE);
+            newParticipant.setEmailVerified(TRUE);
+            newParticipant.setPhoneVerified(TRUE);
             Phone newPhone = new Phone().number("4152588569").regionCode("CA");
             newParticipant.setPhone(newPhone);
             
@@ -347,20 +374,19 @@ public class ParticipantsTest {
             assertEquals("LastName2", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail()); // This cannot be updated
             retrievedPhone = retrieved.getPhone();
-            assertEquals(IntegTestUtils.PHONE.getNumber(), retrievedPhone.getNumber()); // This cannot be updated
+            assertEquals(PHONE.getNumber(), retrievedPhone.getNumber()); // This cannot be updated
             assertEquals("US", retrievedPhone.getRegionCode());
             assertEquals("(971) 248-6796", retrievedPhone.getNationalFormat());
             assertFalse(retrieved.isEmailVerified());
             assertFalse(retrieved.isPhoneVerified());
-            assertEquals("externalID2", retrieved.getExternalId());
-            assertEquals(SharingScope.NO_SHARING, retrieved.getSharingScope());
+            assertEquals(NO_SHARING, retrieved.getSharingScope());
             // BRIDGE-1604: should still be true, even though it was not sent to the server. Through participants API 
             assertTrue(retrieved.isNotifyByEmail());
             assertListsEqualIgnoringOrder(newDataGroups, retrieved.getDataGroups());
             assertListsEqualIgnoringOrder(newLanguages, retrieved.getLanguages());
             assertEquals(id, retrieved.getId());
             assertEquals(newAttributes.get("can_be_recontacted"), retrieved.getAttributes().get("can_be_recontacted"));
-            assertEquals(AccountStatus.UNVERIFIED, retrieved.getStatus()); // researchers cannot enable users
+            assertEquals(UNVERIFIED, retrieved.getStatus()); // researchers cannot enable users
             assertEquals(createdOn, retrieved.getCreatedOn()); // hasn't been changed, still exists
         } finally {
             if (id != null) {

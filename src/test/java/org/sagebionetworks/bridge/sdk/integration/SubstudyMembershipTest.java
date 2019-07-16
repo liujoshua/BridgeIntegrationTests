@@ -50,7 +50,6 @@ public class SubstudyMembershipTest {
 
         Study study = admin.getClient(ForAdminsApi.class).getUsersStudy().execute().body();
         study.setExternalIdRequiredOnSignup(true);
-        study.setExternalIdValidationEnabled(true);
         admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute();
 
         substudyIdsToDelete = new HashSet<>();
@@ -63,7 +62,6 @@ public class SubstudyMembershipTest {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         Study study = adminsApi.getUsersStudy().execute().body();
         study.setExternalIdRequiredOnSignup(false);
-        study.setExternalIdValidationEnabled(false);
         admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute();
 
         // This can only happen after external ID management is disabled.

@@ -1,6 +1,5 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
-import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -8,10 +7,6 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.TemplateType.EMAIL_ACCOUNT_EXISTS;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import org.junit.After;

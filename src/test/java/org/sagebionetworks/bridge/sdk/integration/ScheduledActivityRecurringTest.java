@@ -62,9 +62,8 @@ public class ScheduledActivityRecurringTest {
                 .createAndSignInUser();
         
         Study study = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
-        if (study.isExternalIdRequiredOnSignup() || study.isExternalIdValidationEnabled() || !study.getActivityEventKeys().contains(CUSTOM_EVENT)) {
+        if (study.isExternalIdRequiredOnSignup() || !study.getActivityEventKeys().contains(CUSTOM_EVENT)) {
             study.setExternalIdRequiredOnSignup(false);
-            study.setExternalIdValidationEnabled(false);
             study.getActivityEventKeys().add(CUSTOM_EVENT);
             
             VersionHolder version = admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute().body();

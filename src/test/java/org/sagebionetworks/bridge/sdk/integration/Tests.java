@@ -16,6 +16,9 @@ import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 
+import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.model.ABTestGroup;
 import org.sagebionetworks.bridge.rest.model.ABTestScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.Activity;
@@ -23,6 +26,7 @@ import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
 import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.EmailTemplate;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.MimeType;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Schedule;
@@ -33,7 +37,11 @@ import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.SmsTemplate;
 import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.Substudy;
+import org.sagebionetworks.bridge.rest.model.SubstudyList;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
+import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class Tests {
@@ -45,6 +53,7 @@ public class Tests {
     public static final String FINGERPRINT = "14:6D:E9:83:C5:73:06:50:D8:EE:B9:95:2F:34:FC:64:16:A0:83:42:E6:1D:BE:A8:8A:04:96:B2:3F:CF:44:E5";
     public static final String APP_NAME = "Integration Tests";
     public static final String PASSWORD = "P@ssword`1";
+    public static final String SUBSTUDY_ID = "test-substudy";
 
     public static final EmailTemplate TEST_RESET_PASSWORD_TEMPLATE = new EmailTemplate().subject("Reset your password")
         .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
@@ -316,5 +325,28 @@ public class Tests {
             }
         }
         return retValue;
+    }
+
+    public static ExternalIdentifier createExternalId(Class<?> clazz, TestUser developer) throws Exception {
+        String externalId = Tests.randomIdentifier(clazz);
+        
+        SubstudiesApi substudiesApi = developer.getClient(SubstudiesApi.class);
+        SubstudyList substudyList = substudiesApi.getSubstudies(false).execute().body();
+        if (substudyList.getItems().isEmpty()) {
+            Substudy substudy = new Substudy().id(SUBSTUDY_ID).name(SUBSTUDY_ID);
+            substudiesApi.createSubstudy(substudy).execute();
+            substudyList = substudiesApi.getSubstudies(false).execute().body();
+        }
+        String substudyId = substudyList.getItems().get(0).getId();
+        
+        ExternalIdentifier externalIdentifier = new ExternalIdentifier().identifier(externalId).substudyId(substudyId);
+        int code = developer.getClient(ExternalIdentifiersApi.class).createExternalId(externalIdentifier).execute().code();
+        assertEquals(code, 201);
+        return externalIdentifier;
+    }
+    
+    public static void deleteExternalId(ExternalIdentifier externalId) throws Exception {
+        TestUser admin = TestUserHelper.getSignedInAdmin();
+        admin.getClient(ForAdminsApi.class).deleteExternalId(externalId.getIdentifier()).execute();
     }    
 }
