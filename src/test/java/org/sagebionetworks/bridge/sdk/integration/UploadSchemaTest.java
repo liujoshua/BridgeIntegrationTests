@@ -6,6 +6,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,7 +38,6 @@ import org.sagebionetworks.bridge.rest.exceptions.ConcurrentModificationExceptio
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
-import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
@@ -52,6 +54,7 @@ public class UploadSchemaTest {
     private static TestUserHelper.TestUser developer;
     private static TestUserHelper.TestUser user;
     private static TestUserHelper.TestUser worker;
+    private static TestUserHelper.TestUser sharedDeveloper;
     private static ForAdminsApi adminApi;
     private static UploadSchemasApi devUploadSchemasApi;
     private static ForWorkersApi workerUploadSchemasApi;
@@ -63,10 +66,10 @@ public class UploadSchemaTest {
     @BeforeClass
     public static void beforeClass() throws Exception {
         TestUserHelper.TestUser admin = TestUserHelper.getSignedInAdmin();
-        developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, DEVELOPER);
         user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
-        worker = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, Role.WORKER);
-        TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
+        worker = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, WORKER);
+        sharedDeveloper = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, SHARED_STUDY_ID, DEVELOPER);
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
 
         adminApi = admin.getClient(ForAdminsApi.class);

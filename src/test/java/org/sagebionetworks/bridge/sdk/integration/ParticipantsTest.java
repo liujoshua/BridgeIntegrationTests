@@ -199,11 +199,11 @@ public class ParticipantsTest {
         DateTime oldest = summaries.getItems().get(0).getCreatedOn();
         DateTime newest = summaries.getItems().get(summaries.getItems().size()-1).getCreatedOn();
         
-        // Well we know there's at least two accounts... the admin and the researcher.
+        // Well we know there's at least the bootstrap admin account
         assertEquals(0, summaries.getRequestParams().getOffsetBy().intValue());
         assertEquals(10, summaries.getRequestParams().getPageSize().intValue());
         assertTrue(summaries.getItems().size() <= summaries.getTotal());
-        assertTrue(summaries.getItems().size() > 2);
+        assertTrue(summaries.getItems().size() > 1);
         
         AccountSummary summary = summaries.getItems().get(0);
         assertNotNull(summary.getCreatedOn());

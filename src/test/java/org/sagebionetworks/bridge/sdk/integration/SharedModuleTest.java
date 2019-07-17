@@ -3,10 +3,13 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -44,10 +47,10 @@ public class SharedModuleTest {
     private Survey localSurvey;
 
     @BeforeClass
-    public static void beforeClass() {
+    public static void beforeClass() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        apiDeveloper = TestUserHelper.getSignedInApiDeveloper();
-        sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
+        apiDeveloper = TestUserHelper.createAndSignInUser(SharedModuleTest.class, false, DEVELOPER);
+        sharedDeveloper = TestUserHelper.createAndSignInUser(SharedModuleTest.class, SHARED_STUDY_ID, DEVELOPER);
     }
 
     @Before
@@ -58,6 +61,16 @@ public class SharedModuleTest {
         localSchema = null;
         sharedSurvey = null;
         localSurvey = null;
+    }
+    
+    @AfterClass
+    public static void afterClass() throws Exception {
+        if (apiDeveloper != null) {
+            apiDeveloper.signOutAndDeleteUser();
+        }
+        if (sharedDeveloper != null) {
+            sharedDeveloper.signOutAndDeleteUser();
+        }
     }
 
     @After
