@@ -113,6 +113,13 @@ public class UploadSchemaTest {
             worker.signOutAndDeleteUser();
         }
     }
+    
+    @AfterClass
+    public static void deleteSharedDeveloper() throws Exception {
+        if (sharedDeveloper != null) {
+            sharedDeveloper.signOutAndDeleteUser();
+        }
+    }
 
     @Test
     public void testDeleteWithSharedModule() throws Exception {
