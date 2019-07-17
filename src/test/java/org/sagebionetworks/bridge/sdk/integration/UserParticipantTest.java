@@ -5,8 +5,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -15,6 +15,7 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -88,27 +89,36 @@ public class UserParticipantTest {
 
     @Test
     public void canAddButNotChangeExternalIdentifier() throws Exception {
-        ForConsentedUsersApi usersApi = developer.getClient(ForConsentedUsersApi.class);
-
-        StudyParticipant participant = usersApi.getUsersParticipantRecord(false).execute().body();
-        participant.setExternalId("ABC-123-XYZ");
-
-        usersApi.updateUsersParticipantRecord(participant).execute();
-
-        participant = usersApi.getUsersParticipantRecord(false).execute().body();
-        assertEquals(developer.getEmail(), participant.getEmail());
-        assertEquals("ABC-123-XYZ", participant.getExternalId());
+        ExternalIdentifier externalId1 = Tests.createExternalId(UserParticipantTest.class, developer);
+        ExternalIdentifier externalId2 = Tests.createExternalId(UserParticipantTest.class, developer);
         
-        participant.setExternalId("ThisWillNotWork");
-        usersApi.updateUsersParticipantRecord(participant).execute();
+        TestUser user = TestUserHelper.createAndSignInUser(UserParticipantTest.class, true);
+        try {
+            ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+            StudyParticipant participant = usersApi.getUsersParticipantRecord(false).execute().body();
+            participant.setExternalId(externalId1.getIdentifier());
 
-        participant = usersApi.getUsersParticipantRecord(false).execute().body();
-        assertEquals("ABC-123-XYZ", participant.getExternalId());
+            usersApi.updateUsersParticipantRecord(participant).execute();
+
+            participant = usersApi.getUsersParticipantRecord(false).execute().body();
+            assertEquals(user.getEmail(), participant.getEmail());
+            assertEquals(externalId1.getIdentifier(), participant.getExternalId());
+            
+            participant.setExternalId(externalId2.getIdentifier());
+            usersApi.updateUsersParticipantRecord(participant).execute();
+
+            participant = usersApi.getUsersParticipantRecord(false).execute().body();
+            assertEquals(externalId1.getIdentifier(), participant.getExternalId());
+        } finally {
+            Tests.deleteExternalId(externalId1);
+            Tests.deleteExternalId(externalId2);
+            user.signOutAndDeleteUser();
+        }
     }
     
     @Test
     public void canUpdateDataGroups() throws Exception {
-        List<String> dataGroups = Lists.newArrayList("sdk-int-1", "sdk-int-2");
+        List<String> dataGroups = ImmutableList.of("sdk-int-1", "sdk-int-2");
 
         ForConsentedUsersApi usersApi = developer.getClient(ForConsentedUsersApi.class);
 
@@ -123,7 +133,7 @@ public class UserParticipantTest {
         assertListsEqualIgnoringOrder(dataGroups, participant.getDataGroups());
 
         // now clear the values, it should be possible to remove them.
-        participant.setDataGroups(Lists.newArrayList());
+        participant.setDataGroups(ImmutableList.of());
         usersApi.updateUsersParticipantRecord(participant).execute();
         
         developer.signOut();

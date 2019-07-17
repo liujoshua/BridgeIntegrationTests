@@ -2,6 +2,9 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -22,7 +25,7 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
-import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -37,13 +40,15 @@ import java.util.Map;
 @Category(IntegrationSmokeTest.class)
 public class SignInTest {
     private static final String PASSWORD = "P@ssword`1";
-
+    
+    private TestUser developer;
     private TestUser researcher;
     private TestUser user;
     
     @Before
     public void before() throws Exception {
-        researcher = TestUserHelper.createAndSignInUser(SignInTest.class, true, Role.RESEARCHER);
+        developer = TestUserHelper.createAndSignInUser(SignInTest.class, false, DEVELOPER);
+        researcher = TestUserHelper.createAndSignInUser(SignInTest.class, false, RESEARCHER);
         user = TestUserHelper.createAndSignInUser(SignInTest.class, true);
     }
     
@@ -54,6 +59,9 @@ public class SignInTest {
         }
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
+        }
+        if (developer != null) {
+            developer.signOutAndDeleteUser();
         }
     }
 
@@ -79,6 +87,8 @@ public class SignInTest {
     public void createComplexUser() throws Exception {
         AuthenticationApi authApi = researcher.getClient(AuthenticationApi.class);
         
+        ExternalIdentifier externalId = Tests.createExternalId(SignInTest.class, developer);
+        
         Map<String,String> map = Maps.newHashMap();
         map.put("can_be_recontacted", "true");
 
@@ -90,8 +100,8 @@ public class SignInTest {
         signUp.setLastName("Last Name");
         signUp.setEmail(email);
         signUp.setPassword(PASSWORD);
-        signUp.setExternalId("external ID");
-        signUp.setSharingScope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
+        signUp.setExternalId(externalId.getIdentifier());
+        signUp.setSharingScope(ALL_QUALIFIED_RESEARCHERS);
         signUp.setNotifyByEmail(true);
         signUp.setDataGroups(Lists.newArrayList("group1"));
         signUp.setLanguages(Lists.newArrayList("en"));
@@ -109,13 +119,15 @@ public class SignInTest {
         StudyParticipant retrieved = participantsApi.getParticipantById(summary.getId(), false).execute().body();
         assertEquals("First Name", retrieved.getFirstName());
         assertEquals("Last Name", retrieved.getLastName());
-        assertEquals("external ID", retrieved.getExternalId());
+        assertEquals(externalId.getIdentifier(), retrieved.getExternalId());
         assertEquals(signUp.getEmail(), retrieved.getEmail());
         assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
         assertTrue(retrieved.isNotifyByEmail());
         assertEquals(Lists.newArrayList("group1"), retrieved.getDataGroups());
         assertEquals(Lists.newArrayList("en"), retrieved.getLanguages());
         assertEquals("true", retrieved.getAttributes().get("can_be_recontacted"));
+        
+        Tests.deleteExternalId(externalId);
         
         TestUser admin = TestUserHelper.getSignedInAdmin();
         admin.getClient(ForAdminsApi.class).deleteUser(retrieved.getId()).execute();

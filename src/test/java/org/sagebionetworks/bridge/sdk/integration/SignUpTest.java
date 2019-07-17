@@ -87,7 +87,6 @@ public class SignUpTest {
     @Test
     public void signUpForStudyWithExternalIdValidation() throws Exception {
         Study study = Tests.getStudy(Tests.randomIdentifier(SignUpTest.class), null);
-        study.setExternalIdValidationEnabled(true);
         study.setExternalIdRequiredOnSignup(true);
         
         TestUser admin = TestUserHelper.getSignedInAdmin();
