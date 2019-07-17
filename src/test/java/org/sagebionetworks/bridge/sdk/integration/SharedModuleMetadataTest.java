@@ -6,7 +6,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.sdk.integration.UploadSchemaTest.makeSimpleSchema;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
 
 import java.io.IOException;
 import java.util.List;
@@ -17,6 +19,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -38,6 +41,7 @@ import org.sagebionetworks.bridge.rest.model.SharedModuleType;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.user.TestUserHelper;
+import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class SharedModuleMetadataTest {
@@ -65,13 +69,16 @@ public class SharedModuleMetadataTest {
     private String schemaId;
     private String surveyGuid;
     private DateTime surveyCreatedOn;
+    
+    private static TestUser apiDeveloper;
+    private static TestUser sharedDeveloper; 
 
     @BeforeClass
     public static void beforeClass() throws Exception {
         TestUserHelper.TestUser admin = TestUserHelper.getSignedInAdmin();
-        TestUserHelper.TestUser apiDeveloper = TestUserHelper.getSignedInApiDeveloper();
+        apiDeveloper = TestUserHelper.createAndSignInUser(SharedModuleMetadataTest.class, false, DEVELOPER);
         apiDeveloperModulesApi = apiDeveloper.getClient(SharedModulesApi.class);
-        TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
+        sharedDeveloper = TestUserHelper.createAndSignInUser(SharedModuleMetadataTest.class, SHARED_STUDY_ID, DEVELOPER);
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
         nonAuthSharedModulesApi = TestUserHelper.getNonAuthClient(SharedModulesApi.class, IntegTestUtils.STUDY_ID);
         devUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
@@ -87,7 +94,7 @@ public class SharedModuleMetadataTest {
         schemaId = "dummy-schema-id-" + RandomStringUtils.randomAlphabetic(4);
 
         // create test upload schema
-        UploadSchema uploadSchema = makeSimpleSchema(schemaId, (long) SCHEMA_REV, SCHEMA_VERSION);
+        UploadSchema uploadSchema = makeSimpleSchema(schemaId, (long)SCHEMA_REV, SCHEMA_VERSION);
         devUploadSchemasApi.createUploadSchema(uploadSchema).execute().body();
 
         Survey survey = new Survey().name(SURVEY_NAME).identifier(Tests.randomIdentifier(this.getClass()));
@@ -115,6 +122,16 @@ public class SharedModuleMetadataTest {
             adminSurveysApi.deleteSurvey(surveyGuid, surveyCreatedOn, true).execute();
         } finally {
             adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+        }
+    }
+    
+    @AfterClass
+    public static void afterClass() throws Exception {
+        if (apiDeveloper != null) {
+            apiDeveloper.signOutAndDeleteUser();
+        }
+        if (sharedDeveloper != null) {
+            sharedDeveloper.signOutAndDeleteUser();
         }
     }
 
