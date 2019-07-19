@@ -170,9 +170,9 @@ public class TemplateTest {
         DateTime timestamp2 = devsApi.createTemplateRevision(template.getGuid(), revision2).execute().body().getCreatedOn();
         
         TemplateRevisionList list = devsApi.getTemplateRevisions(template.getGuid(), 0, 5).execute().body();
-        assertEquals(list.getItems().size(), 2);
+        assertEquals(list.getItems().size(), 3); // the starting default, plus the two we created after that
         
-        // publish the second one.
+        // publish the first one (after the default)
         TemplateRevision pubRevision = devsApi.getTemplateRevision(
                 template.getGuid(), list.getItems().get(1).getCreatedOn()).execute().body();
         assertEquals("Subject 1", pubRevision.getSubject());
