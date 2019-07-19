@@ -70,7 +70,6 @@ public class ExternalIdsV4Test {
         String userId = null;
         try {
             Study study = adminClient.getUsersStudy().execute().body();
-            study.setExternalIdValidationEnabled(true);
             adminClient.updateStudy(study.getIdentifier(), study).execute();
 
             // Create some substudies
@@ -172,15 +171,14 @@ public class ExternalIdsV4Test {
             assertEquals(userId, found2.getId());
         } finally {
             Study study = adminClient.getUsersStudy().execute().body();
-            study.setExternalIdValidationEnabled(false);
             adminClient.updateStudy(study.getIdentifier(), study).execute();
             
             if (userId != null) {
                 adminClient.deleteUser(userId).execute();    
             }
-            researcherApi.deleteExternalId(extIdA).execute();
-            researcherApi.deleteExternalId(extIdB1).execute();
-            researcherApi.deleteExternalId(extIdB2).execute();
+            adminClient.deleteExternalId(extIdA).execute();
+            adminClient.deleteExternalId(extIdB1).execute();
+            adminClient.deleteExternalId(extIdB2).execute();
             adminClient.deleteSubstudy(idA, true).execute();
             adminClient.deleteSubstudy(idB, true).execute();
         }
@@ -277,7 +275,7 @@ public class ExternalIdsV4Test {
                 user.signOutAndDeleteUser();    
             }
             for (int i=0; i < 10; i++) {
-                researcherApi.deleteExternalId(ids.get(i).getIdentifier()).execute();    
+                adminClient.deleteExternalId(ids.get(i).getIdentifier()).execute();    
             }
             adminClient.deleteSubstudy(idA, true).execute();
             adminClient.deleteSubstudy(idB, true).execute();

@@ -1,7 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -13,7 +12,6 @@ import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
-import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
@@ -21,9 +19,7 @@ import org.sagebionetworks.bridge.rest.model.GeneratedPassword;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Substudy;
-import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
@@ -39,14 +35,12 @@ public class ExternalIdSignUpTest {
     private ForResearchersApi researchersClient;
     private ForAdminsApi adminClient;
     private AuthenticationApi authClient;
-    private Study study;
     
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         adminClient = admin.getClient(ForAdminsApi.class);
         
-        changeExternalIdValidation(false);
         devResearcher = TestUserHelper.createAndSignInUser(ExternalIdSignUpTest.class, false, Role.DEVELOPER, Role.RESEARCHER);
         externalId1 = Tests.randomIdentifier(ExternalIdSignUpTest.class);
         externalId2 = Tests.randomIdentifier(ExternalIdSignUpTest.class);
@@ -63,23 +57,6 @@ public class ExternalIdSignUpTest {
         }
     }
     
-    public void changeExternalIdValidation(boolean enabled) throws Exception {
-        study = adminClient.getStudy(IntegTestUtils.STUDY_ID).execute().body();
-        study.setExternalIdValidationEnabled(enabled);
-        study.setExternalIdRequiredOnSignup(enabled);
-        VersionHolder versionHolder = adminClient.updateStudy(IntegTestUtils.STUDY_ID, study).execute().body();
-        study.setVersion(versionHolder.getVersion());
-        
-        study = adminClient.getStudy(IntegTestUtils.STUDY_ID).execute().body();
-        if (enabled) {
-            assertTrue(study.isExternalIdValidationEnabled());
-            assertTrue(study.isExternalIdRequiredOnSignup());
-        } else {
-            assertFalse(study.isExternalIdValidationEnabled());
-            assertFalse(study.isExternalIdRequiredOnSignup());
-        }
-    }
-    
     @Test
     public void externalIdSignInTest() throws Exception {
         String userId1 = null;
@@ -87,9 +64,6 @@ public class ExternalIdSignUpTest {
         String userId3 = null;
         String idA = null;
         try {
-            // Enable validation, and an account with just an external ID will succeed
-            changeExternalIdValidation(true);
-            
             idA = Tests.randomIdentifier(ExternalIdSignUpTest.class);
             Substudy substudyA = new Substudy().id(idA).name("Substudy " + idA);
             adminClient.createSubstudy(substudyA).execute();
@@ -159,19 +133,7 @@ public class ExternalIdSignUpTest {
                 userId3 = e.getSession().getId();
                 // still not consented, has succeeded
             }
-            
-            // With validation disabled, this kind of account will not succeed, even if the external ID is there
-            changeExternalIdValidation(false); 
-            try {
-                signUp = new SignUp().study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
-                signUp.externalId(externalId2);
-                authClient.signUp(signUp).execute();
-                fail("Should have thrown exception.");
-            } catch(UnauthorizedException e) {
-                assertEquals("External ID management is not enabled for this study", e.getMessage());
-            }
         } finally {
-            changeExternalIdValidation(false);
             if (userId1 != null) {
                 adminClient.deleteUser(userId1).execute();    
             }
@@ -181,10 +143,12 @@ public class ExternalIdSignUpTest {
             if (userId3 != null) {
                 adminClient.deleteUser(userId3).execute();
             }
-            devIdsClient.deleteExternalId(externalId1).execute();
-            devIdsClient.deleteExternalId(externalId2).execute();
-            devIdsClient.deleteExternalId(externalId3).execute();
-            adminClient.deleteSubstudy(idA, true).execute();
+            adminClient.deleteExternalId(externalId1).execute();
+            adminClient.deleteExternalId(externalId2).execute();
+            adminClient.deleteExternalId(externalId3).execute();
+            if (idA != null) {
+                adminClient.deleteSubstudy(idA, true).execute();    
+            }
         }
     }
 }

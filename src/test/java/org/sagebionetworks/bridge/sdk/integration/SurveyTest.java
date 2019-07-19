@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.BLOODPRESSURE_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.BOOLEAN_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DATETIME_ID;
@@ -20,6 +21,7 @@ import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.STRING_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.TIME_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.WEIGHT_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.POSTALCODE_ID;
 
 import java.io.IOException;
@@ -104,10 +106,10 @@ public class SurveyTest {
     
     private static final String SURVEY_NAME = "dummy-survey-name";
 
-    //private static TestUser admin;
     private static TestUser developer;
     private static TestUser user;
     private static TestUser worker;
+    private static TestUser sharedDeveloper;
     private static SharedModulesApi sharedDeveloperModulesApi;
     private static SurveysApi sharedSurveysApi;
     private static ForAdminsApi adminsApi;
@@ -126,7 +128,7 @@ public class SurveyTest {
         user = TestUserHelper.createAndSignInUser(SurveyTest.class, true);
         worker = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.WORKER);
 
-        TestUserHelper.TestUser sharedDeveloper = TestUserHelper.getSignedInSharedDeveloper();
+        sharedDeveloper = TestUserHelper.createAndSignInUser(SurveyTest.class, SHARED_STUDY_ID, DEVELOPER);        
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
         sharedSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
     }
@@ -170,6 +172,13 @@ public class SurveyTest {
     public static void deleteWorker() throws Exception {
         if (worker != null) {
             worker.signOutAndDeleteUser();
+        }
+    }
+    
+    @AfterClass
+    public static void deleteSharedDeveloper() throws Exception {
+        if (sharedDeveloper != null) {
+            sharedDeveloper.signOutAndDeleteUser();
         }
     }
     

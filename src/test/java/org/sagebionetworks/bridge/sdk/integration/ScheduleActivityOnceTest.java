@@ -74,9 +74,8 @@ public class ScheduleActivityOnceTest {
     @Test
     public void test() throws Exception {
         Study study = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
-        if (study.isExternalIdRequiredOnSignup() || study.isExternalIdValidationEnabled()) {
+        if (study.isExternalIdRequiredOnSignup()) {
             study.setExternalIdRequiredOnSignup(false);
-            study.setExternalIdValidationEnabled(false);
             
             VersionHolder version = admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute().body();
             study.setVersion(version.getVersion());

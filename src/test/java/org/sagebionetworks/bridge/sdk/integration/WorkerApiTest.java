@@ -26,6 +26,7 @@ import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.ActivityEventList;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
@@ -114,42 +115,46 @@ public class WorkerApiTest {
     
     @Test
     public void retrieveUsers() throws Exception {
-        String externalId = Tests.randomIdentifier(WorkerApiTest.class);
+        ExternalIdentifier externalId = Tests.createExternalId(WorkerApiTest.class, developer);
+        
         user = new TestUserHelper.Builder(WorkerApiTest.class).withConsentUser(true)
-                .withExternalId(externalId).createAndSignInUser();
+                .withExternalId(externalId.getIdentifier()).createAndSignInUser();
 
         // Have the user get activities, to bootstrap timezone.
         user.getClient(ActivitiesApi.class).getScheduledActivitiesByDateRange(DateTime.now(TEST_USER_TIME_ZONE),
                 DateTime.now(TEST_USER_TIME_ZONE).plusDays(1)).execute();
 
         // Get all participants
-        AccountSummaryList list = workersApi.getParticipantsForStudy("api", 0, 5, "", null, null, null).execute().body();
+        AccountSummaryList list = workersApi.getParticipantsForStudy(STUDY_ID, 0, 5, "", null, null, null).execute()
+                .body();
         assertTrue(list.getTotal() > 0);
 
         // Get worker participant.
-        list = workersApi.getParticipantsForStudy("api", 0, 5, worker.getEmail(), null, null, null).execute().body();
+        list = workersApi.getParticipantsForStudy(STUDY_ID, 0, 5, worker.getEmail(), null, null, null).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(worker.getEmail(), list.getItems().get(0).getEmail());
         
         // Get user participant. Include consent history in this call.
-        StudyParticipant participant = workersApi.getParticipantByIdForStudy("api", user.getSession().getId(), true)
+        StudyParticipant participant = workersApi.getParticipantByIdForStudy(STUDY_ID, user.getSession().getId(), true)
                 .execute().body();
         assertEquals(user.getEmail(), participant.getEmail());
         assertEquals(TEST_USER_TIME_ZONE_STRING, participant.getTimeZone());
         assertNotNull(participant.getHealthCode());
-        assertNotNull(participant.getConsentHistories().get("api").get(0));
+        assertNotNull(participant.getConsentHistories().get(STUDY_ID).get(0));
         
         // get by health code, also verify we do not include consent histories.
-        StudyParticipant participant2 = workersApi.getParticipantByHealthCodeForStudy("api", participant.getHealthCode(), false)
-                .execute().body();
+        StudyParticipant participant2 = workersApi
+                .getParticipantByHealthCodeForStudy(STUDY_ID, participant.getHealthCode(), false).execute().body();
         assertEquals(participant.getId(), participant2.getId());
-        assertNull(participant2.getConsentHistories().get("api"));
+        assertNull(participant2.getConsentHistories().get(STUDY_ID));
         
         // get by external Id, also verify we do not include consent histories.
-        StudyParticipant participant3 = workersApi.getParticipantByExternalIdForStudy("api", externalId, false)
-                .execute().body();
+        StudyParticipant participant3 = workersApi
+                .getParticipantByExternalIdForStudy(STUDY_ID, externalId.getIdentifier(), false).execute().body();
         assertEquals(participant.getId(), participant3.getId());
-        assertNull(participant3.getConsentHistories().get("api"));
+        assertNull(participant3.getConsentHistories().get(STUDY_ID));
+        
+        Tests.deleteExternalId(externalId);
     }
     
     @Test
@@ -159,12 +164,12 @@ public class WorkerApiTest {
         SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1");
         phoneUser = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, signUp);
         
-        AccountSummaryList list = workersApi.getParticipantsForStudy("api", 0, 5, null, "248-6796", null, null).execute().body();
+        AccountSummaryList list = workersApi.getParticipantsForStudy(STUDY_ID, 0, 5, null, "248-6796", null, null).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(phoneUser.getPhone().getNumber(), list.getItems().get(0).getPhone().getNumber());
         
         String userId = list.getItems().get(0).getId();
-        StudyParticipant participant = workersApi.getParticipantByIdForStudy("api", userId, false).execute().body();
+        StudyParticipant participant = workersApi.getParticipantByIdForStudy(STUDY_ID, userId, false).execute().body();
         
         assertEquals(phoneUser.getPhone().getNumber(), participant.getPhone().getNumber());
         assertNotNull(participant.getHealthCode());
@@ -178,7 +183,7 @@ public class WorkerApiTest {
         try {
             guid = planApi.createSchedulePlan(plan).execute().body();
             
-            SchedulePlanList plans = workersApi.getSchedulePlansForStudy("api", false).execute().body();
+            SchedulePlanList plans = workersApi.getSchedulePlansForStudy(STUDY_ID, false).execute().body();
             
             final String theGuid = guid.getGuid();
             if (!plans.getItems().stream().anyMatch((onePlan) -> onePlan.getGuid().equals(theGuid))) {
