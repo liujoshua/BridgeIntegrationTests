@@ -23,6 +23,7 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.json.DefaultObjectMapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.HealthDataApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
@@ -173,6 +174,11 @@ public class HealthDataTest {
         participant.setDataGroups(ImmutableList.of("group1"));
         participant.setSharingScope(SharingScope.SPONSORS_AND_PARTNERS);
         participantsApi.updateUsersParticipantRecord(participant).execute();
+
+        // Initialize user by asking for activities. This sets the activities_retrieved event, so we can calculate
+        // dayInStudy.
+        user.getClient(ForConsentedUsersApi.class).getScheduledActivitiesByDateRange(DateTime.now(),
+                DateTime.now().plusDays(1)).execute();
     }
 
     @AfterClass
@@ -223,6 +229,7 @@ public class HealthDataTest {
         HealthDataRecord record = user.getClient(HealthDataApi.class).submitHealthData(submission).execute().body();
         assertEquals(APP_VERSION, record.getAppVersion());
         assertNotNull(record.getId());
+        assertEquals(1, record.getDayInStudy().intValue());
         assertEquals(PHONE_INFO, record.getPhoneInfo());
         assertEquals(record.getId() + "-raw.json", record.getRawDataAttachmentId());
         assertEquals(SCHEMA_ID, record.getSchemaId());

@@ -98,7 +98,12 @@ public class UploadTest {
         SignUp signUp = new SignUp().email(emailAddress).password(Tests.PASSWORD);
         signUp.setExternalId(EXTERNAL_ID); // which should, in turn, associate account to SUBSTUDY_ID.
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true, signUp);
-        
+
+        // Initialize user by asking for activities. This sets the activities_retrieved event, so we can calculate
+        // dayInStudy.
+        user.getClient(ForConsentedUsersApi.class).getScheduledActivitiesByDateRange(DateTime.now(),
+                DateTime.now().plusDays(1)).execute();
+
         // ensure schemas exist, so we have something to upload against
         UploadSchemasApi uploadSchemasApi = developer.getClient(UploadSchemasApi.class);
 
@@ -414,6 +419,9 @@ public class UploadTest {
         assertNotNull(record.getId());
         assertEquals("version 1.0.0, build 1", record.getAppVersion());
         assertEquals("Integration Tests", record.getPhoneInfo());
+
+        // User was just created just now, so we're always on day 1.
+        assertEquals(1, record.getDayInStudy().intValue());
 
         // For createdOn and createdOnTimeZone, these exist in the test files, but are kind of all over the place. For
         // now, just verify that the createdOn exists and that createdOnTimeZone can be parsed as a timezone as part of
