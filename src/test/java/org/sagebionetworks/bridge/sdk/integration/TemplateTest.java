@@ -70,7 +70,7 @@ public class TemplateTest {
         
         ForDevelopersApi devsApi = developer.getClient(ForDevelopersApi.class);
         
-        GuidVersionHolder keys = devsApi.createTemplate(template).execute().body();
+        final GuidVersionHolder keys = devsApi.createTemplate(template).execute().body();
         template.setGuid(keys.getGuid());
         template.setVersion(keys.getVersion());
         
@@ -89,9 +89,9 @@ public class TemplateTest {
         criteria.setMinAppVersions(ImmutableMap.of("Android", 11));
         criteria.setMaxAppVersions(ImmutableMap.of("Android", 99));
         
-        keys = devsApi.updateTemplate(template.getGuid(), template).execute().body();
-        template.setGuid(keys.getGuid());
-        template.setVersion(keys.getVersion());
+        GuidVersionHolder keys2 = devsApi.updateTemplate(template.getGuid(), template).execute().body();
+        template.setGuid(keys2.getGuid());
+        template.setVersion(keys2.getVersion());
         
         retrieved = devsApi.getTemplate(template.getGuid()).execute().body();
         assertEquals(template.getName(), retrieved.getName());
@@ -103,17 +103,17 @@ public class TemplateTest {
         // logically delete template as an update, and through DELETE
         
         template.setDeleted(true);
-        keys = devsApi.updateTemplate(template.getGuid(), template).execute().body();
-        template.setGuid(keys.getGuid());
-        template.setVersion(keys.getVersion());
+        GuidVersionHolder keys3 = devsApi.updateTemplate(template.getGuid(), template).execute().body();
+        template.setGuid(keys3.getGuid());
+        template.setVersion(keys3.getVersion());
         
         retrieved = devsApi.getTemplate(template.getGuid()).execute().body();
         assertTrue(retrieved.isDeleted());
         
         template.setDeleted(false);
-        keys = devsApi.updateTemplate(template.getGuid(), template).execute().body();
-        template.setGuid(keys.getGuid());
-        template.setVersion(keys.getVersion());
+        GuidVersionHolder keys4 = devsApi.updateTemplate(template.getGuid(), template).execute().body();
+        template.setGuid(keys4.getGuid());
+        template.setVersion(keys4.getVersion());
         retrieved = devsApi.getTemplate(template.getGuid()).execute().body();
         assertFalse(retrieved.isDeleted());
         
@@ -125,19 +125,19 @@ public class TemplateTest {
         // get a page of templates without logical deletes
         TemplateList list = devsApi.getTemplates(EMAIL_ACCOUNT_EXISTS.name(), null, null, false).execute()
                 .body();
-        assertTrue(list.getItems().stream().noneMatch((template -> template.getGuid().equals(template.getGuid()))));
+        assertTrue(list.getItems().stream().noneMatch((template -> template.getGuid().equals(keys.getGuid()))));
         
         // get a page of templates with logical deletes
         list = devsApi.getTemplates(EMAIL_ACCOUNT_EXISTS.name(), null, null, true).execute().body();
-        assertTrue(list.getItems().stream().anyMatch((template -> template.getGuid().equals(template.getGuid()))));
+        assertTrue(list.getItems().stream().anyMatch((template -> template.getGuid().equals(keys.getGuid()))));
         
         // physically delete
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
-        adminsApi.deleteTemplate(template.getGuid(), true).execute();        
+        adminsApi.deleteTemplate(keys.getGuid(), true).execute();        
         
         // it's really deleted
         try {
-            devsApi.getTemplate(template.getGuid()).execute();
+            devsApi.getTemplate(keys.getGuid()).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
 
@@ -148,7 +148,7 @@ public class TemplateTest {
     public void templateRevisionTest() throws Exception {
         template = new Template();
         template.setName("TestTemplate Name");
-        template.setDescription("TestTemplate Description");
+        template.setDescription("TestTemplate Description ${url}");
         template.setTemplateType(EMAIL_ACCOUNT_EXISTS);
 
         ForDevelopersApi devsApi = developer.getClient(ForDevelopersApi.class);
@@ -159,13 +159,13 @@ public class TemplateTest {
         
         TemplateRevision revision1 = new TemplateRevision();
         revision1.setSubject("Subject 1");
-        revision1.setDocumentContent("Content 1");
+        revision1.setDocumentContent("Content 1 ${url}");
         revision1.setMimeType(TEXT_PLAIN);
         DateTime timestamp1 = devsApi.createTemplateRevision(template.getGuid(), revision1).execute().body().getCreatedOn();
         
         TemplateRevision revision2 = new TemplateRevision();
         revision2.setSubject("Subject 2");
-        revision2.setDocumentContent("Content 2");
+        revision2.setDocumentContent("Content 2 ${url}");
         revision2.setMimeType(TEXT_PLAIN);
         DateTime timestamp2 = devsApi.createTemplateRevision(template.getGuid(), revision2).execute().body().getCreatedOn();
         
@@ -176,7 +176,7 @@ public class TemplateTest {
         TemplateRevision pubRevision = devsApi.getTemplateRevision(
                 template.getGuid(), list.getItems().get(1).getCreatedOn()).execute().body();
         assertEquals("Subject 1", pubRevision.getSubject());
-        assertEquals("Content 1", pubRevision.getDocumentContent());
+        assertEquals("Content 1 ${url}", pubRevision.getDocumentContent());
         assertEquals(developer.getUserId(), pubRevision.getCreatedBy());
         assertEquals(TEXT_PLAIN, pubRevision.getMimeType());
         assertEquals(timestamp1, pubRevision.getCreatedOn());

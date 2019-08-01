@@ -231,7 +231,7 @@ public class AuthenticationTest {
             study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
             study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
             study.setEmailVerificationEnabled(true);
-            
+
             adminApi.createStudy(study).execute();
 
             // Can we sign in to secondstudy? No.
