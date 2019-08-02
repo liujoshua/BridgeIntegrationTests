@@ -23,7 +23,6 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.json.DefaultObjectMapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
-import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.HealthDataApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
@@ -174,11 +173,6 @@ public class HealthDataTest {
         participant.setDataGroups(ImmutableList.of("group1"));
         participant.setSharingScope(SharingScope.SPONSORS_AND_PARTNERS);
         participantsApi.updateUsersParticipantRecord(participant).execute();
-
-        // Initialize user by asking for activities. This sets the activities_retrieved event, so we can calculate
-        // dayInStudy.
-        user.getClient(ForConsentedUsersApi.class).getScheduledActivitiesByDateRange(DateTime.now(),
-                DateTime.now().plusDays(1)).execute();
     }
 
     @AfterClass

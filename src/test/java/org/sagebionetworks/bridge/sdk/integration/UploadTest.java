@@ -99,11 +99,6 @@ public class UploadTest {
         signUp.setExternalId(EXTERNAL_ID); // which should, in turn, associate account to SUBSTUDY_ID.
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true, signUp);
 
-        // Initialize user by asking for activities. This sets the activities_retrieved event, so we can calculate
-        // dayInStudy.
-        user.getClient(ForConsentedUsersApi.class).getScheduledActivitiesByDateRange(DateTime.now(),
-                DateTime.now().plusDays(1)).execute();
-
         // ensure schemas exist, so we have something to upload against
         UploadSchemasApi uploadSchemasApi = developer.getClient(UploadSchemasApi.class);
 
