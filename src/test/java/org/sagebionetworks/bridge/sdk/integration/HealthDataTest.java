@@ -223,6 +223,7 @@ public class HealthDataTest {
         HealthDataRecord record = user.getClient(HealthDataApi.class).submitHealthData(submission).execute().body();
         assertEquals(APP_VERSION, record.getAppVersion());
         assertNotNull(record.getId());
+        assertEquals(1, record.getDayInStudy().intValue());
         assertEquals(PHONE_INFO, record.getPhoneInfo());
         assertEquals(record.getId() + "-raw.json", record.getRawDataAttachmentId());
         assertEquals(SCHEMA_ID, record.getSchemaId());
