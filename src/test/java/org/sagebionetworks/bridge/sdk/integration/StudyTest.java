@@ -243,6 +243,7 @@ public class StudyTest {
         assertTrue("autoVerificationEmailSuppressed should be true",
                 newStudy.isAutoVerificationEmailSuppressed());
         assertNotNull("password policy should not be null", newStudy.getPasswordPolicy());
+        assertTrue("reauthenticationEnabled should be true", newStudy.isReauthenticationEnabled());
         assertNotNull("verify email template should not be null", newStudy.getVerifyEmailTemplate());
         assertNotNull("password reset template should not be null", newStudy.getResetPasswordTemplate());
         assertNotNull("email sign in template should not be null", newStudy.getEmailSignInTemplate());
