@@ -13,6 +13,7 @@ import static org.sagebionetworks.bridge.rest.model.AccountStatus.UNVERIFIED;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
 
@@ -22,6 +23,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import retrofit2.Response;
@@ -92,7 +94,7 @@ public class ParticipantsTest {
         researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(RESEARCHER).withConsentUser(true)
                 .createAndSignInUser();
         
-        externalId = Tests.createExternalId(ParticipantsTest.class, developer);
+        externalId = Tests.createExternalId(ParticipantsTest.class, developer, SUBSTUDY_ID_1);
         
         IntegTestUtils.deletePhoneUser(researcher);
         
@@ -202,9 +204,10 @@ public class ParticipantsTest {
             assertEquals(user.getSession().getId(), participant2.getId());
             assertTrue(participant2.getConsentHistories().isEmpty());
             
+            String externalId = Iterables.getFirst(participant.getExternalIds().values(), null);
             // Get this participant using an external ID
             StudyParticipant participant3 = researcherParticipantsApi.getParticipantByExternalId(
-                    participant.getExternalId(), false).execute().body();
+                    externalId, false).execute().body();
             assertEquals(user.getEmail(), participant3.getEmail());
             assertEquals(user.getSession().getId(), participant3.getId());
             assertTrue(participant2.getConsentHistories().isEmpty());
@@ -216,6 +219,7 @@ public class ParticipantsTest {
         }
     }
     
+    @SuppressWarnings("deprecation")
     @Test
     public void canRetrieveAndPageThroughParticipants() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
@@ -268,6 +272,7 @@ public class ParticipantsTest {
         return true;
     }
     
+    @SuppressWarnings("deprecation")
     @Test(expected = InvalidEntityException.class)
     public void cannotSetBadOffset() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
@@ -275,6 +280,7 @@ public class ParticipantsTest {
         participantsApi.getParticipants(-1, 10, null, null, null, null).execute();
     }
     
+    @SuppressWarnings("deprecation")
     @Test(expected = InvalidEntityException.class)
     public void cannotSetBadPageSize() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
@@ -282,6 +288,7 @@ public class ParticipantsTest {
         participantsApi.getParticipants(0, 4, null, null, null, null).execute();
     }
     
+    @SuppressWarnings("deprecation")
     @Test
     public void crudParticipant() throws Exception {
         String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
@@ -324,7 +331,7 @@ public class ParticipantsTest {
             assertEquals("FirstName", retrieved.getFirstName());
             assertEquals("LastName", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail());
-            assertEquals(externalId.getIdentifier(), retrieved.getExternalId());
+            assertTrue(retrieved.getExternalIds().values().contains(externalId.getIdentifier()));
             assertEquals(ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
             assertTrue(retrieved.isNotifyByEmail());
             assertListsEqualIgnoringOrder(dataGroups, retrieved.getDataGroups());
@@ -637,6 +644,7 @@ public class ParticipantsTest {
         }
     }
     
+    @SuppressWarnings("deprecation")
     @Test
     public void crudUsersWithPhone() throws Exception {
         SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1");

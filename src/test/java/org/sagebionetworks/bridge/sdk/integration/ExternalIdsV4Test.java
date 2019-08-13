@@ -126,7 +126,7 @@ public class ExternalIdsV4Test {
             assertEquals(extIdA, participant.getExternalIds().get(idA));
             assertEquals(1, participant.getSubstudyIds().size());
             assertEquals(idA, participant.getSubstudyIds().get(0));
-            assertEquals(extIdA, participant.getExternalId());
+            assertTrue(participant.getExternalIds().values().contains(extIdA));
 
             // Cannot create another user with this external ID. This should do nothing and fail quietly.
             Response<Message> response = researcher.getClient(AuthenticationApi.class).signUp(signUp).execute();

@@ -128,6 +128,7 @@ public class SubstudyFilteringTest {
         }
     }
     
+    @SuppressWarnings("deprecation")
     @Test
     public void filterParticipants() throws Exception { 
         // researcherA

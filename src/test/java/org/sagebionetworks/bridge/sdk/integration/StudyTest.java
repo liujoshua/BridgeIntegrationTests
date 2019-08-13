@@ -71,6 +71,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
+@SuppressWarnings("deprecation")
 public class StudyTest {
     
     private TestUser admin;
