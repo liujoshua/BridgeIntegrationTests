@@ -1,7 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -111,7 +110,7 @@ public class SubstudyMembershipTest {
         Map<String, String> externalIds = user.getSession().getExternalIds();
         assertEquals(extIdA, externalIds.get(idA));
         assertEquals(1, externalIds.size());
-        assertEquals(extIdA, user.getSession().getExternalId());
+        assertTrue(user.getSession().getExternalIds().values().contains(extIdA));
 
         // add an external ID through the updateIdentifiers interface, should associate to B
         IdentifierUpdate update = new IdentifierUpdate().signIn(user.getSignIn()).externalIdUpdate(extIdB);
@@ -120,7 +119,6 @@ public class SubstudyMembershipTest {
         assertEquals(2, info.getExternalIds().size());
         assertEquals(extIdA, info.getExternalIds().get(idA));
         assertEquals(extIdB, info.getExternalIds().get(idB));
-        assertEquals(extIdB, info.getExternalId()); // most recent one wins, for now
 
         // Error test #1: assigning an external ID that associates use to substudy they are already
         // associated to, throws the appropriate error
@@ -139,14 +137,12 @@ public class SubstudyMembershipTest {
         assertEquals(2, info.getExternalIds().size());
         assertEquals(extIdA, info.getExternalIds().get(idA));
         assertEquals(extIdB, info.getExternalIds().get(idB));
-        assertEquals(extIdB, info.getExternalId()); // has not been changed by this update
         
         // participant is associated to two substudies
         StudyParticipant participant = participantsApi.getParticipantById(info.getId(), false).execute().body();
         assertEquals(2, participant.getExternalIds().size());
         assertEquals(extIdA, participant.getExternalIds().get(idA));
         assertEquals(extIdB, participant.getExternalIds().get(idB));
-        assertEquals(extIdB, participant.getExternalId());
 
         // admin removes a substudy...
         participant.setSubstudyIds(ImmutableList.of(idB)); // no longer associated to substudy A
@@ -156,7 +152,6 @@ public class SubstudyMembershipTest {
         
         assertEquals(1, updatedParticipant.getExternalIds().size());
         assertEquals(extIdB, updatedParticipant.getExternalIds().get(idB));
-        assertNull(updatedParticipant.getExternalId()); // odd, but acceptable during migration period
         
         // Test that withdrawing blanks out the external ID relationships
         String userId = user.getUserId();

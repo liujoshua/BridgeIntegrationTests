@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -53,7 +54,8 @@ public class Tests {
     public static final String FINGERPRINT = "14:6D:E9:83:C5:73:06:50:D8:EE:B9:95:2F:34:FC:64:16:A0:83:42:E6:1D:BE:A8:8A:04:96:B2:3F:CF:44:E5";
     public static final String APP_NAME = "Integration Tests";
     public static final String PASSWORD = "P@ssword`1";
-    public static final String SUBSTUDY_ID = "test-substudy";
+    public static final String SUBSTUDY_ID_1 = "substudy1";
+    public static final String SUBSTUDY_ID_2 = "substudy2";
 
     public static final EmailTemplate TEST_RESET_PASSWORD_TEMPLATE = new EmailTemplate().subject("Reset your password")
         .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
@@ -327,18 +329,18 @@ public class Tests {
         return retValue;
     }
 
-    public static ExternalIdentifier createExternalId(Class<?> clazz, TestUser developer) throws Exception {
+    public static ExternalIdentifier createExternalId(Class<?> clazz, TestUser developer, String substudyId) throws Exception {
         String externalId = Tests.randomIdentifier(clazz);
         
         SubstudiesApi substudiesApi = developer.getClient(SubstudiesApi.class);
         SubstudyList substudyList = substudiesApi.getSubstudies(false).execute().body();
-        if (substudyList.getItems().isEmpty()) {
-            Substudy substudy = new Substudy().id(SUBSTUDY_ID).name(SUBSTUDY_ID);
-            substudiesApi.createSubstudy(substudy).execute();
-            substudyList = substudiesApi.getSubstudies(false).execute().body();
-        }
-        String substudyId = substudyList.getItems().get(0).getId();
         
+        Set<String> existingSubstudyIds = substudyList.getItems().stream().map(Substudy::getId).collect(Collectors.toSet());
+        if (!existingSubstudyIds.contains(substudyId)) {
+            TestUser admin = TestUserHelper.getSignedInAdmin();
+            Substudy substudy = new Substudy().id(substudyId).name(substudyId);
+            admin.getClient(SubstudiesApi.class).createSubstudy(substudy).execute();
+        }
         ExternalIdentifier externalIdentifier = new ExternalIdentifier().identifier(externalId).substudyId(substudyId);
         int code = developer.getClient(ExternalIdentifiersApi.class).createExternalId(externalIdentifier).execute().code();
         assertEquals(code, 201);

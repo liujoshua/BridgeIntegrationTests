@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
 
 import java.io.File;
 import java.util.List;
@@ -55,8 +56,6 @@ import com.google.common.collect.Lists;
 @SuppressWarnings({ "ConstantConditions", "unchecked" })
 public class UploadTest {
     
-    private static final String SUBSTUDY_ID = "upload-test-substudy";
-    
     private static final String EXTERNAL_ID = "upload-test-extid";
     
     // On a cold server, validation could take up to 8 seconds (most of this is downloading and caching the encryption
@@ -78,9 +77,9 @@ public class UploadTest {
         admin = TestUserHelper.getSignedInAdmin();
 
         try {
-            admin.getClient(ForAdminsApi.class).getSubstudy(SUBSTUDY_ID).execute();
+            admin.getClient(ForAdminsApi.class).getSubstudy(SUBSTUDY_ID_1).execute();
         } catch(EntityNotFoundException e) {
-            Substudy substudy = new Substudy().name(SUBSTUDY_ID).id(SUBSTUDY_ID);
+            Substudy substudy = new Substudy().name(SUBSTUDY_ID_1).id(SUBSTUDY_ID_1);
             VersionHolder version = admin.getClient(ForAdminsApi.class).createSubstudy(substudy).execute().body();
             substudy.setVersion(version.getVersion());
         }
@@ -90,7 +89,7 @@ public class UploadTest {
         developer = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.DEVELOPER);
         researcher = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.RESEARCHER);
         
-        ExternalIdentifier extId = new ExternalIdentifier().identifier(EXTERNAL_ID).substudyId(SUBSTUDY_ID);
+        ExternalIdentifier extId = new ExternalIdentifier().identifier(EXTERNAL_ID).substudyId(SUBSTUDY_ID_1);
         ForResearchersApi researchersApi = researcher.getClient(ForResearchersApi.class);
         researchersApi.createExternalId(extId).execute();
         
@@ -347,7 +346,7 @@ public class UploadTest {
         HealthDataRecord record = status.getRecord();
         assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, record.getUserSharingScope());
         assertEquals(1, record.getUserSubstudyMemberships().size());
-        assertEquals(EXTERNAL_ID, record.getUserSubstudyMemberships().get(SUBSTUDY_ID));
+        assertEquals(EXTERNAL_ID, record.getUserSubstudyMemberships().get(SUBSTUDY_ID_1));
 
         Map<String, Object> data = RestUtils.toType(record.getData(), Map.class);
         assertEquals(3, data.size());

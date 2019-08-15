@@ -270,6 +270,7 @@ public class UploadSchemaTest {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private static UploadSchema createOrUpdateSchemaAndVerify(UploadSchema schema) throws Exception {
         String schemaId = schema.getSchemaId();
         UploadSchema returnedSchema = devUploadSchemasApi.createOrUpdateUploadSchema(schema).execute().body();
@@ -302,6 +303,7 @@ public class UploadSchemaTest {
         return returnedSchema;
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void optionalFields() throws Exception {
         // We test every field except DDB version, as DDB version is (from the perspective of the Bridge client), an
@@ -370,6 +372,7 @@ public class UploadSchemaTest {
         testVersionConflict(null, null);
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void createSchemaVersionConflict() throws Exception {
         // Create the schema first.
@@ -379,6 +382,7 @@ public class UploadSchemaTest {
         testVersionConflict(1L, null);
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void createSchemaVersionConflictWithDdbVersion() throws Exception {
         // Create the schema first.
@@ -389,6 +393,7 @@ public class UploadSchemaTest {
         testVersionConflict(1L, 1L);
     }
 
+    @SuppressWarnings("deprecation")
     private void testVersionConflict(Long rev, Long version) throws Exception {
         UploadSchema schema = makeSimpleSchema(schemaId, rev, version);
 

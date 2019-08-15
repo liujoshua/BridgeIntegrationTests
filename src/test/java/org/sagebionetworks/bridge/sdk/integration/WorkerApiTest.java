@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.util.List;
@@ -113,9 +114,10 @@ public class WorkerApiTest {
         }
     }
     
+    @SuppressWarnings("deprecation")
     @Test
     public void retrieveUsers() throws Exception {
-        ExternalIdentifier externalId = Tests.createExternalId(WorkerApiTest.class, developer);
+        ExternalIdentifier externalId = Tests.createExternalId(WorkerApiTest.class, developer, SUBSTUDY_ID_1);
         
         user = new TestUserHelper.Builder(WorkerApiTest.class).withConsentUser(true)
                 .withExternalId(externalId.getIdentifier()).createAndSignInUser();
@@ -157,6 +159,7 @@ public class WorkerApiTest {
         Tests.deleteExternalId(externalId);
     }
     
+    @SuppressWarnings("deprecation")
     @Test
     public void retrieveUsersWithPhone() throws Exception {
         IntegTestUtils.deletePhoneUser(researcher);

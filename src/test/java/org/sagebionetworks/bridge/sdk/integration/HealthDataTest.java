@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
 
 import java.util.List;
 import java.util.Map;
@@ -164,7 +165,7 @@ public class HealthDataTest {
         assertNotNull(surveyCreatedOn);
 
         // Set up user with data groups, external ID, and sharing scope.
-        externalIdentifier = Tests.createExternalId(HealthDataTest.class, developer);
+        externalIdentifier = Tests.createExternalId(HealthDataTest.class, developer, SUBSTUDY_ID_1);
         user = new TestUserHelper.Builder(UploadTest.class).withExternalId(externalIdentifier.getIdentifier())
                 .withConsentUser(true).createAndSignInUser();
         ParticipantsApi participantsApi = user.getClient(ParticipantsApi.class);

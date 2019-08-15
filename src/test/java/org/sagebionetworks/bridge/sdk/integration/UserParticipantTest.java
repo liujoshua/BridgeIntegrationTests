@@ -3,6 +3,8 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 
 import com.google.common.collect.ImmutableList;
@@ -89,8 +91,8 @@ public class UserParticipantTest {
 
     @Test
     public void canAddButNotChangeExternalIdentifier() throws Exception {
-        ExternalIdentifier externalId1 = Tests.createExternalId(UserParticipantTest.class, developer);
-        ExternalIdentifier externalId2 = Tests.createExternalId(UserParticipantTest.class, developer);
+        ExternalIdentifier externalId1 = Tests.createExternalId(UserParticipantTest.class, developer, SUBSTUDY_ID_1);
+        ExternalIdentifier externalId2 = Tests.createExternalId(UserParticipantTest.class, developer, SUBSTUDY_ID_2);
         
         TestUser user = TestUserHelper.createAndSignInUser(UserParticipantTest.class, true);
         try {
@@ -102,13 +104,13 @@ public class UserParticipantTest {
 
             participant = usersApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(user.getEmail(), participant.getEmail());
-            assertEquals(externalId1.getIdentifier(), participant.getExternalId());
+            assertTrue(participant.getExternalIds().values().contains(externalId1.getIdentifier()));
             
             participant.setExternalId(externalId2.getIdentifier());
             usersApi.updateUsersParticipantRecord(participant).execute();
 
             participant = usersApi.getUsersParticipantRecord(false).execute().body();
-            assertEquals(externalId1.getIdentifier(), participant.getExternalId());
+            assertTrue(participant.getExternalIds().values().contains(externalId1.getIdentifier()));
         } finally {
             Tests.deleteExternalId(externalId1);
             Tests.deleteExternalId(externalId2);

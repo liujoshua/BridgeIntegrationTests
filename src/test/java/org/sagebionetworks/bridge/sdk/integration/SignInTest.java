@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -83,11 +84,12 @@ public class SignInTest {
         assertEquals(dataGroups, session.getDataGroups());
     }
     
+    @SuppressWarnings("deprecation")
     @Test
     public void createComplexUser() throws Exception {
         AuthenticationApi authApi = researcher.getClient(AuthenticationApi.class);
         
-        ExternalIdentifier externalId = Tests.createExternalId(SignInTest.class, developer);
+        ExternalIdentifier externalId = Tests.createExternalId(SignInTest.class, developer, SUBSTUDY_ID_1);
         
         Map<String,String> map = Maps.newHashMap();
         map.put("can_be_recontacted", "true");
@@ -119,7 +121,7 @@ public class SignInTest {
         StudyParticipant retrieved = participantsApi.getParticipantById(summary.getId(), false).execute().body();
         assertEquals("First Name", retrieved.getFirstName());
         assertEquals("Last Name", retrieved.getLastName());
-        assertEquals(externalId.getIdentifier(), retrieved.getExternalId());
+        assertTrue(retrieved.getExternalIds().values().contains(externalId.getIdentifier()));
         assertEquals(signUp.getEmail(), retrieved.getEmail());
         assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
         assertTrue(retrieved.isNotifyByEmail());
