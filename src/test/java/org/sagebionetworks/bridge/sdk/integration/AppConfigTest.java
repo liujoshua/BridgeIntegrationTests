@@ -138,6 +138,7 @@ public class AppConfigTest {
         }
     }
     
+    @SuppressWarnings("deprecation")
     @Test
     public void crudAppConfig() throws Exception {
         Survey survey = TestSurvey.getSurvey(AppConfigTest.class);

@@ -87,7 +87,7 @@ public class ExternalIdSignUpTest {
                 fail("Should have thrown exception.");
             } catch(ConsentRequiredException e) {
                 userId1 = e.getSession().getId();
-                assertEquals(externalId1, e.getSession().getExternalId());
+                assertTrue(e.getSession().getExternalIds().values().contains(externalId1));
                 assertEquals(AccountStatus.ENABLED, e.getSession().getStatus());
             }
             
