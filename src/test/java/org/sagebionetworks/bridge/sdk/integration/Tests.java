@@ -26,9 +26,7 @@ import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
 import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
-import org.sagebionetworks.bridge.rest.model.EmailTemplate;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
-import org.sagebionetworks.bridge.rest.model.MimeType;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
@@ -36,7 +34,6 @@ import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
-import org.sagebionetworks.bridge.rest.model.SmsTemplate;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.SubstudyList;
@@ -56,22 +53,6 @@ public class Tests {
     public static final String PASSWORD = "P@ssword`1";
     public static final String SUBSTUDY_ID_1 = "substudy1";
     public static final String SUBSTUDY_ID_2 = "substudy2";
-
-    public static final EmailTemplate TEST_RESET_PASSWORD_TEMPLATE = new EmailTemplate().subject("Reset your password")
-        .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
-    public static final EmailTemplate TEST_VERIFY_EMAIL_TEMPLATE = new EmailTemplate().subject("Verify your email")
-        .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
-    public static final EmailTemplate TEST_EMAIL_SIGNIN_TEMPLATE = new EmailTemplate().subject("${studyName} sign in link")
-            .body("<p>${host}/${token}</p>").mimeType(MimeType.TEXT_HTML);
-    public static final EmailTemplate TEST_ACCOUNT_EXISTS_TEMPLATE = new EmailTemplate().subject("Your ${studyName} account")
-            .body("<p>${url}</p>").mimeType(MimeType.TEXT_HTML);
-    public static final EmailTemplate APP_INSTALL_LINK_TEMPLATE = new EmailTemplate().subject("Your ${studyName} dl link").body("body ${appInstallUrl}")
-            .mimeType(MimeType.TEXT_PLAIN);
-    public static final SmsTemplate RESET_PASSWORD_SMS_TEMPLATE = new SmsTemplate().message("resetPasswordSmsTemplate ${resetPasswordUrl}");
-    public static final SmsTemplate PHONE_SIGNIN_SMS_TEMPLATE = new SmsTemplate().message("phoneSignInSmsTemplate ${token}");
-    public static final SmsTemplate APP_INSTALL_LINK_SMS_TEMPLATE = new SmsTemplate().message("appInstallLinkSmsTemplate ${appInstallUrl}");
-    public static final SmsTemplate VERIFY_PHONE_SMS_TEMPLATE = new SmsTemplate().message("verifyPhoneSmsTemplate ${token}");
-    public static final SmsTemplate ACCOUNT_EXISTS_SMS_TEMPLATE = new SmsTemplate().message("accountExistsSmsTemplate ${token}");
 
     public static ClientInfo getClientInfoWithVersion(String osName, int version) {
         return new ClientInfo().appName(APP_NAME).appVersion(version).deviceName(APP_NAME).osName(osName)
@@ -244,16 +225,6 @@ public class Tests {
         study.setUserProfileAttributes(Lists.newArrayList("new_profile_attribute"));
         study.setTaskIdentifiers(Lists.newArrayList("taskA")); // setting it differently just for the heck of it 
         study.setDataGroups(Lists.newArrayList("beta_users", "production_users"));
-        study.setResetPasswordTemplate(TEST_RESET_PASSWORD_TEMPLATE);
-        study.setVerifyEmailTemplate(TEST_VERIFY_EMAIL_TEMPLATE);
-        study.setEmailSignInTemplate(TEST_EMAIL_SIGNIN_TEMPLATE);
-        study.setAccountExistsTemplate(TEST_ACCOUNT_EXISTS_TEMPLATE);
-        study.setAppInstallLinkTemplate(APP_INSTALL_LINK_TEMPLATE);
-        study.setResetPasswordSmsTemplate(RESET_PASSWORD_SMS_TEMPLATE);
-        study.setPhoneSignInSmsTemplate(PHONE_SIGNIN_SMS_TEMPLATE);
-        study.setAppInstallLinkSmsTemplate(APP_INSTALL_LINK_SMS_TEMPLATE);
-        study.setVerifyPhoneSmsTemplate(VERIFY_PHONE_SMS_TEMPLATE);
-        study.setAccountExistsSmsTemplate(ACCOUNT_EXISTS_SMS_TEMPLATE);
         study.setEmailVerificationEnabled(true);
         study.setEmailSignInEnabled(true);
         study.setHealthCodeExportEnabled(true);
