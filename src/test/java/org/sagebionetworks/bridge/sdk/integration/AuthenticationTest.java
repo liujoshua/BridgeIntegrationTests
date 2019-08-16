@@ -228,8 +228,6 @@ public class AuthenticationTest {
             study.setSupportEmail("bridge-testing+support@sagebase.org");
             study.setConsentNotificationEmail("bridge-testing+consent@sagebase.org");
             study.setTechnicalEmail("bridge-testing+technical@sagebase.org");
-            study.setResetPasswordTemplate(Tests.TEST_RESET_PASSWORD_TEMPLATE);
-            study.setVerifyEmailTemplate(Tests.TEST_VERIFY_EMAIL_TEMPLATE);
             study.setEmailVerificationEnabled(true);
             
             adminApi.createStudy(study).execute();
