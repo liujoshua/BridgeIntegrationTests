@@ -71,7 +71,7 @@ public class CriteriaTest {
         String userAgent = RestUtils.getUserAgent(user.getClientManager().getClientInfo());
         String acceptLanguage = "fr-CH, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5";
         
-        // Save updated language preferences
+        // Force the accept language header, not what is set as a default for integration tests.
         ApiClientProvider provider = new ApiClientProvider(user.getClientManager().getHostUrl(),
                 userAgent, acceptLanguage, STUDY_ID);
         
