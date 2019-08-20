@@ -271,6 +271,8 @@ public class StudyTest {
         assertEquals("OAuth provider should have endpoint", "https://www.server.com/", myProvider.getEndpoint());
         assertEquals("OAuth provider should have callbackUrl", "https://client.callback.com/",
                 myProvider.getCallbackUrl());
+        assertEquals("OAuth provider should have introspectEndpoint", "http://example.com/introspect",
+                myProvider.getIntrospectEndpoint());
 
         // Verify other defaults
         assertFalse("consentNotificationEmailVerified should be false", newStudy

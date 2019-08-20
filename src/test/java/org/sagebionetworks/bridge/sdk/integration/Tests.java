@@ -241,7 +241,8 @@ public class Tests {
         study.setPushNotificationARNs(platformMap);
         
         OAuthProvider oauthProvider = new OAuthProvider().clientId("clientId").secret("secret")
-                .endpoint("https://www.server.com/").callbackUrl("https://client.callback.com/");
+                .endpoint("https://www.server.com/").callbackUrl("https://client.callback.com/")
+                .introspectEndpoint("http://example.com/introspect");
         Map<String,OAuthProvider> oauthProviders = new HashMap<>();
         oauthProviders.put("myProvider", oauthProvider);
         study.setOAuthProviders(oauthProviders);
