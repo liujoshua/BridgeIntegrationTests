@@ -94,7 +94,7 @@ public class StudyConsentTest {
 
         StudyConsent current = studyConsentsApi.getConsent(subpopGuid, studyConsents.getItems().get(0).getCreatedOn())
                 .execute().body();
-        assertEquals(consent.getDocumentContent(), current.getDocumentContent());
+        assertTrue(current.getDocumentContent().contains("<p>Test content</p>"));
         assertNotNull(current.getCreatedOn());
 
         studyConsentsApi.publishConsent(subpopGuid, current.getCreatedOn()).execute();
