@@ -459,7 +459,7 @@ public class ParticipantsTest {
             user.signInAgain();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
-            // User can no longer sign in. 
+            // expected
         } finally {
             user.signOutAndDeleteUser();
         }
@@ -489,6 +489,17 @@ public class ParticipantsTest {
             fail("Should have thrown consent exception");
         } catch(ConsentRequiredException e) {
             assertFalse(RestUtils.isUserConsented(e.getSession()));
+            
+            ParticipantsApi userApi = user.getClient(ParticipantsApi.class);
+            
+            StudyParticipant participant = userApi.getUsersParticipantRecord(true).execute().body();
+            assertEquals(NO_SHARING, participant.getSharingScope());
+            
+            // Should not be able to do this.
+            participant.sharingScope(ALL_QUALIFIED_RESEARCHERS);
+            UserSessionInfo updatedSession = userApi.updateUsersParticipantRecord(participant).execute().body();
+            assertEquals(NO_SHARING, updatedSession.getSharingScope());
+            
         } finally {
             user.signOutAndDeleteUser();
         }
