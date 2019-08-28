@@ -500,6 +500,8 @@ public class ParticipantsTest {
             UserSessionInfo updatedSession = userApi.updateUsersParticipantRecord(participant).execute().body();
             assertEquals(NO_SHARING, updatedSession.getSharingScope());
             
+            participant = userApi.getUsersParticipantRecord(true).execute().body();
+            assertEquals(NO_SHARING, participant.getSharingScope());
         } finally {
             user.signOutAndDeleteUser();
         }
