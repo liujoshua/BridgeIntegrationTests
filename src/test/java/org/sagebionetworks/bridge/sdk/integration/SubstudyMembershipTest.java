@@ -128,7 +128,6 @@ public class SubstudyMembershipTest {
             userApi.updateUsersIdentifiers(update).execute();
             fail("Should have thrown exception");
         } catch (ConstraintViolationException e) {
-            System.out.println(e.getMessage());
             assertTrue(e.getMessage().contains("Account already associated to substudy."));
         }
 
