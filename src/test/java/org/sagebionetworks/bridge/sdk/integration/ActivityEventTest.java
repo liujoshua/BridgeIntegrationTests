@@ -94,6 +94,34 @@ public class ActivityEventTest {
     }
 
     @Test
+    public void canCreateCreatedOnAndStudyStartDate() throws IOException {
+        // Get activity events and convert to map for ease of use
+        List<ActivityEvent> activityEventList = usersApi.getActivityEvents().execute().body().getItems();
+        Map<String, ActivityEvent> activityEventMap = activityEventList.stream().collect(
+                Collectors.toMap(ActivityEvent::getEventId, e -> e));
+        
+        // Verify enrollment events exist
+        ActivityEvent enrollmentEvent = activityEventMap.get("enrollment");
+        assertNotNull(enrollmentEvent);
+        DateTime enrollmentTime = enrollmentEvent.getTimestamp();
+        assertNotNull(enrollmentTime);
+        
+        StudyParticipant participant = usersApi.getUsersParticipantRecord(false).execute().body();
+        
+        // Verify enrollment events exist
+        ActivityEvent createdOnEvent = activityEventMap.get("created_on");
+        assertNotNull(createdOnEvent);
+        DateTime createdOnTime = createdOnEvent.getTimestamp();
+        assertEquals(createdOnTime, participant.getCreatedOn());
+        
+        // Verify enrollment events exist
+        ActivityEvent studyStateDateEvent = activityEventMap.get("study_start_date");
+        assertNotNull(studyStateDateEvent);
+        DateTime studyStateDateTime = studyStateDateEvent.getTimestamp();
+        assertEquals(studyStateDateTime, enrollmentTime);
+    }
+
+    @Test
     public void canCreateAndGetCustomEvent() throws IOException {
         // Setup
         ActivityEventList activityEventList = usersApi.getActivityEvents().execute().body();
