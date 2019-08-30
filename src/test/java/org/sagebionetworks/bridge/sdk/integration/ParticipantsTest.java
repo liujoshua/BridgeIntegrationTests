@@ -22,6 +22,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -135,12 +136,10 @@ public class ParticipantsTest {
             assertEquals(user.getEmail(), self.getEmail());
 
             // Update and verify changes. Right now there's not a lot that can be changed
-            List<String> set = Lists.newArrayList();
-            set.add("nl");
-            set.add("en");
+            List<String> languages = ImmutableList.of("nl", "fr", "en");
 
-            self.setLanguages(set);
-            self.setDataGroups(Lists.newArrayList("group1"));
+            self.setLanguages(languages);
+            self.setDataGroups(ImmutableList.of("group1"));
             self.setSharingScope(ALL_QUALIFIED_RESEARCHERS);
             self.setNotifyByEmail(null); // BRIDGE-1604: should use default value: true
             
@@ -162,7 +161,7 @@ public class ParticipantsTest {
             
             self = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
-            assertEquals(Lists.newArrayList("group1"), self.getDataGroups());
+            assertEquals(ImmutableList.of("group1"), self.getDataGroups());
             assertTrue(self.isNotifyByEmail());  // BRIDGE-1604: true value returned
             
             List<String> deserClientData = (List<String>)RestUtils.toType(self.getClientData(), List.class);
@@ -170,7 +169,7 @@ public class ParticipantsTest {
             assertEquals("B", deserClientData.get(1));
             assertEquals("C", deserClientData.get(2));
             
-            // also language, but this hasn't been added to the session object yet.
+            assertEquals(ImmutableList.of("nl", "fr", "en"), self.getLanguages());
         } finally {
             user.signOutAndDeleteUser();
         }
@@ -461,7 +460,7 @@ public class ParticipantsTest {
             user.signInAgain();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
-            // User can no longer sign in. 
+            // expected
         } finally {
             user.signOutAndDeleteUser();
         }
@@ -491,6 +490,19 @@ public class ParticipantsTest {
             fail("Should have thrown consent exception");
         } catch(ConsentRequiredException e) {
             assertFalse(RestUtils.isUserConsented(e.getSession()));
+            
+            ParticipantsApi userApi = user.getClient(ParticipantsApi.class);
+            
+            StudyParticipant participant = userApi.getUsersParticipantRecord(true).execute().body();
+            assertEquals(NO_SHARING, participant.getSharingScope());
+            
+            // Should not be able to do this.
+            participant.sharingScope(ALL_QUALIFIED_RESEARCHERS);
+            UserSessionInfo updatedSession = userApi.updateUsersParticipantRecord(participant).execute().body();
+            assertEquals(NO_SHARING, updatedSession.getSharingScope());
+            
+            participant = userApi.getUsersParticipantRecord(true).execute().body();
+            assertEquals(NO_SHARING, participant.getSharingScope());
         } finally {
             user.signOutAndDeleteUser();
         }
