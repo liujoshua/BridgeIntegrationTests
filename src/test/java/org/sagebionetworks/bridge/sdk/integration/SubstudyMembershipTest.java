@@ -128,7 +128,7 @@ public class SubstudyMembershipTest {
             userApi.updateUsersIdentifiers(update).execute();
             fail("Should have thrown exception");
         } catch (ConstraintViolationException e) {
-            assertTrue(e.getMessage().contains("This account has already been associated"));
+            assertTrue(e.getMessage().contains("Account already associated to substudy."));
         }
 
         // Error test #2: assigning the same external ID silently changes nothing

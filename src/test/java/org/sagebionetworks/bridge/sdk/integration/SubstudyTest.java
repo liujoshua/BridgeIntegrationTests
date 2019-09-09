@@ -19,6 +19,7 @@ import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
@@ -187,7 +188,7 @@ public class SubstudyTest {
             signUp2.substudyIds(ImmutableList.of(id1, id2));
             participantsApi.createParticipant(signUp2).execute().body();
             fail("Should have thrown exception");
-        } catch(InvalidEntityException e) {
+        } catch(BadRequestException e) {
             assertTrue(e.getMessage().contains("is not a substudy of the caller"));
         }
         
@@ -196,8 +197,8 @@ public class SubstudyTest {
             signUp2.substudyIds(ImmutableList.of());
             participantsApi.createParticipant(signUp2).execute().body();
             fail("Should have thrown exception");
-        } catch(InvalidEntityException e) {
-            assertTrue(e.getMessage().contains("must be assigned to this participant"));
+        } catch(BadRequestException e) {
+            assertTrue(e.getMessage().contains("must be assigned to one or more of these substudies"));
         }
         
         // User can be created if it has at least one substudy from the researcher creating it

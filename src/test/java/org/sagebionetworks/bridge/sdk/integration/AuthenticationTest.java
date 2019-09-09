@@ -260,7 +260,7 @@ public class AuthenticationTest {
         assertEquals(400, response.getStatusLine().getStatusCode());
         
         JsonNode node = new ObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
-        assertEquals("Verification token is invalid (it may have expired, or already been used).", node.get("message").asText());
+        assertEquals("This verification token is no longer valid.", node.get("message").asText());
     }
     
     @Test
@@ -272,7 +272,7 @@ public class AuthenticationTest {
         assertEquals(400, response.getStatusLine().getStatusCode());
         
         JsonNode node = new ObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
-        assertEquals("Verification token is invalid (it may have expired, or already been used).", node.get("message").asText());
+        assertEquals("This verification token is no longer valid.", node.get("message").asText());
     }
     
 
