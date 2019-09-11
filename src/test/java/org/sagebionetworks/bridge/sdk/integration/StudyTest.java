@@ -358,7 +358,6 @@ public class StudyTest {
     }
 
     @Test
-    @Ignore // REMOVEME
     public void researcherCannotAccessAnotherStudy() throws Exception {
         TestUser researcher = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.RESEARCHER);
         try {
@@ -382,7 +381,6 @@ public class StudyTest {
     }
 
     @Test(expected = UnauthorizedException.class)
-    @Ignore // REMOVEME
     public void butNormalUserCannotAccessStudy() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, false);
         try {
@@ -394,7 +392,6 @@ public class StudyTest {
     }
 
     @Test
-    @Ignore // REMOVEME
     public void developerCannotChangeAdminOnlySettings() throws Exception {
         TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
         try {
@@ -427,7 +424,6 @@ public class StudyTest {
     }
 
     @Test
-    @Ignore // REMOVEME
     public void resendVerifyConsentNotificationEmail() throws Exception {
         // We currently can't check an email address as part of a test. Just verify that the call succeeds.
         TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
@@ -441,7 +437,6 @@ public class StudyTest {
     }
 
     @Test
-    @Ignore // REMOVEME
     public void verifyConsentNotificationEmail() throws Exception {
         // We can't currently check an email address to get a real verification token. This test is mainly to make sure
         // that our Java SDK is set up correctly.
@@ -455,7 +450,6 @@ public class StudyTest {
     }
 
     @Test
-    @Ignore // REMOVEME
     public void uploadMetadataFieldDefinitions() throws Exception {
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
 
@@ -605,7 +599,6 @@ public class StudyTest {
     }
 
     @Test
-    @Ignore // REMOVEME
     public void adminCanGetAllStudies() throws Exception {
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
 
@@ -614,7 +607,6 @@ public class StudyTest {
     }
 
     @Test
-    @Ignore // REMOVEME
     public void userCannotAccessApisWithDeprecatedClient() throws Exception {
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         Study study = adminApi.getStudy(IntegTestUtils.STUDY_ID).execute().body();
@@ -652,7 +644,6 @@ public class StudyTest {
     }
 
     @Test
-    @Ignore // REMOVEME
     public void getStudyUploads() throws Exception {
         TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
