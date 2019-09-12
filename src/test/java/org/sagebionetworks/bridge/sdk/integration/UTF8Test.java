@@ -13,6 +13,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 import static org.junit.Assert.assertEquals;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 @Category(IntegrationSmokeTest.class)
 public class UTF8Test {
@@ -43,6 +44,7 @@ public class UTF8Test {
             assertEquals(studyId, returnedStudy.getIdentifier());
             assertEquals(studyName, returnedStudy.getName());
         } finally {
+            adminApi.adminChangeStudy(new SignIn().study(STUDY_ID)).execute();
             // clean-up: delete study
             adminApi.deleteStudy(studyId, true).execute();
         }
