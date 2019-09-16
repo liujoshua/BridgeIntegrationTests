@@ -5,6 +5,7 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -12,6 +13,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 import static org.junit.Assert.assertEquals;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 @Category(IntegrationSmokeTest.class)
 public class UTF8Test {
@@ -35,11 +37,14 @@ public class UTF8Test {
         adminApi.createStudy(study).execute();
 
         try {
+            adminApi.adminChangeStudy(new SignIn().study(studyId)).execute();
+            
             // get study back and verify fields
             Study returnedStudy = adminApi.getStudy(studyId).execute().body();
             assertEquals(studyId, returnedStudy.getIdentifier());
             assertEquals(studyName, returnedStudy.getName());
         } finally {
+            adminApi.adminChangeStudy(new SignIn().study(STUDY_ID)).execute();
             // clean-up: delete study
             adminApi.deleteStudy(studyId, true).execute();
         }
