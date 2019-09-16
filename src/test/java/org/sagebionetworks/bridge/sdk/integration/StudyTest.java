@@ -55,6 +55,7 @@ import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.Upload;
@@ -234,6 +235,7 @@ public class StudyTest {
         VersionHolder holder = adminApi.createStudy(study).execute().body();
         assertNotNull(holder.getVersion());
 
+        adminApi.adminChangeStudy(new SignIn().study(studyId)).execute();
         Study newStudy = adminApi.getStudy(study.getIdentifier()).execute().body();
         
         study.addDataGroupsItem("test_user"); // added by the server, required for equality of dataGroups.
@@ -335,18 +337,16 @@ public class StudyTest {
         assertFalse("studyIdExcludedInExport should be false after update", newestStudy.isStudyIdExcludedInExport());
         assertFalse("consentNotificationEmailVerified should be false after update", newestStudy
                 .isConsentNotificationEmailVerified());
+        
+        // and then you have to switch back, because after you delete this test study, 
+        // all users signed into that study are locked out of working.
+        adminApi.adminChangeStudy(new SignIn().study("api")).execute();
 
         // logically delete a study by admin
         adminApi.deleteStudy(studyId, false).execute();
         Study retStudy = adminApi.getStudy(studyId).execute().body();
         assertNotNull(retStudy);
 
-        // and try to update that deleted study
-        retStudy.setSponsorName("renewed-sponsor-name");
-        adminApi.updateStudy(retStudy.getIdentifier(), retStudy).execute().body();
-        Study retRenewedStudy = adminApi.getStudy(retStudy.getIdentifier()).execute().body();
-        assertEquals("renewed-sponsor-name", retRenewedStudy.getSponsorName());
-        
         adminApi.deleteStudy(studyId, true).execute();
         try {
             adminApi.getStudy(studyId).execute();
