@@ -3,6 +3,9 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.ADMIN;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -16,10 +19,10 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
-import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -43,13 +46,9 @@ public class SubstudyMembershipTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        studyAdmin = TestUserHelper.createAndSignInUser(SubstudyMembershipTest.class, false, Role.DEVELOPER,
-                Role.RESEARCHER, Role.ADMIN); // to change substudy membership, user must also be an admin.
+        studyAdmin = TestUserHelper.createAndSignInUser(SubstudyMembershipTest.class, false, DEVELOPER, RESEARCHER,
+                ADMIN); // to change substudy membership, user must also be an admin.
         substudiesApi = admin.getClient(SubstudiesApi.class);
-
-        Study study = admin.getClient(ForAdminsApi.class).getUsersStudy().execute().body();
-        study.setExternalIdRequiredOnSignup(true);
-        admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute();
 
         substudyIdsToDelete = new HashSet<>();
         externalIdsToDelete = new HashSet<>();
@@ -61,7 +60,7 @@ public class SubstudyMembershipTest {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         Study study = adminsApi.getUsersStudy().execute().body();
         study.setExternalIdRequiredOnSignup(false);
-        admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute();
+        adminsApi.updateStudy(study.getIdentifier(), study).execute();
 
         // This can only happen after external ID management is disabled.
         for (TestUser user : usersToDelete) {
@@ -88,12 +87,15 @@ public class SubstudyMembershipTest {
             } catch(Exception e) {
                 e.printStackTrace();
             }
-            
         }
     }
 
     @Test
     public void addingExternalIdsAssociatesToSubstudy() throws Exception {
+        Study study = admin.getClient(ForAdminsApi.class).getUsersStudy().execute().body();
+        study.setExternalIdRequiredOnSignup(true);
+        admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute();
+        
         // Create two substudies
         String idA = createSubstudy();
         String idB = createSubstudy();
@@ -162,6 +164,39 @@ public class SubstudyMembershipTest {
         StudyParticipant withdrawn = participantsApi.getParticipantById(userId, true).execute().body();
         assertEquals(1, withdrawn.getExternalIds().size());
         assertEquals(extIdB, withdrawn.getExternalIds().get(idB));
+    }
+    
+    @Test
+    public void userCanAddExternalIdMembership() throws Exception {
+        // Create two substudies
+        String idA = createSubstudy();
+        String idB = createSubstudy();
+
+        // Create an external ID in each substudy
+        String extIdA = createExternalId(idA, "extA");
+        String extIdB = createExternalId(idB, "extB");
+
+        // create an account, sign in and consent, assigned to substudy A
+        TestUser user = TestUserHelper.createAndSignInUser(SubstudyMembershipTest.class, true);
+        usersToDelete.add(user);
+        
+        ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
+        //ParticipantsApi participantsApi = studyAdmin.getClient(ParticipantsApi.class);
+
+        // add an external ID the old fashioned way, using the StudyParticipant. This works the first time because
+        // the user isn't associated to a substudy yet
+        StudyParticipant participant = new StudyParticipant().externalId(extIdA);
+        UserSessionInfo session = userApi.updateUsersParticipantRecord(participant).execute().body();
+        assertEquals(extIdA, session.getExternalIds().get(idA));
+        
+        // the second time will not work because now the user is associated to a substudy.
+        participant = new StudyParticipant().externalId(extIdB);
+        try {
+            userApi.updateUsersParticipantRecord(participant).execute().body();
+            fail("Should have thrown exception");
+        } catch(BadRequestException e) {
+            assertTrue(e.getMessage().contains("is not a substudy of the caller"));
+        }
     }
 
     private String createSubstudy() throws Exception {
