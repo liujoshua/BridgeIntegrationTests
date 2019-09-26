@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -27,6 +29,7 @@ import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
 import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
+import org.sagebionetworks.bridge.rest.model.MasterSchedulerConfig;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
@@ -323,4 +326,19 @@ public class Tests {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         admin.getClient(ForAdminsApi.class).deleteExternalId(externalId.getIdentifier()).execute();
     }    
+    
+    public static MasterSchedulerConfig getMastSchedulerConfig() {
+        ObjectNode objNode = JsonNodeFactory.instance.objectNode();
+        objNode.put("a", true);
+        objNode.put("b", "string");
+        
+        MasterSchedulerConfig config = new MasterSchedulerConfig();
+        config.setScheduleId("test-schedule-id");
+        config.setCronSchedule("testCronSchedule");
+        config.setRequestTemplate(objNode);
+        config.setSqsQueueUrl("testSysQueueUrl");
+        config.setVersion(1L);
+        
+        return config;
+    }
 }
