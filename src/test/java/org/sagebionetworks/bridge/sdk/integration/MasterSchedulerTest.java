@@ -41,7 +41,7 @@ public class MasterSchedulerTest {
         try {
             adminApi.deleteSchedulerConfig(SCHEDULE_ID).execute().body();
         } catch (EntityNotFoundException e) {
-            assertEquals("MasterSchedulerConfig not found.", e.getMessage());
+            
         }
     }
     
@@ -94,7 +94,7 @@ public class MasterSchedulerTest {
     }
     
     @Test
-    public void getSchedulerConfigDelete() throws Exception {
+    public void testDeleteSchedulerConfig() throws Exception {
         adminApi.createSchedulerConfig(config).execute().body();
         
         try {
@@ -108,7 +108,7 @@ public class MasterSchedulerTest {
     }
     
     @Test
-    public void getSchedulerStatus() throws Exception {
+    public void testGetSchedulerStatus() throws Exception {
         DateTimeHolder dateTime = adminApi.getSchedulerStatus().execute().body();
         
         assertNull(dateTime.getDateTime());
