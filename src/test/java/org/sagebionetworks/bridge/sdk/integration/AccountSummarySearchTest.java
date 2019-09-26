@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -23,7 +24,6 @@ import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -33,6 +33,8 @@ public class AccountSummarySearchTest {
     private static final ArrayList<String> TEST_USER_GROUPS = Lists.newArrayList("test_user", "sdk-int-1");
     private static final ArrayList<String> TAGGED_USER_GROUPS = Lists.newArrayList("group1", "sdk-int-1");
     private static final ArrayList<String> FRENCH_USER_GROUPS = Lists.newArrayList("sdk-int-1");
+
+    private static String emailPrefix;
     private static TestUser testUser;
     private static TestUser taggedUser;
     private static TestUser frenchUser;
@@ -42,16 +44,21 @@ public class AccountSummarySearchTest {
     
     @BeforeClass
     public static void before() throws Exception {
+        // Manually generate email addresses. We want to limit our AccountSummarySearch to just accounts created by
+        // this test, to improve test reliability. Note that AccountSummarySearch.emailFilter uses a like
+        // '%[emailFilter]%', so an email prefix works.
+        emailPrefix = "bridge-testing+AccountSummarySearchTest-" + RandomStringUtils.randomAlphabetic(4) + "-";
+
         testUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
-                .withSignUp((SignUp) new SignUp().email(IntegTestUtils.makeEmail(AccountSummarySearchTest.class))
+                .withSignUp(new SignUp().email(emailPrefix + "test@sagebase.org")
                         .languages(Lists.newArrayList("es"))
                         .dataGroups(TEST_USER_GROUPS)).createUser();
         taggedUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
-                .withSignUp((SignUp) new SignUp().email(IntegTestUtils.makeEmail(AccountSummarySearchTest.class))
+                .withSignUp(new SignUp().email(emailPrefix + "tagged@sagebase.org")
                         .languages(Lists.newArrayList("es"))
                         .dataGroups(TAGGED_USER_GROUPS)).createUser();
         frenchUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
-                .withSignUp((SignUp) new SignUp().email(IntegTestUtils.makeEmail(AccountSummarySearchTest.class))
+                .withSignUp(new SignUp().email(emailPrefix + "french@sagebase.org")
                         .languages(Lists.newArrayList("fr"))
                         .dataGroups(FRENCH_USER_GROUPS)).createUser();
         
@@ -113,13 +120,13 @@ public class AccountSummarySearchTest {
     }
     
     @FunctionalInterface
-    public abstract interface ThrowingFunction<S,T> {
-        public T apply(S s) throws Exception;
+    public interface ThrowingFunction<S,T> {
+        T apply(S s) throws Exception;
     }
     
     private void testSuite(ThrowingFunction<AccountSummarySearch, AccountSummaryList> supplier) throws Exception {
         // Successful language search
-        AccountSummarySearch search = new AccountSummarySearch().language("fr");
+        AccountSummarySearch search = makeAccountSummarySearch().language("fr");
         AccountSummaryList list = supplier.apply(search);
         Set<String> userIds = mapUserIds(list);
         assertFalse(userIds.contains(testUser.getUserId()));
@@ -128,7 +135,7 @@ public class AccountSummarySearchTest {
         assertEquals("fr", list.getRequestParams().getLanguage());
         
         // Unsuccessful language search
-        search = new AccountSummarySearch().language("en");
+        search = makeAccountSummarySearch().language("en");
         list = supplier.apply(search);
         userIds = mapUserIds(list);
         assertFalse(userIds.contains(testUser.getUserId()));
@@ -137,7 +144,7 @@ public class AccountSummarySearchTest {
         assertEquals("en", list.getRequestParams().getLanguage());
         
         // Successful "allOfGroups" search
-        search = new AccountSummarySearch().allOfGroups(TAGGED_USER_GROUPS);
+        search = makeAccountSummarySearch().allOfGroups(TAGGED_USER_GROUPS);
         list = supplier.apply(search);
         userIds = mapUserIds(list);
         assertFalse(userIds.contains(testUser.getUserId()));
@@ -146,7 +153,7 @@ public class AccountSummarySearchTest {
         listsMatch(TAGGED_USER_GROUPS, list.getRequestParams().getAllOfGroups());
         
         // This is a data group that spans all three accounts..
-        search = new AccountSummarySearch().allOfGroups(FRENCH_USER_GROUPS);
+        search = makeAccountSummarySearch().allOfGroups(FRENCH_USER_GROUPS);
         list = supplier.apply(search);
         userIds = mapUserIds(list);
         assertTrue(userIds.contains(testUser.getUserId()));
@@ -155,7 +162,7 @@ public class AccountSummarySearchTest {
         listsMatch(FRENCH_USER_GROUPS, list.getRequestParams().getAllOfGroups());
         
         // This pulls up nothing
-        search = new AccountSummarySearch().allOfGroups(Lists.newArrayList("sdk-int-2"));
+        search = makeAccountSummarySearch().allOfGroups(Lists.newArrayList("sdk-int-2"));
         list = supplier.apply(search);
         userIds = mapUserIds(list);
         assertFalse(userIds.contains(testUser.getUserId()));
@@ -164,7 +171,7 @@ public class AccountSummarySearchTest {
         listsMatch(Lists.newArrayList("sdk-int-2"), list.getRequestParams().getAllOfGroups());
         
         // Successful "noneOfGroups" search
-        search = new AccountSummarySearch().noneOfGroups(Lists.newArrayList("group1")).pageSize(100);
+        search = makeAccountSummarySearch().noneOfGroups(Lists.newArrayList("group1")).pageSize(100);
         list = supplier.apply(search);
         userIds = mapUserIds(list);
         assertTrue(userIds.contains(testUser.getUserId()));
@@ -173,7 +180,7 @@ public class AccountSummarySearchTest {
         listsMatch(Lists.newArrayList("group1"), list.getRequestParams().getNoneOfGroups());
         
         // This is a data group that spans all three accounts..
-        search = new AccountSummarySearch().noneOfGroups(FRENCH_USER_GROUPS);
+        search = makeAccountSummarySearch().noneOfGroups(FRENCH_USER_GROUPS);
         list = supplier.apply(search);
         userIds = mapUserIds(list);
         assertFalse(userIds.contains(testUser.getUserId()));
@@ -182,7 +189,7 @@ public class AccountSummarySearchTest {
         listsMatch(FRENCH_USER_GROUPS, list.getRequestParams().getNoneOfGroups());
         
         // This pulls up everything we're looking for
-        search = new AccountSummarySearch().noneOfGroups(Lists.newArrayList("sdk-int-2")).pageSize(100);
+        search = makeAccountSummarySearch().noneOfGroups(Lists.newArrayList("sdk-int-2")).pageSize(100);
         list = supplier.apply(search);
         userIds = mapUserIds(list);
         assertTrue(userIds.contains(testUser.getUserId()));
@@ -191,7 +198,7 @@ public class AccountSummarySearchTest {
         listsMatch(Lists.newArrayList("sdk-int-2"), list.getRequestParams().getNoneOfGroups());
         
         // mixed works
-        search = new AccountSummarySearch().allOfGroups(Lists.newArrayList("sdk-int-1"))
+        search = makeAccountSummarySearch().allOfGroups(Lists.newArrayList("sdk-int-1"))
                 .noneOfGroups(Lists.newArrayList("group1"));
         list = supplier.apply(search);
         userIds = mapUserIds(list);
@@ -201,7 +208,7 @@ public class AccountSummarySearchTest {
         listsMatch(Lists.newArrayList("sdk-int-1"), list.getRequestParams().getAllOfGroups());
         listsMatch(Lists.newArrayList("group1"), list.getRequestParams().getNoneOfGroups());
         
-        search = new AccountSummarySearch().allOfGroups(Lists.newArrayList("sdk-int-1")).language("fr")
+        search = makeAccountSummarySearch().allOfGroups(Lists.newArrayList("sdk-int-1")).language("fr")
                 .noneOfGroups(Lists.newArrayList("sdk-int-2"));
         list = supplier.apply(search);
         userIds = mapUserIds(list);
@@ -209,7 +216,11 @@ public class AccountSummarySearchTest {
         assertFalse(userIds.contains(taggedUser.getUserId()));
         assertTrue(userIds.contains(frenchUser.getUserId()));
     }
-    
+
+    private static AccountSummarySearch makeAccountSummarySearch() {
+        return new AccountSummarySearch().emailFilter(emailPrefix);
+    }
+
     private void listsMatch(List<String> list1, List<String> list2) {
         if (list1.size() != list2.size()) {
             fail("Lists are not the same size, cannot be equal");
