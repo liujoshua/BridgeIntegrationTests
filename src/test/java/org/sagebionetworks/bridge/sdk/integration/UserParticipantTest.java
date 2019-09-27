@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
@@ -17,9 +18,11 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -100,17 +103,19 @@ public class UserParticipantTest {
             StudyParticipant participant = usersApi.getUsersParticipantRecord(false).execute().body();
             participant.setExternalId(externalId1.getIdentifier());
 
-            usersApi.updateUsersParticipantRecord(participant).execute();
+            UserSessionInfo session = usersApi.updateUsersParticipantRecord(participant).execute().body();
+            assertEquals(externalId1.getIdentifier(), session.getExternalIds().get(SUBSTUDY_ID_1));
 
             participant = usersApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(user.getEmail(), participant.getEmail());
             assertTrue(participant.getExternalIds().values().contains(externalId1.getIdentifier()));
             
-            participant.setExternalId(externalId2.getIdentifier());
-            usersApi.updateUsersParticipantRecord(participant).execute();
-
-            participant = usersApi.getUsersParticipantRecord(false).execute().body();
-            assertTrue(participant.getExternalIds().values().contains(externalId1.getIdentifier()));
+            try {
+                participant.setExternalId(externalId2.getIdentifier());
+                usersApi.updateUsersParticipantRecord(participant).execute();
+                fail("Exception should have been thrown");
+            } catch(BadRequestException e) {
+            }
         } finally {
             Tests.deleteExternalId(externalId1);
             Tests.deleteExternalId(externalId2);
