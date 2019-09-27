@@ -31,6 +31,7 @@ import org.sagebionetworks.bridge.rest.model.TimeConstraints;
 import org.sagebionetworks.bridge.rest.model.UIHint;
 import org.sagebionetworks.bridge.rest.model.Unit;
 import org.sagebionetworks.bridge.rest.model.WeightConstraints;
+import org.sagebionetworks.bridge.rest.model.YearConstraints;
 import org.sagebionetworks.bridge.rest.model.YearMonthConstraints;
 
 import com.google.common.collect.Lists;
@@ -77,6 +78,7 @@ public class TestSurvey {
     public static final String WEIGHT_ID = "weight";
     public static final String YEARMONTH_ID = "yearmonth";
     public static final String POSTALCODE_ID = "postalcode";
+    public static final String YEAR_ID = "year";
 
     private static Image image(String url, int width, int height) {
         Image image = new Image();
@@ -272,7 +274,7 @@ public class TestSurvey {
         yearMonthQuestion.setIdentifier(YEARMONTH_ID);
         yearMonthQuestion.setUiHint(UIHint.YEARMONTH);
         Tests.setVariableValueInObject(yearMonthQuestion, "type", "SurveyQuestion");
-
+        
         SurveyQuestion postalCodeQuestion = new SurveyQuestion();
         PostalCodeConstraints pcc = new PostalCodeConstraints();
         pcc.setCountryCode(CountryCode.US);
@@ -281,6 +283,18 @@ public class TestSurvey {
         postalCodeQuestion.setPrompt("Postal code?");
         postalCodeQuestion.setIdentifier(POSTALCODE_ID);
         postalCodeQuestion.setUiHint(UIHint.POSTALCODE);
+        Tests.setVariableValueInObject(postalCodeQuestion, "type", "SurveyQuestion");
+        
+        SurveyQuestion yearQuestion = new SurveyQuestion();
+        YearConstraints yc = new YearConstraints();
+        yc.setAllowFuture(true);
+        yc.setAllowPast(false);
+        yc.setLatestValue("2020");
+        yc.setDataType(DataType.YEAR);
+        yearQuestion.setConstraints(yc);
+        yearQuestion.setPrompt("When is your next MRI?");
+        yearQuestion.setIdentifier(YEAR_ID);
+        yearQuestion.setUiHint(UIHint.SLIDER);
         Tests.setVariableValueInObject(postalCodeQuestion, "type", "SurveyQuestion");
 
         survey.setName(cls.getSimpleName() + " Survey");
@@ -300,6 +314,7 @@ public class TestSurvey {
         elements.add(weightQuestion);
         elements.add(yearMonthQuestion);
         elements.add(postalCodeQuestion);
+        elements.add(yearQuestion);
 
         survey.setCopyrightNotice(COPYRIGHT_NOTICE);
 

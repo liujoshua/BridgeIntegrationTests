@@ -7,20 +7,58 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.CountryCode.US;
+import static org.sagebionetworks.bridge.rest.model.DataType.BOOLEAN;
+import static org.sagebionetworks.bridge.rest.model.DataType.DATE;
+import static org.sagebionetworks.bridge.rest.model.DataType.DATETIME;
+import static org.sagebionetworks.bridge.rest.model.DataType.DECIMAL;
+import static org.sagebionetworks.bridge.rest.model.DataType.DURATION;
+import static org.sagebionetworks.bridge.rest.model.DataType.INTEGER;
+import static org.sagebionetworks.bridge.rest.model.DataType.POSTALCODE;
+import static org.sagebionetworks.bridge.rest.model.DataType.STRING;
+import static org.sagebionetworks.bridge.rest.model.DataType.TIME;
+import static org.sagebionetworks.bridge.rest.model.DataType.YEAR;
+import static org.sagebionetworks.bridge.rest.model.DataType.YEARMONTH;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.UIHint.SLIDER;
+import static org.sagebionetworks.bridge.rest.model.Unit.GRAMS;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.BLOODPRESSURE_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.BOOLEAN_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DATETIME_EARLIEST_VALUE;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DATETIME_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DATETIME_LATEST_VALUE;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DATE_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DATE_QUESTION_EARLIEST_VALUE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DATE_QUESTION_LATEST_VALUE;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DECIMAL_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DECIMAL_QUESTION_MAX_VALUE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DECIMAL_QUESTION_MIN_VALUE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DECIMAL_QUESTION_STEP;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DURATION_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DURATION_QUESTION_MAX_VALUE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DURATION_QUESTION_MIN_VALUE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DURATION_QUESTION_STEP;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DURATION_QUESTION_UNIT;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.HEIGHT_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.INTEGER_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.INT_QUESTION_MAX_VALUE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.INT_QUESTION_MIN_VALUE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.INT_QUESTION_STEP;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.INT_QUESTION_UNIT;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.MULTIVALUE_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.STRING_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.STRING_QUESTION_ERROR_MESSAGE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.STRING_QUESTION_MAX_LENGTH;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.STRING_QUESTION_MIN_LENGTH;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.STRING_QUESTION_PATTERN;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.STRING_QUESTION_PLACEHOLDER;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.TIME_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.WEIGHT_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_QUESTION_ALLOW_FUTURE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_QUESTION_EARLIEST_VALUE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_QUESTION_LATEST_VALUE;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEAR_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.POSTALCODE_ID;
 
@@ -59,7 +97,6 @@ import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ActivityType;
 import org.sagebionetworks.bridge.rest.model.BloodPressureConstraints;
 import org.sagebionetworks.bridge.rest.model.BooleanConstraints;
-import org.sagebionetworks.bridge.rest.model.CountryCode;
 import org.sagebionetworks.bridge.rest.model.DataType;
 import org.sagebionetworks.bridge.rest.model.DateConstraints;
 import org.sagebionetworks.bridge.rest.model.DateTimeConstraints;
@@ -93,6 +130,7 @@ import org.sagebionetworks.bridge.rest.model.TimeConstraints;
 import org.sagebionetworks.bridge.rest.model.UIHint;
 import org.sagebionetworks.bridge.rest.model.Unit;
 import org.sagebionetworks.bridge.rest.model.WeightConstraints;
+import org.sagebionetworks.bridge.rest.model.YearConstraints;
 import org.sagebionetworks.bridge.rest.model.YearMonthConstraints;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -196,64 +234,66 @@ public class SurveyTest {
         assertEquals("SurveyQuestion", booleanQuestion.getType());
         BooleanConstraints booleanConstraints = (BooleanConstraints)booleanQuestion.getConstraints();
         assertEquals("BooleanConstraints", booleanConstraints.getType());
-        assertEquals(DataType.BOOLEAN, booleanConstraints.getDataType());
+        assertEquals(BOOLEAN, booleanConstraints.getDataType());
 
         // Date question
         SurveyQuestion dateQuestion = getQuestion(survey, DATE_ID);
         DateConstraints dateConstraints = (DateConstraints)dateQuestion.getConstraints();
-        assertEquals(DataType.DATE, dateConstraints.getDataType());
+        assertEquals(DATE, dateConstraints.getDataType());
+        assertTrue(dateConstraints.isAllowFuture()); // true by default
         assertEquals("DateConstraints", dateConstraints.getType());
-        assertEquals(TestSurvey.DATE_QUESTION_EARLIEST_VALUE, dateConstraints.getEarliestValue());
-        assertEquals(TestSurvey.DATE_QUESTION_LATEST_VALUE, dateConstraints.getLatestValue());
+        assertEquals(DATE_QUESTION_EARLIEST_VALUE, dateConstraints.getEarliestValue());
+        assertEquals(DATE_QUESTION_LATEST_VALUE, dateConstraints.getLatestValue());
         
         // DateTime question
         SurveyQuestion dateTimeQuestion = getQuestion(survey, DATETIME_ID);
         DateTimeConstraints dateTimeConstraints = (DateTimeConstraints)dateTimeQuestion.getConstraints();
-        assertEquals(DataType.DATETIME, dateTimeConstraints.getDataType());
+        assertEquals(DATETIME, dateTimeConstraints.getDataType());
         assertEquals("DateTimeConstraints", dateTimeConstraints.getType());
-        assertEquals(TestSurvey.DATETIME_EARLIEST_VALUE.toString(), dateTimeConstraints.getEarliestValue().toString());
-        assertEquals(TestSurvey.DATETIME_LATEST_VALUE.toString(), dateTimeConstraints.getLatestValue().toString());
+        assertTrue(dateTimeConstraints.isAllowFuture()); // true by default
+        assertEquals(DATETIME_EARLIEST_VALUE.toString(), dateTimeConstraints.getEarliestValue().toString());
+        assertEquals(DATETIME_LATEST_VALUE.toString(), dateTimeConstraints.getLatestValue().toString());
         
         // Decimal question
         SurveyQuestion decimalQuestion = getQuestion(survey, DECIMAL_ID);
         DecimalConstraints decimalConstraints = (DecimalConstraints)decimalQuestion.getConstraints();
-        assertEquals(DataType.DECIMAL, decimalConstraints.getDataType());
+        assertEquals(DECIMAL, decimalConstraints.getDataType());
         assertEquals("DecimalConstraints", decimalConstraints.getType());
-        assertEquals(TestSurvey.DECIMAL_QUESTION_MIN_VALUE, decimalConstraints.getMinValue());
-        assertEquals(TestSurvey.DECIMAL_QUESTION_MAX_VALUE, decimalConstraints.getMaxValue());
-        assertEquals(TestSurvey.DECIMAL_QUESTION_STEP, decimalConstraints.getStep());
-        assertEquals(Unit.GRAMS, decimalConstraints.getUnit());
+        assertEquals(DECIMAL_QUESTION_MIN_VALUE, decimalConstraints.getMinValue());
+        assertEquals(DECIMAL_QUESTION_MAX_VALUE, decimalConstraints.getMaxValue());
+        assertEquals(DECIMAL_QUESTION_STEP, decimalConstraints.getStep());
+        assertEquals(GRAMS, decimalConstraints.getUnit());
         
         // Integer question
         SurveyQuestion intQuestion = getQuestion(survey, INTEGER_ID);
         IntegerConstraints intConstraints = (IntegerConstraints)intQuestion.getConstraints();
-        assertEquals(DataType.INTEGER, intConstraints.getDataType());
+        assertEquals(INTEGER, intConstraints.getDataType());
         assertEquals("IntegerConstraints", intConstraints.getType());
-        assertEquals(TestSurvey.INT_QUESTION_MIN_VALUE, intConstraints.getMinValue());
-        assertEquals(TestSurvey.INT_QUESTION_MAX_VALUE, intConstraints.getMaxValue());
-        assertEquals(TestSurvey.INT_QUESTION_STEP, intConstraints.getStep());
-        assertEquals(TestSurvey.INT_QUESTION_UNIT, intConstraints.getUnit());
+        assertEquals(INT_QUESTION_MIN_VALUE, intConstraints.getMinValue());
+        assertEquals(INT_QUESTION_MAX_VALUE, intConstraints.getMaxValue());
+        assertEquals(INT_QUESTION_STEP, intConstraints.getStep());
+        assertEquals(INT_QUESTION_UNIT, intConstraints.getUnit());
         
         // Duration question
         SurveyQuestion durationQuestion = getQuestion(survey, DURATION_ID);
         DurationConstraints durationConstraints = (DurationConstraints)durationQuestion.getConstraints();
-        assertEquals(DataType.DURATION, durationConstraints.getDataType());
+        assertEquals(DURATION, durationConstraints.getDataType());
         assertEquals("DurationConstraints", durationConstraints.getType());
-        assertEquals(TestSurvey.DURATION_QUESTION_MIN_VALUE, durationConstraints.getMinValue());
-        assertEquals(TestSurvey.DURATION_QUESTION_MAX_VALUE, durationConstraints.getMaxValue());
-        assertEquals(TestSurvey.DURATION_QUESTION_STEP, durationConstraints.getStep());
-        assertEquals(TestSurvey.DURATION_QUESTION_UNIT, durationConstraints.getUnit());
+        assertEquals(DURATION_QUESTION_MIN_VALUE, durationConstraints.getMinValue());
+        assertEquals(DURATION_QUESTION_MAX_VALUE, durationConstraints.getMaxValue());
+        assertEquals(DURATION_QUESTION_STEP, durationConstraints.getStep());
+        assertEquals(DURATION_QUESTION_UNIT, durationConstraints.getUnit());
         
         // Time question
         SurveyQuestion timeQuestion = getQuestion(survey, TIME_ID);
         TimeConstraints timeConstraints = (TimeConstraints)timeQuestion.getConstraints();
-        assertEquals(DataType.TIME, timeConstraints.getDataType());
+        assertEquals(TIME, timeConstraints.getDataType());
         assertEquals("TimeConstraints", timeConstraints.getType());
         
         // MultiValue question
         SurveyQuestion multiValueQuestion = getQuestion(survey, MULTIVALUE_ID);
         MultiValueConstraints multiValueConstraints = (MultiValueConstraints)multiValueQuestion.getConstraints();
-        assertEquals(DataType.STRING, multiValueConstraints.getDataType());
+        assertEquals(STRING, multiValueConstraints.getDataType());
         assertEquals("MultiValueConstraints", multiValueConstraints.getType());
         List<SurveyQuestionOption> options = multiValueConstraints.getEnumeration();
         assertEquals(5, options.size());
@@ -268,13 +308,13 @@ public class SurveyTest {
         // String question
         SurveyQuestion stringQuestion = getQuestion(survey, STRING_ID);
         StringConstraints stringConstraints = (StringConstraints)stringQuestion.getConstraints();
-        assertEquals(DataType.STRING, stringConstraints.getDataType());
+        assertEquals(STRING, stringConstraints.getDataType());
         assertEquals("StringConstraints", stringConstraints.getType());
-        assertEquals(TestSurvey.STRING_QUESTION_MIN_LENGTH, stringConstraints.getMinLength());
-        assertEquals(TestSurvey.STRING_QUESTION_MAX_LENGTH, stringConstraints.getMaxLength());
-        assertEquals(TestSurvey.STRING_QUESTION_PATTERN, stringConstraints.getPattern());
-        assertEquals(TestSurvey.STRING_QUESTION_ERROR_MESSAGE, stringConstraints.getPatternErrorMessage());
-        assertEquals(TestSurvey.STRING_QUESTION_PLACEHOLDER, stringConstraints.getPatternPlaceholder());
+        assertEquals(STRING_QUESTION_MIN_LENGTH, stringConstraints.getMinLength());
+        assertEquals(STRING_QUESTION_MAX_LENGTH, stringConstraints.getMaxLength());
+        assertEquals(STRING_QUESTION_PATTERN, stringConstraints.getPattern());
+        assertEquals(STRING_QUESTION_ERROR_MESSAGE, stringConstraints.getPatternErrorMessage());
+        assertEquals(STRING_QUESTION_PLACEHOLDER, stringConstraints.getPatternPlaceholder());
         
         // Blood pressure question
         SurveyQuestion bloodPressureQuestion = getQuestion(survey, BLOODPRESSURE_ID);
@@ -302,20 +342,31 @@ public class SurveyTest {
         // YearMonth question
         SurveyQuestion yearMonthQuestion = getQuestion(survey, YEARMONTH_ID);
         YearMonthConstraints yearMonthConstraints = (YearMonthConstraints)yearMonthQuestion.getConstraints();
-        assertEquals(DataType.YEARMONTH, yearMonthConstraints.getDataType());
+        assertEquals(YEARMONTH, yearMonthConstraints.getDataType());
+        assertTrue(yearMonthConstraints.isAllowFuture()); // true by default
         assertEquals("YearMonthConstraints", yearMonthConstraints.getType());
-        assertEquals(TestSurvey.YEARMONTH_QUESTION_ALLOW_FUTURE, yearMonthConstraints.isAllowFuture());
-        assertEquals(TestSurvey.YEARMONTH_QUESTION_EARLIEST_VALUE, yearMonthConstraints.getEarliestValue());
-        assertEquals(TestSurvey.YEARMONTH_QUESTION_LATEST_VALUE, yearMonthConstraints.getLatestValue());
+        assertEquals(YEARMONTH_QUESTION_ALLOW_FUTURE, yearMonthConstraints.isAllowFuture());
+        assertEquals(YEARMONTH_QUESTION_EARLIEST_VALUE, yearMonthConstraints.getEarliestValue());
+        assertEquals(YEARMONTH_QUESTION_LATEST_VALUE, yearMonthConstraints.getLatestValue());
         
         // Postal Code question
         SurveyQuestion postalCodeQuestion = getQuestion(survey, POSTALCODE_ID);
         PostalCodeConstraints postalCodeConstraints = (PostalCodeConstraints)postalCodeQuestion.getConstraints();
-        assertEquals(DataType.POSTALCODE, postalCodeConstraints.getDataType());
+        assertEquals(POSTALCODE, postalCodeConstraints.getDataType());
         assertEquals("PostalCodeConstraints", postalCodeConstraints.getType());
-        assertEquals(CountryCode.US, postalCodeConstraints.getCountryCode());
+        assertEquals(US, postalCodeConstraints.getCountryCode());
         assertEquals(17, postalCodeConstraints.getSparseZipCodePrefixes().size());
         assertEquals("036", postalCodeConstraints.getSparseZipCodePrefixes().get(0));
+
+        // Year question
+        SurveyQuestion yearQuestion = getQuestion(survey, YEAR_ID);
+        YearConstraints yearConstraints = (YearConstraints)yearQuestion.getConstraints();
+        assertEquals(YEAR, yearConstraints.getDataType());
+        assertEquals("YearConstraints", yearConstraints.getType());
+        assertEquals(SLIDER, yearQuestion.getUiHint());
+        assertFalse(yearConstraints.isAllowPast());
+        assertTrue(yearConstraints.isAllowFuture());
+        assertEquals("2020", yearConstraints.getLatestValue());
     }
     
     private SurveyQuestion getQuestion(Survey survey, String questionId) {
