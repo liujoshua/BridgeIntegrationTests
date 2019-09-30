@@ -20,7 +20,6 @@ import static org.sagebionetworks.bridge.rest.model.DataType.TIME;
 import static org.sagebionetworks.bridge.rest.model.DataType.YEAR;
 import static org.sagebionetworks.bridge.rest.model.DataType.YEARMONTH;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
-import static org.sagebionetworks.bridge.rest.model.UIHint.SLIDER;
 import static org.sagebionetworks.bridge.rest.model.Unit.GRAMS;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.BLOODPRESSURE_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.BOOLEAN_ID;
@@ -55,7 +54,6 @@ import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.STRING_QUEST
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.TIME_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.WEIGHT_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_ID;
-import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_QUESTION_ALLOW_FUTURE;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_QUESTION_EARLIEST_VALUE;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_QUESTION_LATEST_VALUE;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEAR_ID;
@@ -220,6 +218,18 @@ public class SurveyTest {
         }
     }
     
+    @Test
+    public void allowPastTrueByDefaultInSDK() {
+        DateTimeConstraints dtc = new DateTimeConstraints();
+        assertTrue(dtc.isAllowPast());
+        YearMonthConstraints ymc = new YearMonthConstraints();
+        assertTrue(ymc.isAllowPast());
+        DateConstraints dc = new DateConstraints();
+        assertTrue(dc.isAllowPast());
+        YearConstraints yc = new YearConstraints();
+        assertTrue(yc.isAllowPast());
+    }
+    
     // One test to verify that all the fields of the test survey can be persisted and retrieved.
     // Info screen is still tested separately. 
     @Test
@@ -240,7 +250,8 @@ public class SurveyTest {
         SurveyQuestion dateQuestion = getQuestion(survey, DATE_ID);
         DateConstraints dateConstraints = (DateConstraints)dateQuestion.getConstraints();
         assertEquals(DATE, dateConstraints.getDataType());
-        assertTrue(dateConstraints.isAllowFuture()); // true by default
+        assertFalse(dateConstraints.isAllowPast());
+        assertTrue(dateConstraints.isAllowFuture());
         assertEquals("DateConstraints", dateConstraints.getType());
         assertEquals(DATE_QUESTION_EARLIEST_VALUE, dateConstraints.getEarliestValue());
         assertEquals(DATE_QUESTION_LATEST_VALUE, dateConstraints.getLatestValue());
@@ -250,7 +261,8 @@ public class SurveyTest {
         DateTimeConstraints dateTimeConstraints = (DateTimeConstraints)dateTimeQuestion.getConstraints();
         assertEquals(DATETIME, dateTimeConstraints.getDataType());
         assertEquals("DateTimeConstraints", dateTimeConstraints.getType());
-        assertTrue(dateTimeConstraints.isAllowFuture()); // true by default
+        assertFalse(dateTimeConstraints.isAllowPast());
+        assertTrue(dateTimeConstraints.isAllowFuture());
         assertEquals(DATETIME_EARLIEST_VALUE.toString(), dateTimeConstraints.getEarliestValue().toString());
         assertEquals(DATETIME_LATEST_VALUE.toString(), dateTimeConstraints.getLatestValue().toString());
         
@@ -343,9 +355,9 @@ public class SurveyTest {
         SurveyQuestion yearMonthQuestion = getQuestion(survey, YEARMONTH_ID);
         YearMonthConstraints yearMonthConstraints = (YearMonthConstraints)yearMonthQuestion.getConstraints();
         assertEquals(YEARMONTH, yearMonthConstraints.getDataType());
-        assertTrue(yearMonthConstraints.isAllowFuture()); // true by default
+        assertFalse(yearMonthConstraints.isAllowPast());
+        assertTrue(yearMonthConstraints.isAllowFuture());
         assertEquals("YearMonthConstraints", yearMonthConstraints.getType());
-        assertEquals(YEARMONTH_QUESTION_ALLOW_FUTURE, yearMonthConstraints.isAllowFuture());
         assertEquals(YEARMONTH_QUESTION_EARLIEST_VALUE, yearMonthConstraints.getEarliestValue());
         assertEquals(YEARMONTH_QUESTION_LATEST_VALUE, yearMonthConstraints.getLatestValue());
         
@@ -363,9 +375,10 @@ public class SurveyTest {
         YearConstraints yearConstraints = (YearConstraints)yearQuestion.getConstraints();
         assertEquals(YEAR, yearConstraints.getDataType());
         assertEquals("YearConstraints", yearConstraints.getType());
-        assertEquals(SLIDER, yearQuestion.getUiHint());
+        assertEquals(UIHint.YEAR, yearQuestion.getUiHint());
         assertFalse(yearConstraints.isAllowPast());
         assertTrue(yearConstraints.isAllowFuture());
+        assertEquals("2000", yearConstraints.getEarliestValue());
         assertEquals("2020", yearConstraints.getLatestValue());
     }
     
