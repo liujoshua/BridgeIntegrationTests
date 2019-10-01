@@ -334,9 +334,9 @@ public class Tests {
         
         MasterSchedulerConfig config = new MasterSchedulerConfig();
         config.setScheduleId("test-schedule-id");
-        config.setCronSchedule("testCronSchedule");
+        config.setCronSchedule("0 0 0 1 * ?");
         config.setRequestTemplate(objNode);
-        config.setSqsQueueUrl("testSysQueueUrl");
+        config.setSqsQueueUrl("https://sqs.us-east-1.amazonaws.com/649232250620/Bridge-UDD-Dummy-Queue");
         config.setVersion(1L);
         
         return config;
