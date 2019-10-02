@@ -12,8 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -328,14 +327,10 @@ public class Tests {
     }    
     
     public static MasterSchedulerConfig getMastSchedulerConfig() {
-        ObjectNode objNode = JsonNodeFactory.instance.objectNode();
-        objNode.put("a", true);
-        objNode.put("b", "string");
-        
         MasterSchedulerConfig config = new MasterSchedulerConfig();
         config.setScheduleId("test-schedule-id");
         config.setCronSchedule("0 0 0 1 * ?");
-        config.setRequestTemplate(objNode);
+        config.setRequestTemplate(ImmutableMap.of("a", "string", "b", true));
         config.setSqsQueueUrl("https://sqs.us-east-1.amazonaws.com/649232250620/Bridge-UDD-Dummy-Queue");
         config.setVersion(1L);
         

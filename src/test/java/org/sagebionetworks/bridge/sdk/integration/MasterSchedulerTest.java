@@ -7,6 +7,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.After;
 import org.junit.Before;
@@ -20,6 +21,8 @@ import org.sagebionetworks.bridge.rest.model.MasterSchedulerConfigList;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import retrofit2.Response;
 
@@ -50,6 +53,7 @@ public class MasterSchedulerTest {
         }
     }
     
+    @SuppressWarnings("unchecked")
     @Test
     public void testMasterSchedulerConfig() throws IOException {
         try {
@@ -60,7 +64,17 @@ public class MasterSchedulerTest {
         }
         
         MasterSchedulerConfig result = adminApi.createSchedulerConfig(config).execute().body();
-        assertNotNull(result);
+        assertEquals(result.getScheduleId(), config.getScheduleId());
+        assertEquals(result.getCronSchedule(), config.getCronSchedule());
+        assertEquals(result.getSqsQueueUrl(), config.getSqsQueueUrl());
+        assertEquals(result.getVersion(), config.getVersion());
+        
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, Object> returnedRequestTemplateMap = mapper.convertValue(result.getRequestTemplate(), Map.class);
+        assertEquals(2, returnedRequestTemplateMap.size());
+        assertEquals("string", returnedRequestTemplateMap.get("a"));
+        assertEquals(true, returnedRequestTemplateMap.get("b"));
+        
         try {
             adminApi.createSchedulerConfig(config).execute().body();
             fail("expected exception");
@@ -68,11 +82,21 @@ public class MasterSchedulerTest {
             assertEquals("MasterSchedulerConfig already exists.", e.getMessage());
         }
         
-        MasterSchedulerConfig getResult = adminApi.getSchedulerConfig(SCHEDULE_ID).execute().body();
-        assertNotNull(getResult);
+        result = adminApi.getSchedulerConfig(SCHEDULE_ID).execute().body();
+        assertEquals(result.getScheduleId(), config.getScheduleId());
+        assertEquals(result.getCronSchedule(), config.getCronSchedule());
+        assertEquals(result.getSqsQueueUrl(), config.getSqsQueueUrl());
+        assertEquals(result.getVersion(), config.getVersion());
+        
+        returnedRequestTemplateMap = mapper.convertValue(result.getRequestTemplate(), Map.class);
+        assertEquals(2, returnedRequestTemplateMap.size());
+        assertEquals("string", returnedRequestTemplateMap.get("a"));
+        assertEquals(true, returnedRequestTemplateMap.get("b"));
         
         MasterSchedulerConfigList configList = adminApi.getAllSchedulerConfigs().execute().body();
         List<MasterSchedulerConfig> configs = configList.getItems();
+        assertEquals(1, configs.size());
+        assertEquals(configs.get(0).getScheduleId(), SCHEDULE_ID);
         
         MasterSchedulerConfig configV2 = Tests.getMastSchedulerConfig();
         configV2.setVersion(2L);
@@ -87,10 +111,10 @@ public class MasterSchedulerTest {
         configV2.setScheduleId("new-schedule-id");
         configV2.setCronSchedule(UPDATED_CRON);
         
-        MasterSchedulerConfig updatedResult = adminApi.updateSchedulerConfig(SCHEDULE_ID, configV2).execute().body();
-        assertEquals(updatedResult.getScheduleId(), SCHEDULE_ID);
-        assertEquals(updatedResult.getCronSchedule(), UPDATED_CRON);
-        assertEquals(updatedResult.getVersion(), new Long(2));
+        result = adminApi.updateSchedulerConfig(SCHEDULE_ID, configV2).execute().body();
+        assertEquals(result.getScheduleId(), SCHEDULE_ID);
+        assertEquals(result.getCronSchedule(), UPDATED_CRON);
+        assertEquals(result.getVersion(), new Long(2));
         
         MasterSchedulerConfigList updatedConfigList = adminApi.getAllSchedulerConfigs().execute().body();
         List<MasterSchedulerConfig> updatedConfigs = updatedConfigList.getItems();
@@ -98,12 +122,22 @@ public class MasterSchedulerTest {
         
         try {
             adminApi.deleteSchedulerConfig("delete-schedule-id").execute().body();
+            fail("expected exception");
         } catch (EntityNotFoundException e) {
             assertEquals("MasterSchedulerConfig not found.", e.getMessage());
         }
         
         Response<Message> response = adminApi.deleteSchedulerConfig(SCHEDULE_ID).execute();
         assertEquals(200, response.code());
+        
+        try {
+            adminApi.getSchedulerConfig(SCHEDULE_ID).execute().body();
+        } catch (EntityNotFoundException e) {
+            assertEquals("MasterSchedulerConfig not found.", e.getMessage());
+        }
+        
+        configList = adminApi.getAllSchedulerConfigs().execute().body();
+        assertEquals(0, configList.getItems().size());
     }
     
     @Test
