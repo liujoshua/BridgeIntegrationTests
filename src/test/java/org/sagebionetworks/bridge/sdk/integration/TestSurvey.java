@@ -31,6 +31,7 @@ import org.sagebionetworks.bridge.rest.model.TimeConstraints;
 import org.sagebionetworks.bridge.rest.model.UIHint;
 import org.sagebionetworks.bridge.rest.model.Unit;
 import org.sagebionetworks.bridge.rest.model.WeightConstraints;
+import org.sagebionetworks.bridge.rest.model.YearConstraints;
 import org.sagebionetworks.bridge.rest.model.YearMonthConstraints;
 
 import com.google.common.collect.Lists;
@@ -39,7 +40,6 @@ public class TestSurvey {
     public static final DateTimeZone MST = DateTimeZone.forOffsetHours(3); 
     public static final String YEARMONTH_QUESTION_LATEST_VALUE = "2020-12";
     public static final String YEARMONTH_QUESTION_EARLIEST_VALUE = "2018-01";
-    public static final boolean YEARMONTH_QUESTION_ALLOW_FUTURE = true;
     public static final String STRING_QUESTION_PLACEHOLDER = "###-###-####";
     public static final String STRING_QUESTION_ERROR_MESSAGE = "Please enter phone number";
     public static final String STRING_QUESTION_PATTERN = "\\d{3}-\\d{3}-\\d{4}";
@@ -77,6 +77,7 @@ public class TestSurvey {
     public static final String WEIGHT_ID = "weight";
     public static final String YEARMONTH_ID = "yearmonth";
     public static final String POSTALCODE_ID = "postalcode";
+    public static final String YEAR_ID = "year";
 
     private static Image image(String url, int width, int height) {
         Image image = new Image();
@@ -158,6 +159,7 @@ public class TestSurvey {
         c2.setDataType(DataType.DATE);
         c2.setEarliestValue(DATE_QUESTION_EARLIEST_VALUE);
         c2.setLatestValue(DATE_QUESTION_LATEST_VALUE);
+        c2.setAllowPast(false);
         c2.setAllowFuture(true);
         dateQuestion.setPrompt("When did you last have a medical check-up?");
         dateQuestion.setIdentifier(DATE_ID);
@@ -167,6 +169,7 @@ public class TestSurvey {
         
         SurveyQuestion dateTimeQuestion = new SurveyQuestion();
         DateTimeConstraints c3 = new DateTimeConstraints();
+        c3.setAllowPast(false);
         c3.setAllowFuture(true);
         c3.setEarliestValue(DATETIME_EARLIEST_VALUE);
         c3.setLatestValue(DATETIME_LATEST_VALUE);
@@ -264,7 +267,8 @@ public class TestSurvey {
         SurveyQuestion yearMonthQuestion = new SurveyQuestion();
         YearMonthConstraints c11 = new YearMonthConstraints();
         c11.setDataType(DataType.YEARMONTH);
-        c11.setAllowFuture(YEARMONTH_QUESTION_ALLOW_FUTURE);
+        c11.setAllowPast(false);
+        c11.setAllowFuture(true);
         c11.setEarliestValue(YEARMONTH_QUESTION_EARLIEST_VALUE);
         c11.setLatestValue(YEARMONTH_QUESTION_LATEST_VALUE);
         yearMonthQuestion.setConstraints(c11);
@@ -272,7 +276,7 @@ public class TestSurvey {
         yearMonthQuestion.setIdentifier(YEARMONTH_ID);
         yearMonthQuestion.setUiHint(UIHint.YEARMONTH);
         Tests.setVariableValueInObject(yearMonthQuestion, "type", "SurveyQuestion");
-
+        
         SurveyQuestion postalCodeQuestion = new SurveyQuestion();
         PostalCodeConstraints pcc = new PostalCodeConstraints();
         pcc.setCountryCode(CountryCode.US);
@@ -282,6 +286,19 @@ public class TestSurvey {
         postalCodeQuestion.setIdentifier(POSTALCODE_ID);
         postalCodeQuestion.setUiHint(UIHint.POSTALCODE);
         Tests.setVariableValueInObject(postalCodeQuestion, "type", "SurveyQuestion");
+        
+        SurveyQuestion yearQuestion = new SurveyQuestion();
+        YearConstraints yc = new YearConstraints();
+        yc.setAllowFuture(true);
+        yc.setAllowPast(false);
+        yc.setEarliestValue("2000");
+        yc.setLatestValue("2020");
+        yc.setDataType(DataType.YEAR);
+        yearQuestion.setConstraints(yc);
+        yearQuestion.setPrompt("When is your next MRI?");
+        yearQuestion.setIdentifier(YEAR_ID);
+        yearQuestion.setUiHint(UIHint.YEAR);
+        Tests.setVariableValueInObject(yearQuestion, "type", "SurveyQuestion");
 
         survey.setName(cls.getSimpleName() + " Survey");
         survey.setIdentifier(Tests.randomIdentifier(cls));
@@ -300,6 +317,7 @@ public class TestSurvey {
         elements.add(weightQuestion);
         elements.add(yearMonthQuestion);
         elements.add(postalCodeQuestion);
+        elements.add(yearQuestion);
 
         survey.setCopyrightNotice(COPYRIGHT_NOTICE);
 
