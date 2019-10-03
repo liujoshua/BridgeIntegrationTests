@@ -95,8 +95,15 @@ public class MasterSchedulerTest {
         
         MasterSchedulerConfigList configList = adminApi.getAllSchedulerConfigs().execute().body();
         List<MasterSchedulerConfig> configs = configList.getItems();
-        assertEquals(1, configs.size());
-        assertEquals(configs.get(0).getScheduleId(), SCHEDULE_ID);
+        boolean found = false;
+        for (MasterSchedulerConfig config : configs) {
+            if (config.getScheduleId().equals(SCHEDULE_ID)) {
+                found = true;
+            }
+        }
+        if (!found) {
+            fail("MasterSchedulerConfig not in list.");
+        }
         
         MasterSchedulerConfig configV2 = Tests.getMastSchedulerConfig();
         configV2.setVersion(2L);
@@ -132,12 +139,17 @@ public class MasterSchedulerTest {
         
         try {
             adminApi.getSchedulerConfig(SCHEDULE_ID).execute().body();
+            fail("expected exception");
         } catch (EntityNotFoundException e) {
             assertEquals("MasterSchedulerConfig not found.", e.getMessage());
         }
         
         configList = adminApi.getAllSchedulerConfigs().execute().body();
-        assertEquals(0, configList.getItems().size());
+        for (MasterSchedulerConfig config : configList.getItems()) {
+            if (config.getScheduleId() == SCHEDULE_ID) {
+                fail("MasterSchedulerConfig not deleted");
+            }
+        }
     }
     
     @Test
