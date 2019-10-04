@@ -4,13 +4,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.FileRevisionStatus.AVAILABLE;
+import static org.sagebionetworks.bridge.rest.model.FileRevisionStatus.PENDING;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 
 import java.io.File;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
@@ -151,6 +152,18 @@ public class FileTest {
             assertEquals("test.pdf", rev.getName());
             assertEquals("application/pdf", rev.getMimeType());
             assertTrue(rev.getSize() > 0L);
+            assertEquals(rev.getStatus(), AVAILABLE);
+            
+            // verify the pending object too
+            FileRevision revision = new FileRevision();
+            revision.setFileGuid(rev.getFileGuid());
+            revision.setName(file.getName());
+            revision.setMimeType("application/pdf");
+            FileRevision updated = devsApi.createFileRevision(rev.getFileGuid(), revision).execute().body();
+            assertEquals(updated.getStatus(), PENDING);
+            assertTrue(updated.getUploadURL() != null);
+            assertTrue(updated.getDownloadURL() != null);
+            
         } finally {
             if (metadata != null) {
                 ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
