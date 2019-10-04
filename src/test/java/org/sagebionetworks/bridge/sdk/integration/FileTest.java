@@ -6,15 +6,22 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 
+import java.io.File;
+
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.api.FilesApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForDevelopersApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.FileMetadata;
 import org.sagebionetworks.bridge.rest.model.FileMetadataList;
+import org.sagebionetworks.bridge.rest.model.FileRevision;
+import org.sagebionetworks.bridge.rest.model.FileRevisionList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -28,7 +35,7 @@ public class FileTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        developer = TestUserHelper.createAndSignInUser(TemplateTest.class, true, DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(FileTest.class, true, DEVELOPER);
     }
     
     @After
@@ -50,7 +57,6 @@ public class FileTest {
         // create template
         metadata = new FileMetadata();
         metadata.setName("TestFile Name");
-        metadata.setMimeType("application/json");
         metadata.setDescription("TestFile Description");
         metadata.setDeleted(true);
         
@@ -62,13 +68,11 @@ public class FileTest {
         
         FileMetadata retrieved = devsApi.getFile(metadata.getGuid()).execute().body();
         assertEquals(metadata.getName(), retrieved.getName());
-        assertEquals(metadata.getMimeType(), retrieved.getMimeType());
         assertEquals(metadata.getDescription(), retrieved.getDescription());
         assertFalse(retrieved.isDeleted());
         
         // update template
         metadata.setName("TestTemplate Name Updated");
-        metadata.setMimeType("application/json; utf-8");
         metadata.setDescription("TestTemplate Description Updated");
         metadata.setDeleted(false);
         
@@ -78,7 +82,6 @@ public class FileTest {
         
         retrieved = devsApi.getFile(metadata.getGuid()).execute().body();
         assertEquals(metadata.getName(), retrieved.getName());
-        assertEquals(metadata.getMimeType(), retrieved.getMimeType());
         assertEquals(metadata.getDescription(), retrieved.getDescription());
         assertFalse(retrieved.isDeleted());
 
@@ -121,6 +124,38 @@ public class FileTest {
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
 
+        }
+    }
+    
+    @Test
+    public void canCrudFileRevision() throws Exception {
+        try {
+            metadata = new FileMetadata();
+            metadata.setName("TestFile Name");
+            metadata.setDescription("TestFile Description");
+            metadata.setDeleted(true);
+            
+            ForDevelopersApi devsApi = developer.getClient(ForDevelopersApi.class);
+            
+            final GuidVersionHolder keys = devsApi.createFile(metadata).execute().body();
+            metadata.setGuid(keys.getGuid());
+            metadata.setVersion(keys.getVersion());
+    
+            FilesApi filesApi = developer.getClient(FilesApi.class);
+            File file = new File("src/test/resources/file-test/test.pdf");
+            String url = RestUtils.uploadHostedFileToS3(filesApi, metadata.getGuid(), file);
+            
+            FileRevisionList list = devsApi.getFileRevisions(metadata.getGuid(), 0, 5).execute().body();
+            FileRevision rev = list.getItems().get(0);
+            assertEquals(url, rev.getDownloadURL());
+            assertEquals("test.pdf", rev.getName());
+            assertEquals("application/pdf", rev.getMimeType());
+            assertTrue(rev.getSize() > 0L);
+        } finally {
+            if (metadata != null) {
+                ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+                adminsApi.deleteFile(metadata.getGuid(), true).execute();        
+            }
         }
     }
 }
