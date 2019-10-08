@@ -18,6 +18,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
+import org.sagebionetworks.bridge.rest.api.FilesApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.PublicApi;
@@ -64,6 +65,7 @@ public class AppConfigTest {
     private AppConfigsApi appConfigsApi;
     private UploadSchemasApi schemasApi;
     private SurveysApi surveysApi;
+    private FilesApi filesApi;
     private List<String> configsToDelete = new ArrayList<>();
     
     private GuidCreatedOnVersionHolder surveyKeys;
@@ -79,6 +81,7 @@ public class AppConfigTest {
         appConfigsApi = developer.getClient(AppConfigsApi.class);
         schemasApi = developer.getClient(UploadSchemasApi.class);
         surveysApi = developer.getClient(SurveysApi.class);
+        filesApi = developer.getClient(FilesApi.class);
         
         // App configs with no criteria will conflict with the run of this test. Set the range on these
         // for Android to 1-1.
