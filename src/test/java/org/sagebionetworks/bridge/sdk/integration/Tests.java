@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -27,6 +28,7 @@ import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
 import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
+import org.sagebionetworks.bridge.rest.model.MasterSchedulerConfig;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
@@ -323,4 +325,15 @@ public class Tests {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         admin.getClient(ForAdminsApi.class).deleteExternalId(externalId.getIdentifier()).execute();
     }    
+    
+    public static MasterSchedulerConfig getMastSchedulerConfig() {
+        MasterSchedulerConfig config = new MasterSchedulerConfig();
+        config.setScheduleId("test-schedule-id");
+        config.setCronSchedule("0 0 0 1 * ?");
+        config.setRequestTemplate(ImmutableMap.of("a", "string", "b", true));
+        config.setSqsQueueUrl("https://sqs.us-east-1.amazonaws.com/649232250620/Bridge-UDD-Dummy-Queue");
+        config.setVersion(1L);
+        
+        return config;
+    }
 }
