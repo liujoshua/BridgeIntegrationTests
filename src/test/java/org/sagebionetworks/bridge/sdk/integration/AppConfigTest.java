@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.Map;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.RestUtils;
@@ -29,9 +31,14 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 import org.sagebionetworks.bridge.rest.model.AppConfigElement;
+import org.sagebionetworks.bridge.rest.model.AppConfigList;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.ConfigReference;
 import org.sagebionetworks.bridge.rest.model.Criteria;
+import org.sagebionetworks.bridge.rest.model.FileMetadata;
+import org.sagebionetworks.bridge.rest.model.FileReference;
+import org.sagebionetworks.bridge.rest.model.FileRevision;
+import org.sagebionetworks.bridge.rest.model.FileRevisionList;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -48,6 +55,7 @@ import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -70,6 +78,7 @@ public class AppConfigTest {
     
     private GuidCreatedOnVersionHolder surveyKeys;
     private UploadSchema schemaKeys;
+    private GuidVersionHolder fileKeys;
     private AppConfigElement element;
     
     @Before
@@ -108,8 +117,8 @@ public class AppConfigTest {
     @After
     public void deleteSurveys() throws IOException {
         if (surveyKeys != null) {
-            admin.getClient(SurveysApi.class).deleteSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true)
-                    .execute();
+            admin.getClient(SurveysApi.class).deleteSurvey(
+                surveyKeys.getGuid(), surveyKeys.getCreatedOn(), true).execute();
         }
     }
     
@@ -117,6 +126,13 @@ public class AppConfigTest {
     public void deleteUploadSchema() throws IOException {
         if (schemaKeys != null) {
             adminApi.deleteAllRevisionsOfUploadSchema(schemaKeys.getSchemaId(), true).execute();
+        }
+    }
+    
+    @After
+    public void deleteFile() throws Exception {
+        if (fileKeys != null) {
+            adminApi.deleteFile(fileKeys.getGuid(), true).execute();
         }
     }
     
@@ -144,10 +160,22 @@ public class AppConfigTest {
     @SuppressWarnings("deprecation")
     @Test
     public void crudAppConfig() throws Exception {
+        FileMetadata meta = new FileMetadata();
+        meta.setName("test file");
+        fileKeys = filesApi.createFile(meta).execute().body();
+        
+        File file = new File("src/test/resources/file-test/test.pdf");
+        RestUtils.uploadHostedFileToS3(filesApi, fileKeys.getGuid(), file);
+        
+        FileRevisionList list = filesApi.getFileRevisions(fileKeys.getGuid(), 0, 5).execute().body();
+        FileRevision revision = list.getItems().get(0);
+        FileReference fileRef = new FileReference().guid(revision.getFileGuid()).createdOn(revision.getCreatedOn());
+        
         Survey survey = TestSurvey.getSurvey(AppConfigTest.class);
         survey.setIdentifier(Tests.randomIdentifier(this.getClass()));
         surveyKeys = surveysApi.createSurvey(survey).execute().body();
         surveysApi.publishSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), false).execute();
+        Thread.sleep(500);
         
         UploadFieldDefinition fieldDef = new UploadFieldDefinition();
         fieldDef.setName("field");
@@ -160,12 +188,10 @@ public class AppConfigTest {
         
         // create it
         schemaKeys = schemasApi.createOrUpdateUploadSchema(schema).execute().body();
-        
         StudiesApi studiesApi = developer.getClient(StudiesApi.class);
         int initialCount = appConfigsApi.getAppConfigs(false).execute().body().getItems().size();
-        
+
         SurveyReference surveyRef1 = new SurveyReference().guid(surveyKeys.getGuid()).createdOn(surveyKeys.getCreatedOn());
-        List<SurveyReference> surveyReferences = Lists.newArrayList(surveyRef1);
 
         StudyParticipant participant = new StudyParticipant();
         participant.setExternalId("externalId");
@@ -174,16 +200,18 @@ public class AppConfigTest {
         criteria.setMaxAppVersions(ImmutableMap.of("Android", 10));
         
         AppConfig appConfig = new AppConfig();
-        appConfig.setLabel(Tests.randomIdentifier(AppConfigTest.class));
+        appConfig.label(Tests.randomIdentifier(AppConfigTest.class));
         appConfig.clientData(participant);
-        appConfig.setCriteria(criteria);
-        appConfig.setSurveyReferences(surveyReferences);
+        appConfig.criteria(criteria);
+        appConfig.surveyReferences(ImmutableList.of(surveyRef1));
+        appConfig.fileReferences(ImmutableList.of(fileRef));
         
         // Create
         GuidVersionHolder holder = appConfigsApi.createAppConfig(appConfig).execute().body();
         configsToDelete.add(holder.getGuid());
         
         AppConfig firstOneRetrieved = appConfigsApi.getAppConfig(holder.getGuid()).execute().body();
+        
         Tests.setVariableValueInObject(firstOneRetrieved.getSurveyReferences().get(0), "href", null);
         assertEquals(appConfig.getLabel(), firstOneRetrieved.getLabel());
         assertSurveyReference(surveyRef1, firstOneRetrieved.getSurveyReferences().get(0));
@@ -193,12 +221,17 @@ public class AppConfigTest {
         StudyParticipant savedUser = RestUtils.toType(firstOneRetrieved.getClientData(), StudyParticipant.class);
         assertEquals("externalId", savedUser.getExternalId());
         
+        FileReference retrievedFileRef = firstOneRetrieved.getFileReferences().get(0);
+        assertEquals(retrievedFileRef.getGuid(), revision.getFileGuid());
+        assertEquals(retrievedFileRef.getCreatedOn().toString(), revision.getCreatedOn().toString());
+        
         // Change it. You can no longer add duplicate or invalid references, so just add a second reference
         SchemaReference schemaRef1 = new SchemaReference().id(schemaKeys.getSchemaId())
                 .revision(schemaKeys.getRevision());
         List<SchemaReference> schemaReferences = Lists.newArrayList(schemaRef1);
         
         appConfig.setSchemaReferences(schemaReferences);
+        appConfig.setFileReferences(ImmutableList.of());
         appConfig.setGuid(holder.getGuid());
         appConfig.setVersion(holder.getVersion());
         
@@ -216,6 +249,7 @@ public class AppConfigTest {
         assertNotEquals(secondOneRetrieved.getCreatedOn().toString(), secondOneRetrieved.getModifiedOn().toString());
         assertEquals(secondOneRetrieved.getCreatedOn().toString(), firstOneRetrieved.getCreatedOn().toString());
         assertNotEquals(secondOneRetrieved.getModifiedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
+        assertTrue(secondOneRetrieved.getFileReferences().isEmpty());
         
         // You can get it as the user
         AppConfig userAppConfig = studiesApi.getAppConfigForStudy(developer.getStudyId()).execute().body();
@@ -280,6 +314,7 @@ public class AppConfigTest {
     }
     
     @Test
+    @Ignore
     public void canPhysicallyDeleteLogicallyDeletedAppConfig() throws Exception {
         AppConfig appConfig = new AppConfig();
         appConfig.setLabel(Tests.randomIdentifier(AppConfigTest.class));
@@ -303,6 +338,7 @@ public class AppConfigTest {
     }
     
     @Test
+    @Ignore
     public void appConfigWithElements() throws Exception {
         user = TestUserHelper.createAndSignInUser(AppConfigTest.class, true);
         
