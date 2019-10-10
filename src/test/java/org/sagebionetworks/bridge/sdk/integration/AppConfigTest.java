@@ -15,7 +15,6 @@ import java.util.Map;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.RestUtils;
@@ -31,7 +30,6 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 import org.sagebionetworks.bridge.rest.model.AppConfigElement;
-import org.sagebionetworks.bridge.rest.model.AppConfigList;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.ConfigReference;
 import org.sagebionetworks.bridge.rest.model.Criteria;
@@ -55,7 +53,6 @@ import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -175,7 +172,6 @@ public class AppConfigTest {
         survey.setIdentifier(Tests.randomIdentifier(this.getClass()));
         surveyKeys = surveysApi.createSurvey(survey).execute().body();
         surveysApi.publishSurvey(surveyKeys.getGuid(), surveyKeys.getCreatedOn(), false).execute();
-        Thread.sleep(500);
         
         UploadFieldDefinition fieldDef = new UploadFieldDefinition();
         fieldDef.setName("field");
@@ -314,7 +310,6 @@ public class AppConfigTest {
     }
     
     @Test
-    @Ignore
     public void canPhysicallyDeleteLogicallyDeletedAppConfig() throws Exception {
         AppConfig appConfig = new AppConfig();
         appConfig.setLabel(Tests.randomIdentifier(AppConfigTest.class));
@@ -338,7 +333,6 @@ public class AppConfigTest {
     }
     
     @Test
-    @Ignore
     public void appConfigWithElements() throws Exception {
         user = TestUserHelper.createAndSignInUser(AppConfigTest.class, true);
         
