@@ -1440,6 +1440,35 @@ public class SurveyTest {
         }
     }
     
+    @Test
+    public void getMostRecentSurveyVersionAndDeleteWithIdentifier() throws Exception {
+        // Test the interaction of publication and the two kinds of deletion
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        
+        Survey survey = TestSurvey.getSurvey(SurveyTest.class);
+        GuidCreatedOnVersionHolder keys1 = createSurveyWithIdentifier(surveysApi, survey);
+        GuidCreatedOnVersionHolder keys2 = versionSurvey(surveysApi, keys1);
+        String guid = keys1.getGuid();
+        
+        // You cannot publish a (logically) deleted survey
+        surveysApi.deleteSurvey(keys1.getGuid(), keys1.getCreatedOn(), false).execute();
+        try {
+            surveysApi.publishSurvey(keys1.getGuid(), keys1.getCreatedOn(), false).execute();
+            fail("Should have thrown an exception");
+        } catch(EntityNotFoundException e) {
+            
+        }
+        surveysApi.publishSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
+        surveysApi.deleteSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
+        Thread.sleep(1000);
+        
+        try {
+            surveysApi.getMostRecentSurveyVersion(guid).execute().body();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+        }
+    }
+    
     private void anyDeleted(Call<SurveyList> call) throws IOException {
         assertTrue(call.execute().body().getItems().stream().anyMatch(Survey::isDeleted));
     }
