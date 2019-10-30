@@ -78,6 +78,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ParticipantsTest {
+    private static final String DUMMY_SYNAPSE_USER_ID = "00000";
     private TestUser admin;
     private TestUser developer;
     private TestUser researcher;
@@ -141,6 +142,7 @@ public class ParticipantsTest {
             self.setDataGroups(ImmutableList.of("group1"));
             self.setSharingScope(ALL_QUALIFIED_RESEARCHERS);
             self.setNotifyByEmail(null); // BRIDGE-1604: should use default value: true
+            self.setSynapseUserId(DUMMY_SYNAPSE_USER_ID);
             
             List<String> clientData = new ArrayList<>();
             clientData.add("A");
@@ -161,6 +163,7 @@ public class ParticipantsTest {
             self = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
             assertEquals(ImmutableList.of("group1"), self.getDataGroups());
+            assertEquals(DUMMY_SYNAPSE_USER_ID, self.getSynapseUserId());
             assertTrue(self.isNotifyByEmail());  // BRIDGE-1604: true value returned
             
             List<String> deserClientData = (List<String>)RestUtils.toType(self.getClientData(), List.class);
@@ -307,6 +310,7 @@ public class ParticipantsTest {
         participant.setLanguages(languages);
         participant.setStatus(DISABLED); // should be ignored
         participant.setAttributes(attributes);
+        participant.setSynapseUserId(DUMMY_SYNAPSE_USER_ID);
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         IdentifierHolder idHolder = participantsApi.createParticipant(participant).execute().body();
@@ -322,6 +326,7 @@ public class ParticipantsTest {
             assertEquals("FirstName", summary.getFirstName());
             assertEquals("LastName", summary.getLastName());
             assertEquals(email, summary.getEmail());
+            assertEquals(DUMMY_SYNAPSE_USER_ID, summary.getSynapseUserId());
             
             // Can also get by the ID
             StudyParticipant retrieved = participantsApi.getParticipantById(id, true).execute().body();
@@ -344,6 +349,7 @@ public class ParticipantsTest {
             assertEquals("US", retrievedPhone.getRegionCode());
             assertFalse(retrieved.isEmailVerified());
             assertFalse(retrieved.isPhoneVerified());
+            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
             createdOn = retrieved.getCreatedOn();
             
             // Update the user. Identified by the email address
@@ -366,6 +372,7 @@ public class ParticipantsTest {
             newParticipant.setPhoneVerified(TRUE);
             Phone newPhone = new Phone().number("4152588569").regionCode("CA");
             newParticipant.setPhone(newPhone);
+            newParticipant.setSynapseUserId("11111");
             
             participantsApi.updateParticipant(id, newParticipant).execute();
             
@@ -392,6 +399,7 @@ public class ParticipantsTest {
             assertEquals(newAttributes.get("can_be_recontacted"), retrieved.getAttributes().get("can_be_recontacted"));
             assertEquals(UNVERIFIED, retrieved.getStatus()); // researchers cannot enable users
             assertEquals(createdOn, retrieved.getCreatedOn()); // hasn't been changed, still exists
+            assertEquals("11111", retrieved.getSynapseUserId());
         } finally {
             if (id != null) {
                 admin.getClient(ForAdminsApi.class).deleteUser(id).execute();

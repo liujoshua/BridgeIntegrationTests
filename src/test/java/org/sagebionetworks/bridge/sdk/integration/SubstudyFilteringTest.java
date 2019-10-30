@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -52,6 +53,9 @@ import org.sagebionetworks.bridge.util.IntegTestUtils;
 import com.google.common.collect.ImmutableList;
 
 public class SubstudyFilteringTest {
+    
+    private static final DateTimeZone ZONE = DateTime.now().getZone();
+    
     public static class UserInfo {
         private final String userId;
         private final SignIn signIn;
@@ -250,8 +254,10 @@ public class SubstudyFilteringTest {
         try {
             keys = schedulesApi.createSchedulePlan(plan).execute().body();
             
-            DateTime startOn = DateTime.now();
-            DateTime endOn = DateTime.now().plusDays(4);
+            // Time zone changes break this test, both dates have to be in the same time zone. UTC accomplishes
+            // that. See BRIDGE-2126
+            DateTime startOn = DateTime.now(DateTimeZone.UTC);
+            DateTime endOn = startOn.plusDays(4);
             
             // If the rules are being applied, user AB can see this activity, but neither A nor B can see it
             ClientManager abClient = new ClientManager.Builder().withSignIn(userAB.getSignIn()).build();
