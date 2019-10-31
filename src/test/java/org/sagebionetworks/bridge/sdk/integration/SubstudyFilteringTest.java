@@ -54,8 +54,6 @@ import com.google.common.collect.ImmutableList;
 
 public class SubstudyFilteringTest {
     
-    private static final DateTimeZone ZONE = DateTime.now().getZone();
-    
     public static class UserInfo {
         private final String userId;
         private final SignIn signIn;

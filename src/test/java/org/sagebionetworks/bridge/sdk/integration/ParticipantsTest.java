@@ -142,7 +142,6 @@ public class ParticipantsTest {
             self.setDataGroups(ImmutableList.of("group1"));
             self.setSharingScope(ALL_QUALIFIED_RESEARCHERS);
             self.setNotifyByEmail(null); // BRIDGE-1604: should use default value: true
-            self.setSynapseUserId(DUMMY_SYNAPSE_USER_ID);
             
             List<String> clientData = new ArrayList<>();
             clientData.add("A");
@@ -163,7 +162,6 @@ public class ParticipantsTest {
             self = userApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(ALL_QUALIFIED_RESEARCHERS, self.getSharingScope());
             assertEquals(ImmutableList.of("group1"), self.getDataGroups());
-            assertEquals(DUMMY_SYNAPSE_USER_ID, self.getSynapseUserId());
             assertTrue(self.isNotifyByEmail());  // BRIDGE-1604: true value returned
             
             List<String> deserClientData = (List<String>)RestUtils.toType(self.getClientData(), List.class);
@@ -399,7 +397,7 @@ public class ParticipantsTest {
             assertEquals(newAttributes.get("can_be_recontacted"), retrieved.getAttributes().get("can_be_recontacted"));
             assertEquals(UNVERIFIED, retrieved.getStatus()); // researchers cannot enable users
             assertEquals(createdOn, retrieved.getCreatedOn()); // hasn't been changed, still exists
-            assertEquals("11111", retrieved.getSynapseUserId());
+            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
         } finally {
             if (id != null) {
                 admin.getClient(ForAdminsApi.class).deleteUser(id).execute();
