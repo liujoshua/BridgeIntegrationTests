@@ -350,6 +350,11 @@ public class ParticipantsTest {
             assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
             createdOn = retrieved.getCreatedOn();
             
+            // Can also get by the Synapse ID
+            retrieved = participantsApi.getParticipantBySynapseUserId(DUMMY_SYNAPSE_USER_ID, true).execute().body();
+            assertEquals(email, retrieved.getEmail());
+            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
+            
             // Update the user. Identified by the email address
             Map<String,String> newAttributes = new ImmutableMap.Builder<String,String>().put("can_be_recontacted","206-555-1212").build();
             List<String> newLanguages = Lists.newArrayList("de","sw");
