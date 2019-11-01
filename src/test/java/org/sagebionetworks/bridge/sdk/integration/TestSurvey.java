@@ -70,6 +70,7 @@ public class TestSurvey {
     public static final String DATETIME_ID = "last_reading";
     public static final String DECIMAL_ID = "deleuterium_dosage";
     public static final String DURATION_ID = "time_for_appt";
+    public static final String IDENTIFIER_PREFIX = "identifier:";
     public static final String INTEGER_ID = "BP X DAY";
     public static final String TIME_ID = "deleuterium_x_day";
     public static final String BLOODPRESSURE_ID = "bloodpressure";

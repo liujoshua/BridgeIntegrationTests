@@ -39,6 +39,7 @@ import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DURATION_QUE
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DURATION_QUESTION_STEP;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.DURATION_QUESTION_UNIT;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.HEIGHT_ID;
+import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.IDENTIFIER_PREFIX;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.INTEGER_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.INT_QUESTION_MAX_VALUE;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.INT_QUESTION_MIN_VALUE;
@@ -237,6 +238,7 @@ public class SurveyTest {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
         
         GuidCreatedOnVersionHolder key = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        
         Survey survey = surveysApi.getSurvey(key.getGuid(), key.getCreatedOn()).execute().body();
         
         // Boolean question
@@ -422,6 +424,36 @@ public class SurveyTest {
     }
 
     @Test
+    public void testPermanentDeleteWithSharedModuleWithIdentifier() throws Exception {
+        // create test survey and test shared module
+        String moduleId = "integ-test-module-delete" + RandomStringUtils.randomAlphabetic(4);;
+
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
+        GuidCreatedOnVersionHolder retSurvey = sharedSurveysApi.createSurvey(survey).execute().body();
+
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
+                .name("Integ Test Schema").surveyCreatedOn(retSurvey.getCreatedOn().toString()).surveyGuid(retSurvey.getGuid());
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
+
+        // execute delete
+        Exception thrownEx = null;
+        try {
+            adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            adminsApi.deleteSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(), retSurvey.getCreatedOn(), true).execute();
+            fail("expected exception");
+        } catch (BadRequestException e) {
+            thrownEx = e;
+        } finally {
+            // finally delete shared module and uploaded schema
+            adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
+            adminsApi.deleteSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(), retSurvey.getCreatedOn(), true).execute();
+            adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+        }
+        assertNotNull(thrownEx);
+    }
+
+    @Test
     public void testVirtualDeleteWithSharedModule() throws Exception {
         // create test survey and test shared module
         String moduleId = "integ-test-module-delete" + RandomStringUtils.randomAlphabetic(4);;
@@ -446,6 +478,36 @@ public class SurveyTest {
             adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
+            adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+        }
+        assertNotNull(thrownEx);
+    }
+
+    @Test
+    public void testVirtualDeleteWithSharedModuleWithIdentifer() throws Exception {
+        // create test survey and test shared module
+        String moduleId = "integ-test-module-delete" + RandomStringUtils.randomAlphabetic(4);;
+
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
+        GuidCreatedOnVersionHolder retSurvey = sharedSurveysApi.createSurvey(survey).execute().body();
+
+        SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
+                .name("Integ Test Schema").surveyCreatedOn(retSurvey.getCreatedOn().toString()).surveyGuid(retSurvey.getGuid());
+        sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()
+                .body();
+
+        // execute delete
+        Exception thrownEx = null;
+        try {
+            sharedSurveysApi.deleteSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(), retSurvey.getCreatedOn(), false).execute();
+            fail("expected exception");
+        } catch (BadRequestException e) {
+            thrownEx = e;
+        } finally {
+            // finally delete shared module and uploaded schema
+            adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
+            adminsApi.deleteSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(), retSurvey.getCreatedOn(), true).execute();
             adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
@@ -497,6 +559,26 @@ public class SurveyTest {
     }
 
     @Test
+    public void cannotUpdateSurveyIdWithIdentifier() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+
+        // Create survey.
+        Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
+        GuidCreatedOnVersionHolder keys = createSurveyWithIdentifier(surveysApi, survey);
+        
+        // Attempt to update the survey ID.
+        survey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+        assertEquals(keys.getGuid(), IDENTIFIER_PREFIX + survey.getIdentifier());
+        
+        survey.setIdentifier(surveyId + "-2");
+        surveysApi.updateSurvey(keys.getGuid(), keys.getCreatedOn(), survey).execute();
+
+        // Survey ID remains unchanged.
+        survey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+        assertEquals(surveyId, survey.getIdentifier());
+    }
+
+    @Test
     public void saveAndRetrieveSurvey() throws Exception {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
         GuidCreatedOnVersionHolder key = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
@@ -521,6 +603,33 @@ public class SurveyTest {
     }
 
     @Test
+    public void saveAndRetrieveSurveyWithIdentifier() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        GuidCreatedOnVersionHolder keys = createSurveyWithIdentifier(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+
+        Survey survey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+
+        List<SurveyElement> questions = survey.getElements();
+        String prompt = ((SurveyQuestion)questions.get(1)).getPrompt();
+        assertEquals("Prompt is correct.", "When did you last have a medical check-up?", prompt);
+        surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
+        
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+        survey = usersApi.getPublishedSurveyVersion(keys.getGuid()).execute().body();
+        assertEquals(keys.getGuid(), IDENTIFIER_PREFIX+survey.getIdentifier());
+        
+        // And again, correct
+        questions = survey.getElements();
+        prompt = ((SurveyQuestion)questions.get(1)).getPrompt();
+        assertEquals("Prompt is correct.", "When did you last have a medical check-up?", prompt);
+
+        // Check optional parameters.
+        assertEquals(TestSurvey.COPYRIGHT_NOTICE, survey.getCopyrightNotice());
+        assertEquals(TestSurvey.MODULE_ID, survey.getModuleId());
+        assertEquals(TestSurvey.MODULE_VERSION, survey.getModuleVersion().intValue());
+    }
+    
+    @Test
     public void createVersionPublish() throws Exception {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
 
@@ -541,6 +650,31 @@ public class SurveyTest {
 
         surveysApi.publishSurvey(survey.getGuid(), survey.getCreatedOn(), false).execute();
         survey = surveysApi.getSurvey(survey.getGuid(), survey.getCreatedOn()).execute().body();
+        assertTrue("survey is now published.", survey.isPublished());
+    }
+
+    @Test
+    public void createVersionPublishWithIdentifier() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+
+        Survey survey = TestSurvey.getSurvey(SurveyTest.class);
+        assertNull(survey.getGuid());
+        assertNull(survey.getVersion());
+        assertNull(survey.getCreatedOn());
+        GuidCreatedOnVersionHolder key = createSurveyWithIdentifier(surveysApi, survey);
+        assertNotNull(key.getGuid());
+        assertNotNull(key.getVersion());
+        assertNotNull(key.getCreatedOn());
+        
+        GuidCreatedOnVersionHolder laterKey = versionSurvey(surveysApi, key);
+        assertNotEquals("Version has been updated.", key.getCreatedOn(), laterKey.getCreatedOn());
+        
+        survey = surveysApi.getSurvey(key.getGuid(), laterKey.getCreatedOn()).execute().body();
+        assertFalse("survey is not published.", survey.isPublished());
+
+        surveysApi.publishSurvey(key.getGuid(), survey.getCreatedOn(), false).execute();
+        survey = surveysApi.getSurvey(key.getGuid(), survey.getCreatedOn()).execute().body();
+        assertEquals(key.getGuid(), IDENTIFIER_PREFIX+survey.getIdentifier());
         assertTrue("survey is now published.", survey.isPublished());
     }
 
@@ -579,6 +713,27 @@ public class SurveyTest {
     }
 
     @Test
+    public void getAllVersionsOfASurveyWithIdentifier() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+
+        GuidCreatedOnVersionHolder key = createSurveyWithIdentifier(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        String prefix = key.getGuid();
+        key = versionSurvey(surveysApi, key);
+        SurveyList surveyList = surveysApi.getAllVersionsOfSurvey(prefix, false).execute().body();
+        int count = surveyList.getItems().size();
+        assertEquals("Two versions for this survey.", 2, count);
+        
+        // verify includeDeleted
+        Survey oneVersion = surveyList.getItems().get(0);
+        assertEquals(prefix, IDENTIFIER_PREFIX + oneVersion.getIdentifier());
+        
+        surveysApi.deleteSurvey(prefix, oneVersion.getCreatedOn(), false).execute();
+        
+        anyDeleted(surveysApi.getAllVersionsOfSurvey(prefix, true));
+        noneDeleted(surveysApi.getAllVersionsOfSurvey(prefix, false));
+    }
+
+    @Test
     public void canGetMostRecentOrRecentlyPublishedSurvey() throws Exception {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
 
@@ -613,6 +768,44 @@ public class SurveyTest {
         anyDeleted(surveysApi.getMostRecentSurveys(true));
         noneDeleted(surveysApi.getMostRecentSurveys(false));
     }
+    
+    @Test
+    public void canGetMostRecentOrRecentlyPublishedSurveyWithIdentifier() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+
+        GuidCreatedOnVersionHolder key = createSurveyWithIdentifier(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        String key_prefix = key.getGuid();
+        key = versionSurvey(surveysApi, key);
+        key = versionSurvey(surveysApi, key);
+
+        GuidCreatedOnVersionHolder key1 = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        key1 = versionSurvey(surveysApi, key1);
+        key1 = versionSurvey(surveysApi, key1);
+
+        GuidCreatedOnVersionHolder key2 = createSurveyWithIdentifier(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        String key2_prefix = key2.getGuid();
+        key2 = versionSurvey(surveysApi, key2);
+        key2 = versionSurvey(surveysApi, key2);
+
+        // Sleep to clear eventual consistency problems.
+        Thread.sleep(2000);
+        SurveyList recentSurveys = surveysApi.getMostRecentSurveys(false).execute().body();
+        containsAll(recentSurveys.getItems(), key, key1, key2);
+
+        key = surveysApi.publishSurvey(key_prefix, key.getCreatedOn(), false).execute().body();
+        key2 = surveysApi.publishSurvey(key2_prefix, key2.getCreatedOn(), false).execute().body();
+
+        Thread.sleep(2000);
+        SurveyList publishedSurveys = surveysApi.getPublishedSurveys(false).execute().body();
+        containsAll(publishedSurveys.getItems(), key, key2);
+        
+        // verify logical deletion
+        surveysApi.deleteSurvey(key2_prefix, key2.getCreatedOn(), false).execute();
+
+        Thread.sleep(2000);
+        anyDeleted(surveysApi.getMostRecentSurveys(true));
+        noneDeleted(surveysApi.getMostRecentSurveys(false));
+    }
 
     @Test
     public void canUpdateASurvey() throws Exception {
@@ -629,6 +822,25 @@ public class SurveyTest {
         
         survey = surveysApi.getSurvey(survey.getGuid(), survey.getCreatedOn()).execute().body();
         assertEquals("Name should have changed.", survey.getName(), "New name");
+    }
+
+    @Test
+    public void canUpdateASurveyWithIdentifier() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        
+        GuidCreatedOnVersionHolder key = createSurveyWithIdentifier(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+        Survey survey = surveysApi.getSurvey(key.getGuid(), key.getCreatedOn()).execute().body();
+        assertEquals("Type is Survey.", survey.getClass(), Survey.class);
+        assertEquals(key.getGuid(), IDENTIFIER_PREFIX + survey.getIdentifier());
+        
+        survey.setName("New name");
+        GuidCreatedOnVersionHolder holder = surveysApi.updateSurvey(key.getGuid(), survey.getCreatedOn(), survey).execute().body();
+        // Should be incremented.
+        assertTrue(holder.getVersion() > survey.getVersion());
+        
+        survey = surveysApi.getSurvey(key.getGuid(), survey.getCreatedOn()).execute().body();
+        assertEquals("Name should have changed.", survey.getName(), "New name");
+        assertEquals(key.getGuid(), IDENTIFIER_PREFIX + survey.getIdentifier());
     }
     
     @Test
@@ -663,6 +875,25 @@ public class SurveyTest {
         versionSurvey(surveysApi, key2);
 
         Survey found = surveysApi.getPublishedSurveyVersion(key2.getGuid()).execute().body();
+        assertEquals("This returns the right version", key2.getCreatedOn(), found.getCreatedOn());
+        assertNotEquals("And these are really different versions", key.getCreatedOn(), found.getCreatedOn());
+    }
+    
+    @Test
+    public void canGetMostRecentlyPublishedSurveyWithoutTimestampWithIdentifier() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        
+        Survey survey = TestSurvey.getSurvey(SurveyTest.class);
+
+        GuidCreatedOnVersionHolder key = createSurveyWithIdentifier(surveysApi, survey);
+
+        GuidCreatedOnVersionHolder key1 = versionSurvey(surveysApi, key);
+        GuidCreatedOnVersionHolder key2 = versionSurvey(surveysApi, key1);
+        surveysApi.publishSurvey(key.getGuid(), key2.getCreatedOn(), false).execute();
+        versionSurvey(surveysApi, key2);
+
+        Survey found = surveysApi.getPublishedSurveyVersion(key.getGuid()).execute().body();
+        assertEquals(key.getGuid(), IDENTIFIER_PREFIX+found.getIdentifier());
         assertEquals("This returns the right version", key2.getCreatedOn(), found.getCreatedOn());
         assertNotEquals("And these are really different versions", key.getCreatedOn(), found.getCreatedOn());
     }
@@ -753,6 +984,65 @@ public class SurveyTest {
         assertEquals("Prompt", newQuestion.getPrompt());
         assertEquals(UIHint.TEXTFIELD, newQuestion.getUiHint());
     }
+    
+    @Test
+    public void canSaveAndRetrieveInfoScreenWithIdentifier() throws Exception {
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        
+        Survey survey = new Survey();
+        survey.setIdentifier("test-survey");
+        survey.setName("Test study");
+        
+        SurveyInfoScreen screen = new SurveyInfoScreen();
+        screen.setIdentifier("foo");
+        screen.setTitle("Title");
+        screen.setPrompt("Prompt");
+        screen.setPromptDetail("Prompt detail");
+        Tests.setVariableValueInObject(survey, "type", "SurveyInfoScreen");
+        
+        Image image = new Image();
+        image.setSource("https://pbs.twimg.com/profile_images/1642204340/ReferencePear_400x400.PNG");
+        image.setHeight(400);
+        image.setWidth(400);
+        screen.setImage(image);
+        survey.getElements().add(screen);
+        
+        // Add a question too just to verify that's okay
+        SurveyQuestion question = new SurveyQuestion();
+        question.setIdentifier("bar");
+        question.setPrompt("Prompt");
+        question.setUiHint(UIHint.TEXTFIELD);
+        StringConstraints sc = new StringConstraints();
+        sc.setDataType(DataType.STRING);
+        question.setConstraints(sc);
+        Tests.setVariableValueInObject(question, "type", "SurveyQuestion");
+        survey.getElements().add(question);
+        
+        GuidCreatedOnVersionHolder keys = createSurveyWithIdentifier(surveysApi, survey);
+        
+        Survey newSurvey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
+        assertEquals(keys.getGuid(), IDENTIFIER_PREFIX + newSurvey.getIdentifier());
+        assertEquals(2, newSurvey.getElements().size());
+        
+        SurveyInfoScreen newScreen = (SurveyInfoScreen)newSurvey.getElements().get(0);
+        
+        assertEquals(SurveyInfoScreen.class, newScreen.getClass());
+        assertNotNull(newScreen.getGuid());
+        assertEquals("foo", newScreen.getIdentifier());
+        assertEquals("Title", newScreen.getTitle());
+        assertEquals("Prompt", newScreen.getPrompt());
+        assertEquals("Prompt detail", newScreen.getPromptDetail());
+        assertEquals("https://pbs.twimg.com/profile_images/1642204340/ReferencePear_400x400.PNG", newScreen.getImage().getSource());
+        assertEquals((Integer)400, newScreen.getImage().getWidth());
+        assertEquals((Integer)400, newScreen.getImage().getHeight());
+        
+        SurveyQuestion newQuestion = (SurveyQuestion)newSurvey.getElements().get(1);
+        assertEquals(SurveyQuestion.class, newQuestion.getClass());
+        assertNotNull(newQuestion.getGuid());
+        assertEquals("bar", newQuestion.getIdentifier());
+        assertEquals("Prompt", newQuestion.getPrompt());
+        assertEquals(UIHint.TEXTFIELD, newQuestion.getUiHint());
+    }
 
     @Test
     public void workerCanGetSurveys() throws Exception {
@@ -806,7 +1096,7 @@ public class SurveyTest {
         noneDeleted(workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID, false));
         anyDeleted(workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID, true));
     }
-
+    
     @Test
     public void verifyEndSurveyRule() throws Exception {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
@@ -1150,6 +1440,35 @@ public class SurveyTest {
         }
     }
     
+    @Test
+    public void getMostRecentSurveyVersionAndDeleteWithIdentifier() throws Exception {
+        // Test the interaction of publication and the two kinds of deletion
+        SurveysApi surveysApi = developer.getClient(SurveysApi.class);
+        
+        Survey survey = TestSurvey.getSurvey(SurveyTest.class);
+        GuidCreatedOnVersionHolder keys1 = createSurveyWithIdentifier(surveysApi, survey);
+        GuidCreatedOnVersionHolder keys2 = versionSurvey(surveysApi, keys1);
+        String guid = keys1.getGuid();
+        
+        // You cannot publish a (logically) deleted survey
+        surveysApi.deleteSurvey(keys1.getGuid(), keys1.getCreatedOn(), false).execute();
+        try {
+            surveysApi.publishSurvey(keys1.getGuid(), keys1.getCreatedOn(), false).execute();
+            fail("Should have thrown an exception");
+        } catch(EntityNotFoundException e) {
+            
+        }
+        surveysApi.publishSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
+        surveysApi.deleteSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
+        Thread.sleep(1000);
+        
+        try {
+            surveysApi.getMostRecentSurveyVersion(guid).execute().body();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+        }
+    }
+    
     private void anyDeleted(Call<SurveyList> call) throws IOException {
         assertTrue(call.execute().body().getItems().stream().anyMatch(Survey::isDeleted));
     }
@@ -1248,6 +1567,15 @@ public class SurveyTest {
         return keys;
     }
 
+    private GuidCreatedOnVersionHolder createSurveyWithIdentifier(SurveysApi surveysApi, Survey survey) throws Exception {
+        GuidCreatedOnVersionHolder keys = surveysApi.createSurvey(survey).execute().body();
+        surveysToDelete.add(keys);
+        survey.setGuid(IDENTIFIER_PREFIX + survey.getIdentifier());
+        survey.setCreatedOn(keys.getCreatedOn());
+        survey.setVersion(keys.getVersion());
+        return new MutableHolder(survey);
+    }
+    
     private GuidCreatedOnVersionHolder versionSurvey(SurveysApi surveysApi, GuidCreatedOnVersionHolder survey) throws Exception {
         GuidCreatedOnVersionHolder versionHolder = surveysApi
                 .versionSurvey(survey.getGuid(), survey.getCreatedOn()).execute().body();
