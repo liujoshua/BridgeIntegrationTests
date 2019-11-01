@@ -30,6 +30,7 @@ import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.MasterSchedulerConfig;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
+import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.Schedule;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduleType;
@@ -55,6 +56,9 @@ public class Tests {
     public static final String PASSWORD = "P@ssword`1";
     public static final String SUBSTUDY_ID_1 = "substudy1";
     public static final String SUBSTUDY_ID_2 = "substudy2";
+    public static final Phone PHONE = new Phone().number("9712486796").regionCode("US");
+    public static final String NATIONAL_PHONE_FORMAT = "(971) 248-6796";
+    public static final String SYNAPSE_USER_ID = "88888";
 
     public static ClientInfo getClientInfoWithVersion(String osName, int version) {
         return new ClientInfo().appName(APP_NAME).appVersion(version).deviceName(APP_NAME).osName(osName)
