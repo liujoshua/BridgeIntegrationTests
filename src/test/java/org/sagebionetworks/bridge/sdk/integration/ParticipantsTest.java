@@ -78,6 +78,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ParticipantsTest {
+    private static final String DUMMY_SYNAPSE_USER_ID = "00000";
     private TestUser admin;
     private TestUser developer;
     private TestUser researcher;
@@ -308,6 +309,7 @@ public class ParticipantsTest {
         participant.setLanguages(languages);
         participant.setStatus(DISABLED); // should be ignored
         participant.setAttributes(attributes);
+        participant.setSynapseUserId(DUMMY_SYNAPSE_USER_ID);
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         IdentifierHolder idHolder = participantsApi.createParticipant(participant).execute().body();
@@ -323,6 +325,7 @@ public class ParticipantsTest {
             assertEquals("FirstName", summary.getFirstName());
             assertEquals("LastName", summary.getLastName());
             assertEquals(email, summary.getEmail());
+            assertEquals(DUMMY_SYNAPSE_USER_ID, summary.getSynapseUserId());
             
             // Can also get by the ID
             StudyParticipant retrieved = participantsApi.getParticipantById(id, true).execute().body();
@@ -345,7 +348,13 @@ public class ParticipantsTest {
             assertEquals("US", retrievedPhone.getRegionCode());
             assertFalse(retrieved.isEmailVerified());
             assertFalse(retrieved.isPhoneVerified());
+            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
             createdOn = retrieved.getCreatedOn();
+            
+            // Can also get by the Synapse ID
+            retrieved = participantsApi.getParticipantBySynapseUserId(DUMMY_SYNAPSE_USER_ID, true).execute().body();
+            assertEquals(email, retrieved.getEmail());
+            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
             
             // Update the user. Identified by the email address
             Map<String,String> newAttributes = new ImmutableMap.Builder<String,String>().put("can_be_recontacted","206-555-1212").build();
@@ -367,6 +376,7 @@ public class ParticipantsTest {
             newParticipant.setPhoneVerified(TRUE);
             Phone newPhone = new Phone().number("4152588569").regionCode("CA");
             newParticipant.setPhone(newPhone);
+            newParticipant.setSynapseUserId("11111");
             
             participantsApi.updateParticipant(id, newParticipant).execute();
             
@@ -393,6 +403,7 @@ public class ParticipantsTest {
             assertEquals(newAttributes.get("can_be_recontacted"), retrieved.getAttributes().get("can_be_recontacted"));
             assertEquals(UNVERIFIED, retrieved.getStatus()); // researchers cannot enable users
             assertEquals(createdOn, retrieved.getCreatedOn()); // hasn't been changed, still exists
+            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
         } finally {
             if (id != null) {
                 admin.getClient(ForAdminsApi.class).deleteUser(id).execute();
