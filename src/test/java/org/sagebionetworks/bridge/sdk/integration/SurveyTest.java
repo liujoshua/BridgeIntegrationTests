@@ -565,7 +565,10 @@ public class SurveyTest {
         // Create survey.
         Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
         GuidCreatedOnVersionHolder keys = createSurveyWithIdentifier(surveysApi, survey);
-        
+
+        // identifier users global secondary index. Sleep mitigate eventual consistency.
+        Thread.sleep(2000);
+
         // Attempt to update the survey ID.
         survey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
         assertEquals(keys.getGuid(), IDENTIFIER_PREFIX + survey.getIdentifier());
@@ -606,6 +609,9 @@ public class SurveyTest {
     public void saveAndRetrieveSurveyWithIdentifier() throws Exception {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
         GuidCreatedOnVersionHolder keys = createSurveyWithIdentifier(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+
+        // identifier users global secondary index. Sleep mitigate eventual consistency.
+        Thread.sleep(2000);
 
         Survey survey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
 
@@ -665,7 +671,10 @@ public class SurveyTest {
         assertNotNull(key.getGuid());
         assertNotNull(key.getVersion());
         assertNotNull(key.getCreatedOn());
-        
+
+        // identifier users global secondary index. Sleep mitigate eventual consistency.
+        Thread.sleep(2000);
+
         GuidCreatedOnVersionHolder laterKey = versionSurvey(surveysApi, key);
         assertNotEquals("Version has been updated.", key.getCreatedOn(), laterKey.getCreatedOn());
         
@@ -718,6 +727,10 @@ public class SurveyTest {
 
         GuidCreatedOnVersionHolder key = createSurveyWithIdentifier(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
         String prefix = key.getGuid();
+
+        // identifier users global secondary index. Sleep mitigate eventual consistency.
+        Thread.sleep(2000);
+
         key = versionSurvey(surveysApi, key);
         SurveyList surveyList = surveysApi.getAllVersionsOfSurvey(prefix, false).execute().body();
         int count = surveyList.getItems().size();
@@ -829,6 +842,10 @@ public class SurveyTest {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
         
         GuidCreatedOnVersionHolder key = createSurveyWithIdentifier(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
+
+        // identifier users global secondary index. Sleep mitigate eventual consistency.
+        Thread.sleep(2000);
+
         Survey survey = surveysApi.getSurvey(key.getGuid(), key.getCreatedOn()).execute().body();
         assertEquals("Type is Survey.", survey.getClass(), Survey.class);
         assertEquals(key.getGuid(), IDENTIFIER_PREFIX + survey.getIdentifier());
@@ -886,6 +903,9 @@ public class SurveyTest {
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
 
         GuidCreatedOnVersionHolder key = createSurveyWithIdentifier(surveysApi, survey);
+
+        // identifier users global secondary index. Sleep mitigate eventual consistency.
+        Thread.sleep(2000);
 
         GuidCreatedOnVersionHolder key1 = versionSurvey(surveysApi, key);
         GuidCreatedOnVersionHolder key2 = versionSurvey(surveysApi, key1);
@@ -1019,7 +1039,10 @@ public class SurveyTest {
         survey.getElements().add(question);
         
         GuidCreatedOnVersionHolder keys = createSurveyWithIdentifier(surveysApi, survey);
-        
+
+        // identifier users global secondary index. Sleep mitigate eventual consistency.
+        Thread.sleep(2000);
+
         Survey newSurvey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
         assertEquals(keys.getGuid(), IDENTIFIER_PREFIX + newSurvey.getIdentifier());
         assertEquals(2, newSurvey.getElements().size());
@@ -1447,6 +1470,10 @@ public class SurveyTest {
         
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
         GuidCreatedOnVersionHolder keys1 = createSurveyWithIdentifier(surveysApi, survey);
+
+        // identifier users global secondary index. Sleep mitigate eventual consistency.
+        Thread.sleep(2000);
+
         GuidCreatedOnVersionHolder keys2 = versionSurvey(surveysApi, keys1);
         String guid = keys1.getGuid();
         
