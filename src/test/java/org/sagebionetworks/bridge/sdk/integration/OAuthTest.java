@@ -126,7 +126,6 @@ public class OAuthTest {
         String payload = escapeJSON(format("{'username':'%s','password':'%s'}", userEmail, userPassword));
         HttpResponse response = Request.Post(SYNAPSE_LOGIN_URL)
                 .setHeader("content-type", "application/json")
-                //.setHeader("accept-encoding", "gzip, deflate, br")
                 .body(new StringEntity(payload))
                 .execute().returnResponse();
         
@@ -137,7 +136,6 @@ public class OAuthTest {
                 "'responseType':'code','redirectUri':'https://research-staging.sagebridge.org'}");
         response = Request.Post(SYNAPSE_OAUTH_CONSENT)
                 .setHeader("content-type", "application/json")
-                //.setHeader("accept-encoding", "gzip, deflate, br")
                 .setHeader("sessiontoken", sessionToken)
                 .body(new StringEntity(payload))
                 .execute().returnResponse();
