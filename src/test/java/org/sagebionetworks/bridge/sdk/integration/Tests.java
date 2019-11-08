@@ -340,4 +340,8 @@ public class Tests {
         
         return config;
     }
+    
+    public static String escapeJSON(String json) {
+        return json.replaceAll("'", "\"");
+    }
 }
