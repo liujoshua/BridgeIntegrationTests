@@ -6,8 +6,6 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.ADMIN;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.util.HashSet;
 import java.util.Map;
