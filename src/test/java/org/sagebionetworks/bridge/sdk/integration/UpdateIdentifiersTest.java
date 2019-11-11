@@ -11,28 +11,19 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class UpdateIdentifiersTest {
-    private TestUser admin;
     private TestUser user;
     
-    private Substudy substudy;
-
     @Before
     public void before() {
-        admin = TestUserHelper.getSignedInAdmin();
     }
     
     @After
