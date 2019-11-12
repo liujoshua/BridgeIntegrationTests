@@ -575,6 +575,7 @@ public class SurveyTest {
         
         survey.setIdentifier(surveyId + "-2");
         surveysApi.updateSurvey(keys.getGuid(), keys.getCreatedOn(), survey).execute();
+        Thread.sleep(2000);
 
         // Survey ID remains unchanged.
         survey = surveysApi.getSurvey(keys.getGuid(), keys.getCreatedOn()).execute().body();
@@ -619,7 +620,8 @@ public class SurveyTest {
         String prompt = ((SurveyQuestion)questions.get(1)).getPrompt();
         assertEquals("Prompt is correct.", "When did you last have a medical check-up?", prompt);
         surveysApi.publishSurvey(keys.getGuid(), keys.getCreatedOn(), false).execute();
-        
+        Thread.sleep(2000);
+
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         survey = usersApi.getPublishedSurveyVersion(keys.getGuid()).execute().body();
         assertEquals(keys.getGuid(), IDENTIFIER_PREFIX+survey.getIdentifier());
@@ -677,11 +679,13 @@ public class SurveyTest {
 
         GuidCreatedOnVersionHolder laterKey = versionSurvey(surveysApi, key);
         assertNotEquals("Version has been updated.", key.getCreatedOn(), laterKey.getCreatedOn());
-        
+        Thread.sleep(2000);
+
         survey = surveysApi.getSurvey(key.getGuid(), laterKey.getCreatedOn()).execute().body();
         assertFalse("survey is not published.", survey.isPublished());
 
         surveysApi.publishSurvey(key.getGuid(), survey.getCreatedOn(), false).execute();
+        Thread.sleep(2000);
         survey = surveysApi.getSurvey(key.getGuid(), survey.getCreatedOn()).execute().body();
         assertEquals(key.getGuid(), IDENTIFIER_PREFIX+survey.getIdentifier());
         assertTrue("survey is now published.", survey.isPublished());
@@ -732,6 +736,7 @@ public class SurveyTest {
         Thread.sleep(2000);
 
         key = versionSurvey(surveysApi, key);
+        Thread.sleep(2000);
         SurveyList surveyList = surveysApi.getAllVersionsOfSurvey(prefix, false).execute().body();
         int count = surveyList.getItems().size();
         assertEquals("Two versions for this survey.", 2, count);
@@ -788,7 +793,9 @@ public class SurveyTest {
 
         GuidCreatedOnVersionHolder key = createSurveyWithIdentifier(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
         String key_prefix = key.getGuid();
+        Thread.sleep(2000);
         key = versionSurvey(surveysApi, key);
+        Thread.sleep(2000);
         key = versionSurvey(surveysApi, key);
 
         GuidCreatedOnVersionHolder key1 = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
@@ -797,7 +804,9 @@ public class SurveyTest {
 
         GuidCreatedOnVersionHolder key2 = createSurveyWithIdentifier(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
         String key2_prefix = key2.getGuid();
+        Thread.sleep(2000);
         key2 = versionSurvey(surveysApi, key2);
+        Thread.sleep(2000);
         key2 = versionSurvey(surveysApi, key2);
 
         // Sleep to clear eventual consistency problems.
@@ -854,7 +863,8 @@ public class SurveyTest {
         GuidCreatedOnVersionHolder holder = surveysApi.updateSurvey(key.getGuid(), survey.getCreatedOn(), survey).execute().body();
         // Should be incremented.
         assertTrue(holder.getVersion() > survey.getVersion());
-        
+        Thread.sleep(2000);
+
         survey = surveysApi.getSurvey(key.getGuid(), survey.getCreatedOn()).execute().body();
         assertEquals("Name should have changed.", survey.getName(), "New name");
         assertEquals(key.getGuid(), IDENTIFIER_PREFIX + survey.getIdentifier());
@@ -908,9 +918,13 @@ public class SurveyTest {
         Thread.sleep(2000);
 
         GuidCreatedOnVersionHolder key1 = versionSurvey(surveysApi, key);
+        Thread.sleep(2000);
         GuidCreatedOnVersionHolder key2 = versionSurvey(surveysApi, key1);
+        Thread.sleep(2000);
         surveysApi.publishSurvey(key.getGuid(), key2.getCreatedOn(), false).execute();
+        Thread.sleep(2000);
         versionSurvey(surveysApi, key2);
+        Thread.sleep(2000);
 
         Survey found = surveysApi.getPublishedSurveyVersion(key.getGuid()).execute().body();
         assertEquals(key.getGuid(), IDENTIFIER_PREFIX+found.getIdentifier());
@@ -1476,9 +1490,11 @@ public class SurveyTest {
 
         GuidCreatedOnVersionHolder keys2 = versionSurvey(surveysApi, keys1);
         String guid = keys1.getGuid();
-        
+        Thread.sleep(2000);
+
         // You cannot publish a (logically) deleted survey
         surveysApi.deleteSurvey(keys1.getGuid(), keys1.getCreatedOn(), false).execute();
+        Thread.sleep(2000);
         try {
             surveysApi.publishSurvey(keys1.getGuid(), keys1.getCreatedOn(), false).execute();
             fail("Should have thrown an exception");
@@ -1486,8 +1502,9 @@ public class SurveyTest {
             
         }
         surveysApi.publishSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
+        Thread.sleep(2000);
         surveysApi.deleteSurvey(keys2.getGuid(), keys2.getCreatedOn(), false).execute();
-        Thread.sleep(1000);
+        Thread.sleep(2000);
         
         try {
             surveysApi.getMostRecentSurveyVersion(guid).execute().body();
