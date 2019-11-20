@@ -1,7 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -11,7 +11,7 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.escapeJSON;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
-import java.util.List;
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -62,6 +62,8 @@ public class OAuthTest {
     
     @After
     public void after() throws Exception {
+        // Force admin back to the API test
+        admin.signOut();
         if (user != null) {
             user.signOutAndDeleteUser();
         }
@@ -214,8 +216,8 @@ public class OAuthTest {
         StudyList list = studiesApi.getStudyMemberships().execute().body();
         assertEquals(2, list.getItems().size());
         
-        List<String> studyIds = list.getItems().stream().map(el -> el.getIdentifier()).collect(toList());
-        assertEquals(ImmutableSet.of(STUDY_ID, SHARED_STUDY_ID), ImmutableSet.copyOf(studyIds));
+        Set<String> studyIds = list.getItems().stream().map(el -> el.getIdentifier()).collect(toSet());
+        assertEquals(ImmutableSet.of(STUDY_ID, SHARED_STUDY_ID), studyIds);
         
         UserSessionInfo info = studiesApi.changeStudy(new SignIn().study(SHARED_STUDY_ID)).execute().body();
         assertEquals(user2Id, info.getId());
@@ -229,8 +231,6 @@ public class OAuthTest {
         // Verify this has an immediate effect on the other user
         list = user.getClient(StudiesApi.class).getStudyMemberships().execute().body();
         assertEquals(list.getItems().size(), 1);
-        
-        admin.signOut();
     }
     
     private String getValue(HttpResponse response, String property) throws Exception {
