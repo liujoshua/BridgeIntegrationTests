@@ -129,7 +129,6 @@ public class IntentToParticipateTest {
     }
     
     @Test
-    @Ignore
     public void testIntentToParticipateWithEmail() throws Exception {
         String email = IntegTestUtils.makeEmail(IntentToParticipateTest.class);
         TestUser user = null;
