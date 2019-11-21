@@ -1,16 +1,22 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.escapeJSON;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Request;
@@ -26,6 +32,7 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorStringList;
 import org.sagebionetworks.bridge.rest.model.OAuthAuthorizationToken;
@@ -33,6 +40,7 @@ import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -44,31 +52,33 @@ public class OAuthTest {
 
     private TestUser admin;
     private TestUser user;
+    private TestUser user2;
     private TestUser worker;
     
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        user = TestUserHelper.createAndSignInUser(OAuthTest.class, true);
-
-        // This account will be able to sign in using the paired Synapse credentials.
-        String synapseUserId = admin.getConfig().get("synapse.test.user.id");
-        worker = TestUserHelper.createAndSignInUser(OAuthTest.class, true, 
-                new SignUp().roles(ImmutableList.of(WORKER)).synapseUserId(synapseUserId));
     }
     
     @After
     public void after() throws Exception {
+        // Force admin back to the API test
+        admin.signOut();
         if (user != null) {
             user.signOutAndDeleteUser();
         }
         if (worker != null) {
             worker.signOutAndDeleteUser();
         }
+        if (user2 != null) {
+            user2.signOutAndDeleteUser();
+        }
     }
     
     @Test(expected = EntityNotFoundException.class)
     public void requestOAuthAccessTokenExists() throws Exception {
+        user = TestUserHelper.createAndSignInUser(OAuthTest.class, true);
+        
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         
         OAuthAuthorizationToken token = new OAuthAuthorizationToken().authToken("authToken");
@@ -77,6 +87,10 @@ public class OAuthTest {
     
     @Test
     public void test() throws Exception {
+        String synapseUserId = admin.getConfig().get("synapse.test.user.id");
+        worker = TestUserHelper.createAndSignInUser(OAuthTest.class, true, 
+                new SignUp().roles(ImmutableList.of(WORKER)).synapseUserId(synapseUserId));
+        
         ForWorkersApi workersApi = worker.getClient(ForWorkersApi.class);
         
         try {
@@ -117,6 +131,10 @@ public class OAuthTest {
     
     @Test
     public void signInWithSynapseAccount() throws Exception {
+        String synapseUserId = admin.getConfig().get("synapse.test.user.id");
+        worker = TestUserHelper.createAndSignInUser(OAuthTest.class, true, 
+                new SignUp().roles(ImmutableList.of(WORKER)).synapseUserId(synapseUserId));
+        
         Config config = worker.getConfig();
         String userEmail = config.get("synapse.test.user");
         String userPassword = config.get("synapse.test.user.password");
@@ -157,6 +175,10 @@ public class OAuthTest {
     
     @Test
     public void signInWithSynapseAccountUsingRestUtils() throws Exception {
+        String synapseUserId = admin.getConfig().get("synapse.test.user.id");
+        worker = TestUserHelper.createAndSignInUser(OAuthTest.class, true, 
+                new SignUp().roles(ImmutableList.of(WORKER)).synapseUserId(synapseUserId));
+        
         Config config = worker.getConfig();
         String userEmail = config.get("synapse.test.user");
         String userPassword = config.get("synapse.test.user.password");
@@ -169,6 +191,46 @@ public class OAuthTest {
         
         assertEquals(session.getId(), worker.getSession().getId());
         assertEquals(session.getSynapseUserId(), worker.getSession().getSynapseUserId());
+    }
+    
+    @Test
+    public void synapseUserCanSwitchBetweenStudies() throws Exception {
+        // Going to use the shared study as well as the API study for this test.
+        String synapseUserId = admin.getConfig().get("synapse.test.user.id");
+        
+        user = new TestUserHelper.Builder(OAuthTest.class).withStudyId(STUDY_ID)
+                .withSignUp(new SignUp().study(STUDY_ID)
+                .roles(ImmutableList.of(DEVELOPER)).synapseUserId(synapseUserId))
+                .createAndSignInUser();
+        String userId = user.getUserId();
+
+        admin.getClient(ForAdminsApi.class).adminChangeStudy(new SignIn().study(SHARED_STUDY_ID)).execute();
+        
+        user2 = new TestUserHelper.Builder(OAuthTest.class).withStudyId(SHARED_STUDY_ID)
+                .withSignUp(new SignUp().study(SHARED_STUDY_ID)
+                .roles(ImmutableList.of(DEVELOPER)).synapseUserId(synapseUserId))
+                .createAndSignInUser();
+        String user2Id = user2.getUserId();
+
+        StudiesApi studiesApi = user2.getClient(StudiesApi.class);
+        StudyList list = studiesApi.getStudyMemberships().execute().body();
+        assertEquals(2, list.getItems().size());
+        
+        Set<String> studyIds = list.getItems().stream().map(el -> el.getIdentifier()).collect(toSet());
+        assertEquals(ImmutableSet.of(STUDY_ID, SHARED_STUDY_ID), studyIds);
+        
+        UserSessionInfo info = studiesApi.changeStudy(new SignIn().study(SHARED_STUDY_ID)).execute().body();
+        assertEquals(user2Id, info.getId());
+        
+        info = studiesApi.changeStudy(new SignIn().study(STUDY_ID)).execute().body();
+        assertEquals(userId, info.getId());
+        
+        // Before the admin switches back to the API study, delete this user in the shared study
+        user2.signOutAndDeleteUser();
+        
+        // Verify this has an immediate effect on the other user
+        list = user.getClient(StudiesApi.class).getStudyMemberships().execute().body();
+        assertEquals(list.getItems().size(), 1);
     }
     
     private String getValue(HttpResponse response, String property) throws Exception {

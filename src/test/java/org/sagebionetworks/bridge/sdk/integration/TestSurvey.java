@@ -125,6 +125,7 @@ public class TestSurvey {
         mvc.setAllowOther(false);
         mvc.setAllowMultiple(true);
         mvc.setDataType(DataType.STRING);
+        mvc.setRequired(true);
         multiValueQuestion.setConstraints(mvc);
         multiValueQuestion.setPrompt("How do you feel today?");
         multiValueQuestion.setIdentifier(MULTIVALUE_ID);
