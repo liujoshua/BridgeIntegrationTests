@@ -148,7 +148,7 @@ public class TemplateTest {
     public void templateRevisionTest() throws Exception {
         template = new Template();
         template.setName("TestTemplate Name");
-        template.setDescription("TestTemplate Description");
+        template.setDescription("TestTemplate Description ${url}");
         template.setTemplateType(EMAIL_ACCOUNT_EXISTS);
 
         ForDevelopersApi devsApi = developer.getClient(ForDevelopersApi.class);

@@ -103,7 +103,8 @@ public class ParticipantsTest {
         if (!study.isPhoneSignInEnabled() || !study.isEmailSignInEnabled()) {
             study.setPhoneSignInEnabled(true);
             study.setEmailSignInEnabled(true);
-            adminApi.updateStudy(study.getIdentifier(), study).execute();
+            VersionHolder keys = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
+            study.version(keys.getVersion());
         }
     }
     

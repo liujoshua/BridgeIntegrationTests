@@ -229,7 +229,7 @@ public class AuthenticationTest {
             study.setConsentNotificationEmail("bridge-testing+consent@sagebase.org");
             study.setTechnicalEmail("bridge-testing+technical@sagebase.org");
             study.setEmailVerificationEnabled(true);
-            
+
             adminApi.createStudy(study).execute();
 
             // Can we sign in to secondstudy? No.
