@@ -308,7 +308,7 @@ public class SurveyTest {
         SurveyQuestion multiValueQuestion = getQuestion(survey, MULTIVALUE_ID);
         MultiValueConstraints multiValueConstraints = (MultiValueConstraints)multiValueQuestion.getConstraints();
         assertEquals(STRING, multiValueConstraints.getDataType());
-        assertTrue(multiValueConstraints.isRequired());
+        assertTrue(multiValueConstraints.isRequired());        
         assertEquals("MultiValueConstraints", multiValueConstraints.getType());
         List<SurveyQuestionOption> options = multiValueConstraints.getEnumeration();
         assertEquals(5, options.size());
