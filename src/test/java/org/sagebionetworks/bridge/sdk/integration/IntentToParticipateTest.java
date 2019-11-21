@@ -10,7 +10,6 @@ import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.ClientManager;
