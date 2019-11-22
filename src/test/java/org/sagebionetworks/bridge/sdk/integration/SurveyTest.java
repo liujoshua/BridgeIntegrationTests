@@ -311,7 +311,7 @@ public class SurveyTest {
         assertTrue(multiValueConstraints.isRequired());        
         assertEquals("MultiValueConstraints", multiValueConstraints.getType());
         List<SurveyQuestionOption> options = multiValueConstraints.getEnumeration();
-        assertEquals(5, options.size());
+        assertEquals(6, options.size());
         SurveyQuestionOption option = options.get(0);
         assertEquals("Terrible", option.getLabel());
         assertEquals("Terrible Detail", option.getDetail());

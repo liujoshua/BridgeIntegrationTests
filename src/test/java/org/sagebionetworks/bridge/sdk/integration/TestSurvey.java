@@ -88,12 +88,13 @@ public class TestSurvey {
         return image;
     }
     
-    private static SurveyQuestionOption option(String label, String detail, String value, Image image) {
+    private static SurveyQuestionOption option(String label, String detail, String value, Image image, boolean exclusive) {
         SurveyQuestionOption option = new SurveyQuestionOption();
         option.setLabel(label);
         option.setDetail(detail);
         option.setValue(value);
         option.setImage(image);
+        option.setExclusive(exclusive);
         return option;
     }
     
@@ -116,11 +117,12 @@ public class TestSurvey {
         Image great = image("http://great.svg", 600, 300);
         MultiValueConstraints mvc = new MultiValueConstraints();
         List<SurveyQuestionOption> options = Lists.newArrayList(
-                option("Terrible", "Terrible Detail", "1", terrible), 
-                option("Poor", "Poor Detail", "2", poor),
-                option("OK", "OK Detail", "3", ok), 
-                option("Good", "Good Detail", "4", good),
-                option("Great", "Great Detail", "5", great));
+                option("Terrible", "Terrible Detail", "1", terrible, false), 
+                option("Poor", "Poor Detail", "2", poor, false),
+                option("OK", "OK Detail", "3", ok, false), 
+                option("Good", "Good Detail", "4", good, false),
+                option("Great", "Great Detail", "5", great, false),
+                option("None of the above", "nota", "0", null, true));
         mvc.setEnumeration(options);
         mvc.setAllowOther(false);
         mvc.setAllowMultiple(true);
