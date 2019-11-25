@@ -122,7 +122,7 @@ public class TestSurvey {
                 option("OK", "OK Detail", "3", ok, false), 
                 option("Good", "Good Detail", "4", good, false),
                 option("Great", "Great Detail", "5", great, false),
-                option("None of the above", "nota", "0", null, true));
+                option("None of the above", "nota", "0", terrible, true));
         mvc.setEnumeration(options);
         mvc.setAllowOther(false);
         mvc.setAllowMultiple(true);
