@@ -12,8 +12,8 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -26,7 +26,6 @@ import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.PhoneSignIn;
 import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
-import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
@@ -36,7 +35,6 @@ import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,6 +49,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 @Category(IntegrationSmokeTest.class)
 @SuppressWarnings("unchecked")
@@ -60,29 +61,30 @@ public class AuthenticationTest {
     private static TestUser testUser;
     private static TestUser phoneOnlyTestUser;
     private static AuthenticationApi authApi;
-    private static ForAdminsApi adminApi;
+    private static ForSuperadminsApi superadminApi;
     
     @BeforeClass
     public static void beforeClass() throws IOException {
-        researchUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true, Role.RESEARCHER);
+        researchUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true, RESEARCHER);
         
         // Make a test user with a phone number.
-        SignUp phoneOnlyUser = new SignUp().study(IntegTestUtils.STUDY_ID).consent(true).phone(IntegTestUtils.PHONE);
+        SignUp phoneOnlyUser = new SignUp().study(STUDY_ID).consent(true).phone(PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(AuthenticationTest.class).withConsentUser(true)
                 .withSignUp(phoneOnlyUser).createUser();
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
         authApi = testUser.getClient(AuthenticationApi.class);
 
         adminUser = TestUserHelper.getSignedInAdmin();
-        adminApi = adminUser.getClient(ForAdminsApi.class);
+        superadminApi = adminUser.getClient(ForSuperadminsApi.class);
 
         // Verify necessary flags (health code export, email sign in, phone sign in, reauth) are enabled
-        Study study = adminApi.getUsersStudy().execute().body();
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
+        // Study study = adminApi.getUsersStudy().execute().body();
         study.setHealthCodeExportEnabled(true);
         study.setPhoneSignInEnabled(true);
         study.setEmailSignInEnabled(true);
         study.setReauthenticationEnabled(true);
-        adminApi.updateStudy(study.getIdentifier(), study).execute();
+        superadminApi.updateStudy(study.getIdentifier(), study).execute();
     }
     
     @AfterClass
@@ -107,31 +109,31 @@ public class AuthenticationTest {
     @AfterClass
     public static void disableReauth() throws Exception {
         // Because of https://sagebionetworks.jira.com/browse/BRIDGE-2091, we don't want to leave reauth enabled.
-        Study study = adminApi.getUsersStudy().execute().body();
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         study.setReauthenticationEnabled(false);
-        adminApi.updateStudy(study.getIdentifier(), study).execute();
+        superadminApi.updateStudy(study.getIdentifier(), study).execute();
     }
 
     @Test
     public void requestEmailSignIn() throws Exception {
         EmailSignInRequest emailSignInRequest = new EmailSignInRequest().study(testUser.getStudyId())
                 .email(testUser.getEmail());
-        Study study = adminApi.getStudy(testUser.getStudyId()).execute().body();
+        Study study = superadminApi.getStudy(testUser.getStudyId()).execute().body();
         try {
             // Turn on email-based sign in for test. We can't verify the email was sent... we can verify this call
             // works and returns the right error conditions.
             study.setEmailSignInEnabled(true);
             
             // Bug: this call does not return VersionHolder (BRIDGE-1809). Retrieve study again.
-            adminApi.updateStudy(study.getIdentifier(), study).execute();
-            study = adminApi.getStudy(testUser.getStudyId()).execute().body();
+            superadminApi.updateStudy(study.getIdentifier(), study).execute();
+            study = superadminApi.getStudy(testUser.getStudyId()).execute().body();
             assertTrue(study.isEmailSignInEnabled());
             
             Response<Message> response = authApi.requestEmailSignIn(emailSignInRequest).execute();
             assertEquals(202, response.code());
         } finally {
             study.setEmailSignInEnabled(false);
-            adminApi.updateStudy(study.getIdentifier(), study).execute();
+            superadminApi.updateStudy(study.getIdentifier(), study).execute();
         }
     }
     
@@ -230,7 +232,7 @@ public class AuthenticationTest {
             study.setTechnicalEmail("bridge-testing+technical@sagebase.org");
             study.setEmailVerificationEnabled(true);
 
-            adminApi.createStudy(study).execute();
+            superadminApi.createStudy(study).execute();
 
             // Can we sign in to secondstudy? No.
             try {
@@ -246,7 +248,7 @@ public class AuthenticationTest {
                 assertEquals(404, e.getStatusCode());
             }
         } finally {
-            adminApi.deleteStudy(studyId, true).execute();
+            superadminApi.deleteStudy(studyId, true).execute();
         }
     }
     
@@ -326,7 +328,7 @@ public class AuthenticationTest {
     public void phoneSignInThrows() throws Exception {
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
 
-        PhoneSignIn phoneSignIn = new PhoneSignIn().phone(IntegTestUtils.PHONE).study(phoneOnlyTestUser.getStudyId()).token("test-token");
+        PhoneSignIn phoneSignIn = new PhoneSignIn().phone(PHONE).study(phoneOnlyTestUser.getStudyId()).token("test-token");
 
         authApi.signInViaPhone(phoneSignIn).execute();
     }
@@ -349,7 +351,7 @@ public class AuthenticationTest {
         verifySession(200, session.getSessionToken());
 
         // Make sure signIn actually checks credentials even while already logged in.
-        SignIn badSignIn = new SignIn().study(IntegTestUtils.STUDY_ID).email(testUser.getEmail())
+        SignIn badSignIn = new SignIn().study(STUDY_ID).email(testUser.getEmail())
                 .password("bad password");
         try {
             authApi.signIn(badSignIn).execute();
@@ -365,7 +367,7 @@ public class AuthenticationTest {
         }
 
         // Also, reauth
-        SignIn badReauth = new SignIn().study(IntegTestUtils.STUDY_ID).email(testUser.getEmail())
+        SignIn badReauth = new SignIn().study(STUDY_ID).email(testUser.getEmail())
                 .reauthToken("bad token");
         try {
             authApi.reauthenticate(badReauth).execute();
@@ -388,7 +390,7 @@ public class AuthenticationTest {
         verifySession(200, newSessionV4.getSessionToken());
 
         // Reauth will reacquire the same session because the token has not expired
-        SignIn reauth = new SignIn().study(IntegTestUtils.STUDY_ID).email(testUser.getEmail())
+        SignIn reauth = new SignIn().study(STUDY_ID).email(testUser.getEmail())
                 .reauthToken(newSessionV4.getReauthToken());
         UserSessionInfo newSessionReauth = authApi.reauthenticate(reauth).execute().body();
         verifySession(200, newSessionV4.getSessionToken());

@@ -6,6 +6,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
+import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
+import static org.sagebionetworks.bridge.rest.model.SharingScope.SPONSORS_AND_PARTNERS;
+import static org.sagebionetworks.bridge.rest.model.SmsType.TRANSACTIONAL;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -19,9 +27,9 @@ import retrofit2.Response;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
@@ -36,11 +44,8 @@ import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.Message;
-import org.sagebionetworks.bridge.rest.model.Role;
-import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
-import org.sagebionetworks.bridge.rest.model.SmsType;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
@@ -74,17 +79,17 @@ public class ConsentTest {
         adminUser = TestUserHelper.getSignedInAdmin();
 
         // Make researcher.
-        researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.RESEARCHER);
+        researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, RESEARCHER);
 
         // Make phone user.
         IntegTestUtils.deletePhoneUser(researchUser);
-        SignUp phoneOnlyUser = new SignUp().study(IntegTestUtils.STUDY_ID).consent(true).phone(IntegTestUtils.PHONE);
+        SignUp phoneOnlyUser = new SignUp().study(STUDY_ID).consent(true).phone(PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(ConsentTest.class).withConsentUser(true)
                 .withSignUp(phoneOnlyUser).createAndSignInUser();
 
         // Verify necessary flags (health code export) are enabled
-        ForAdminsApi adminApi = adminUser.getClient(ForAdminsApi.class);
-        Study study = adminApi.getUsersStudy().execute().body();
+        ForSuperadminsApi adminApi = adminUser.getClient(ForSuperadminsApi.class);
+        Study study = adminApi.getStudy(STUDY_ID).execute().body();
         study.setHealthCodeExportEnabled(true);
         adminApi.updateStudy(study.getIdentifier(), study).execute();
     }
@@ -110,30 +115,30 @@ public class ConsentTest {
         try {
             // starts out with no sharing
             UserSessionInfo session = testUser.getSession();
-            assertEquals(SharingScope.NO_SHARING, session.getSharingScope());
+            assertEquals(NO_SHARING, session.getSharingScope());
 
             // Change, verify in-memory session changed, verify after signing in again that server state has changed
             StudyParticipant participant = new StudyParticipant();
 
-            participant.sharingScope(SharingScope.SPONSORS_AND_PARTNERS);
+            participant.sharingScope(SPONSORS_AND_PARTNERS);
             userApi.updateUsersParticipantRecord(participant).execute();
             
             participant = userApi.getUsersParticipantRecord(false).execute().body();
-            assertEquals(SharingScope.SPONSORS_AND_PARTNERS, participant.getSharingScope());
+            assertEquals(SPONSORS_AND_PARTNERS, participant.getSharingScope());
 
             // Do the same thing in reverse, setting to no sharing
             participant = new StudyParticipant();
-            participant.sharingScope(SharingScope.NO_SHARING);
+            participant.sharingScope(NO_SHARING);
 
             userApi.updateUsersParticipantRecord(participant).execute();
 
             participant = userApi.getUsersParticipantRecord(true).execute().body();
-            assertEquals(SharingScope.NO_SHARING, participant.getSharingScope());
+            assertEquals(NO_SHARING, participant.getSharingScope());
             
             Map<String,List<UserConsentHistory>> map = participant.getConsentHistories();
-            UserConsentHistory history = map.get(IntegTestUtils.STUDY_ID).get(0);
+            UserConsentHistory history = map.get(STUDY_ID).get(0);
             
-            assertEquals(IntegTestUtils.STUDY_ID, history.getSubpopulationGuid());
+            assertEquals(STUDY_ID, history.getSubpopulationGuid());
             assertNotNull(history.getConsentCreatedOn());
             assertNotNull(history.getName());
             assertNotNull(history.getBirthdate());
@@ -150,7 +155,7 @@ public class ConsentTest {
     // BRIDGE-1594
     @Test
     public void giveConsentAndWithdrawTwice() throws Exception {
-        TestUser developer = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(ConsentTest.class, true, DEVELOPER);
         TestUser user = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
         SubpopulationsApi subpopsApi = developer.getClientManager().getClient(SubpopulationsApi.class);
         GuidVersionHolder keys = null;
@@ -163,7 +168,7 @@ public class ConsentTest {
 
             ConsentSignature signature = new ConsentSignature();
             signature.setName("Test User");
-            signature.setScope(SharingScope.NO_SHARING);
+            signature.setScope(NO_SHARING);
             signature.setBirthdate(LocalDate.parse("1970-04-04"));
 
             Withdrawal withdrawal = new Withdrawal();
@@ -226,7 +231,7 @@ public class ConsentTest {
 
             LocalDate date = new LocalDate(1970, 10, 10);
             ConsentSignature signature = new ConsentSignature().name(user.getEmail()).birthdate(date)
-                    .scope(SharingScope.SPONSORS_AND_PARTNERS);
+                    .scope(SPONSORS_AND_PARTNERS);
             userApi.createConsentSignature(user.getDefaultSubpopulation(), signature).execute();
 
             UserSessionInfo session = user.signInAgain();
@@ -256,7 +261,7 @@ public class ConsentTest {
             }
             LocalDate date = LocalDate.now();
             ConsentSignature signature = new ConsentSignature().name(user.getEmail()).birthdate(date)
-                    .scope(SharingScope.SPONSORS_AND_PARTNERS);
+                    .scope(SPONSORS_AND_PARTNERS);
             userApi.createConsentSignature(user.getDefaultSubpopulation(), signature).execute();
         } finally {
             user.signOutAndDeleteUser();
@@ -296,7 +301,7 @@ public class ConsentTest {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, false);
 
         ConsentSignature sig = new ConsentSignature().name(name).birthdate(birthdate).imageData(imageData)
-                .imageMimeType(imageMimeType).scope(SharingScope.ALL_QUALIFIED_RESEARCHERS);
+                .imageMimeType(imageMimeType).scope(ALL_QUALIFIED_RESEARCHERS);
         try {
             ForConsentedUsersApi userApi = testUser.getClient(ForConsentedUsersApi.class);
 
@@ -328,7 +333,7 @@ public class ConsentTest {
 
             // Participant record includes the sharing scope that was set
             StudyParticipant participant = userApi.getUsersParticipantRecord(false).execute().body();
-            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, participant.getSharingScope());
+            assertEquals(ALL_QUALIFIED_RESEARCHERS, participant.getSharingScope());
 
             // Session now shows consent...
             session = testUser.signInAgain();
@@ -347,7 +352,7 @@ public class ConsentTest {
             try {
                 // See BRIDGE-1568
                 sig = new ConsentSignature().name(sig.getName()).birthdate(sig.getBirthdate())
-                        .scope(SharingScope.ALL_QUALIFIED_RESEARCHERS).imageData(sig.getImageData())
+                        .scope(ALL_QUALIFIED_RESEARCHERS).imageData(sig.getImageData())
                         .imageMimeType(sig.getImageMimeType());
                 userApi.createConsentSignature(testUser.getDefaultSubpopulation(), sig).execute();
                 fail("EntityAlreadyExistsException not thrown");
@@ -362,7 +367,7 @@ public class ConsentTest {
             session = testUser.signInAgain();
             existingSessionToken = session.getSessionToken();
             
-            assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
+            assertEquals(ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
             assertTrue(RestUtils.isUserConsented(session));
 
             // withdraw consent
@@ -423,7 +428,7 @@ public class ConsentTest {
                 .getMostRecentSmsMessage(phoneOnlyTestUser.getUserId()).execute().body();
         assertEquals(phoneOnlyTestUser.getPhone().getNumber(), message.getPhoneNumber());
         assertNotNull(message.getMessageId());
-        assertEquals(SmsType.TRANSACTIONAL, message.getSmsType());
+        assertEquals(TRANSACTIONAL, message.getSmsType());
         assertEquals(phoneOnlyTestUser.getStudyId(), message.getStudyId());
 
         // Message body isn't constrained by the test, so just check that it exists.
@@ -496,7 +501,7 @@ public class ConsentTest {
 
             // Retrieve the account and verify it has been processed correctly.
             StudyParticipant theUser = participantsApi.getParticipantById(userId, true).execute().body();
-            assertEquals(SharingScope.NO_SHARING, theUser.getSharingScope());
+            assertEquals(NO_SHARING, theUser.getSharingScope());
             assertFalse(theUser.isNotifyByEmail());
             assertNull(theUser.getEmail());
             assertFalse(theUser.isEmailVerified());
@@ -550,7 +555,7 @@ public class ConsentTest {
         TestUser user = null;
         Substudy substudy = null;
         Subpopulation subpop = null;
-        TestUser devUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, Role.DEVELOPER);
+        TestUser devUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, DEVELOPER);
         SubstudiesApi substudiesApi = adminUser.getClient(SubstudiesApi.class);
         SubpopulationsApi subpopApi = devUser.getClient(SubpopulationsApi.class);
         try {
@@ -578,7 +583,7 @@ public class ConsentTest {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
 
             ConsentSignature sig = new ConsentSignature().name("Test User")
-                    .birthdate(LocalDate.parse("2000-01-01")).scope(SharingScope.NO_SHARING);
+                    .birthdate(LocalDate.parse("2000-01-01")).scope(NO_SHARING);
             UserSessionInfo session = usersApi.createConsentSignature(subpop.getGuid(), sig).execute().body();
 
             // verify that the session contains all the correct information

@@ -6,6 +6,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.util.Map;
 
@@ -24,6 +28,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForDevelopersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantReportsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
@@ -41,7 +46,6 @@ import org.sagebionetworks.bridge.rest.model.ReportDataList;
 import org.sagebionetworks.bridge.rest.model.ReportIndex;
 import org.sagebionetworks.bridge.rest.model.ReportIndexList;
 import org.sagebionetworks.bridge.rest.model.ReportType;
-import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
@@ -91,18 +95,18 @@ public class ReportTest {
         holder = substudiesApi.createSubstudy(substudy2).execute().body();
         substudy2.setVersion(holder.getVersion());
         
-        developer = new TestUserHelper.Builder(ReportTest.class).withRoles(Role.DEVELOPER)
+        developer = new TestUserHelper.Builder(ReportTest.class).withRoles(DEVELOPER)
                 .withSubstudyIds(ImmutableSet.of(substudy1.getId())).createAndSignInUser();
 
         // Make this worker a researcher solely for the purpose of getting the healthCode needed to user the worker
         // API
-        worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, Role.WORKER, Role.RESEARCHER);
+        worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, WORKER, RESEARCHER);
 
         // Worker test needs to be able to get healthcode.
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        Study study = adminApi.getStudy("api").execute().body();
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         study.setHealthCodeExportEnabled(true);
-        adminApi.updateStudy(study.getIdentifier(), study).execute().body();
+        superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
     }
 
     @Before
@@ -150,10 +154,10 @@ public class ReportTest {
 
     @AfterClass
     public static void unsetHealthCodeExportEnabled() throws Exception {
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        Study study = adminApi.getStudy("api").execute().body();
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         study.setHealthCodeExportEnabled(false);
-        adminApi.updateStudy(study.getIdentifier(), study).execute().body();
+        superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
     }
 
     @Test

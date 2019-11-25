@@ -20,8 +20,8 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ActivitiesApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
@@ -68,11 +68,11 @@ public class WorkerApiTest {
         workersApi = worker.getClient(ForWorkersApi.class);
         
         // Turn on healthcode sharing, it is usually off 
-        ForAdminsApi studiesApi = admin.getClient(ForAdminsApi.class);
-        Study study = studiesApi.getStudy(STUDY_ID).execute().body();
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         if (!study.isHealthCodeExportEnabled()) {
             study.setHealthCodeExportEnabled(true);
-            studiesApi.updateStudy(STUDY_ID, study).execute();
+            superadminApi.updateStudy(STUDY_ID, study).execute();
         }
     }
 
@@ -83,11 +83,11 @@ public class WorkerApiTest {
         }
 
         // Turn off healthcode sharing to clean up
-        ForAdminsApi studiesApi = admin.getClient(ForAdminsApi.class);
-        Study study = studiesApi.getStudy(STUDY_ID).execute().body();
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         if (study.isHealthCodeExportEnabled()) {
             study.setHealthCodeExportEnabled(false);
-            studiesApi.updateStudy(STUDY_ID, study).execute();
+            superadminApi.updateStudy(STUDY_ID, study).execute();
         }
     }
     @After

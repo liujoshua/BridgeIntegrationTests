@@ -7,7 +7,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -48,19 +47,17 @@ public class SelfStudyTest {
         assertEquals("api", study.getIdentifier());
     }
     
-    @Test(expected = UnauthorizedException.class)
-    public void researcherCannotUpdateStudy() throws Exception {
-        StudiesApi studiesApi = researcher.getClient(StudiesApi.class);
+    public void developerCanUpdateSelfStudy() throws Exception {
+        StudiesApi studiesApi = developer.getClient(StudiesApi.class);
         Study study = studiesApi.getUsersStudy().execute().body();
-        study.setName("Test");
+        study.setName("Test Study");
         studiesApi.updateUsersStudy(study).execute();
     }
     
-    @Test(expected = UnauthorizedException.class)
-    public void adminCannotUpdateStudyThroughResearcherAPI() throws Exception {
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+    public void researcherCanUpdateSelfStudy() throws Exception {
+        StudiesApi studiesApi = researcher.getClient(StudiesApi.class);
         Study study = studiesApi.getUsersStudy().execute().body();
-        study.setName("Test");
+        study.setName("Test Study");
         studiesApi.updateUsersStudy(study).execute();
     }
 }

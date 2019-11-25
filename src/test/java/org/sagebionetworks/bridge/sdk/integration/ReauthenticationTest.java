@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -14,8 +15,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.SignIn;
@@ -58,21 +59,21 @@ public class ReauthenticationTest {
     @BeforeClass
     public static void turnOnReauthentication() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
         
-        Study study = adminApi.getStudy("api").execute().body();
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         study.setReauthenticationEnabled(true);
-        adminApi.updateStudy("api", study).execute();
+        superadminApi.updateStudy(STUDY_ID, study).execute();
     }
     
     @AfterClass
     public static void turnOffReauthentication() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
         
-        Study study = adminApi.getStudy("api").execute().body();
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         study.setReauthenticationEnabled(false);
-        adminApi.updateStudy("api", study).execute();
+        superadminApi.updateStudy(STUDY_ID, study).execute();
     }
     
     @Test

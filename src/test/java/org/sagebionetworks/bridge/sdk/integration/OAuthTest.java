@@ -7,6 +7,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.API_SIGNIN;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.escapeJSON;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
@@ -29,8 +31,8 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -105,14 +107,14 @@ public class OAuthTest {
         } catch(EntityNotFoundException e) {
             assertEquals("OAuthProvider not found.", e.getMessage());
         }
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        Study study = adminApi.getStudy(worker.getStudyId()).execute().body();
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        Study study = superadminApi.getStudy(worker.getStudyId()).execute().body();
         try {
             OAuthProvider provider = new OAuthProvider().clientId("foo").endpoint("https://webservices.sagebridge.org/")
                     .callbackUrl("https://webservices.sagebridge.org/").secret("secret");
             
             study.getOAuthProviders().put("bridge", provider);
-            VersionHolder version = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
+            VersionHolder version = superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
             study.setVersion(version.getVersion()); 
             
             ForwardCursorStringList list = workersApi.getHealthCodesGrantingOAuthAccess(worker.getStudyId(), "bridge", null, null).execute().body();
@@ -125,7 +127,7 @@ public class OAuthTest {
             }
         } finally {
             study.getOAuthProviders().remove("bridge");
-            adminApi.updateStudy(study.getIdentifier(), study).execute();
+            superadminApi.updateStudy(study.getIdentifier(), study).execute();
         }
     }
     
@@ -204,7 +206,7 @@ public class OAuthTest {
                 .createAndSignInUser();
         String userId = user.getUserId();
 
-        admin.getClient(ForAdminsApi.class).adminChangeStudy(new SignIn().study(SHARED_STUDY_ID)).execute();
+        admin.getClient(ForSuperadminsApi.class).adminChangeStudy(SHARED_SIGNIN).execute();
         
         user2 = new TestUserHelper.Builder(OAuthTest.class).withStudyId(SHARED_STUDY_ID)
                 .withSignUp(new SignUp().study(SHARED_STUDY_ID)
@@ -219,10 +221,10 @@ public class OAuthTest {
         Set<String> studyIds = list.getItems().stream().map(el -> el.getIdentifier()).collect(toSet());
         assertEquals(ImmutableSet.of(STUDY_ID, SHARED_STUDY_ID), studyIds);
         
-        UserSessionInfo info = studiesApi.changeStudy(new SignIn().study(SHARED_STUDY_ID)).execute().body();
+        UserSessionInfo info = studiesApi.changeStudy(SHARED_SIGNIN).execute().body();
         assertEquals(user2Id, info.getId());
         
-        info = studiesApi.changeStudy(new SignIn().study(STUDY_ID)).execute().body();
+        info = studiesApi.changeStudy(API_SIGNIN).execute().body();
         assertEquals(userId, info.getId());
         
         // Before the admin switches back to the API study, delete this user in the shared study

@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,6 +19,7 @@ import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
@@ -65,18 +67,18 @@ public class ExternalIdsV4Test {
         final String extIdB1 = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
         final String extIdB2 = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
 
-        ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
+        ForSuperadminsApi superadminClient = admin.getClient(ForSuperadminsApi.class);
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
         String userId = null;
         try {
-            Study study = adminClient.getUsersStudy().execute().body();
-            adminClient.updateStudy(study.getIdentifier(), study).execute();
+            Study study = superadminClient.getStudy(STUDY_ID).execute().body();
+            superadminClient.updateStudy(study.getIdentifier(), study).execute();
 
             // Create some substudies
             Substudy substudyA = new Substudy().id(idA).name("Substudy " + idA);
             Substudy substudyB = new Substudy().id(idB).name("Substudy " + idB);
-            adminClient.createSubstudy(substudyA).execute();
-            adminClient.createSubstudy(substudyB).execute();
+            superadminClient.createSubstudy(substudyA).execute();
+            superadminClient.createSubstudy(substudyB).execute();
 
             // Creating an external ID without a substudy now fails
             try {
@@ -170,17 +172,18 @@ public class ExternalIdsV4Test {
             assertEquals(userId, found1.getId());
             assertEquals(userId, found2.getId());
         } finally {
-            Study study = adminClient.getUsersStudy().execute().body();
-            adminClient.updateStudy(study.getIdentifier(), study).execute();
+            Study study = superadminClient.getStudy(STUDY_ID).execute().body();
+            superadminClient.updateStudy(study.getIdentifier(), study).execute();
             
+            ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
             if (userId != null) {
                 adminClient.deleteUser(userId).execute();    
             }
             adminClient.deleteExternalId(extIdA).execute();
             adminClient.deleteExternalId(extIdB1).execute();
             adminClient.deleteExternalId(extIdB2).execute();
-            adminClient.deleteSubstudy(idA, true).execute();
-            adminClient.deleteSubstudy(idB, true).execute();
+            superadminClient.deleteSubstudy(idA, true).execute();
+            superadminClient.deleteSubstudy(idB, true).execute();
         }
     }
 
@@ -197,15 +200,15 @@ public class ExternalIdsV4Test {
             ids.add(id);
         }
         
-        ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
+        ForSuperadminsApi superadminClient = admin.getClient(ForSuperadminsApi.class);
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
         TestUser user = null;
         try {
             // Create substudy
             Substudy substudyA = new Substudy().id(idA).name("Substudy " + idA);
             Substudy substudyB = new Substudy().id(idB).name("Substudy " + idB);
-            adminClient.createSubstudy(substudyA).execute();
-            adminClient.createSubstudy(substudyB).execute();
+            superadminClient.createSubstudy(substudyA).execute();
+            superadminClient.createSubstudy(substudyB).execute();
             
             // Create enough external IDs to page
             for (int i=0; i < 10; i++) {
@@ -274,11 +277,12 @@ public class ExternalIdsV4Test {
             if (user != null) {
                 user.signOutAndDeleteUser();    
             }
+            ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
             for (int i=0; i < 10; i++) {
                 adminClient.deleteExternalId(ids.get(i).getIdentifier()).execute();    
             }
-            adminClient.deleteSubstudy(idA, true).execute();
-            adminClient.deleteSubstudy(idB, true).execute();
+            superadminClient.deleteSubstudy(idA, true).execute();
+            superadminClient.deleteSubstudy(idB, true).execute();
         }
     }
 

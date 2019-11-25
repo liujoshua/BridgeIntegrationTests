@@ -20,6 +20,7 @@ import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
@@ -108,6 +109,7 @@ public class SubstudyFilteringTest {
     @AfterClass
     public static void after() throws Exception {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+        ForSuperadminsApi superadminsApi = admin.getClient(ForSuperadminsApi.class);
         for (String userId : userIdsToDelete) {
             try {
                 adminsApi.deleteUser(userId).execute();    
@@ -117,7 +119,7 @@ public class SubstudyFilteringTest {
         }
         for (String substudyId : substudyIdsToDelete) {
             try {
-                adminsApi.deleteSubstudy(substudyId, true).execute();    
+                superadminsApi.deleteSubstudy(substudyId, true).execute();    
             } catch(Exception e) {
                 e.printStackTrace();
             }

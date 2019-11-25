@@ -13,6 +13,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.DateTimeHolder;
@@ -32,7 +33,7 @@ public class MasterSchedulerTest {
     
     private TestUser admin;
     
-    private ForAdminsApi adminApi;
+    private ForSuperadminsApi superadminApi;
     
     private MasterSchedulerConfig config;
     
@@ -40,14 +41,14 @@ public class MasterSchedulerTest {
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         
-        adminApi = admin.getClient(ForAdminsApi.class);
+        superadminApi = admin.getClient(ForSuperadminsApi.class);
         config = Tests.getMastSchedulerConfig();
     }
     
     @After
     public void after() throws Exception {
         try {
-            adminApi.deleteSchedulerConfig(SCHEDULE_ID).execute().body();
+            superadminApi.deleteSchedulerConfig(SCHEDULE_ID).execute().body();
         } catch (EntityNotFoundException e) {
             
         }
@@ -57,13 +58,13 @@ public class MasterSchedulerTest {
     @Test
     public void testMasterSchedulerConfig() throws IOException {
         try {
-            adminApi.getSchedulerConfig(SCHEDULE_ID).execute().body();
+            superadminApi.getSchedulerConfig(SCHEDULE_ID).execute().body();
             fail("expected exception");
         } catch (EntityNotFoundException e) {
             assertEquals("MasterSchedulerConfig not found.", e.getMessage());
         }
         
-        MasterSchedulerConfig result = adminApi.createSchedulerConfig(config).execute().body();
+        MasterSchedulerConfig result = superadminApi.createSchedulerConfig(config).execute().body();
         assertEquals(result.getScheduleId(), config.getScheduleId());
         assertEquals(result.getCronSchedule(), config.getCronSchedule());
         assertEquals(result.getSqsQueueUrl(), config.getSqsQueueUrl());
@@ -76,13 +77,13 @@ public class MasterSchedulerTest {
         assertEquals(true, returnedRequestTemplateMap.get("b"));
         
         try {
-            adminApi.createSchedulerConfig(config).execute().body();
+            superadminApi.createSchedulerConfig(config).execute().body();
             fail("expected exception");
         } catch (EntityAlreadyExistsException e) {
             assertEquals("MasterSchedulerConfig already exists.", e.getMessage());
         }
         
-        result = adminApi.getSchedulerConfig(SCHEDULE_ID).execute().body();
+        result = superadminApi.getSchedulerConfig(SCHEDULE_ID).execute().body();
         assertEquals(result.getScheduleId(), config.getScheduleId());
         assertEquals(result.getCronSchedule(), config.getCronSchedule());
         assertEquals(result.getSqsQueueUrl(), config.getSqsQueueUrl());
@@ -93,7 +94,7 @@ public class MasterSchedulerTest {
         assertEquals("string", returnedRequestTemplateMap.get("a"));
         assertEquals(true, returnedRequestTemplateMap.get("b"));
         
-        MasterSchedulerConfigList configList = adminApi.getAllSchedulerConfigs().execute().body();
+        MasterSchedulerConfigList configList = superadminApi.getAllSchedulerConfigs().execute().body();
         List<MasterSchedulerConfig> configs = configList.getItems();
         boolean found = false;
         for (MasterSchedulerConfig config : configs) {
@@ -108,7 +109,7 @@ public class MasterSchedulerTest {
         MasterSchedulerConfig configV2 = Tests.getMastSchedulerConfig();
         configV2.setVersion(2L);
         try {
-            adminApi.updateSchedulerConfig(SCHEDULE_ID, configV2).execute().body();
+            superadminApi.updateSchedulerConfig(SCHEDULE_ID, configV2).execute().body();
             fail("expected exception");
         } catch (EntityNotFoundException e) {
             assertEquals("MasterSchedulerConfig not found.", e.getMessage());
@@ -118,33 +119,33 @@ public class MasterSchedulerTest {
         configV2.setScheduleId("new-schedule-id");
         configV2.setCronSchedule(UPDATED_CRON);
         
-        result = adminApi.updateSchedulerConfig(SCHEDULE_ID, configV2).execute().body();
+        result = superadminApi.updateSchedulerConfig(SCHEDULE_ID, configV2).execute().body();
         assertEquals(result.getScheduleId(), SCHEDULE_ID);
         assertEquals(result.getCronSchedule(), UPDATED_CRON);
         assertEquals(result.getVersion(), new Long(2));
         
-        MasterSchedulerConfigList updatedConfigList = adminApi.getAllSchedulerConfigs().execute().body();
+        MasterSchedulerConfigList updatedConfigList = superadminApi.getAllSchedulerConfigs().execute().body();
         List<MasterSchedulerConfig> updatedConfigs = updatedConfigList.getItems();
         assertNotEquals(configs, updatedConfigs);
         
         try {
-            adminApi.deleteSchedulerConfig("delete-schedule-id").execute().body();
+            superadminApi.deleteSchedulerConfig("delete-schedule-id").execute().body();
             fail("expected exception");
         } catch (EntityNotFoundException e) {
             assertEquals("MasterSchedulerConfig not found.", e.getMessage());
         }
         
-        Response<Message> response = adminApi.deleteSchedulerConfig(SCHEDULE_ID).execute();
+        Response<Message> response = superadminApi.deleteSchedulerConfig(SCHEDULE_ID).execute();
         assertEquals(200, response.code());
         
         try {
-            adminApi.getSchedulerConfig(SCHEDULE_ID).execute().body();
+            superadminApi.getSchedulerConfig(SCHEDULE_ID).execute().body();
             fail("expected exception");
         } catch (EntityNotFoundException e) {
             assertEquals("MasterSchedulerConfig not found.", e.getMessage());
         }
         
-        configList = adminApi.getAllSchedulerConfigs().execute().body();
+        configList = superadminApi.getAllSchedulerConfigs().execute().body();
         for (MasterSchedulerConfig config : configList.getItems()) {
             if (config.getScheduleId() == SCHEDULE_ID) {
                 fail("MasterSchedulerConfig not deleted");
@@ -154,7 +155,7 @@ public class MasterSchedulerTest {
     
     @Test
     public void testGetSchedulerStatus() throws Exception {
-        DateTimeHolder dateTime = adminApi.getSchedulerStatus().execute().body();
+        DateTimeHolder dateTime = admin.getClient(ForAdminsApi.class).getSchedulerStatus().execute().body();
         
         assertNotNull(dateTime);
     }

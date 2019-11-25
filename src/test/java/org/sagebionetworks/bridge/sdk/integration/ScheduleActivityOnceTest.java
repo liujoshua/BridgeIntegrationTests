@@ -14,6 +14,7 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.model.Activity;
@@ -77,7 +78,7 @@ public class ScheduleActivityOnceTest {
         if (study.isExternalIdRequiredOnSignup()) {
             study.setExternalIdRequiredOnSignup(false);
             
-            VersionHolder version = admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute().body();
+            VersionHolder version = admin.getClient(ForSuperadminsApi.class).updateStudy(study.getIdentifier(), study).execute().body();
             study.setVersion(version.getVersion());
         }
         Schedule schedule = new Schedule();
