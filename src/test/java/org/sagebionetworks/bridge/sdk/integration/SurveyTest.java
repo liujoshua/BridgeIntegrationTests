@@ -431,6 +431,8 @@ public class SurveyTest {
 
         Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
         GuidCreatedOnVersionHolder retSurvey = sharedSurveysApi.createSurvey(survey).execute().body();
+        // identifier users global secondary index. Sleep mitigate eventual consistency.
+        Thread.sleep(2000);
 
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
                 .name("Integ Test Schema").surveyCreatedOn(retSurvey.getCreatedOn().toString()).surveyGuid(retSurvey.getGuid());
@@ -747,7 +749,8 @@ public class SurveyTest {
         assertEquals(prefix, IDENTIFIER_PREFIX + oneVersion.getIdentifier());
         
         surveysApi.deleteSurvey(prefix, oneVersion.getCreatedOn(), false).execute();
-        
+        Thread.sleep(2000);
+
         anyDeleted(surveysApi.getAllVersionsOfSurvey(prefix, true));
         noneDeleted(surveysApi.getAllVersionsOfSurvey(prefix, false));
     }
