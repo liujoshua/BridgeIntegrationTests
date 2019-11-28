@@ -311,14 +311,16 @@ public class SurveyTest {
         assertTrue(multiValueConstraints.isRequired());        
         assertEquals("MultiValueConstraints", multiValueConstraints.getType());
         List<SurveyQuestionOption> options = multiValueConstraints.getEnumeration();
-        assertEquals(5, options.size());
-        SurveyQuestionOption option = options.get(0);
-        assertEquals("Terrible", option.getLabel());
-        assertEquals("Terrible Detail", option.getDetail());
-        assertEquals("1", option.getValue());
+        assertEquals(6, options.size());
+
+        SurveyQuestionOption option = options.get(5);
+        assertEquals("None of the above", option.getLabel());
+        assertEquals("nota", option.getDetail());
+        assertEquals("0", option.getValue());
         assertEquals("http://terrible.svg", option.getImage().getSource());
         assertEquals(new Integer(600), option.getImage().getWidth());
         assertEquals(new Integer(300), option.getImage().getHeight());
+        assertTrue(option.isExclusive());
         
         // String question
         SurveyQuestion stringQuestion = getQuestion(survey, STRING_ID);
