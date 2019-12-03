@@ -314,14 +314,16 @@ public class SurveyTest {
         assertTrue(multiValueConstraints.isRequired());        
         assertEquals("MultiValueConstraints", multiValueConstraints.getType());
         List<SurveyQuestionOption> options = multiValueConstraints.getEnumeration();
-        assertEquals(5, options.size());
-        SurveyQuestionOption option = options.get(0);
-        assertEquals("Terrible", option.getLabel());
-        assertEquals("Terrible Detail", option.getDetail());
-        assertEquals("1", option.getValue());
+        assertEquals(6, options.size());
+
+        SurveyQuestionOption option = options.get(5);
+        assertEquals("None of the above", option.getLabel());
+        assertEquals("nota", option.getDetail());
+        assertEquals("0", option.getValue());
         assertEquals("http://terrible.svg", option.getImage().getSource());
         assertEquals(new Integer(600), option.getImage().getWidth());
         assertEquals(new Integer(300), option.getImage().getHeight());
+        assertTrue(option.isExclusive());
         
         // String question
         SurveyQuestion stringQuestion = getQuestion(survey, STRING_ID);
@@ -434,6 +436,8 @@ public class SurveyTest {
 
         Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
         GuidCreatedOnVersionHolder retSurvey = sharedSurveysApi.createSurvey(survey).execute().body();
+        // identifier users global secondary index. Sleep mitigate eventual consistency.
+        Thread.sleep(2000);
 
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
                 .name("Integ Test Schema").surveyCreatedOn(retSurvey.getCreatedOn().toString()).surveyGuid(retSurvey.getGuid());
@@ -750,7 +754,8 @@ public class SurveyTest {
         assertEquals(prefix, IDENTIFIER_PREFIX + oneVersion.getIdentifier());
         
         surveysApi.deleteSurvey(prefix, oneVersion.getCreatedOn(), false).execute();
-        
+        Thread.sleep(2000);
+
         anyDeleted(surveysApi.getAllVersionsOfSurvey(prefix, true));
         noneDeleted(surveysApi.getAllVersionsOfSurvey(prefix, false));
     }
