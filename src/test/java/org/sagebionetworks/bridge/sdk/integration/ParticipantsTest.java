@@ -16,6 +16,7 @@ import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
@@ -32,6 +33,7 @@ import retrofit2.Response;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
@@ -98,12 +100,12 @@ public class ParticipantsTest {
         
         IntegTestUtils.deletePhoneUser(researcher);
         
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        Study study = adminApi.getUsersStudy().execute().body();
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         if (!study.isPhoneSignInEnabled() || !study.isEmailSignInEnabled()) {
             study.setPhoneSignInEnabled(true);
             study.setEmailSignInEnabled(true);
-            VersionHolder keys = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
+            VersionHolder keys = superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
             study.version(keys.getVersion());
         }
     }
@@ -182,12 +184,12 @@ public class ParticipantsTest {
                 .withExternalId(externalId.getIdentifier()).createAndSignInUser();
         
         ParticipantsApi researcherParticipantsApi = researcher.getClient(ParticipantsApi.class);
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        Study study = adminApi.getStudy(admin.getStudyId()).execute().body();
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        Study study = superadminApi.getStudy(admin.getStudyId()).execute().body();
         
         try {
             study.setHealthCodeExportEnabled(true);
-            VersionHolder version = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
+            VersionHolder version = superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
             study.version(version.getVersion());
             
             StudyParticipant participant = researcherParticipantsApi.getParticipantById(
@@ -213,7 +215,7 @@ public class ParticipantsTest {
         } finally {
             user.signOutAndDeleteUser();
             study.setHealthCodeExportEnabled(false);
-            VersionHolder version = adminApi.updateStudy(study.getIdentifier(), study).execute().body();
+            VersionHolder version = superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
             study.version(version.getVersion());
         }
     }

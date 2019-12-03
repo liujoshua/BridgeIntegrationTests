@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import com.google.common.collect.ImmutableMap;
 import org.joda.time.DateTime;
@@ -16,7 +17,7 @@ import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.Config;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.IntentToParticipateApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
@@ -44,10 +45,10 @@ public class IntentToParticipateTest {
         IntegTestUtils.deletePhoneUser(researcher);
 
         // Add dummy install link to trigger Intent SMS.
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        Study study = adminApi.getUsersStudy().execute().body();
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         study.setInstallLinks(ImmutableMap.of("Universal", "http://example.com/"));
-        adminApi.updateStudy(study.getIdentifier(), study).execute();
+        superadminApi.updateStudy(study.getIdentifier(), study).execute();
     }
     
     @After

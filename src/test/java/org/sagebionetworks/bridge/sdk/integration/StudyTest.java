@@ -6,6 +6,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,8 +43,8 @@ import retrofit2.Response;
 
 import org.sagebionetworks.bridge.config.PropertiesConfig;
 import org.sagebionetworks.bridge.rest.ClientManager;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.UploadsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
@@ -54,7 +57,6 @@ import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
-import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
@@ -109,7 +111,7 @@ public class StudyTest {
     @After
     public void after() throws Exception {
         if (studyId != null) {
-            admin.getClient(ForAdminsApi.class).deleteStudy(studyId, true).execute();
+            admin.getClient(ForSuperadminsApi.class).deleteStudy(studyId, true).execute();
         }
         if (project != null) {
             synapseClient.deleteEntityById(project.getId());
@@ -146,7 +148,7 @@ public class StudyTest {
     @Ignore
     public void createSynapseProjectTeam() throws IOException, SynapseException {
         // only use developer to signin
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, DEVELOPER);
         try {
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
 
@@ -218,7 +220,7 @@ public class StudyTest {
 
     @Test
     public void crudStudy() throws Exception {
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
 
         studyId = Tests.randomIdentifier(StudyTest.class);
         Study study = Tests.getStudy(studyId, null);
@@ -232,11 +234,11 @@ public class StudyTest {
         // Set validation strictness to null, to verify the default.
         study.setUploadValidationStrictness(null);
 
-        VersionHolder holder = adminApi.createStudy(study).execute().body();
+        VersionHolder holder = superadminApi.createStudy(study).execute().body();
         assertNotNull(holder.getVersion());
 
-        adminApi.adminChangeStudy(new SignIn().study(studyId)).execute();
-        Study newStudy = adminApi.getStudy(study.getIdentifier()).execute().body();
+        superadminApi.adminChangeStudy(new SignIn().study(studyId)).execute();
+        Study newStudy = superadminApi.getStudy(study.getIdentifier()).execute().body();
         
         study.addDataGroupsItem("test_user"); // added by the server, required for equality of dataGroups.
 
@@ -305,9 +307,9 @@ public class StudyTest {
 
         Long oldVersion = newStudy.getVersion();
         alterStudy(newStudy);
-        adminApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
+        superadminApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
 
-        Study newerStudy = adminApi.getStudy(newStudy.getIdentifier()).execute().body();
+        Study newerStudy = superadminApi.getStudy(newStudy.getIdentifier()).execute().body();
         assertTrue(newerStudy.getVersion() > oldVersion);
 
         assertFalse(newerStudy.isAutoVerificationEmailSuppressed());
@@ -330,8 +332,8 @@ public class StudyTest {
         // ConsentNotificationEmailVerified cannot be set by the update API.
         newerStudy.setConsentNotificationEmailVerified(true);
 
-        adminApi.updateStudy(newerStudy.getIdentifier(), newerStudy).execute().body();
-        Study newestStudy = adminApi.getStudy(newStudy.getIdentifier()).execute().body();
+        superadminApi.updateStudy(newerStudy.getIdentifier(), newerStudy).execute().body();
+        Study newestStudy = superadminApi.getStudy(newStudy.getIdentifier()).execute().body();
 
         assertFalse("emailSignInEnabled should be false after update", newestStudy.isEmailSignInEnabled());
         assertFalse("studyIdExcludedInExport should be false after update", newestStudy.isStudyIdExcludedInExport());
@@ -340,16 +342,16 @@ public class StudyTest {
         
         // and then you have to switch back, because after you delete this test study, 
         // all users signed into that study are locked out of working.
-        adminApi.adminChangeStudy(new SignIn().study("api")).execute();
+        superadminApi.adminChangeStudy(new SignIn().study("api")).execute();
 
         // logically delete a study by admin
-        adminApi.deleteStudy(studyId, false).execute();
-        Study retStudy = adminApi.getStudy(studyId).execute().body();
+        superadminApi.deleteStudy(studyId, false).execute();
+        Study retStudy = superadminApi.getStudy(studyId).execute().body();
         assertNotNull(retStudy);
 
-        adminApi.deleteStudy(studyId, true).execute();
+        superadminApi.deleteStudy(studyId, true).execute();
         try {
-            adminApi.getStudy(studyId).execute();
+            superadminApi.getStudy(studyId).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
             // expected exception
@@ -359,17 +361,17 @@ public class StudyTest {
 
     @Test
     public void researcherCannotAccessAnotherStudy() throws Exception {
-        TestUser researcher = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.RESEARCHER);
+        TestUser researcher = TestUserHelper.createAndSignInUser(StudyTest.class, false, RESEARCHER);
         try {
             studyId = Tests.randomIdentifier(StudyTest.class);
             Study study = Tests.getStudy(studyId, null);
 
-            ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-            adminApi.createStudy(study).execute();
+            ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+            superadminApi.createStudy(study).execute();
 
             try {
                 // Researcher getting an admin client, an error should result
-                ForAdminsApi resStudiesApi = researcher.getClient(ForAdminsApi.class);
+                ForSuperadminsApi resStudiesApi = researcher.getClient(ForSuperadminsApi.class);
                 resStudiesApi.getStudy(studyId).execute();
                 fail("Should not have been able to get this other study");
             } catch(UnauthorizedException e) {
@@ -393,7 +395,7 @@ public class StudyTest {
 
     @Test
     public void developerCannotChangeAdminOnlySettings() throws Exception {
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, DEVELOPER);
         try {
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
 
@@ -426,7 +428,7 @@ public class StudyTest {
     @Test
     public void resendVerifyConsentNotificationEmail() throws Exception {
         // We currently can't check an email address as part of a test. Just verify that the call succeeds.
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, DEVELOPER);
         try {
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
             Response<Message> response = studiesApi.resendVerifyEmail("consent_notification").execute();
@@ -451,7 +453,7 @@ public class StudyTest {
 
     @Test
     public void uploadMetadataFieldDefinitions() throws Exception {
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
 
         // Random field name, so they don't conflict.
         String fieldName = "test-field-" + RandomStringUtils.randomAlphabetic(4);
@@ -460,7 +462,7 @@ public class StudyTest {
         UploadFieldDefinition modifiedField = new UploadFieldDefinition().name(fieldName).type(
                 UploadFieldType.INT);
 
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, DEVELOPER);
         try {
             StudiesApi studiesApi = developer.getClient(StudiesApi.class);
             Study study = studiesApi.getUsersStudy().execute().body();
@@ -539,7 +541,7 @@ public class StudyTest {
             // Admin can modify field.
             removeFieldDefByName(fieldName, study);
             appendToStudy(study, modifiedField);
-            adminApi.updateStudy(IntegTestUtils.STUDY_ID, study).execute();
+            superadminApi.updateStudy(STUDY_ID, study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
             returnedFieldDef = getFieldDefByName(fieldName, study);
@@ -547,7 +549,7 @@ public class StudyTest {
 
             // Admin can delete field.
             removeFieldDefByName(fieldName, study);
-            adminApi.updateStudy(IntegTestUtils.STUDY_ID, study).execute();
+            superadminApi.updateStudy(STUDY_ID, study).execute();
 
             study = studiesApi.getUsersStudy().execute().body();
             returnedFieldDef = getFieldDefByName(fieldName, study);
@@ -608,12 +610,12 @@ public class StudyTest {
 
     @Test
     public void userCannotAccessApisWithDeprecatedClient() throws Exception {
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        Study study = adminApi.getStudy(IntegTestUtils.STUDY_ID).execute().body();
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         // Set a minimum value that should not any other tests
         if (study.getMinSupportedAppVersions().get("Android") == null) {
             study.getMinSupportedAppVersions().put("Android", 1);
-            adminApi.updateStudy(IntegTestUtils.STUDY_ID, study).execute();
+            superadminApi.updateStudy(STUDY_ID, study).execute();
         }
         TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
         try {
@@ -645,7 +647,7 @@ public class StudyTest {
 
     @Test
     public void getStudyUploads() throws Exception {
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, DEVELOPER);
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         TestUser user2 = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {

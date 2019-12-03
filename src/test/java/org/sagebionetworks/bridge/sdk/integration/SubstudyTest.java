@@ -17,6 +17,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
@@ -58,6 +59,7 @@ public class SubstudyTest {
     public void after() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+        ForSuperadminsApi superadminsApi = admin.getClient(ForSuperadminsApi.class);
         for (String userId : userIdsToDelete) {
             try {
                 adminsApi.deleteUser(userId).execute();
@@ -66,7 +68,7 @@ public class SubstudyTest {
         }
         for (String substudyId : substudyIdsToDelete) {
             try {
-                adminsApi.deleteSubstudy(substudyId, true).execute();    
+                superadminsApi.deleteSubstudy(substudyId, true).execute();    
             } catch(EntityNotFoundException e) {
             }
         }

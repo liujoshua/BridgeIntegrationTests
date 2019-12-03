@@ -81,6 +81,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
@@ -150,6 +151,7 @@ public class SurveyTest {
     private static SharedModulesApi sharedDeveloperModulesApi;
     private static SurveysApi sharedSurveysApi;
     private static ForAdminsApi adminsApi;
+    private static ForSuperadminsApi superadminsApi;
 
     private String surveyId;
 
@@ -161,6 +163,7 @@ public class SurveyTest {
     public static void beforeClass() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         adminsApi = admin.getClient(ForAdminsApi.class);
+        superadminsApi = admin.getClient(ForSuperadminsApi.class);
         developer = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(SurveyTest.class, true);
         worker = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.WORKER);
@@ -412,7 +415,7 @@ public class SurveyTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            superadminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
@@ -421,7 +424,7 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
-            adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -444,7 +447,7 @@ public class SurveyTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            superadminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(), retSurvey.getCreatedOn(), true).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
@@ -453,7 +456,7 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(), retSurvey.getCreatedOn(), true).execute();
-            adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -480,10 +483,10 @@ public class SurveyTest {
             thrownEx = e;
         } finally {
             // finally delete shared module and uploaded schema
-            adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            superadminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
-            adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -510,10 +513,10 @@ public class SurveyTest {
             thrownEx = e;
         } finally {
             // finally delete shared module and uploaded schema
-            adminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            superadminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(), retSurvey.getCreatedOn(), true).execute();
-            adminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }

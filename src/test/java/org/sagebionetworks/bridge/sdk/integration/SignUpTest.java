@@ -2,7 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -91,8 +91,8 @@ public class SignUpTest {
         
         TestUser admin = TestUserHelper.getSignedInAdmin();
         
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
-        adminApi.createStudy(study).execute();
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        superadminApi.createStudy(study).execute();
 
         SignUp signUp = new SignUp()
                 .study(study.getIdentifier())
@@ -115,7 +115,7 @@ public class SignUpTest {
                 assertEquals("externalId is not a valid external ID", e.getErrors().get("externalId").get(0));
             }
         } finally {
-            adminApi.deleteStudy(study.getIdentifier(), true).execute();
+            superadminApi.deleteStudy(study.getIdentifier(), true).execute();
         }
     }
 }

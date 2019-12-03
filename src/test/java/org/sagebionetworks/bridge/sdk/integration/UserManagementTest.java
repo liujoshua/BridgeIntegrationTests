@@ -3,6 +3,11 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.API_SIGNIN;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import org.junit.After;
 import org.junit.Before;
@@ -13,10 +18,10 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -26,8 +31,6 @@ import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class UserManagementTest {
     
-    private static final String API = "api";
-    private static final String SHARED = "shared";
     private TestUser admin;
     private TestUser researcher;
 
@@ -35,7 +38,7 @@ public class UserManagementTest {
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
 
-        researcher = TestUserHelper.createAndSignInUser(UserManagementTest.class, true, Role.RESEARCHER);
+        researcher = TestUserHelper.createAndSignInUser(UserManagementTest.class, true, RESEARCHER);
     }
 
     @After
@@ -93,35 +96,35 @@ public class UserManagementTest {
         // don't get any mistakes
         admin.signOut();
         
-        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
         SignIn signIn = new SignIn().study(admin.getStudyId())
                 .email(admin.getEmail()).password((admin.getPassword()));
         
-        adminApi.adminSignIn(signIn).execute().body();
+        superadminApi.adminSignIn(signIn).execute().body();
         Study currentStudy = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
-        assertEquals(API, currentStudy.getIdentifier());
+        assertEquals(STUDY_ID, currentStudy.getIdentifier());
         
-        adminApi = admin.getClient(ForAdminsApi.class);
-        adminApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute().body();
+        superadminApi = admin.getClient(ForSuperadminsApi.class);
+        superadminApi.adminChangeStudy(SHARED_SIGNIN).execute().body();
         
         currentStudy = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
-        assertEquals(SHARED, currentStudy.getIdentifier());
+        assertEquals(SHARED_STUDY_ID, currentStudy.getIdentifier());
         
         // now reverse the order
         admin.signOut(); // so it's not necessary to switch back to the API study for future tests
         
-        adminApi = admin.getClient(ForAdminsApi.class);
-        signIn = new SignIn().study(SHARED)
+        superadminApi = admin.getClient(ForSuperadminsApi.class);
+        signIn = new SignIn().study(SHARED_STUDY_ID)
                 .email(admin.getEmail()).password((admin.getPassword()));
         
-        adminApi.adminSignIn(signIn).execute().body();
+        superadminApi.adminSignIn(signIn).execute().body();
         currentStudy = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
-        assertEquals(SHARED, currentStudy.getIdentifier());
+        assertEquals(SHARED_STUDY_ID, currentStudy.getIdentifier());
         
-        adminApi = admin.getClient(ForAdminsApi.class);
-        adminApi.adminChangeStudy(Tests.API_SIGNIN).execute().body();
+        superadminApi = admin.getClient(ForSuperadminsApi.class);
+        superadminApi.adminChangeStudy(API_SIGNIN).execute().body();
         
         currentStudy = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
-        assertEquals(API, currentStudy.getIdentifier());
+        assertEquals(STUDY_ID, currentStudy.getIdentifier());
     }
 }

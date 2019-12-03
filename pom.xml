@@ -49,12 +49,12 @@
         <dependency>
             <groupId>org.sagebionetworks</groupId>
             <artifactId>BridgeIntegTestUtils</artifactId>
-            <version>1.0.7</version>
+            <version>1.0.8</version>
         </dependency>
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
             <artifactId>rest-client</artifactId>
-            <version>0.19.23</version>
+            <version>0.19.24</version>
             <scope>test</scope>
         </dependency>
         <dependency>

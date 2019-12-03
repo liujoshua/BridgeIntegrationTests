@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.ADMIN;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -17,6 +18,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
@@ -57,10 +59,10 @@ public class SubstudyMembershipTest {
 
     @After
     public void after() throws Exception {
-        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
-        Study study = adminsApi.getUsersStudy().execute().body();
+        ForSuperadminsApi superadminsApi = admin.getClient(ForSuperadminsApi.class);
+        Study study = superadminsApi.getStudy(STUDY_ID).execute().body();
         study.setExternalIdRequiredOnSignup(false);
-        adminsApi.updateStudy(study.getIdentifier(), study).execute();
+        superadminsApi.updateStudy(study.getIdentifier(), study).execute();
 
         // This can only happen after external ID management is disabled.
         for (TestUser user : usersToDelete) {
@@ -83,7 +85,7 @@ public class SubstudyMembershipTest {
         }
         for (String substudyId : substudyIdsToDelete) {
             try {
-                adminsApi.deleteSubstudy(substudyId, true).execute();    
+                superadminsApi.deleteSubstudy(substudyId, true).execute();    
             } catch(Exception e) {
                 e.printStackTrace();
             }
@@ -94,7 +96,7 @@ public class SubstudyMembershipTest {
     public void addingExternalIdsAssociatesToSubstudy() throws Exception {
         Study study = admin.getClient(ForAdminsApi.class).getUsersStudy().execute().body();
         study.setExternalIdRequiredOnSignup(true);
-        admin.getClient(ForAdminsApi.class).updateStudy(study.getIdentifier(), study).execute();
+        admin.getClient(ForSuperadminsApi.class).updateStudy(study.getIdentifier(), study).execute();
         
         // Create two substudies
         String idA = createSubstudy();

@@ -8,7 +8,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.API_SIGNIN;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,6 +33,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
@@ -45,7 +49,6 @@ import org.sagebionetworks.bridge.rest.model.UploadSchema;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaList;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.user.TestUserHelper;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class UploadSchemaTest {
     // We put spaces in the schema ID to test URL encoding.
@@ -56,6 +59,7 @@ public class UploadSchemaTest {
     private static TestUserHelper.TestUser worker;
     private static TestUserHelper.TestUser sharedDeveloper;
     private static ForAdminsApi adminApi;
+    private static ForSuperadminsApi superadminApi;
     private static UploadSchemasApi devUploadSchemasApi;
     private static ForWorkersApi workerUploadSchemasApi;
     private static SharedModulesApi sharedDeveloperModulesApi;
@@ -73,6 +77,7 @@ public class UploadSchemaTest {
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
 
         adminApi = admin.getClient(ForAdminsApi.class);
+        superadminApi = admin.getClient(ForSuperadminsApi.class);
         devUploadSchemasApi = developer.getClient(UploadSchemasApi.class);
         sharedUploadSchemasApi = sharedDeveloper.getClient(UploadSchemasApi.class);
         workerUploadSchemasApi = worker.getClient(ForWorkersApi.class);
@@ -86,7 +91,7 @@ public class UploadSchemaTest {
     @After
     public void deleteSchemas() throws Exception {
         try {
-            adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminApi.adminChangeStudy(API_SIGNIN).execute();
             adminApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
@@ -137,9 +142,9 @@ public class UploadSchemaTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            adminApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            superadminApi.adminChangeStudy(SHARED_SIGNIN).execute();
             adminApi.deleteAllRevisionsOfUploadSchema(retSchema.getSchemaId(), true).execute();
-            adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminApi.adminChangeStudy(API_SIGNIN).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
@@ -147,9 +152,9 @@ public class UploadSchemaTest {
             // finally delete shared module and uploaded schema
             adminApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
 
-            adminApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            superadminApi.adminChangeStudy(SHARED_SIGNIN).execute();
             adminApi.deleteAllRevisionsOfUploadSchema(retSchema.getSchemaId(), true).execute();
-            adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminApi.adminChangeStudy(API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -178,8 +183,8 @@ public class UploadSchemaTest {
 
         // Step 3b: Worker client can also get schemas, and can get schemas by study, schema, and rev.
         // This schema should be identical to updatedSchemaV2, except it also has the study ID.
-        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevision(IntegTestUtils.STUDY_ID, schemaId, 2L).execute().body();
-        assertEquals(IntegTestUtils.STUDY_ID, workerSchemaV2.getStudyId());
+        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevision(STUDY_ID, schemaId, 2L).execute().body();
+        assertEquals(STUDY_ID, workerSchemaV2.getStudyId());
         assertSchemaFilledIn(workerSchemaV2);
 
         UploadSchema workerSchemaV2MinusStudyId = copy(null, workerSchemaV2);

@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.API_SIGNIN;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -16,6 +18,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
@@ -78,15 +81,16 @@ public class SharedModuleTest {
         // Delete schemas created by test. We do it in a single After method instead of multiple, in case there are any
         // referential integrity concerns.
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
 
         if (module != null) {
             try {
-                adminApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+                superadminApi.adminChangeStudy(SHARED_SIGNIN).execute();
                 adminApi.deleteMetadataByIdAllVersions(module.getId(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting module " + module.getId() + ": "  + ex.getMessage(), ex);
             } finally {
-                adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+                superadminApi.adminChangeStudy(API_SIGNIN).execute();
             }
         }
 
@@ -102,13 +106,13 @@ public class SharedModuleTest {
 
         if (sharedSchema != null) {
             try {
-                adminApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+                superadminApi.adminChangeStudy(SHARED_SIGNIN).execute();
                 adminApi.deleteAllRevisionsOfUploadSchema(sharedSchema.getSchemaId(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting schema " + sharedSchema.getSchemaId() + " in study " +
                         sharedDeveloper.getStudyId() + ": "  + ex.getMessage(), ex);
             } finally {
-                adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+                superadminApi.adminChangeStudy(API_SIGNIN).execute();
             }
         }
 
@@ -122,12 +126,12 @@ public class SharedModuleTest {
 
         if (sharedSurvey != null) {
             try {
-                adminApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+                superadminApi.adminChangeStudy(SHARED_SIGNIN).execute();
                 adminApi.deleteSurvey(sharedSurvey.getGuid(), sharedSurvey.getCreatedOn(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting shared survey " + sharedSurvey.getGuid() + ": "  + ex.getMessage(), ex);
             } finally {
-                adminApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+                superadminApi.adminChangeStudy(API_SIGNIN).execute();
             }
         }
     }
