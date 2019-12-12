@@ -71,6 +71,7 @@ public class ReportTest {
 
     private static TestUser admin;
     private static TestUser developer;
+    private static TestUser studyScopedDeveloper;
     private static TestUser worker;
     
     private static Substudy substudy1;
@@ -87,6 +88,7 @@ public class ReportTest {
         
         admin = TestUserHelper.getSignedInAdmin();
         SubstudiesApi substudiesApi = admin.getClient(SubstudiesApi.class);
+        
         substudy1 = new Substudy().id(id1).name("Substudy " + id1);
         VersionHolder holder = substudiesApi.createSubstudy(substudy1).execute().body();
         substudy1.setVersion(holder.getVersion());
@@ -96,11 +98,10 @@ public class ReportTest {
         substudy2.setVersion(holder.getVersion());
         
         developer = new TestUserHelper.Builder(ReportTest.class).withRoles(DEVELOPER)
+                .createAndSignInUser();
+        
+        studyScopedDeveloper = new TestUserHelper.Builder(ReportTest.class).withRoles(DEVELOPER)
                 .withSubstudyIds(ImmutableSet.of(substudy1.getId())).createAndSignInUser();
-
-        // Make this worker a researcher solely for the purpose of getting the healthCode needed to user the worker
-        // API
-        worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, WORKER, RESEARCHER);
 
         // Worker test needs to be able to get healthcode.
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
@@ -111,22 +112,22 @@ public class ReportTest {
 
     @Before
     public void before() throws Exception {
-        user = TestUserHelper.createAndSignInUser(ReportTest.class, true);
         reportId = Tests.randomIdentifier(ReportTest.class);
     }
 
     @After
     public void after() throws Exception {
         ForDevelopersApi developerApi = developer.getClient(ForDevelopersApi.class);
-        developerApi.deleteAllParticipantReportRecords(user.getUserId(), reportId).execute();
         developerApi.deleteAllStudyReportRecords(reportId).execute();
 
         admin.getClient(ForAdminsApi.class).deleteParticipantReportIndex(reportId).execute();
         
         if (user != null) {
+            developerApi.deleteAllParticipantReportRecords(user.getUserId(), reportId).execute();
             user.signOutAndDeleteUser();
         }
         if (substudyScopedUser != null) {
+            developerApi.deleteAllParticipantReportRecords(substudyScopedUser.getUserId(), reportId).execute();
             substudyScopedUser.signOutAndDeleteUser();
         }
     }
@@ -136,6 +137,13 @@ public class ReportTest {
         if (developer != null) {
             developer.signOutAndDeleteUser();
         }
+        if (studyScopedDeveloper != null) {
+            studyScopedDeveloper.signOutAndDeleteUser();
+        }
+        if (worker != null) {
+            worker.signOutAndDeleteUser();
+        }
+
         // The substudy must be deleted after the developer because we put them in the substudy.
         if (substudy1 != null) {
             admin.getClient(SubstudiesApi.class).deleteSubstudy(substudy1.getId(), true).execute();
@@ -143,17 +151,6 @@ public class ReportTest {
         if (substudy2 != null) {
             admin.getClient(SubstudiesApi.class).deleteSubstudy(substudy2.getId(), true).execute();
         }
-    }
-
-    @AfterClass
-    public static void deleteWorker() throws Exception {
-        if (worker != null) {
-            worker.signOutAndDeleteUser();
-        }
-    }
-
-    @AfterClass
-    public static void unsetHealthCodeExportEnabled() throws Exception {
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
         Study study = superadminApi.getStudy(STUDY_ID).execute().body();
         study.setHealthCodeExportEnabled(false);
@@ -162,6 +159,8 @@ public class ReportTest {
 
     @Test
     public void developerCanCrudParticipantReport() throws Exception {
+        user = TestUserHelper.createAndSignInUser(ReportTest.class, true);
+        
         String userId = user.getSession().getId();
         ParticipantReportsApi reportsApi = developer.getClient(ParticipantReportsApi.class);
 
@@ -184,8 +183,7 @@ public class ReportTest {
         assertEquals(SEARCH_END_DATE, results.getRequestParams().getEndDate());
 
         // This search is out of range, and should return no results.
-        results = usersApi
-                .getParticipantReportRecords(reportId, SEARCH_START_DATE.plusDays(30), SEARCH_END_DATE.plusDays(30))
+        results = usersApi.getParticipantReportRecords(reportId, SEARCH_START_DATE.plusDays(30), SEARCH_END_DATE.plusDays(30))
                 .execute().body();
         assertEquals(0, results.getItems().size());
 
@@ -210,6 +208,9 @@ public class ReportTest {
 
     @Test
     public void workerCanCrudParticipantReportByDate() throws Exception {
+        user = TestUserHelper.createAndSignInUser(ReportTest.class, true);
+        worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, WORKER, RESEARCHER);
+
         String healthCode = worker.getClient(ParticipantsApi.class).getParticipantById(user.getSession().getId(),
                 false).execute().body().getHealthCode();
         assertNotNull(healthCode);
@@ -248,6 +249,9 @@ public class ReportTest {
 
     @Test
     public void workerCanCrudParticipantReportByDateTime() throws Exception {
+        user = TestUserHelper.createAndSignInUser(ReportTest.class, true);
+        worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, WORKER, RESEARCHER);
+        
         String healthCode = worker.getClient(ParticipantsApi.class).getParticipantById(user.getSession().getId(),
                 false).execute().body().getHealthCode();
         assertNotNull(healthCode);
@@ -388,8 +392,7 @@ public class ReportTest {
     public void correctExceptionsOnBadRequest() throws Exception {
         StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
         try {
-            devReportClient
-                    .getStudyReportRecords(reportId, LocalDate.parse("2010-10-10"), LocalDate.parse("2012-10-10"))
+            devReportClient.getStudyReportRecords(reportId, LocalDate.parse("2010-10-10"), LocalDate.parse("2012-10-10"))
                     .execute();
             fail("Should have thrown an exception");
         } catch (BadRequestException e) {
@@ -420,6 +423,7 @@ public class ReportTest {
     
     @Test
     public void userCanCRUDSelfReports() throws Exception {
+        user = TestUserHelper.createAndSignInUser(ReportTest.class, true);
         UsersApi userApi = user.getClient(UsersApi.class);
 
         userApi.saveParticipantReportRecordsV4(reportId, makeReportData(DATETIME1, "foo", "A")).execute();
@@ -466,9 +470,11 @@ public class ReportTest {
     
     @Test
     public void studyReportsNotVisibleOutsideOfSubstudy() throws Exception {
-        StudyReportsApi devReportClient = developer.getClient(StudyReportsApi.class);
+        StudyReportsApi devReportClient = studyScopedDeveloper.getClient(StudyReportsApi.class);
+        
         ReportData data1 = makeReportData(DATE1, "asdf", "A");
         data1.setSubstudyIds(ImmutableList.of(substudy1.getId()));
+        
         ReportData data2 = makeReportData(DATE2, "asdf", "B");
         devReportClient.addStudyReportRecord(reportId, data1).execute();
         devReportClient.addStudyReportRecord(reportId, data2).execute();
@@ -518,6 +524,8 @@ public class ReportTest {
     
     @Test
     public void participantReportsNotVisibleOutsideOfSubstudy() throws Exception {
+        worker = TestUserHelper.createAndSignInUser(ReportTest.class, true, WORKER, RESEARCHER);
+        
         // It would seem to be dumb to create reports for a participant that are associated to substudies such that the 
         // user will not be able to see them. Nevertheless, if it happens, we enforce visibility constraints.
         substudyScopedUser = new TestUserHelper.Builder(ReportTest.class).withConsentUser(true)
