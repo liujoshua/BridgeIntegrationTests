@@ -152,7 +152,6 @@ public class ScheduledActivityRecurringTest {
         assertEquals(ytz1, activities.getItems().get(0).getScheduledOn().toString());
         assertEquals(ytz2, activities.getItems().get(1).getScheduledOn().toString());
         assertEquals(ytz3, activities.getItems().get(2).getScheduledOn().toString());
-        //assertEquals(ytz4, activities.getItems().get(3).getScheduledOn().toString());
         
         // Return to +12:00 land and ask for activites for three days, but one day in the future
         ScheduledActivityListV4 activitiesV4 = filterList(usersApi
