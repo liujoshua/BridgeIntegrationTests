@@ -117,19 +117,7 @@ public class AssessmentTest {
                 .customizationFields(CUSTOMIZATION_FIELDS);
         
         Assessment firstRevision = assessmentApi.createAssessment(unsavedAssessment).execute().body();
-        assertEquals(id, firstRevision.getIdentifier());
-        assertEquals("Title", firstRevision.getTitle());
-        assertEquals("Summary", firstRevision.getSummary());
-        assertEquals("Not validated", firstRevision.getValidationStatus());
-        assertEquals("Not normed", firstRevision.getNormingStatus());
-        assertEquals("Android", firstRevision.getOsName());
-        assertEquals(SUBSTUDY_ID_1, firstRevision.getOwnerId());
-        assertTrue(firstRevision.getTags().contains(markerTag));
-        assertTrue(firstRevision.getCategories().contains("cat1"));
-        assertTrue(firstRevision.getCategories().contains("cat2"));
-        assertEquals(CUSTOMIZATION_FIELDS, firstRevision.getCustomizationFields());
-        assertEquals(Long.valueOf(1), firstRevision.getRevision());
-        assertEquals(Long.valueOf(1L), firstRevision.getVersion());
+        assertFields(firstRevision);
         
         // createAssessment fails when identifier already exists
         try {
@@ -155,6 +143,8 @@ public class AssessmentTest {
         // getAssessmentById works
         Assessment retValueById = assessmentApi.getAssessmentById(id, firstRevision.getRevision()).execute().body();
         assertEquals(firstRevision.getGuid(), retValueById.getGuid());
+        // verify fields
+        assertFields(retValueById);
         
         // createAssessmentRevision works
         firstRevision.setIdentifier(id);
@@ -303,5 +293,21 @@ public class AssessmentTest {
         // Should all be gone...
         list = sharedApi.getSharedAssessments(null, null, null, ImmutableList.of(markerTag), true).execute().body();
         assertTrue(list.getItems().isEmpty());
+    }
+
+    private void assertFields(Assessment firstRevision) {
+        assertEquals(id, firstRevision.getIdentifier());
+        assertEquals("Title", firstRevision.getTitle());
+        assertEquals("Summary", firstRevision.getSummary());
+        assertEquals("Not validated", firstRevision.getValidationStatus());
+        assertEquals("Not normed", firstRevision.getNormingStatus());
+        assertEquals("Android", firstRevision.getOsName());
+        assertEquals(SUBSTUDY_ID_1, firstRevision.getOwnerId());
+        assertTrue(firstRevision.getTags().contains(markerTag));
+        assertTrue(firstRevision.getCategories().contains("cat1"));
+        assertTrue(firstRevision.getCategories().contains("cat2"));
+        assertEquals(CUSTOMIZATION_FIELDS, firstRevision.getCustomizationFields());
+        assertEquals(Long.valueOf(1), firstRevision.getRevision());
+        assertEquals(Long.valueOf(1L), firstRevision.getVersion());
     }
 }
