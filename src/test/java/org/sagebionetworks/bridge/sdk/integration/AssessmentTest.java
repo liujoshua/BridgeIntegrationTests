@@ -295,19 +295,19 @@ public class AssessmentTest {
         assertTrue(list.getItems().isEmpty());
     }
 
-    private void assertFields(Assessment firstRevision) {
-        assertEquals(id, firstRevision.getIdentifier());
-        assertEquals("Title", firstRevision.getTitle());
-        assertEquals("Summary", firstRevision.getSummary());
-        assertEquals("Not validated", firstRevision.getValidationStatus());
-        assertEquals("Not normed", firstRevision.getNormingStatus());
-        assertEquals("Android", firstRevision.getOsName());
-        assertEquals(SUBSTUDY_ID_1, firstRevision.getOwnerId());
-        assertTrue(firstRevision.getTags().contains(markerTag));
-        assertTrue(firstRevision.getCategories().contains("cat1"));
-        assertTrue(firstRevision.getCategories().contains("cat2"));
-        assertEquals(CUSTOMIZATION_FIELDS, firstRevision.getCustomizationFields());
-        assertEquals(Long.valueOf(1), firstRevision.getRevision());
-        assertEquals(Long.valueOf(1L), firstRevision.getVersion());
+    private void assertFields(Assessment assessment) {
+        assertEquals(id, assessment.getIdentifier());
+        assertEquals("Title", assessment.getTitle());
+        assertEquals("Summary", assessment.getSummary());
+        assertEquals("Not validated", assessment.getValidationStatus());
+        assertEquals("Not normed", assessment.getNormingStatus());
+        assertEquals("Android", assessment.getOsName());
+        assertEquals(SUBSTUDY_ID_1, assessment.getOwnerId());
+        assertTrue(assessment.getTags().contains(markerTag));
+        assertTrue(assessment.getCategories().contains("cat1"));
+        assertTrue(assessment.getCategories().contains("cat2"));
+        assertEquals(CUSTOMIZATION_FIELDS, assessment.getCustomizationFields());
+        assertEquals(Long.valueOf(1), assessment.getRevision());
+        assertEquals(Long.valueOf(1L), assessment.getVersion());
     }
 }
