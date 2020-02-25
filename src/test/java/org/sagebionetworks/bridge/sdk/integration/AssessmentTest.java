@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -15,6 +16,7 @@ import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -39,7 +41,9 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 public class AssessmentTest {
-    private static final ImmutableList<String> CATEGORIES = ImmutableList.of("cat1", "cat2");
+    private static final String TITLE = "Title";
+    private static final String CAT1 = "category:cat1";
+    private static final String CAT2 = "category:cat2";
     
     // This isn't usable until the configuration is implemented, but 
     // verify it is persisted corrrectly
@@ -90,14 +94,26 @@ public class AssessmentTest {
         }
         TestUser admin = TestUserHelper.getSignedInAdmin();
         AssessmentsApi api = admin.getClient(AssessmentsApi.class);
+        SharedAssessmentsApi sharedApi = admin.getClient(SharedAssessmentsApi.class);
         
-        try {
-            AssessmentList revisions = api.getAssessmentRevisionsById(id, null, null, true).execute().body();
+        AssessmentList assessments = api.getAssessments(
+                null, null, ImmutableList.of(markerTag), true).execute().body();
+        for (Assessment oneAssessment : assessments.getItems()) {
+            AssessmentList revisions = api.getAssessmentRevisionsById(
+                    oneAssessment.getIdentifier(), null, null, true).execute().body();
             for (Assessment revision : revisions.getItems()) {
-                api.deleteAssessment(revision.getGuid(), true).execute();
+                api.deleteAssessment(revision.getGuid(), true).execute();    
             }
-        } catch(EntityNotFoundException e) {
-            // this is okay, the test concludes by testing deletion.
+        }
+        
+        AssessmentList sharedAssessments = sharedApi.getSharedAssessments(
+                null, null, ImmutableList.of(markerTag), true).execute().body();
+        for (Assessment oneSharedAssessment : sharedAssessments.getItems()) {
+            AssessmentList revisions = sharedApi.getSharedAssessmentRevisionsById(
+                    oneSharedAssessment.getIdentifier(), null, null, true).execute().body();
+            for (Assessment revision : revisions.getItems()) {
+                sharedApi.deleteSharedAssessment(revision.getGuid(), true).execute();    
+            }
         }
     }
     
@@ -106,14 +122,13 @@ public class AssessmentTest {
         // createAssessment works
         Assessment unsavedAssessment = new Assessment()
                 .identifier(id)
-                .title("Title")
+                .title(TITLE)
                 .summary("Summary")
                 .validationStatus("Not validated")
                 .normingStatus("Not normed")
                 .osName("Android")
                 .ownerId(SUBSTUDY_ID_1)
-                .tags(ImmutableList.of(markerTag))
-                .categories(CATEGORIES)
+                .tags(ImmutableList.of(markerTag, CAT1, CAT2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
         
         Assessment firstRevision = assessmentApi.createAssessment(unsavedAssessment).execute().body();
@@ -174,7 +189,7 @@ public class AssessmentTest {
         
         // getAssessments works
         AssessmentList allAssessments = assessmentApi.getAssessments(
-                null, null, null, ImmutableList.of(markerTag), false).execute().body();
+                null, null, ImmutableList.of(markerTag), false).execute().body();
         assertEquals(1, allAssessments.getItems().size());
         assertEquals(Integer.valueOf(1), allAssessments.getTotal());
         assertEquals(secondRevision.getGuid(), allAssessments.getItems().get(0).getGuid());
@@ -206,8 +221,7 @@ public class AssessmentTest {
         // now the first version is the latest
         latest = assessmentApi.getLatestAssessmentRevision(id).execute().body();
         assertEquals(firstRevision.getGuid(), latest.getGuid());
-        // (we have to use unsaved because we modified the first draft to create the second draft)
-        assertEquals(unsavedAssessment.getTitle(), latest.getTitle());
+        assertEquals(TITLE, latest.getTitle());
         
         // getAssessmentRevisionsByGUID works
         allAssessments = assessmentApi.getAssessmentRevisionsByGUID(firstRevision.getGuid(), null, null, false).execute().body();
@@ -256,6 +270,20 @@ public class AssessmentTest {
         assertNotEquals(firstRevision.getGuid(), shared.getGuid());
         assertEquals(firstRevision.getIdentifier(), shared.getIdentifier());
 
+        Assessment sharedByGuid = sharedApi.getSharedAssessmentByGUID(
+                shared.getGuid()).execute().body();
+        assertEquals(sharedByGuid.getGuid(), shared.getGuid());
+        
+        Assessment sharedById = sharedApi.getSharedAssessmentById(
+                shared.getIdentifier(), firstRevision.getRevision()).execute().body();
+        assertEquals(sharedById.getGuid(), shared.getGuid());
+        
+        shared.setTitle("new title");
+        shared.setSummary("new summary");
+        Assessment sharedUpdated = sharedApi.updateSharedAssessment(shared.getGuid(), shared).execute().body();
+        assertEquals(sharedUpdated.getTitle(), "new title");
+        assertEquals(sharedUpdated.getSummary(), "new summary");
+        
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ForSuperadminsApi superAdminApi = admin.getClient(ForSuperadminsApi.class);
         SharedAssessmentsApi adminSharedApi = admin.getClient(SharedAssessmentsApi.class);
@@ -272,7 +300,7 @@ public class AssessmentTest {
         // deleteAssessment physical=true works
         admin.getClient(ForAdminsApi.class).deleteAssessment(secondRevision.getGuid(), true).execute();
         list = assessmentApi.getAssessments(
-                null, null, null, ImmutableList.of(markerTag), true).execute().body();
+                null, null, ImmutableList.of(markerTag), true).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(Integer.valueOf(1), list.getTotal());
         assertEquals(Long.valueOf(3L), list.getItems().get(0).getRevision());
@@ -286,26 +314,155 @@ public class AssessmentTest {
         }
         try {
             superAdminApi.adminChangeStudy(SHARED_SIGNIN).execute();
+            // test logical delete of shared assessments
+            adminSharedApi.deleteSharedAssessment(shared.getGuid(), false).execute().body();
+            
+            list = sharedApi.getSharedAssessments(null, null, ImmutableList.of(markerTag), false).execute().body();
+            assertEquals(Integer.valueOf(0), list.getTotal());
+            assertTrue(list.getItems().isEmpty());
+            
+            list = sharedApi.getSharedAssessments(null, null, ImmutableList.of(markerTag), true).execute().body();
+            assertEquals(Integer.valueOf(1), list.getTotal());
+            assertEquals(1, list.getItems().size());
+            
             adminSharedApi.deleteSharedAssessment(shared.getGuid(), true).execute().body();
         } finally {
             superAdminApi.adminChangeStudy(API_SIGNIN).execute();
         }
         // Should all be gone...
-        list = sharedApi.getSharedAssessments(null, null, null, ImmutableList.of(markerTag), true).execute().body();
+        list = sharedApi.getSharedAssessments(null, null, ImmutableList.of(markerTag), true).execute().body();
         assertTrue(list.getItems().isEmpty());
+        
+        // PAGING
+        
+        // Test paging (10 records with different IDs)
+        for (int i=0; i < 10; i++) {
+            unsavedAssessment = new Assessment()
+                    .identifier(id+i)
+                    .title(TITLE)
+                    .osName("Android")
+                    .ownerId(SUBSTUDY_ID_1)
+                    .tags(ImmutableList.of(markerTag, CAT1, CAT2))
+                    .customizationFields(CUSTOMIZATION_FIELDS);
+            assessmentApi.createAssessment(unsavedAssessment).execute();
+        }
+        
+        AssessmentList page1 = assessmentApi.getAssessments(0, 5, ImmutableList.of(markerTag), false).execute().body();
+        assertEquals(Integer.valueOf(10), page1.getTotal());
+        assertEquals(5, page1.getItems().size());
+        assertEquals(id+"9", page1.getItems().get(0).getIdentifier());
+        assertEquals(id+"8", page1.getItems().get(1).getIdentifier());
+        assertEquals(id+"7", page1.getItems().get(2).getIdentifier());
+        assertEquals(id+"6", page1.getItems().get(3).getIdentifier());
+        assertEquals(id+"5", page1.getItems().get(4).getIdentifier());
+        
+        AssessmentList page2 = assessmentApi.getAssessments(5, 5, ImmutableList.of(markerTag), false).execute().body();
+        assertEquals(Integer.valueOf(10), page2.getTotal());
+        assertEquals(5, page2.getItems().size());
+        assertEquals(id+"4", page2.getItems().get(0).getIdentifier());
+        assertEquals(id+"3", page2.getItems().get(1).getIdentifier());
+        assertEquals(id+"2", page2.getItems().get(2).getIdentifier());
+        assertEquals(id+"1", page2.getItems().get(3).getIdentifier());
+        assertEquals(id+"0", page2.getItems().get(4).getIdentifier());
+        
+        // Test paging (10 revisions of the same ID)
+        unsavedAssessment = new Assessment()
+                .identifier(id)
+                .title(TITLE)
+                .osName("Android")
+                .ownerId(SUBSTUDY_ID_1)
+                .tags(ImmutableList.of(markerTag, CAT1, CAT2))
+                .customizationFields(CUSTOMIZATION_FIELDS);
+        Assessment retValue = assessmentApi.createAssessment(unsavedAssessment).execute().body();
+        String guid = retValue.getGuid();
+        for (int i=0; i < 10; i++) {
+            retValue.setGuid(null);
+            retValue.setRevision(Long.valueOf(i+2));
+            retValue.setVersion(null);
+            assessmentApi.createAssessmentRevision(guid, retValue).execute();
+        }
+        
+        AssessmentList page3 = assessmentApi.getAssessmentRevisionsById(id, 0, 5, true).execute().body();
+        // 11 = the original, plus ten additional revisions
+        assertRequestParams(page3, 11, 0, 5, true);
+        
+        AssessmentList page4 = assessmentApi.getAssessmentRevisionsById(id, 5, 5, true).execute().body();
+        assertRequestParams(page4, 11, 5, 5, true);
+        
+        page3 = assessmentApi.getAssessmentRevisionsByGUID(guid, 0, 5, true).execute().body();
+        // 11 = the original, plus ten additional revisions
+        assertRequestParams(page3, 11, 0, 5, true);
+        
+        page4 = assessmentApi.getAssessmentRevisionsByGUID(guid, 5, 5, true).execute().body();
+        assertRequestParams(page4, 11, 5, 5, true);
+        
+        // Publish all of these to shared folder so we can test shared assessment paging. We're 
+        // publishing 10 distinct identifiers in one revision (page1 and pag2) and then we're 
+        // publishing 10 revisions of one identifier (page3 and page4), so we can test all the 
+        // shared paging APIs.
+        for (Assessment assessment : page1.getItems()) {
+            assessmentApi.publishAssessment(assessment.getGuid()).execute();
+        }
+        for (Assessment assessment : page2.getItems()) {
+            assessmentApi.publishAssessment(assessment.getGuid()).execute();
+        }
+        for (Assessment assessment : page3.getItems()) {
+            assessmentApi.publishAssessment(assessment.getGuid()).execute();
+        }
+        for (Assessment assessment : page4.getItems()) {
+            assessmentApi.publishAssessment(assessment.getGuid()).execute();
+        }
+        
+        AssessmentList sharedPage1 = sharedApi.getSharedAssessments(
+                0, 5, ImmutableList.of(markerTag), false).execute().body();
+        assertRequestParams(sharedPage1, 10, 0, 5, false);
+        
+        AssessmentList sharedPage2 = sharedApi.getSharedAssessments(
+                5, 5, ImmutableList.of(markerTag), false).execute().body();
+        assertRequestParams(sharedPage2, 10, 5, 5, false);
+        
+        AssessmentList sharedPage3 = sharedApi.getSharedAssessmentRevisionsById(
+                id, 0, 5, true).execute().body();
+        assertRequestParams(sharedPage3, 10, 0, 5, true);
+        
+        AssessmentList sharedPage4 = sharedApi.getSharedAssessmentRevisionsById(
+                id, 5, 5, true).execute().body();
+        assertRequestParams(sharedPage4, 10, 5, 5, true);
+        
+        String sharedGuid = sharedPage3.getItems().get(0).getGuid();
+
+        AssessmentList sharedPage5 = sharedApi.getSharedAssessmentRevisionsByGUID(
+                sharedGuid, 0, 5, true).execute().body();
+        assertRequestParams(sharedPage5, 10, 0, 5, true);
+        
+        AssessmentList sharedPage6 = sharedApi.getSharedAssessmentRevisionsByGUID(
+                sharedGuid, 5, 5, true).execute().body();
+        assertRequestParams(sharedPage6, 10, 5, 5, true);
     }
 
+    private void assertRequestParams(AssessmentList list, int total, int offsetBy, int pageSize,
+            boolean includeDeleted) {
+        assertEquals(Integer.valueOf(total), list.getTotal());
+        assertEquals(Integer.valueOf(offsetBy), list.getRequestParams().getOffsetBy());
+        assertEquals(Integer.valueOf(pageSize), list.getRequestParams().getPageSize());
+        assertEquals(includeDeleted, list.getRequestParams().isIncludeDeleted());
+        assertEquals(pageSize, list.getItems().size());
+        // all the GUIDs are unique.
+        Set<String> guids = list.getItems().stream().map(Assessment::getGuid).collect(toSet());
+        assertEquals(pageSize, guids.size());
+    }
+    
     private void assertFields(Assessment assessment) {
         assertEquals(id, assessment.getIdentifier());
-        assertEquals("Title", assessment.getTitle());
+        assertEquals(TITLE, assessment.getTitle());
         assertEquals("Summary", assessment.getSummary());
         assertEquals("Not validated", assessment.getValidationStatus());
         assertEquals("Not normed", assessment.getNormingStatus());
         assertEquals("Android", assessment.getOsName());
         assertEquals(SUBSTUDY_ID_1, assessment.getOwnerId());
         assertTrue(assessment.getTags().contains(markerTag));
-        assertTrue(assessment.getCategories().contains("cat1"));
-        assertTrue(assessment.getCategories().contains("cat2"));
+        assertTrue(assessment.getTags().contains(CAT1));
+        assertTrue(assessment.getTags().contains(CAT2));
         assertEquals(CUSTOMIZATION_FIELDS, assessment.getCustomizationFields());
         assertEquals(Long.valueOf(1), assessment.getRevision());
         assertEquals(Long.valueOf(1L), assessment.getVersion());
