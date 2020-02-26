@@ -14,6 +14,7 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,6 +22,7 @@ import java.util.Set;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import org.junit.After;
 import org.junit.Before;
@@ -88,31 +90,30 @@ public class AssessmentTest {
     }
     
     @After
-    public void deleteDeveloper() throws IOException {
+    public void after() throws IOException {
         if (developer != null) {
             developer.signOutAndDeleteUser();            
         }
         TestUser admin = TestUserHelper.getSignedInAdmin();
         AssessmentsApi api = admin.getClient(AssessmentsApi.class);
         SharedAssessmentsApi sharedApi = admin.getClient(SharedAssessmentsApi.class);
-        
+
         AssessmentList assessments = api.getAssessments(
                 null, null, ImmutableList.of(markerTag), true).execute().body();
         for (Assessment oneAssessment : assessments.getItems()) {
             AssessmentList revisions = api.getAssessmentRevisionsById(
                     oneAssessment.getIdentifier(), null, null, true).execute().body();
             for (Assessment revision : revisions.getItems()) {
-                api.deleteAssessment(revision.getGuid(), true).execute();    
+                api.deleteAssessment(revision.getGuid(), true).execute();
             }
         }
-        
         AssessmentList sharedAssessments = sharedApi.getSharedAssessments(
                 null, null, ImmutableList.of(markerTag), true).execute().body();
         for (Assessment oneSharedAssessment : sharedAssessments.getItems()) {
             AssessmentList revisions = sharedApi.getSharedAssessmentRevisionsById(
                     oneSharedAssessment.getIdentifier(), null, null, true).execute().body();
             for (Assessment revision : revisions.getItems()) {
-                sharedApi.deleteSharedAssessment(revision.getGuid(), true).execute();    
+                sharedApi.deleteSharedAssessment(revision.getGuid(), true).execute();
             }
         }
     }
@@ -335,6 +336,8 @@ public class AssessmentTest {
         
         // PAGING
         
+        Set<String> uniqueGuids = new HashSet<>();
+        
         // Test paging (10 records with different IDs)
         for (int i=0; i < 10; i++) {
             unsavedAssessment = new Assessment()
@@ -355,6 +358,7 @@ public class AssessmentTest {
         assertEquals(id+"7", page1.getItems().get(2).getIdentifier());
         assertEquals(id+"6", page1.getItems().get(3).getIdentifier());
         assertEquals(id+"5", page1.getItems().get(4).getIdentifier());
+        uniqueGuids.addAll(page1.getItems().stream().map(Assessment::getGuid).collect(toSet()));
         
         AssessmentList page2 = assessmentApi.getAssessments(5, 5, ImmutableList.of(markerTag), false).execute().body();
         assertEquals(Integer.valueOf(10), page2.getTotal());
@@ -364,92 +368,122 @@ public class AssessmentTest {
         assertEquals(id+"2", page2.getItems().get(2).getIdentifier());
         assertEquals(id+"1", page2.getItems().get(3).getIdentifier());
         assertEquals(id+"0", page2.getItems().get(4).getIdentifier());
+        uniqueGuids.addAll(page2.getItems().stream().map(Assessment::getGuid).collect(toSet()));
         
-        // Test paging (10 revisions of the same ID)
+        assertEquals(10, uniqueGuids.size());
+        
+        Set<String> uniqueRevisionGuids = new HashSet<>();
+        
+        // Test paging (10 revisions of the an assessment in the list of 10)
+        String parentGuid = page1.getItems().get(0).getGuid();
+        String parentId = page1.getItems().get(0).getIdentifier();
         unsavedAssessment = new Assessment()
-                .identifier(id)
+                .identifier(parentId)
                 .title(TITLE)
                 .osName("Android")
                 .ownerId(SUBSTUDY_ID_1)
                 .tags(ImmutableList.of(markerTag, CAT1, CAT2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
-        Assessment retValue = assessmentApi.createAssessment(unsavedAssessment).execute().body();
-        String guid = retValue.getGuid();
         for (int i=0; i < 10; i++) {
-            retValue.setGuid(null);
-            retValue.setRevision(Long.valueOf(i+2));
-            retValue.setVersion(null);
-            assessmentApi.createAssessmentRevision(guid, retValue).execute();
+            unsavedAssessment.setRevision(Long.valueOf(i+2));
+            assessmentApi.createAssessmentRevision(parentGuid, unsavedAssessment).execute().body();
         }
         
-        AssessmentList page3 = assessmentApi.getAssessmentRevisionsById(id, 0, 5, true).execute().body();
+        AssessmentList page3 = assessmentApi.getAssessmentRevisionsById(parentId, 0, 5, true).execute().body();
         // 11 = the original, plus ten additional revisions
-        assertRequestParams(page3, 11, 0, 5, true);
+        assertRequestParams(page3, 0, 5, 11, true, 5);
+        uniqueRevisionGuids.addAll(page3.getItems().stream().map(Assessment::getGuid).collect(toSet()));
         
-        AssessmentList page4 = assessmentApi.getAssessmentRevisionsById(id, 5, 5, true).execute().body();
-        assertRequestParams(page4, 11, 5, 5, true);
+        AssessmentList page4 = assessmentApi.getAssessmentRevisionsById(parentId, 5, 5, true).execute().body();
+        assertRequestParams(page4, 5, 5, 11, true, 5);
+        uniqueRevisionGuids.addAll(page4.getItems().stream().map(Assessment::getGuid).collect(toSet()));
         
-        page3 = assessmentApi.getAssessmentRevisionsByGUID(guid, 0, 5, true).execute().body();
+        page3 = assessmentApi.getAssessmentRevisionsByGUID(parentGuid, 0, 10, true).execute().body();
         // 11 = the original, plus ten additional revisions
-        assertRequestParams(page3, 11, 0, 5, true);
+        assertRequestParams(page3, 0, 10, 11, true, 10);
+        uniqueRevisionGuids.addAll(page3.getItems().stream().map(Assessment::getGuid).collect(toSet()));
         
-        page4 = assessmentApi.getAssessmentRevisionsByGUID(guid, 5, 5, true).execute().body();
-        assertRequestParams(page4, 11, 5, 5, true);
+        page4 = assessmentApi.getAssessmentRevisionsByGUID(parentGuid, 10, 10, true).execute().body();
+        assertRequestParams(page4, 10, 10, 11, true, 1);
+        uniqueRevisionGuids.addAll(page4.getItems().stream().map(Assessment::getGuid).collect(toSet()));
+        
+        // There are 11 revisions
+        assertEquals(11, uniqueRevisionGuids.size());
+        // so, only one overlapping item between the two sets (the most recent revision returned from 
+        // both APIs).
+        assertEquals(1, Sets.intersection(uniqueGuids, uniqueRevisionGuids).size());
         
         // Publish all of these to shared folder so we can test shared assessment paging. We're 
         // publishing 10 distinct identifiers in one revision (page1 and pag2) and then we're 
         // publishing 10 revisions of one identifier (page3 and page4), so we can test all the 
         // shared paging APIs.
-        for (Assessment assessment : page1.getItems()) {
-            assessmentApi.publishAssessment(assessment.getGuid()).execute();
-        }
-        for (Assessment assessment : page2.getItems()) {
-            assessmentApi.publishAssessment(assessment.getGuid()).execute();
-        }
-        for (Assessment assessment : page3.getItems()) {
-            assessmentApi.publishAssessment(assessment.getGuid()).execute();
-        }
-        for (Assessment assessment : page4.getItems()) {
-            assessmentApi.publishAssessment(assessment.getGuid()).execute();
+        
+        Set<String> allGuids = new HashSet<>();
+        allGuids.addAll(uniqueGuids);
+        allGuids.addAll(uniqueRevisionGuids);
+        
+        // clear these to verify that the items from the shared APIs are unique
+        uniqueGuids.clear();
+        uniqueRevisionGuids.clear();
+        
+        for (String guid : allGuids) {
+            assessmentApi.publishAssessment(guid).execute();
         }
         
         AssessmentList sharedPage1 = sharedApi.getSharedAssessments(
                 0, 5, ImmutableList.of(markerTag), false).execute().body();
-        assertRequestParams(sharedPage1, 10, 0, 5, false);
+        assertRequestParams(sharedPage1, 0, 5, 10, false, 5);
+        uniqueGuids.addAll(sharedPage1.getItems().stream().map(Assessment::getGuid).collect(toSet()));
         
         AssessmentList sharedPage2 = sharedApi.getSharedAssessments(
                 5, 5, ImmutableList.of(markerTag), false).execute().body();
-        assertRequestParams(sharedPage2, 10, 5, 5, false);
+        assertRequestParams(sharedPage2, 5, 5, 10, false, 5);
+        uniqueGuids.addAll(sharedPage2.getItems().stream().map(Assessment::getGuid).collect(toSet()));
         
         AssessmentList sharedPage3 = sharedApi.getSharedAssessmentRevisionsById(
-                id, 0, 5, true).execute().body();
-        assertRequestParams(sharedPage3, 10, 0, 5, true);
+                parentId, 0, 5, true).execute().body();
+        assertRequestParams(sharedPage3, 0, 5, 11, true, 5);
+        uniqueRevisionGuids.addAll(sharedPage3.getItems().stream().map(Assessment::getGuid).collect(toSet()));
         
         AssessmentList sharedPage4 = sharedApi.getSharedAssessmentRevisionsById(
-                id, 5, 5, true).execute().body();
-        assertRequestParams(sharedPage4, 10, 5, 5, true);
+                parentId, 5, 5, true).execute().body();
+        assertRequestParams(sharedPage4, 5, 5, 11, true, 5);
+        uniqueRevisionGuids.addAll(sharedPage4.getItems().stream().map(Assessment::getGuid).collect(toSet()));
         
         String sharedGuid = sharedPage3.getItems().get(0).getGuid();
 
         AssessmentList sharedPage5 = sharedApi.getSharedAssessmentRevisionsByGUID(
                 sharedGuid, 0, 5, true).execute().body();
-        assertRequestParams(sharedPage5, 10, 0, 5, true);
+        assertRequestParams(sharedPage5, 0, 5, 11, true, 5);
+        // Should not change the count, it's the same stuff...
+        uniqueRevisionGuids.addAll(sharedPage5.getItems().stream().map(Assessment::getGuid).collect(toSet()));
         
         AssessmentList sharedPage6 = sharedApi.getSharedAssessmentRevisionsByGUID(
                 sharedGuid, 5, 5, true).execute().body();
-        assertRequestParams(sharedPage6, 10, 5, 5, true);
+        assertRequestParams(sharedPage6, 5, 5, 11, true, 5);
+        // Should not change the count, it's the same stuff...
+        uniqueRevisionGuids.addAll(sharedPage6.getItems().stream().map(Assessment::getGuid).collect(toSet()));
+        
+        // get that one last item...
+        AssessmentList sharedPage7 = sharedApi.getSharedAssessmentRevisionsByGUID(
+                sharedGuid, 10, 5, true).execute().body();
+        assertRequestParams(sharedPage7, 10, 5, 11, true, 1);
+        uniqueRevisionGuids.addAll(sharedPage7.getItems().stream().map(Assessment::getGuid).collect(toSet()));
+        
+        assertEquals(10, uniqueGuids.size());
+        assertEquals(11, uniqueRevisionGuids.size());
     }
 
-    private void assertRequestParams(AssessmentList list, int total, int offsetBy, int pageSize,
-            boolean includeDeleted) {
+    private void assertRequestParams(AssessmentList list, int offsetBy, int pageSize, int total,
+            boolean includeDeleted, int actualSize) {
         assertEquals(Integer.valueOf(total), list.getTotal());
         assertEquals(Integer.valueOf(offsetBy), list.getRequestParams().getOffsetBy());
         assertEquals(Integer.valueOf(pageSize), list.getRequestParams().getPageSize());
         assertEquals(includeDeleted, list.getRequestParams().isIncludeDeleted());
-        assertEquals(pageSize, list.getItems().size());
+        assertEquals(actualSize, list.getItems().size());
         // all the GUIDs are unique.
         Set<String> guids = list.getItems().stream().map(Assessment::getGuid).collect(toSet());
-        assertEquals(pageSize, guids.size());
+        assertEquals(actualSize, guids.size());
     }
     
     private void assertFields(Assessment assessment) {
