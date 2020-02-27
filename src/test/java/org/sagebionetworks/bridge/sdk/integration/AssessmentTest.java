@@ -285,6 +285,24 @@ public class AssessmentTest {
         assertEquals(sharedUpdated.getTitle(), "new title");
         assertEquals(sharedUpdated.getSummary(), "new summary");
         
+        // Make an assessment under the same identifier but a different owner... it cannot
+        // be published back.
+        Assessment otherAssessment = null;
+        try {
+            SharedAssessmentsApi badDevSharedApi = otherDeveloper.getClient(SharedAssessmentsApi.class);
+            otherAssessment = badDevSharedApi.importSharedAssessment(
+                    shared.getGuid(), SUBSTUDY_ID_2).execute().body();
+            badDevApi.publishAssessment(otherAssessment.getGuid()).execute();
+            fail("Should have thrown exception");
+        } catch(UnauthorizedException e) {
+            assertTrue(e.getMessage().contains("Assessment exists in shared library under a different owner"));
+        } finally {
+            if (otherAssessment != null) {
+                TestUser admin = TestUserHelper.getSignedInAdmin();
+                admin.getClient(AssessmentsApi.class).deleteAssessment(otherAssessment.getGuid(), true).execute();
+            }
+        }
+        
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ForSuperadminsApi superAdminApi = admin.getClient(ForSuperadminsApi.class);
         SharedAssessmentsApi adminSharedApi = admin.getClient(SharedAssessmentsApi.class);
