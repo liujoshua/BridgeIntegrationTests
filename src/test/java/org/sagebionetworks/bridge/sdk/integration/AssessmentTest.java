@@ -195,6 +195,11 @@ public class AssessmentTest {
         assertEquals(Integer.valueOf(1), allAssessments.getTotal());
         assertEquals(secondRevision.getGuid(), allAssessments.getItems().get(0).getGuid());
         
+        // getAssessments works without tags
+        allAssessments = assessmentApi.getAssessments(
+                null, null, null, false).execute().body();
+        assertTrue(allAssessments.getTotal() > 0);
+        
         // getAssessments works with multiple tags
         allAssessments = assessmentApi.getAssessments(
                 null, null, ImmutableList.of(markerTag, TAG1, TAG2), false).execute().body();
