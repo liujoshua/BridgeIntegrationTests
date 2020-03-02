@@ -975,7 +975,7 @@ public class SurveyTest {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
         
         Survey survey = new Survey();
-        survey.setIdentifier("test-survey");
+        survey.setIdentifier(surveyId);
         survey.setName("Test study");
         
         SurveyInfoScreen screen = new SurveyInfoScreen();
@@ -1033,7 +1033,7 @@ public class SurveyTest {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
         
         Survey survey = new Survey();
-        survey.setIdentifier("test-survey");
+        survey.setIdentifier(surveyId);
         survey.setName("Test study");
         
         SurveyInfoScreen screen = new SurveyInfoScreen();
@@ -1148,7 +1148,7 @@ public class SurveyTest {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
         
         Survey survey = new Survey();
-        survey.setIdentifier("test-survey");
+        survey.setIdentifier(surveyId);
         survey.setName("Test study");
 
         SurveyRule rule = new SurveyRule();
