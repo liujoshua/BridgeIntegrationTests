@@ -47,7 +47,8 @@ import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class Tests {
     public static final SignIn API_SIGNIN = new SignIn().study(IntegTestUtils.STUDY_ID);
-    public static final SignIn SHARED_SIGNIN = new SignIn().study("shared");
+    public static final String SHARED_ID = "shared";
+    public static final SignIn SHARED_SIGNIN = new SignIn().study(SHARED_ID);
     public static final String PACKAGE = "org.sagebionetworks.bridge";
     public static final String MOBILE_APP_NAME = "DummyApp";
     public static final String APP_ID = PACKAGE + "." + MOBILE_APP_NAME;
