@@ -1610,6 +1610,15 @@ public class SurveyTest {
                 Objects.equals(guid, other.guid) &&
                 Objects.equals(version, other.version);
         }
+
+        @Override
+        public String toString() {
+            return "MutableHolder{" +
+                    "guid='" + guid + '\'' +
+                    ", createdOn=" + createdOn +
+                    ", version=" + version +
+                    '}';
+        }
     }
     
     // Helper methods to ensure we always record these calls for cleanup
