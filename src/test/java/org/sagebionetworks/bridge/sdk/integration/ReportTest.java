@@ -103,6 +103,8 @@ public class ReportTest {
         studyScopedDeveloper = new TestUserHelper.Builder(ReportTest.class).withRoles(DEVELOPER)
                 .withSubstudyIds(ImmutableSet.of(substudy1.getId())).createAndSignInUser();
 
+        worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, WORKER, RESEARCHER);
+
         // Worker test needs to be able to get healthcode.
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
         Study study = superadminApi.getStudy(STUDY_ID).execute().body();
@@ -209,7 +211,6 @@ public class ReportTest {
     @Test
     public void workerCanCrudParticipantReportByDate() throws Exception {
         user = TestUserHelper.createAndSignInUser(ReportTest.class, true);
-        worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, WORKER, RESEARCHER);
 
         String healthCode = worker.getClient(ParticipantsApi.class).getParticipantById(user.getSession().getId(),
                 false).execute().body().getHealthCode();
@@ -250,8 +251,7 @@ public class ReportTest {
     @Test
     public void workerCanCrudParticipantReportByDateTime() throws Exception {
         user = TestUserHelper.createAndSignInUser(ReportTest.class, true);
-        worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, WORKER, RESEARCHER);
-        
+
         String healthCode = worker.getClient(ParticipantsApi.class).getParticipantById(user.getSession().getId(),
                 false).execute().body().getHealthCode();
         assertNotNull(healthCode);
@@ -524,9 +524,7 @@ public class ReportTest {
     
     @Test
     public void participantReportsNotVisibleOutsideOfSubstudy() throws Exception {
-        worker = TestUserHelper.createAndSignInUser(ReportTest.class, true, WORKER, RESEARCHER);
-        
-        // It would seem to be dumb to create reports for a participant that are associated to substudies such that the 
+        // It would seem to be dumb to create reports for a participant that are associated to substudies such that the
         // user will not be able to see them. Nevertheless, if it happens, we enforce visibility constraints.
         substudyScopedUser = new TestUserHelper.Builder(ReportTest.class).withConsentUser(true)
                 .withSubstudyIds(ImmutableSet.of(substudy2.getId())).createAndSignInUser();
