@@ -64,18 +64,23 @@ public class AssessmentTest {
     
     @Before
     public void before() throws Exception {
+        id = randomIdentifier(AssessmentTest.class);
+        markerTag = "test:" + randomIdentifier(AssessmentTest.class);
+
         admin = TestUserHelper.getSignedInAdmin();
         SubstudiesApi subApi = admin.getClient(SubstudiesApi.class);
         
         // Getting ahead of our skis here, as we haven't refactored substudies to be organizations
         // and we're already using them that way.
-        Substudy org = subApi.getSubstudy(SUBSTUDY_ID_1).execute().body();
-        if (org == null) {
+        try {
+            subApi.getSubstudy(SUBSTUDY_ID_1).execute();
+        } catch (EntityNotFoundException ex) {
             Substudy substudy = new Substudy().id(SUBSTUDY_ID_1).name(SUBSTUDY_ID_1);
             subApi.createSubstudy(substudy).execute();
         }
-        org = subApi.getSubstudy(SUBSTUDY_ID_2).execute().body();
-        if (org == null) {
+        try {
+            subApi.getSubstudy(SUBSTUDY_ID_2).execute().body();
+        } catch (EntityNotFoundException ex) {
             Substudy substudy = new Substudy().id(SUBSTUDY_ID_2).name(SUBSTUDY_ID_2);
             subApi.createSubstudy(substudy).execute();
         }
@@ -86,14 +91,15 @@ public class AssessmentTest {
                 .withSubstudyIds(ImmutableSet.of(SUBSTUDY_ID_2)).createAndSignInUser();
         assessmentApi = developer.getClient(AssessmentsApi.class);
         badDevApi = otherDeveloper.getClient(AssessmentsApi.class);
-        id = randomIdentifier(AssessmentTest.class);
-        markerTag = "test:" + randomIdentifier(AssessmentTest.class);
     }
     
     @After
     public void after() throws IOException {
         if (developer != null) {
             developer.signOutAndDeleteUser();            
+        }
+        if (otherDeveloper != null) {
+            otherDeveloper.signOutAndDeleteUser();
         }
         TestUser admin = TestUserHelper.getSignedInAdmin();
         AssessmentsApi api = admin.getClient(AssessmentsApi.class);
