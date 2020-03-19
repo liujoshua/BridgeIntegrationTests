@@ -33,6 +33,7 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.SharedAssessmentsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
+import org.sagebionetworks.bridge.rest.api.TagsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
@@ -122,6 +123,10 @@ public class AssessmentTest {
                 sharedApi.deleteSharedAssessment(revision.getGuid(), true).execute();
             }
         }
+        TagsApi tagsApi = admin.getClient(TagsApi.class);
+        tagsApi.deleteTag(TAG1).execute();
+        tagsApi.deleteTag(TAG2).execute();
+        tagsApi.deleteTag(markerTag).execute();
     }
     
     @Test
