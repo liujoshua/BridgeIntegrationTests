@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -14,6 +15,9 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -25,6 +29,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
 import org.sagebionetworks.bridge.rest.api.SharedAssessmentsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentList;
@@ -49,36 +54,41 @@ public class AssessmentResourceTest {
 
     @Before
     public void before() throws Exception {
+        id = randomIdentifier(AssessmentResourceTest.class);
         admin = TestUserHelper.getSignedInAdmin();
         SubstudiesApi subApi = admin.getClient(SubstudiesApi.class);
 
         // Getting ahead of our skis here, as we haven't refactored substudies to be organizations
         // and we're already using them that way.
-        Substudy org = subApi.getSubstudy(SUBSTUDY_ID_1).execute().body();
-        if (org == null) {
+        try {
+            subApi.getSubstudy(SUBSTUDY_ID_1).execute().body();
+        } catch(EntityNotFoundException e) {
             Substudy substudy = new Substudy().id(SUBSTUDY_ID_1).name(SUBSTUDY_ID_1);
             subApi.createSubstudy(substudy).execute();
         }
-        org = subApi.getSubstudy(SUBSTUDY_ID_2).execute().body();
-        if (org == null) {
+        try {
+            subApi.getSubstudy(SUBSTUDY_ID_2).execute().body();
+        } catch(EntityNotFoundException e) {
             Substudy substudy = new Substudy().id(SUBSTUDY_ID_2).name(SUBSTUDY_ID_2);
             subApi.createSubstudy(substudy).execute();
         }
 
-        developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER)
+        developer = new TestUserHelper.Builder(AssessmentResourceTest.class).withRoles(DEVELOPER)
                 .withSubstudyIds(ImmutableSet.of(SUBSTUDY_ID_1)).createAndSignInUser();
-        otherDeveloper = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER)
+        otherDeveloper = new TestUserHelper.Builder(AssessmentResourceTest.class).withRoles(DEVELOPER)
                 .withSubstudyIds(ImmutableSet.of(SUBSTUDY_ID_2)).createAndSignInUser();
         assessmentApi = developer.getClient(AssessmentsApi.class);
         sharedAssessmentsApi = developer.getClient(SharedAssessmentsApi.class);
         badDevApi = otherDeveloper.getClient(AssessmentsApi.class);
-        id = randomIdentifier(AssessmentTest.class);
     }
 
     @After
     public void after() throws IOException {
         if (developer != null) {
             developer.signOutAndDeleteUser();
+        }
+        if (otherDeveloper != null) {
+            otherDeveloper.signOutAndDeleteUser();
         }
         TestUser admin = TestUserHelper.getSignedInAdmin();
         AssessmentsApi api = admin.getClient(AssessmentsApi.class);
@@ -141,8 +151,6 @@ public class AssessmentResourceTest {
         assertEquals(URL + "2", resource.getUrl());
         assertNotEquals(version, resource.getVersion());
         assertTrue(resource.isUpToDate());
-
-        // test paging values:
         
         // Does retrieve item with right category and min/max revision set (all matching)
         resourcesPage = assessmentApi.getAssessmentResources(id, null, null,
@@ -205,6 +213,10 @@ public class AssessmentResourceTest {
                 null, null, null, true).execute().body();
         assertEquals(sharedResourcesPage.getItems().get(0).getTitle(), "This is a different title");
         
+        // get individual shared assessment
+        sharedResource = sharedAssessmentsApi.getSharedAssessmentResource(id, sharedResource.getGuid()).execute().body();
+        assertNotNull(sharedResource);
+        
         // import the assessment and resource back to the local context.
         sharedResource.setTitle("This is a different shared title");
         sharedResource = sharedAssessmentsApi.updateSharedAssessmentResource(
@@ -222,5 +234,60 @@ public class AssessmentResourceTest {
                 .execute().body().getTotal();
         assertEquals(localCount, 1);
         assertEquals(sharedCount, 1);
+        
+        // logically delete the local resource
+        assessmentApi.deleteAssessmentResource(id, resource.getGuid(), false).execute();
+        localCount = assessmentApi.getAssessmentResources(
+                id, null, null, null, null, null, false).execute().body().getTotal();
+        assertEquals(localCount, 0);
+        localCount = assessmentApi.getAssessmentResources(
+                id, null, null, null, null, null, true).execute().body().getTotal();
+        assertEquals(localCount, 1);
+        // can still be retrieved with knowledge of the GUID
+        resource = assessmentApi.getAssessmentResource(id, resource.getGuid()).execute().body();
+        assertNotNull(resource);
+        
+        // logically delete the shared resource
+        admin.getClient(SharedAssessmentsApi.class).deleteSharedAssessmentResource(
+                id, sharedResource.getGuid(), false).execute();
+        sharedCount = sharedAssessmentsApi.getSharedAssessmentResources(
+                id, null, null, null, null, null, false).execute().body().getTotal();
+        assertEquals(0, sharedCount);
+        sharedCount = sharedAssessmentsApi.getSharedAssessmentResources(
+                id, null, null, null, null, null, true).execute().body().getTotal();
+        assertEquals(1, sharedCount);
+        sharedResource = sharedAssessmentsApi.getSharedAssessmentResource(id, sharedResource.getGuid()).execute().body();
+        assertNotNull(sharedResource);
+        
+        // test paging values
+        for (int i=0; i < 10; i++) {
+            ExternalResource res = assessmentApi.createAssessmentResource(id, resource).execute().body();;
+            assessmentApi.publishAssessmentResource(id, ImmutableList.of(res.getGuid())).execute();
+        }
+        PagedExternalResourceList page1 = assessmentApi.getAssessmentResources(id, 0, 5, null, null, null, false)
+                .execute().body();        
+        PagedExternalResourceList page2 = assessmentApi.getAssessmentResources(id, 5, 5, null, null, null, false)
+                .execute().body();
+        PagedExternalResourceList page3 = assessmentApi.getAssessmentResources(id, 10, 5, null, null, null, false)
+                .execute().body();
+        // should be 10 unique GUIDs, last page notwithstanding
+        Set<String> allGuids = new HashSet<>();
+        allGuids.addAll(page1.getItems().stream().map(ExternalResource::getGuid).collect(toSet()));
+        allGuids.addAll(page2.getItems().stream().map(ExternalResource::getGuid).collect(toSet()));
+        allGuids.addAll(page3.getItems().stream().map(ExternalResource::getGuid).collect(toSet()));
+        assertEquals(10, allGuids.size());
+        
+        page1 = sharedAssessmentsApi.getSharedAssessmentResources(id, 0, 5, null, null, null, false)
+                .execute().body();        
+        page2 = sharedAssessmentsApi.getSharedAssessmentResources(id, 5, 5, null, null, null, false)
+                .execute().body();
+        page3 = sharedAssessmentsApi.getSharedAssessmentResources(id, 10, 5, null, null, null, false)
+                .execute().body();
+        // should be 10 unique GUIDs, last page notwithstanding
+        allGuids.clear();
+        allGuids.addAll(page1.getItems().stream().map(ExternalResource::getGuid).collect(toSet()));
+        allGuids.addAll(page2.getItems().stream().map(ExternalResource::getGuid).collect(toSet()));
+        allGuids.addAll(page3.getItems().stream().map(ExternalResource::getGuid).collect(toSet()));
+        assertEquals(10, allGuids.size());
     }
 }
