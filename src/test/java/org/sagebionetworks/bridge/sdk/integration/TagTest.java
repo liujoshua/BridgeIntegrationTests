@@ -41,10 +41,19 @@ public class TagTest {
         tagsApi.deleteTag("tag3").execute();
         
         allTags = tagsApi.getTags().execute().body();
-        assertFalse(allTags.containsKey("default") && allTags.get("default").contains("tag3"));
-        assertFalse(allTags.containsKey("cat1") && allTags.get("cat1").contains("tag1.1"));
-        assertFalse(allTags.containsKey("cat1") && allTags.get("cat1").contains("tag1.2"));
-        assertFalse(allTags.containsKey("cat2") && allTags.get("cat2").contains("tag2.1"));
-        assertFalse(allTags.containsKey("cat2") && allTags.get("cat2").contains("tag2.2"));
+        // if this category doesn't exist, than the tag in the category doesn't exist
+        if (allTags.containsKey("default")) {
+            assertFalse(allTags.get("default").contains("tag3"));
+        }
+        // if this category doesn't exist, than the tag in the category doesn't exist
+        if (allTags.containsKey("cat1")) {
+            assertFalse(allTags.get("cat1").contains("tag1.1"));
+            assertFalse(allTags.get("cat1").contains("tag1.2"));
+        }
+        // if this category doesn't exist, than the tag in the category doesn't exist
+        if (allTags.containsKey("cat2")) {
+            assertFalse(allTags.get("cat2").contains("tag2.1"));
+            assertFalse(allTags.get("cat2").contains("tag2.2"));
+        }
     }
 }
