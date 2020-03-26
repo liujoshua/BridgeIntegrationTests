@@ -38,6 +38,7 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentList;
+import org.sagebionetworks.bridge.rest.model.RequestParams;
 import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -196,10 +197,16 @@ public class AssessmentTest {
         
         // getAssessments works
         AssessmentList allAssessments = assessmentApi.getAssessments(
-                null, null, ImmutableList.of(markerTag), false).execute().body();
+                0, 25, ImmutableList.of(markerTag), true).execute().body();
         assertEquals(1, allAssessments.getItems().size());
         assertEquals(Integer.valueOf(1), allAssessments.getTotal());
         assertEquals(secondRevision.getGuid(), allAssessments.getItems().get(0).getGuid());
+        
+        RequestParams rp = allAssessments.getRequestParams();
+        assertEquals(Integer.valueOf(0), rp.getOffsetBy());
+        assertEquals(Integer.valueOf(25), rp.getPageSize());
+        assertEquals(ImmutableList.of(markerTag), rp.getTags());
+        assertTrue(rp.isIncludeDeleted());
         
         // getAssessments works without tags
         allAssessments = assessmentApi.getAssessments(
