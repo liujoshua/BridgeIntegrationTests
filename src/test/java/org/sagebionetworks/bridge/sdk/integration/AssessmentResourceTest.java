@@ -17,7 +17,6 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -193,7 +192,7 @@ public class AssessmentResourceTest {
         }
 
         // publish the assessment and resource
-        assessmentApi.publishAssessment(assessment.getGuid()).execute().body();
+        assessmentApi.publishAssessment(assessment.getGuid(), null).execute().body();
         assessmentApi.publishAssessmentResource(id, ImmutableList.of(resourceGuid)).execute().body();
 
         // Resource should be published along with the assessment.
