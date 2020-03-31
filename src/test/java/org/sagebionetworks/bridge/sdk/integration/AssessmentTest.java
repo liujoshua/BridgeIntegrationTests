@@ -139,7 +139,7 @@ public class AssessmentTest {
                 .summary("Summary")
                 .validationStatus("Not validated")
                 .normingStatus("Not normed")
-                .osName("Android")
+                .osName("Both")
                 .ownerId(SUBSTUDY_ID_1)
                 .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
@@ -391,7 +391,7 @@ public class AssessmentTest {
             unsavedAssessment = new Assessment()
                     .identifier(id+i)
                     .title(TITLE)
-                    .osName("Android")
+                    .osName("Both")
                     .ownerId(SUBSTUDY_ID_1)
                     .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                     .customizationFields(CUSTOMIZATION_FIELDS);
@@ -429,7 +429,7 @@ public class AssessmentTest {
         unsavedAssessment = new Assessment()
                 .identifier(parentId)
                 .title(TITLE)
-                .osName("Android")
+                .osName("Both")
                 .ownerId(SUBSTUDY_ID_1)
                 .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
@@ -564,7 +564,7 @@ public class AssessmentTest {
         assertEquals("Summary", assessment.getSummary());
         assertEquals("Not validated", assessment.getValidationStatus());
         assertEquals("Not normed", assessment.getNormingStatus());
-        assertEquals("Android", assessment.getOsName());
+        assertEquals("Universal", assessment.getOsName());
         assertEquals(SUBSTUDY_ID_1, assessment.getOwnerId());
         assertTrue(assessment.getTags().contains(markerTag));
         assertTrue(assessment.getTags().contains(TAG1));
