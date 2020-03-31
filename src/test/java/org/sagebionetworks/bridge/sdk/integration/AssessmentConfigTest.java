@@ -154,6 +154,15 @@ public class AssessmentConfigTest {
         SharedAssessmentsApi sharedApi = developer.getClient(SharedAssessmentsApi.class);
         Assessment shared = sharedApi.getLatestSharedAssessmentRevision(id).execute().body();
         
+        // API to get shared configuration works
+        AssessmentConfig sharedConfig = sharedApi.getSharedAssessmentConfig(shared.getGuid()).execute().body();
+        JsonElement el = RestUtils.toJSON(sharedConfig.getConfig());
+        JsonElement item1 = el.getAsJsonArray().get(0);
+        JsonObject obj1 = item1.getAsJsonObject();
+        assertEquals(ORIGINAL, obj1.get("field1").getAsString());
+        assertEquals(ORIGINAL, obj1.get("field2").getAsString());
+        assertEquals(ORIGINAL, obj1.get("field3").getAsString());
+        
         Assessment newAssessment = sharedApi.importSharedAssessment(shared.getGuid(), SUBSTUDY_ID_1).execute().body();
         
         JsonElement textNode = RestUtils.toJSON(CHANGED);
@@ -166,9 +175,9 @@ public class AssessmentConfigTest {
         AssessmentConfig updatedConfig = assessmentApi.customizeAssessmentConfig(
                 newAssessment.getGuid(), nodeMap).execute().body();
         
-        JsonElement el = RestUtils.toJSON(updatedConfig.getConfig());
-        JsonElement item1 = el.getAsJsonArray().get(0);
-        JsonObject obj1 = item1.getAsJsonObject();
+        el = RestUtils.toJSON(updatedConfig.getConfig());
+        item1 = el.getAsJsonArray().get(0);
+        obj1 = item1.getAsJsonObject();
         assertEquals(CHANGED, obj1.get("field1").getAsString());
         assertEquals(CHANGED, obj1.get("field2").getAsString());
         assertEquals(ORIGINAL, obj1.get("field3").getAsString());
