@@ -39,6 +39,7 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentList;
+import org.sagebionetworks.bridge.rest.model.PropertyInfo;
 import org.sagebionetworks.bridge.rest.model.RequestParams;
 import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -50,10 +51,14 @@ public class AssessmentTest {
     private static final String TAG2 = "category:cat2";
     
     // This isn't usable until the configuration is implemented, but 
-    // verify it is persisted corrrectly
-    private static final Map<String, List<String>> CUSTOMIZATION_FIELDS = ImmutableMap.of(
-            "node1", ImmutableList.of("field1", "field2"),
-            "node2", ImmutableList.of("field3", "field4"));
+    // verify it is persisted correctly
+    private static final Map<String, List<PropertyInfo>> CUSTOMIZATION_FIELDS = ImmutableMap.of(
+            "node1", ImmutableList.of(
+                    new PropertyInfo().propName("field1").label("field1 label"), 
+                    new PropertyInfo().propName("field2").label("field2 label")),
+            "node2", ImmutableList.of(
+                    new PropertyInfo().propName("field3").label("field3 label"), 
+                    new PropertyInfo().propName("field4").label("field4 label")));
 
     private TestUser admin;
     private TestUser developer;
@@ -139,7 +144,7 @@ public class AssessmentTest {
                 .summary("Summary")
                 .validationStatus("Not validated")
                 .normingStatus("Not normed")
-                .osName("Android")
+                .osName("Both")
                 .ownerId(SUBSTUDY_ID_1)
                 .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
@@ -392,7 +397,7 @@ public class AssessmentTest {
             unsavedAssessment = new Assessment()
                     .identifier(id+i)
                     .title(TITLE)
-                    .osName("Android")
+                    .osName("Both")
                     .ownerId(SUBSTUDY_ID_1)
                     .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                     .customizationFields(CUSTOMIZATION_FIELDS);
@@ -430,7 +435,7 @@ public class AssessmentTest {
         unsavedAssessment = new Assessment()
                 .identifier(parentId)
                 .title(TITLE)
-                .osName("Android")
+                .osName("Both")
                 .ownerId(SUBSTUDY_ID_1)
                 .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
@@ -565,12 +570,17 @@ public class AssessmentTest {
         assertEquals("Summary", assessment.getSummary());
         assertEquals("Not validated", assessment.getValidationStatus());
         assertEquals("Not normed", assessment.getNormingStatus());
-        assertEquals("Android", assessment.getOsName());
+        assertEquals("Universal", assessment.getOsName());
         assertEquals(SUBSTUDY_ID_1, assessment.getOwnerId());
         assertTrue(assessment.getTags().contains(markerTag));
         assertTrue(assessment.getTags().contains(TAG1));
         assertTrue(assessment.getTags().contains(TAG2));
-        assertEquals(CUSTOMIZATION_FIELDS, assessment.getCustomizationFields());
+        List<PropertyInfo> node1Props = assessment.getCustomizationFields().get("node1");
+        List<PropertyInfo> node2Props = assessment.getCustomizationFields().get("node2");
+        assertEquals(ImmutableSet.of("field1", "field2"), 
+                node1Props.stream().map(PropertyInfo::getPropName).collect(toSet()));
+        assertEquals(ImmutableSet.of("field3", "field4"), 
+                node2Props.stream().map(PropertyInfo::getPropName).collect(toSet()));
         assertEquals(Long.valueOf(1), assessment.getRevision());
         assertEquals(Long.valueOf(1L), assessment.getVersion());
     }
