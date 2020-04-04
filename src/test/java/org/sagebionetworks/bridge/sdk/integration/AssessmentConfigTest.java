@@ -146,7 +146,7 @@ public class AssessmentConfigTest {
         config.setConfig(jsonArray);
         config = assessmentApi.updateAssessmentConfig(assessment.getGuid(), config).execute().body();
         
-        assessmentApi.publishAssessment(assessment.getGuid()).execute().body();
+        assessmentApi.publishAssessment(assessment.getGuid(), null).execute().body();
         
         // This is starting to look like a problem in the API... you can't just get back the assessment
         // from the publication call, that's not the shared assessment, it's the modified original 
@@ -163,7 +163,7 @@ public class AssessmentConfigTest {
         assertEquals(ORIGINAL, obj1.get("field2").getAsString());
         assertEquals(ORIGINAL, obj1.get("field3").getAsString());
         
-        Assessment newAssessment = sharedApi.importSharedAssessment(shared.getGuid(), SUBSTUDY_ID_1).execute().body();
+        Assessment newAssessment = sharedApi.importSharedAssessment(shared.getGuid(), SUBSTUDY_ID_1, null).execute().body();
         
         JsonElement textNode = RestUtils.toJSON(CHANGED);
         Map<String, JsonElement> propMap1 = ImmutableMap.of("field1", textNode, "field2", textNode, "field3", textNode);
