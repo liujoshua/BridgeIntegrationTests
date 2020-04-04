@@ -295,7 +295,7 @@ public class AssessmentTest {
         
         // SHARED ASSESSMENTS LIFECYCLE
         
-        firstRevision = assessmentApi.publishAssessment(firstRevision.getGuid()).execute().body();
+        firstRevision = assessmentApi.publishAssessment(firstRevision.getGuid(), null).execute().body();
         
         SharedAssessmentsApi sharedApi = developer.getClient(SharedAssessmentsApi.class);
         Assessment shared = sharedApi.getLatestSharedAssessmentRevision(id).execute().body();
@@ -326,8 +326,8 @@ public class AssessmentTest {
         try {
             SharedAssessmentsApi badDevSharedApi = otherDeveloper.getClient(SharedAssessmentsApi.class);
             otherAssessment = badDevSharedApi.importSharedAssessment(
-                    shared.getGuid(), SUBSTUDY_ID_2).execute().body();
-            badDevApi.publishAssessment(otherAssessment.getGuid()).execute();
+                    shared.getGuid(), SUBSTUDY_ID_2, null).execute().body();
+            badDevApi.publishAssessment(otherAssessment.getGuid(), null).execute();
             fail("Should have thrown exception");
         } catch(UnauthorizedException e) {
             assertTrue(e.getMessage().contains("Assessment exists in shared library under a different owner"));
@@ -343,7 +343,8 @@ public class AssessmentTest {
         SharedAssessmentsApi adminSharedApi = admin.getClient(SharedAssessmentsApi.class);
 
         // Import a shared assessment back into the study
-        Assessment newAssessment = sharedApi.importSharedAssessment(shared.getGuid(), SUBSTUDY_ID_1).execute().body();        
+        Assessment newAssessment = sharedApi.importSharedAssessment(shared.getGuid(), 
+                SUBSTUDY_ID_1, null).execute().body();        
         assertEquals(shared.getGuid(), newAssessment.getOriginGuid());
         assertEquals(SUBSTUDY_ID_1, newAssessment.getOwnerId());
         assertNotEquals(shared.getGuid(), newAssessment.getGuid());
@@ -489,7 +490,7 @@ public class AssessmentTest {
         uniqueRevisionGuidsByGuid.clear();
         
         for (String guid : allGuids) {
-            assessmentApi.publishAssessment(guid).execute();
+            assessmentApi.publishAssessment(guid, null).execute();
         }
         
         AssessmentList sharedPage1 = sharedApi.getSharedAssessments(

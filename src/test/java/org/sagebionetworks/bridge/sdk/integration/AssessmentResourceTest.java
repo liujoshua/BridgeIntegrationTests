@@ -192,7 +192,7 @@ public class AssessmentResourceTest {
         }
 
         // publish the assessment and resource
-        assessmentApi.publishAssessment(assessment.getGuid()).execute().body();
+        assessmentApi.publishAssessment(assessment.getGuid(), null).execute().body();
         assessmentApi.publishAssessmentResource(id, ImmutableList.of(resourceGuid)).execute().body();
 
         // Resource should be published along with the assessment.
