@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -110,7 +111,7 @@ public class ParticipantIsConsentedTest {
 
     @Test
     public void optionalSubpopNotSigned() throws Exception {
-        SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID)
+        SignUp signUp = new SignUp().appId(STUDY_ID)
                 .email(IntegTestUtils.makeEmail(ParticipantIsConsentedTest.class)).password(Tests.PASSWORD);
         signUp.addDataGroupsItem(DATA_GROUP);
         user = new TestUserHelper.Builder(ParticipantIsConsentedTest.class).withConsentUser(false).withSignUp(signUp)

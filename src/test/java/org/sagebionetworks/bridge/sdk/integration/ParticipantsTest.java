@@ -689,10 +689,10 @@ public class ParticipantsTest {
     
     @Test
     public void addEmailToPhoneUser() throws Exception {
-        SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1").study(IntegTestUtils.STUDY_ID);
+        SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1").appId(IntegTestUtils.STUDY_ID);
         phoneUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
         
-        SignIn signIn = new SignIn().phone(signUp.getPhone()).password(signUp.getPassword()).study(IntegTestUtils.STUDY_ID);
+        SignIn signIn = new SignIn().phone(signUp.getPhone()).password(signUp.getPassword()).appId(IntegTestUtils.STUDY_ID);
 
         String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
         IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(email);
@@ -716,20 +716,20 @@ public class ParticipantsTest {
     @Test
     public void addPhoneToEmailUser() throws Exception {
         String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
-        SignUp signUp = new SignUp().email(email).password("P@ssword`1").study(IntegTestUtils.STUDY_ID);
+        SignUp signUp = new SignUp().email(email).password("P@ssword`1").appId(STUDY_ID);
         emailUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
         
-        SignIn signIn = new SignIn().email(signUp.getEmail()).password(signUp.getPassword()).study(IntegTestUtils.STUDY_ID);
+        SignIn signIn = new SignIn().email(signUp.getEmail()).password(signUp.getPassword()).appId(STUDY_ID);
 
-        IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(IntegTestUtils.PHONE);
+        IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(PHONE);
         
         ForConsentedUsersApi usersApi = emailUser.getClient(ForConsentedUsersApi.class);
         UserSessionInfo info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
-        assertEquals(IntegTestUtils.PHONE.getNumber(), info.getPhone().getNumber());
+        assertEquals(PHONE.getNumber(), info.getPhone().getNumber());
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         StudyParticipant retrieved = participantsApi.getParticipantById(emailUser.getSession().getId(), true).execute().body();
-        assertEquals(IntegTestUtils.PHONE.getNumber(), retrieved.getPhone().getNumber());
+        assertEquals(PHONE.getNumber(), retrieved.getPhone().getNumber());
         
         // But if you do it again, it should not work
         Phone otherPhone = new Phone().number("4082588569").regionCode("US");

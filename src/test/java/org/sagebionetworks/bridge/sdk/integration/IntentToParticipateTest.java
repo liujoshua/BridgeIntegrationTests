@@ -69,7 +69,7 @@ public class IntentToParticipateTest {
             
             IntentToParticipate intent = new IntentToParticipate()
                     .phone(IntegTestUtils.PHONE)
-                    .studyId(IntegTestUtils.STUDY_ID)
+                    .appId(IntegTestUtils.STUDY_ID)
                     .subpopGuid(IntegTestUtils.STUDY_ID)
                     .osName("iPhone")
                     .consentSignature(sig);
@@ -85,7 +85,7 @@ public class IntentToParticipateTest {
             intentApi.submitIntentToParticipate(intent).execute();
             
             SignUp signUp = new SignUp()
-                    .study(IntegTestUtils.STUDY_ID)
+                    .appId(IntegTestUtils.STUDY_ID)
                     .phone(IntegTestUtils.PHONE)
                     .password(Tests.PASSWORD)
                     .checkForConsent(true);
@@ -102,7 +102,7 @@ public class IntentToParticipateTest {
             assertEquals(IntegTestUtils.PHONE.getNumber(), message.getPhoneNumber());
             assertNotNull(message.getMessageId());
             assertEquals(SmsType.TRANSACTIONAL, message.getSmsType());
-            assertEquals(IntegTestUtils.STUDY_ID, message.getStudyId());
+            assertEquals(IntegTestUtils.STUDY_ID, message.getAppId());
 
             // Message body isn't constrained by the test, so just check that it exists.
             assertNotNull(message.getMessageBody());
@@ -140,8 +140,8 @@ public class IntentToParticipateTest {
             
             IntentToParticipate intent = new IntentToParticipate()
                     .email(email)
-                    .studyId(IntegTestUtils.STUDY_ID)
-                    .subpopGuid(IntegTestUtils.STUDY_ID)
+                    .appId(STUDY_ID)
+                    .subpopGuid(STUDY_ID)
                     .osName("iPhone")
                     .consentSignature(sig);
             
@@ -156,7 +156,7 @@ public class IntentToParticipateTest {
             intentApi.submitIntentToParticipate(intent).execute();
             
             SignUp signUp = new SignUp()
-                    .study(IntegTestUtils.STUDY_ID)
+                    .appId(STUDY_ID)
                     .email(email)
                     .password(Tests.PASSWORD)
                     .checkForConsent(true);

@@ -37,7 +37,7 @@ public class UTF8Test {
         superadminApi.createStudy(study).execute();
 
         try {
-            superadminApi.adminChangeStudy(new SignIn().study(studyId)).execute();
+            superadminApi.adminChangeStudy(new SignIn().appId(studyId)).execute();
             
             // get study back and verify fields
             Study returnedStudy = superadminApi.getStudy(studyId).execute().body();

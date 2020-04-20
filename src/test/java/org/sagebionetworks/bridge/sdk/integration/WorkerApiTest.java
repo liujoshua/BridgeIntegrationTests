@@ -276,7 +276,7 @@ public class WorkerApiTest {
     public void sendUserSmsMessage() throws Exception {
         SignUp signUp = new SignUp();
         signUp.setPhone(IntegTestUtils.PHONE);
-        signUp.setStudy(IntegTestUtils.STUDY_ID);
+        signUp.setAppId(STUDY_ID);
         signUp.setConsent(true);
 
         user = new TestUserHelper.Builder(WorkerApiTest.class).withSignUp(signUp).withConsentUser(true)
@@ -302,7 +302,7 @@ public class WorkerApiTest {
         assertEquals(expectedMessageBody, message.getMessageBody());
         assertNotNull(message.getMessageId());
         assertEquals(SmsType.PROMOTIONAL, message.getSmsType());
-        assertEquals(user.getStudyId(), message.getStudyId());
+        assertEquals(user.getStudyId(), message.getAppId());
 
         // Clock skew on Jenkins can be known to go as high as 10 minutes. For a robust test, simply check that the
         // message was sent within the last hour.

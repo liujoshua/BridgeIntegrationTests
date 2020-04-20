@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.util.List;
 import java.util.Map;
@@ -87,7 +88,7 @@ public class SmsNotificationRegistrationTest {
     @Before
     public void createUser() throws Exception {
         // Create phone user, initially with data group sdk-int-1.
-        SignUp phoneSignUp = new SignUp().study(IntegTestUtils.STUDY_ID).consent(true).phone(IntegTestUtils.PHONE);
+        SignUp phoneSignUp = new SignUp().appId(STUDY_ID).consent(true).phone(IntegTestUtils.PHONE);
         phoneSignUp.addDataGroupsItem("sdk-int-1");
         phoneUser = new TestUserHelper.Builder(SmsNotificationRegistrationTest.class).withConsentUser(true)
                 .withSignUp(phoneSignUp).createAndSignInUser();

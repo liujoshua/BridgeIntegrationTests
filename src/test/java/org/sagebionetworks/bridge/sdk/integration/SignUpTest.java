@@ -64,7 +64,7 @@ public class SignUpTest {
         try {
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             
-            SignIn email = new SignIn().study("junk").email("bridge-testing@sagebase.org");
+            SignIn email = new SignIn().appId("junk").email("bridge-testing@sagebase.org");
             authApi.requestResetPassword(email).execute();
         } finally {
             testUser.signOutAndDeleteUser();
@@ -95,7 +95,7 @@ public class SignUpTest {
         superadminApi.createStudy(study).execute();
 
         SignUp signUp = new SignUp()
-                .study(study.getIdentifier())
+                .appId(study.getIdentifier())
                 .email(IntegTestUtils.makeEmail(SignUpTest.class))
                 .password("P@ssword`1");
         AuthenticationApi authApi = admin.getClient(AuthenticationApi.class);

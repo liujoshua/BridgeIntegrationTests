@@ -107,7 +107,7 @@ public class ReauthenticationTest {
         // You can re-authenticate.
         String oldSessionToken = session.getSessionToken();
         String reauthToken = session.getReauthToken();
-        SignIn signIn = new SignIn().study(user.getStudyId())
+        SignIn signIn = new SignIn().appId(user.getStudyId())
                 .email(user.getSession().getEmail()).reauthToken(reauthToken);
         
         Set<String> sessionTokens = new HashSet<>();
@@ -151,7 +151,7 @@ public class ReauthenticationTest {
         user.signOut();
         
         try {
-            signIn = new SignIn().study(user.getStudyId()).email(email).reauthToken(thirdSession.getReauthToken());
+            signIn = new SignIn().appId(user.getStudyId()).email(email).reauthToken(thirdSession.getReauthToken());
             authApi.reauthenticate(signIn).execute().body();
             fail("Should have thrown exception.");
         } catch(EntityNotFoundException e) {
@@ -193,7 +193,7 @@ public class ReauthenticationTest {
             // Pause for 16 seconds... becuase we're caching this value
             Thread.sleep(16000);
             
-            SignIn signIn = new SignIn().study(testUser.getStudyId()).email(testUser.getEmail()).reauthToken(reauthToken);
+            SignIn signIn = new SignIn().appId(testUser.getStudyId()).email(testUser.getEmail()).reauthToken(reauthToken);
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             UserSessionInfo newSession = authApi.reauthenticate(signIn).execute().body();
             assertNotEquals(reauthToken, newSession.getReauthToken());

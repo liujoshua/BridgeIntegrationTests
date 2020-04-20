@@ -55,7 +55,7 @@ public class UserManagementTest {
         String password = "P4ssword";
 
         SignUp signUp = new SignUp();
-        signUp.setStudy(admin.getStudyId());
+        signUp.setAppId(admin.getStudyId());
         signUp.setEmail(email);
         signUp.setConsent(true);
         signUp.setPassword(password);
@@ -66,7 +66,7 @@ public class UserManagementTest {
         assertNotNull(userSession.getId());
 
         // Can sign in with this user.
-        SignIn signIn = new SignIn().study(admin.getStudyId()).email(email).password(password);
+        SignIn signIn = new SignIn().appId(admin.getStudyId()).email(email).password(password);
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
         newUserAuthApi.signInV4(signIn).execute();
@@ -97,7 +97,7 @@ public class UserManagementTest {
         admin.signOut();
         
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-        SignIn signIn = new SignIn().study(admin.getStudyId())
+        SignIn signIn = new SignIn().appId(admin.getStudyId())
                 .email(admin.getEmail()).password((admin.getPassword()));
         
         superadminApi.adminSignIn(signIn).execute().body();
@@ -114,7 +114,7 @@ public class UserManagementTest {
         admin.signOut(); // so it's not necessary to switch back to the API study for future tests
         
         superadminApi = admin.getClient(ForSuperadminsApi.class);
-        signIn = new SignIn().study(SHARED_STUDY_ID)
+        signIn = new SignIn().appId(SHARED_STUDY_ID)
                 .email(admin.getEmail()).password((admin.getPassword()));
         
         superadminApi.adminSignIn(signIn).execute().body();

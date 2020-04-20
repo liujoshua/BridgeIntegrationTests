@@ -163,7 +163,7 @@ public class OAuthTest {
         
         // Call bridge to get a session
         OAuthAuthorizationToken token = new OAuthAuthorizationToken()
-                .study(STUDY_ID)
+                .appId(STUDY_ID)
                 .vendorId("synapse")
                 .authToken(authToken)
                 .callbackUrl("https://research-staging.sagebridge.org");
@@ -186,7 +186,7 @@ public class OAuthTest {
         String userPassword = config.get("synapse.test.user.password");
         worker.signOut();
 
-        SignIn signIn = new SignIn().study(STUDY_ID).email(userEmail).password(userPassword);
+        SignIn signIn = new SignIn().appId(STUDY_ID).email(userEmail).password(userPassword);
         AuthenticationApi authApi = worker.getClient(AuthenticationApi.class);
         
         UserSessionInfo session = RestUtils.signInWithSynapse(authApi, signIn);
@@ -201,7 +201,7 @@ public class OAuthTest {
         String synapseUserId = admin.getConfig().get("synapse.test.user.id");
         
         user = new TestUserHelper.Builder(OAuthTest.class).withStudyId(STUDY_ID)
-                .withSignUp(new SignUp().study(STUDY_ID)
+                .withSignUp(new SignUp().appId(STUDY_ID)
                 .roles(ImmutableList.of(DEVELOPER)).synapseUserId(synapseUserId))
                 .createAndSignInUser();
         String userId = user.getUserId();
@@ -209,7 +209,7 @@ public class OAuthTest {
         admin.getClient(ForSuperadminsApi.class).adminChangeStudy(SHARED_SIGNIN).execute();
         
         user2 = new TestUserHelper.Builder(OAuthTest.class).withStudyId(SHARED_STUDY_ID)
-                .withSignUp(new SignUp().study(SHARED_STUDY_ID)
+                .withSignUp(new SignUp().appId(SHARED_STUDY_ID)
                 .roles(ImmutableList.of(DEVELOPER)).synapseUserId(synapseUserId))
                 .createAndSignInUser();
         String user2Id = user2.getUserId();

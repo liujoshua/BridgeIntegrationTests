@@ -218,7 +218,7 @@ public class SubstudyMembershipTest {
 
     private TestUser createUser(String externalId) throws Exception {
         String email = IntegTestUtils.makeEmail(SubstudyMembershipTest.class);
-        SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID).email(email).password("P@ssword`1");
+        SignUp signUp = new SignUp().appId(STUDY_ID).email(email).password("P@ssword`1");
         signUp.externalId(externalId);
         TestUser user = TestUserHelper.createAndSignInUser(SubstudyMembershipTest.class, true, signUp);
         usersToDelete.add(user);

@@ -116,7 +116,7 @@ public class ExternalIdsV4Test {
             // Sign up a user with an external ID specified. Just one of them: we don't have plans to
             // allow the assignment of multiple external IDs on sign up. Adding new substudies is probably
             // going to happen by signing additional consents, but that's TBD.
-            SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID);
+            SignUp signUp = new SignUp().appId(IntegTestUtils.STUDY_ID);
             signUp.setPassword(Tests.PASSWORD);
             signUp.setExternalId(extIdA);
             researcher.getClient(AuthenticationApi.class).signUp(signUp).execute();
@@ -158,7 +158,7 @@ public class ExternalIdsV4Test {
             // be usable to retrieve the account (demonstrating that this is not simply because in the interim 
             // while migrating, we're writing the external ID to the singular externalId field).
             
-            SignIn signIn = new SignIn().study(IntegTestUtils.STUDY_ID);
+            SignIn signIn = new SignIn().appId(IntegTestUtils.STUDY_ID);
             signIn.setExternalId(extIdA);
             signIn.setPassword(Tests.PASSWORD);
             
@@ -254,7 +254,7 @@ public class ExternalIdsV4Test {
             }
             
             // Create a researcher in study B, and run this stuff again, it should be filtered
-            SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID);
+            SignUp signUp = new SignUp().appId(IntegTestUtils.STUDY_ID);
             signUp.setExternalId(ids.get(0).getIdentifier());
             user = new TestUserHelper.Builder(ExternalIdsV4Test.class)
                     .withRoles(Role.RESEARCHER, Role.DEVELOPER)

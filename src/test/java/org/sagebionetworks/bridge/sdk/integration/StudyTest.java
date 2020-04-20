@@ -237,7 +237,7 @@ public class StudyTest {
         VersionHolder holder = superadminApi.createStudy(study).execute().body();
         assertNotNull(holder.getVersion());
 
-        superadminApi.adminChangeStudy(new SignIn().study(studyId)).execute();
+        superadminApi.adminChangeStudy(new SignIn().appId(studyId)).execute();
         Study newStudy = superadminApi.getStudy(study.getIdentifier()).execute().body();
         
         study.addDataGroupsItem("test_user"); // added by the server, required for equality of dataGroups.
@@ -342,7 +342,7 @@ public class StudyTest {
         
         // and then you have to switch back, because after you delete this test study, 
         // all users signed into that study are locked out of working.
-        superadminApi.adminChangeStudy(new SignIn().study("api")).execute();
+        superadminApi.adminChangeStudy(new SignIn().appId("api")).execute();
 
         // logically delete a study by admin
         superadminApi.deleteStudy(studyId, false).execute();

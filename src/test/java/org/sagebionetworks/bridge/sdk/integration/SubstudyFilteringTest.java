@@ -60,7 +60,7 @@ public class SubstudyFilteringTest {
         private final SignIn signIn;
         public UserInfo(String userId, String email) {
             this.userId = userId;
-            this.signIn = new SignIn().email(email).password(Tests.PASSWORD).study(IntegTestUtils.STUDY_ID);
+            this.signIn = new SignIn().email(email).password(Tests.PASSWORD).appId(IntegTestUtils.STUDY_ID);
         }
         public String getId() { return userId; }
         public SignIn getSignIn() { return signIn; }
@@ -307,7 +307,7 @@ public class SubstudyFilteringTest {
     
     private static UserInfo createUser(Role role, String... substudyIds) throws Exception {
         String email = IntegTestUtils.makeEmail(SubstudyTest.class);
-        SignUp signUp = new SignUp().email(email).password(Tests.PASSWORD).study(IntegTestUtils.STUDY_ID).consent(true);
+        SignUp signUp = new SignUp().email(email).password(Tests.PASSWORD).appId(IntegTestUtils.STUDY_ID).consent(true);
         signUp.substudyIds(ImmutableList.copyOf(substudyIds));
         if (role != null) {
             signUp.setRoles(ImmutableList.of(role));

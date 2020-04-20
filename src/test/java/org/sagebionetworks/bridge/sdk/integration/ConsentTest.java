@@ -83,7 +83,7 @@ public class ConsentTest {
 
         // Make phone user.
         IntegTestUtils.deletePhoneUser(researchUser);
-        SignUp phoneOnlyUser = new SignUp().study(STUDY_ID).consent(true).phone(PHONE);
+        SignUp phoneOnlyUser = new SignUp().appId(STUDY_ID).consent(true).phone(PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(ConsentTest.class).withConsentUser(true)
                 .withSignUp(phoneOnlyUser).createAndSignInUser();
 
@@ -429,7 +429,7 @@ public class ConsentTest {
         assertEquals(phoneOnlyTestUser.getPhone().getNumber(), message.getPhoneNumber());
         assertNotNull(message.getMessageId());
         assertEquals(TRANSACTIONAL, message.getSmsType());
-        assertEquals(phoneOnlyTestUser.getStudyId(), message.getStudyId());
+        assertEquals(phoneOnlyTestUser.getStudyId(), message.getAppId());
 
         // Message body isn't constrained by the test, so just check that it exists.
         assertNotNull(message.getMessageBody());

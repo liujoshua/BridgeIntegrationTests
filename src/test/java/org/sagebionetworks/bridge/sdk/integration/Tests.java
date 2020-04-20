@@ -3,6 +3,8 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -46,8 +48,8 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class Tests {
-    public static final SignIn API_SIGNIN = new SignIn().study(IntegTestUtils.STUDY_ID);
-    public static final SignIn SHARED_SIGNIN = new SignIn().study("shared");
+    public static final SignIn API_SIGNIN = new SignIn().appId(STUDY_ID);
+    public static final SignIn SHARED_SIGNIN = new SignIn().appId(SHARED_STUDY_ID);
     public static final String PACKAGE = "org.sagebionetworks.bridge";
     public static final String MOBILE_APP_NAME = "DummyApp";
     public static final String APP_ID = PACKAGE + "." + MOBILE_APP_NAME;
