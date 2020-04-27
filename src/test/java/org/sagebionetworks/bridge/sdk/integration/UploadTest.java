@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
 
 import java.io.File;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.RecordExportStatusRequest;
@@ -69,7 +71,9 @@ public class UploadTest {
     
     private static TestUserHelper.TestUser worker;
     private static TestUserHelper.TestUser developer;
+    private static TestUserHelper.TestUser otherStudyAdmin;
     private static TestUserHelper.TestUser researcher;
+    private static TestUserHelper.TestUser studyAdmin;
     private static TestUserHelper.TestUser user;
     private static TestUserHelper.TestUser admin;
 
@@ -88,8 +92,10 @@ public class UploadTest {
         // developer is to ensure schemas exist. user is to do uploads
         worker = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.WORKER);
         developer = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.DEVELOPER);
+        otherStudyAdmin = TestUserHelper.createAndSignInUser(UploadTest.class, SHARED_STUDY_ID, Role.ADMIN);
         researcher = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.RESEARCHER);
-        
+        studyAdmin = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.ADMIN);
+
         ExternalIdentifier extId = new ExternalIdentifier().identifier(EXTERNAL_ID).substudyId(SUBSTUDY_ID_1);
         ForResearchersApi researchersApi = researcher.getClient(ForResearchersApi.class);
         researchersApi.createExternalId(extId).execute();
@@ -186,6 +192,13 @@ public class UploadTest {
     }
 
     @AfterClass
+    public static void deleteOtherStudyAdmin() throws Exception {
+        if (otherStudyAdmin != null) {
+            otherStudyAdmin.signOutAndDeleteUser();
+        }
+    }
+
+    @AfterClass
     public static void deleteResearcher() throws Exception {
         ForAdminsApi adminsApi = TestUserHelper.getSignedInAdmin().getClient(ForAdminsApi.class);
         adminsApi.deleteExternalId(EXTERNAL_ID).execute();
@@ -193,7 +206,14 @@ public class UploadTest {
             researcher.signOutAndDeleteUser();
         }
     }
-    
+
+    @AfterClass
+    public static void deleteStudyAdmin() throws Exception {
+        if (studyAdmin != null) {
+            studyAdmin.signOutAndDeleteUser();
+        }
+    }
+
     @AfterClass
     public static void deleteUser() throws Exception {
         if (user != null) {
@@ -379,6 +399,26 @@ public class UploadTest {
         assertNotNull(retrieved3.getHealthData());
         assertNotNull(retrieved4.getHealthData());
         assertEquals(retrieved3, retrieved4);
+
+        // Study admin can also retrieve this record.
+        ForAdminsApi studyAdminApi = studyAdmin.getClient(ForAdminsApi.class);
+        studyAdminApi.getUploadById(status.getId()).execute();
+        studyAdminApi.getUploadByRecordId(record.getId()).execute();
+
+        // Other study admin cannot retrieve this record.
+        ForAdminsApi otherStudyAdminApi = otherStudyAdmin.getClient(ForAdminsApi.class);
+        try {
+            otherStudyAdminApi.getUploadById(status.getId()).execute();
+            fail("exception expected");
+        } catch (UnauthorizedException ex) {
+            // expected exception
+        }
+        try {
+            otherStudyAdminApi.getUploadByRecordId(record.getId()).execute();
+            fail("exception expected");
+        } catch (UnauthorizedException ex) {
+            // expected exception
+        }
 
         // Change the user's sharing scope. This is the simplest change we can make that will be reflected when we
         // redrive the upload.
