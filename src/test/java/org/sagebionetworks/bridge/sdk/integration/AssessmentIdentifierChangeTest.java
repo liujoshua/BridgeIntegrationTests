@@ -12,7 +12,6 @@ import java.util.Set;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import org.apache.logging.log4j.util.LambdaUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
