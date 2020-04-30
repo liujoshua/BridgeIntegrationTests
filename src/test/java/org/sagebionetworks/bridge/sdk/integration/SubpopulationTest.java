@@ -186,7 +186,7 @@ public class SubpopulationTest {
             subpopulationsApi.deleteSubpopulation(defaultSubpop.getGuid(), false).execute();
             fail("Should have thrown an exception.");
         } catch(BadRequestException e) {
-            assertEquals("Cannot delete the default subpopulation for a study.", e.getMessage());
+            assertEquals("Cannot delete the default subpopulation for an app.", e.getMessage());
         }
     }
     
