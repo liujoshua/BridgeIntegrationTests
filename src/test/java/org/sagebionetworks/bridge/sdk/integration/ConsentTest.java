@@ -497,7 +497,7 @@ public class ConsentTest {
 
             Withdrawal withdrawal = new Withdrawal().reason("Reason for withdrawal.");
             Message message = participantsApi.withdrawParticipantFromStudy(userId, withdrawal).execute().body();
-            assertEquals("User has been withdrawn from the study.", message.getMessage());
+            assertEquals("User has been withdrawn from one or more studies in the app.", message.getMessage());
 
             // Retrieve the account and verify it has been processed correctly.
             StudyParticipant theUser = participantsApi.getParticipantById(userId, true).execute().body();
