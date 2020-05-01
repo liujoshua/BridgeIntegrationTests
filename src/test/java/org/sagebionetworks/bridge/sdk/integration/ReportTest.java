@@ -9,7 +9,7 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.Map;
 
@@ -39,6 +39,7 @@ import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorReportDataList;
 import org.sagebionetworks.bridge.rest.model.ReportData;
 import org.sagebionetworks.bridge.rest.model.ReportDataForWorker;
@@ -46,7 +47,6 @@ import org.sagebionetworks.bridge.rest.model.ReportDataList;
 import org.sagebionetworks.bridge.rest.model.ReportIndex;
 import org.sagebionetworks.bridge.rest.model.ReportIndexList;
 import org.sagebionetworks.bridge.rest.model.ReportType;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -71,7 +71,7 @@ public class ReportTest {
 
     private static TestUser admin;
     private static TestUser developer;
-    private static TestUser studyScopedDeveloper;
+    private static TestUser appScopedDeveloper;
     private static TestUser worker;
     
     private static Substudy substudy1;
@@ -100,16 +100,16 @@ public class ReportTest {
         developer = new TestUserHelper.Builder(ReportTest.class).withRoles(DEVELOPER)
                 .createAndSignInUser();
         
-        studyScopedDeveloper = new TestUserHelper.Builder(ReportTest.class).withRoles(DEVELOPER)
+        appScopedDeveloper = new TestUserHelper.Builder(ReportTest.class).withRoles(DEVELOPER)
                 .withSubstudyIds(ImmutableSet.of(substudy1.getId())).createAndSignInUser();
 
         worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, WORKER, RESEARCHER);
 
         // Worker test needs to be able to get healthcode.
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
-        study.setHealthCodeExportEnabled(true);
-        superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
+        app.setHealthCodeExportEnabled(true);
+        superadminApi.updateApp(app.getIdentifier(), app).execute().body();
     }
 
     @Before
@@ -139,8 +139,8 @@ public class ReportTest {
         if (developer != null) {
             developer.signOutAndDeleteUser();
         }
-        if (studyScopedDeveloper != null) {
-            studyScopedDeveloper.signOutAndDeleteUser();
+        if (appScopedDeveloper != null) {
+            appScopedDeveloper.signOutAndDeleteUser();
         }
         if (worker != null) {
             worker.signOutAndDeleteUser();
@@ -154,9 +154,9 @@ public class ReportTest {
             admin.getClient(SubstudiesApi.class).deleteSubstudy(substudy2.getId(), true).execute();
         }
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
-        study.setHealthCodeExportEnabled(false);
-        superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
+        app.setHealthCodeExportEnabled(false);
+        superadminApi.updateApp(app.getIdentifier(), app).execute().body();
     }
 
     @Test
@@ -238,7 +238,7 @@ public class ReportTest {
         assertEquals(SEARCH_END_DATE, results.getRequestParams().getEndDate());
 
         // Worker can get those reports.
-        results = workerReportsApi.getParticipantReportsForParticipant(user.getStudyId(), userId, reportId,
+        results = workerReportsApi.getParticipantReportsForParticipant(user.getAppId(), userId, reportId,
                 SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
         assertEquals(3, results.getItems().size());
         assertReportData(DATE1, "foo", "A", results.getItems().get(0));
@@ -279,7 +279,7 @@ public class ReportTest {
         assertEquals(SEARCH_END_TIME.toString(), results.getRequestParams().getEndTime().toString());
 
         // Worker can get those reports.
-        results = workerReportsApi.getParticipantReportsForParticipantV4(user.getStudyId(), userId, reportId,
+        results = workerReportsApi.getParticipantReportsForParticipantV2(user.getAppId(), userId, reportId,
                 SEARCH_START_TIME, SEARCH_END_TIME, null, 20).execute().body();
         assertEquals(3, results.getItems().size());
         assertNull(results.getNextPageOffsetKey());
@@ -337,7 +337,7 @@ public class ReportTest {
 
         // Reports are not publicly accessible.
         try {
-            devReportClient.getPublicStudyReportRecords(developer.getStudyId(), reportId, SEARCH_START_DATE,
+            devReportClient.getPublicStudyReportRecords(developer.getAppId(), reportId, SEARCH_START_DATE,
                     SEARCH_END_DATE).execute().body();
             fail("Should have thrown exception");
         } catch (EntityNotFoundException e) {
@@ -351,7 +351,7 @@ public class ReportTest {
 
         // Get the reports through the public API
         ReportDataList report = devReportClient
-                .getPublicStudyReportRecords(developer.getStudyId(), reportId, SEARCH_START_DATE, SEARCH_END_DATE)
+                .getPublicStudyReportRecords(developer.getAppId(), reportId, SEARCH_START_DATE, SEARCH_END_DATE)
                 .execute().body();
         assertEquals(3, report.getItems().size());
         assertReportData(DATE1, "foo", "A", report.getItems().get(0));
@@ -470,7 +470,7 @@ public class ReportTest {
     
     @Test
     public void studyReportsNotVisibleOutsideOfSubstudy() throws Exception {
-        StudyReportsApi devReportClient = studyScopedDeveloper.getClient(StudyReportsApi.class);
+        StudyReportsApi devReportClient = appScopedDeveloper.getClient(StudyReportsApi.class);
         
         ReportData data1 = makeReportData(DATE1, "asdf", "A");
         data1.setSubstudyIds(ImmutableList.of(substudy1.getId()));
@@ -553,10 +553,10 @@ public class ReportTest {
             // expected, and from the correct call.
         }
         
-        String studyId = substudyScopedUser.getStudyId();
+        String appId = substudyScopedUser.getAppId();
         String userId = substudyScopedUser.getUserId();
         // The worker, which is not in any substudies, can get these reports
-        ReportDataList list = workerApi.getParticipantReportsForParticipant(studyId, userId, reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
+        ReportDataList list = workerApi.getParticipantReportsForParticipant(appId, userId, reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
         assertEquals(2, list.getItems().size());
         ReportData retrieved1 = list.getItems().get(0);
         assertEquals(DATE1.toString(), retrieved1.getDate());

@@ -6,7 +6,7 @@ import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -98,7 +98,7 @@ public class SignInTest {
         String email = IntegTestUtils.makeEmail(SignInTest.class);
 
         SignUp signUp = new SignUp();
-        signUp.setAppId(researcher.getStudyId());
+        signUp.setAppId(researcher.getAppId());
         signUp.setFirstName("First Name");
         signUp.setLastName("Last Name");
         signUp.setEmail(email);
@@ -140,7 +140,7 @@ public class SignInTest {
     public void signInNoAccount() throws Exception {
         // Generate random email, but don't create the account.
         String email = IntegTestUtils.makeEmail(SignInTest.class);
-        SignIn signIn = new SignIn().appId(STUDY_ID).email(email).password(PASSWORD);
+        SignIn signIn = new SignIn().appId(TEST_APP_ID).email(email).password(PASSWORD);
 
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
@@ -150,7 +150,7 @@ public class SignInTest {
     @Test(expected = EntityNotFoundException.class)
     public void signInBadPassword() throws Exception {
         // To prevent email enumeration attack, this throws a 404 not found.
-        SignIn signIn = new SignIn().appId(STUDY_ID).email(user.getEmail()).password("This is not my password");
+        SignIn signIn = new SignIn().appId(TEST_APP_ID).email(user.getEmail()).password("This is not my password");
 
         ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
         AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);

@@ -26,15 +26,16 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ActivityType;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.CompoundActivity;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
@@ -48,7 +49,6 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
@@ -111,11 +111,11 @@ public class ScheduledActivityTest {
         researcher = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Role.RESEARCHER);
         developer = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true, Role.DEVELOPER);
         
-        StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-        Study study = studiesApi.getUsersStudy().execute().body();
-        if (!study.getAutomaticCustomEvents().containsKey("two_weeks_before_enrollment")) {
-            study.getAutomaticCustomEvents().put("two_weeks_before_enrollment", "enrollment:P-14D");
-            studiesApi.updateUsersStudy(study).execute().body();
+        AppsApi appsApi = developer.getClient(AppsApi.class);
+        App app = appsApi.getUsersApp().execute().body();
+        if (!app.getAutomaticCustomEvents().containsKey("two_weeks_before_enrollment")) {
+            app.getAutomaticCustomEvents().put("two_weeks_before_enrollment", "enrollment:P-14D");
+            appsApi.updateUsersApp(app).execute().body();
         }
         
         user = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true);

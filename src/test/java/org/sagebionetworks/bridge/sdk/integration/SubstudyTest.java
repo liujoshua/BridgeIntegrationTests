@@ -6,7 +6,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -156,7 +156,7 @@ public class SubstudyTest {
         
         // Create a user associated to this sub-study.
         String researcherEmail = IntegTestUtils.makeEmail(SubstudyTest.class);
-        SignUp researcherSignUp = new SignUp().email(researcherEmail).password("P@ssword`1").appId(STUDY_ID);
+        SignUp researcherSignUp = new SignUp().email(researcherEmail).password("P@ssword`1").appId(TEST_APP_ID);
         researcherSignUp.roles(ImmutableList.of(Role.RESEARCHER));
         researcherSignUp.substudyIds(ImmutableList.of(id1));
 
@@ -179,12 +179,12 @@ public class SubstudyTest {
         
         // Sign in this researcher, verify all the rules.
         ClientManager manager = new ClientManager.Builder()
-                .withSignIn(new SignIn().email(researcherEmail).password("P@ssword`1").appId(IntegTestUtils.STUDY_ID))
+                .withSignIn(new SignIn().email(researcherEmail).password("P@ssword`1").appId(TEST_APP_ID))
                 .build();
         ParticipantsApi participantsApi = manager.getClient(ParticipantsApi.class);
 
         String email2 = IntegTestUtils.makeEmail(SubstudyTest.class);
-        SignUp signUp2 = new SignUp().email(email2).password("P@ssword`1").appId(IntegTestUtils.STUDY_ID);
+        SignUp signUp2 = new SignUp().email(email2).password("P@ssword`1").appId(TEST_APP_ID);
         
         // Cannot sign this user up because the substudies include one the researcher does not possess.
         try {

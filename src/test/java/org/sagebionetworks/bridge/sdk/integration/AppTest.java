@@ -8,7 +8,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,9 +43,9 @@ import retrofit2.Response;
 
 import org.sagebionetworks.bridge.config.PropertiesConfig;
 import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.UploadsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -53,13 +53,13 @@ import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.exceptions.UnsupportedVersionException;
 import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
+import org.sagebionetworks.bridge.rest.model.App;
+import org.sagebionetworks.bridge.rest.model.AppList;
 import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.SignIn;
-import org.sagebionetworks.bridge.rest.model.Study;
-import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.Upload;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
 import org.sagebionetworks.bridge.rest.model.UploadFieldType;
@@ -70,13 +70,12 @@ import org.sagebionetworks.bridge.rest.model.UploadValidationStrictness;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 @SuppressWarnings("deprecation")
-public class StudyTest {
+public class AppTest {
     
     private TestUser admin;
-    private String studyId;
+    private String appId;
     private SynapseClient synapseClient;
     private Project project;
     private Team team;
@@ -110,8 +109,8 @@ public class StudyTest {
 
     @After
     public void after() throws Exception {
-        if (studyId != null) {
-            admin.getClient(ForSuperadminsApi.class).deleteStudy(studyId, true).execute();
+        if (appId != null) {
+            admin.getClient(ForSuperadminsApi.class).deleteApp(appId, true).execute();
         }
         if (project != null) {
             synapseClient.deleteEntityById(project.getId());
@@ -141,32 +140,32 @@ public class StudyTest {
         TEST_USER_ID = Long.parseLong(config.get(TEST_USER_ID_NAME));
     }
 
-    // Disabled this test: This test stomps the Synapse configuration in the API study. This is used by the
+    // Disabled this test: This test stomps the Synapse configuration in the API app. This is used by the
     // Bridge-Exporter to test the Bridge-Exporter as part of the release process. The conflict introduced in this test
     // causes Bridge-Exporter tests to fail.
     @Test
     @Ignore
     public void createSynapseProjectTeam() throws IOException, SynapseException {
         // only use developer to signin
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(AppTest.class, false, DEVELOPER);
         try {
-            StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+            AppsApi appsApi = developer.getClient(AppsApi.class);
 
             // integration test with synapseclient
-            // pre-setup - remove current study's project and team info
-            Study currentStudy = studiesApi.getUsersStudy().execute().body();
-            currentStudy.setSynapseDataAccessTeamId(null);
-            currentStudy.setSynapseProjectId(null);
+            // pre-setup - remove current app's project and team info
+            App currentApi = appsApi.getUsersApp().execute().body();
+            currentApi.setSynapseDataAccessTeamId(null);
+            currentApi.setSynapseProjectId(null);
 
-            studiesApi.updateUsersStudy(currentStudy).execute().body();
+            appsApi.updateUsersApp(currentApi).execute().body();
 
             // execute
-            studiesApi.createSynapseProjectTeam(ImmutableList.of(TEST_USER_ID.toString())).execute().body();
-            // verify study
-            Study newStudy = studiesApi.getUsersStudy().execute().body();
-            assertEquals(newStudy.getIdentifier(), currentStudy.getIdentifier());
-            String projectId = newStudy.getSynapseProjectId();
-            Long teamId = newStudy.getSynapseDataAccessTeamId();
+            appsApi.createSynapseProjectTeam(ImmutableList.of(TEST_USER_ID.toString())).execute().body();
+            // verify app
+            App newApp = appsApi.getUsersApp().execute().body();
+            assertEquals(newApp.getIdentifier(), currentApi.getIdentifier());
+            String projectId = newApp.getSynapseProjectId();
+            Long teamId = newApp.getSynapseDataAccessTeamId();
 
             // verify if project and team exists
             Entity project = synapseClient.getEntityById(projectId);
@@ -219,57 +218,57 @@ public class StudyTest {
     }
 
     @Test
-    public void crudStudy() throws Exception {
+    public void crudApp() throws Exception {
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
 
-        studyId = Tests.randomIdentifier(StudyTest.class);
-        Study study = Tests.getStudy(studyId, null);
-        assertNull("study version should be null", study.getVersion());
+        appId = Tests.randomIdentifier(AppTest.class);
+        App app = Tests.getApp(appId, null);
+        assertNull("app version should be null", app.getVersion());
 
         // Set these flags to the non-default value to verify that studies are always created with these flags set to
         // the default value.
-        study.setConsentNotificationEmailVerified(true);
-        study.setStudyIdExcludedInExport(false);
+        app.setConsentNotificationEmailVerified(true);
+        app.setAppIdExcludedInExport(false);
 
         // Set validation strictness to null, to verify the default.
-        study.setUploadValidationStrictness(null);
+        app.setUploadValidationStrictness(null);
 
-        VersionHolder holder = superadminApi.createStudy(study).execute().body();
+        VersionHolder holder = superadminApi.createApp(app).execute().body();
         assertNotNull(holder.getVersion());
 
-        superadminApi.adminChangeStudy(new SignIn().appId(studyId)).execute();
-        Study newStudy = superadminApi.getStudy(study.getIdentifier()).execute().body();
+        superadminApi.adminChangeApp(new SignIn().appId(appId)).execute();
+        App newApp = superadminApi.getApp(app.getIdentifier()).execute().body();
         
-        study.addDataGroupsItem("test_user"); // added by the server, required for equality of dataGroups.
+        app.addDataGroupsItem("test_user"); // added by the server, required for equality of dataGroups.
 
-        // Verify study has password/email templates
+        // Verify app has password/email templates
         assertTrue("autoVerificationEmailSuppressed should be true",
-                newStudy.isAutoVerificationEmailSuppressed());
-        assertNotNull("password policy should not be null", newStudy.getPasswordPolicy());
-        assertTrue("reauthenticationEnabled should be true", newStudy.isReauthenticationEnabled());
-        assertEquals("name should be equal", study.getName(), newStudy.getName());
-        assertEquals("minAgeOfConsent should be equal", study.getMinAgeOfConsent(), newStudy.getMinAgeOfConsent());
-        assertEquals("sponsorName should be equal", study.getSponsorName(), newStudy.getSponsorName());
-        assertTrue("strictUploadValidationEnabled should be true", newStudy.isStrictUploadValidationEnabled());
-        assertEquals("supportEmail should be equal", study.getSupportEmail(), newStudy.getSupportEmail());
-        assertEquals("technicalEmail should be equal", study.getTechnicalEmail(), newStudy.getTechnicalEmail());
-        assertTrue("usesCustomExportSchedule should be true", study.isUsesCustomExportSchedule());
-        assertEquals("consentNotificationEmail should be equal", study.getConsentNotificationEmail(), newStudy.getConsentNotificationEmail());
-        assertEquals("userProfileAttributes should be equal", study.getUserProfileAttributes(), newStudy.getUserProfileAttributes());
-        assertEquals("taskIdentifiers should be equal", study.getTaskIdentifiers(), newStudy.getTaskIdentifiers());
-        assertTrue("dataGroups should be equal", Tests.assertListsEqualIgnoringOrder(study.getDataGroups(), newStudy.getDataGroups()));
-        assertEquals("android minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get("Android"),
-                newStudy.getMinSupportedAppVersions().get("Android"));
-        assertEquals("iOS minSupportedAppVersions should be equal", study.getMinSupportedAppVersions().get("iPhone OS"),
-                newStudy.getMinSupportedAppVersions().get("iPhone OS"));
+                newApp.isAutoVerificationEmailSuppressed());
+        assertNotNull("password policy should not be null", newApp.getPasswordPolicy());
+        assertTrue("reauthenticationEnabled should be true", newApp.isReauthenticationEnabled());
+        assertEquals("name should be equal", app.getName(), newApp.getName());
+        assertEquals("minAgeOfConsent should be equal", app.getMinAgeOfConsent(), newApp.getMinAgeOfConsent());
+        assertEquals("sponsorName should be equal", app.getSponsorName(), newApp.getSponsorName());
+        assertTrue("strictUploadValidationEnabled should be true", newApp.isStrictUploadValidationEnabled());
+        assertEquals("supportEmail should be equal", app.getSupportEmail(), newApp.getSupportEmail());
+        assertEquals("technicalEmail should be equal", app.getTechnicalEmail(), newApp.getTechnicalEmail());
+        assertTrue("usesCustomExportSchedule should be true", app.isUsesCustomExportSchedule());
+        assertEquals("consentNotificationEmail should be equal", app.getConsentNotificationEmail(), newApp.getConsentNotificationEmail());
+        assertEquals("userProfileAttributes should be equal", app.getUserProfileAttributes(), newApp.getUserProfileAttributes());
+        assertEquals("taskIdentifiers should be equal", app.getTaskIdentifiers(), newApp.getTaskIdentifiers());
+        assertTrue("dataGroups should be equal", Tests.assertListsEqualIgnoringOrder(app.getDataGroups(), newApp.getDataGroups()));
+        assertEquals("android minSupportedAppVersions should be equal", app.getMinSupportedAppVersions().get("Android"),
+                newApp.getMinSupportedAppVersions().get("Android"));
+        assertEquals("iOS minSupportedAppVersions should be equal", app.getMinSupportedAppVersions().get("iPhone OS"),
+                newApp.getMinSupportedAppVersions().get("iPhone OS"));
         
-        assertEquals("android push ARN should be equal", study.getPushNotificationARNs().get("Android"),
-                newStudy.getPushNotificationARNs().get("Android"));        
-        assertEquals("iOS push ARN should be equal", study.getPushNotificationARNs().get("iPhone OS"),
-                newStudy.getPushNotificationARNs().get("iPhone OS"));   
+        assertEquals("android push ARN should be equal", app.getPushNotificationARNs().get("Android"),
+                newApp.getPushNotificationARNs().get("Android"));        
+        assertEquals("iOS push ARN should be equal", app.getPushNotificationARNs().get("iPhone OS"),
+                newApp.getPushNotificationARNs().get("iPhone OS"));   
         
         // Verify OAuth providers
-        OAuthProvider myProvider = newStudy.getOAuthProviders().get("myProvider");
+        OAuthProvider myProvider = newApp.getOAuthProviders().get("myProvider");
         assertEquals("OAuth provider should have clientId", "clientId", myProvider.getClientId());
         assertEquals("OAuth provider should have secret", "secret", myProvider.getSecret());
         assertEquals("OAuth provider should have endpoint", "https://www.server.com/", myProvider.getEndpoint());
@@ -279,101 +278,101 @@ public class StudyTest {
                 myProvider.getIntrospectEndpoint());
 
         // Verify other defaults
-        assertFalse("consentNotificationEmailVerified should be false", newStudy
+        assertFalse("consentNotificationEmailVerified should be false", newApp
                 .isConsentNotificationEmailVerified());
-        assertTrue("studyIdExcludedInExport should be true", newStudy.isStudyIdExcludedInExport());
+        assertTrue("appIdExcludedInExport should be true", newApp.isAppIdExcludedInExport());
         assertEquals("uploadValidationStrictness should be REPORT", UploadValidationStrictness.REPORT,
-                newStudy.getUploadValidationStrictness());
-        assertTrue("healthCodeExportEnabled should be true", newStudy.isHealthCodeExportEnabled());
-        assertTrue("emailVerificationEnabled should be true", newStudy.isEmailVerificationEnabled());
-        assertTrue("emailSignInEnabled should be true", newStudy.isEmailSignInEnabled());
+                newApp.getUploadValidationStrictness());
+        assertTrue("healthCodeExportEnabled should be true", newApp.isHealthCodeExportEnabled());
+        assertTrue("emailVerificationEnabled should be true", newApp.isEmailVerificationEnabled());
+        assertTrue("emailSignInEnabled should be true", newApp.isEmailSignInEnabled());
         
-        assertEquals(1, newStudy.getAndroidAppLinks().size());
-        AndroidAppLink androidAppLink = newStudy.getAndroidAppLinks().get(0);
+        assertEquals(1, newApp.getAndroidAppLinks().size());
+        AndroidAppLink androidAppLink = newApp.getAndroidAppLinks().get(0);
         assertEquals(Tests.PACKAGE, androidAppLink.getNamespace());
         assertEquals(Tests.MOBILE_APP_NAME, androidAppLink.getPackageName());
         assertEquals(1, androidAppLink.getSha256CertFingerprints().size());
         assertEquals(Tests.FINGERPRINT, androidAppLink.getSha256CertFingerprints().get(0));
         
-        assertEquals(1, newStudy.getAppleAppLinks().size());
-        AppleAppLink appleAppLink = newStudy.getAppleAppLinks().get(0);
+        assertEquals(1, newApp.getAppleAppLinks().size());
+        AppleAppLink appleAppLink = newApp.getAppleAppLinks().get(0);
         assertEquals(Tests.APP_ID, appleAppLink.getAppID());
         assertEquals(1, appleAppLink.getPaths().size());
-        String path = "/" + newStudy.getIdentifier() + "/*";
+        String path = "/" + newApp.getIdentifier() + "/*";
         assertEquals(path, appleAppLink.getPaths().get(0));
 
-        // assert disable study
-        assertTrue(newStudy.isDisableExport());
+        // assert disable app
+        assertTrue(newApp.isDisableExport());
 
-        Long oldVersion = newStudy.getVersion();
-        alterStudy(newStudy);
-        superadminApi.updateStudy(newStudy.getIdentifier(), newStudy).execute().body();
+        Long oldVersion = newApp.getVersion();
+        alterApp(newApp);
+        superadminApi.updateApp(newApp.getIdentifier(), newApp).execute().body();
 
-        Study newerStudy = superadminApi.getStudy(newStudy.getIdentifier()).execute().body();
-        assertTrue(newerStudy.getVersion() > oldVersion);
+        App newerApp = superadminApi.getApp(newApp.getIdentifier()).execute().body();
+        assertTrue(newerApp.getVersion() > oldVersion);
 
-        assertFalse(newerStudy.isAutoVerificationEmailSuppressed());
-        assertEquals("Altered Test Study [SDK]", newerStudy.getName());
-        assertFalse(newerStudy.isStrictUploadValidationEnabled());
-        assertEquals("test3@test.com", newerStudy.getSupportEmail());
-        assertEquals(UploadValidationStrictness.WARNING, newerStudy.getUploadValidationStrictness());
-        assertEquals("bridge-testing+test4@sagebase.org", newerStudy.getConsentNotificationEmail());
+        assertFalse(newerApp.isAutoVerificationEmailSuppressed());
+        assertEquals("Altered Test App [SDK]", newerApp.getName());
+        assertFalse(newerApp.isStrictUploadValidationEnabled());
+        assertEquals("test3@test.com", newerApp.getSupportEmail());
+        assertEquals(UploadValidationStrictness.WARNING, newerApp.getUploadValidationStrictness());
+        assertEquals("bridge-testing+test4@sagebase.org", newerApp.getConsentNotificationEmail());
 
-        assertEquals("endpoint2", newerStudy.getOAuthProviders().get("myProvider").getEndpoint());
-        assertEquals("callbackUrl2", newerStudy.getOAuthProviders().get("myProvider").getCallbackUrl());
+        assertEquals("endpoint2", newerApp.getOAuthProviders().get("myProvider").getEndpoint());
+        assertEquals("callbackUrl2", newerApp.getOAuthProviders().get("myProvider").getCallbackUrl());
         
-        assertTrue(newerStudy.getAppleAppLinks().isEmpty());
-        assertTrue(newerStudy.getAndroidAppLinks().isEmpty());
+        assertTrue(newerApp.getAppleAppLinks().isEmpty());
+        assertTrue(newerApp.getAndroidAppLinks().isEmpty());
         
         // Set stuff that only an admin can set.
-        newerStudy.setEmailSignInEnabled(false);
-        newerStudy.setStudyIdExcludedInExport(false);
+        newerApp.setEmailSignInEnabled(false);
+        newerApp.setAppIdExcludedInExport(false);
 
         // ConsentNotificationEmailVerified cannot be set by the update API.
-        newerStudy.setConsentNotificationEmailVerified(true);
+        newerApp.setConsentNotificationEmailVerified(true);
 
-        superadminApi.updateStudy(newerStudy.getIdentifier(), newerStudy).execute().body();
-        Study newestStudy = superadminApi.getStudy(newStudy.getIdentifier()).execute().body();
+        superadminApi.updateApp(newerApp.getIdentifier(), newerApp).execute().body();
+        App newestApp = superadminApi.getApp(newApp.getIdentifier()).execute().body();
 
-        assertFalse("emailSignInEnabled should be false after update", newestStudy.isEmailSignInEnabled());
-        assertFalse("studyIdExcludedInExport should be false after update", newestStudy.isStudyIdExcludedInExport());
-        assertFalse("consentNotificationEmailVerified should be false after update", newestStudy
+        assertFalse("emailSignInEnabled should be false after update", newestApp.isEmailSignInEnabled());
+        assertFalse("appIdExcludedInExport should be false after update", newestApp.isAppIdExcludedInExport());
+        assertFalse("consentNotificationEmailVerified should be false after update", newestApp
                 .isConsentNotificationEmailVerified());
         
-        // and then you have to switch back, because after you delete this test study, 
-        // all users signed into that study are locked out of working.
-        superadminApi.adminChangeStudy(new SignIn().appId("api")).execute();
+        // and then you have to switch back, because after you delete this test app, 
+        // all users signed into that app are locked out of working.
+        superadminApi.adminChangeApp(new SignIn().appId(TEST_APP_ID)).execute();
 
-        // logically delete a study by admin
-        superadminApi.deleteStudy(studyId, false).execute();
-        Study retStudy = superadminApi.getStudy(studyId).execute().body();
-        assertNotNull(retStudy);
+        // logically delete a app by admin
+        superadminApi.deleteApp(appId, false).execute();
+        App retApp = superadminApi.getApp(appId).execute().body();
+        assertNotNull(retApp);
 
-        superadminApi.deleteStudy(studyId, true).execute();
+        superadminApi.deleteApp(appId, true).execute();
         try {
-            superadminApi.getStudy(studyId).execute();
+            superadminApi.getApp(appId).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
             // expected exception
         }
-        studyId = null;
+        appId = null;
     }
 
     @Test
-    public void researcherCannotAccessAnotherStudy() throws Exception {
-        TestUser researcher = TestUserHelper.createAndSignInUser(StudyTest.class, false, RESEARCHER);
+    public void researcherCannotAccessAnotherApp() throws Exception {
+        TestUser researcher = TestUserHelper.createAndSignInUser(AppTest.class, false, RESEARCHER);
         try {
-            studyId = Tests.randomIdentifier(StudyTest.class);
-            Study study = Tests.getStudy(studyId, null);
+            appId = Tests.randomIdentifier(AppTest.class);
+            App app = Tests.getApp(appId, null);
 
             ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-            superadminApi.createStudy(study).execute();
+            superadminApi.createApp(app).execute();
 
             try {
                 // Researcher getting an admin client, an error should result
                 ForSuperadminsApi resStudiesApi = researcher.getClient(ForSuperadminsApi.class);
-                resStudiesApi.getStudy(studyId).execute();
-                fail("Should not have been able to get this other study");
+                resStudiesApi.getApp(appId).execute();
+                fail("Should not have been able to get this other app");
             } catch(UnauthorizedException e) {
                 assertEquals("Unauthorized HTTP response code", 403, e.getStatusCode());
             }
@@ -383,11 +382,11 @@ public class StudyTest {
     }
 
     @Test(expected = UnauthorizedException.class)
-    public void butNormalUserCannotAccessStudy() throws Exception {
-        TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, false);
+    public void butNormalUserCannotAccessApp() throws Exception {
+        TestUser user = TestUserHelper.createAndSignInUser(AppTest.class, false);
         try {
-            StudiesApi studiesApi = user.getClient(StudiesApi.class);
-            studiesApi.getUsersStudy().execute();
+            AppsApi appsApi = user.getClient(AppsApi.class);
+            appsApi.getUsersApp().execute();
         } finally {
             user.signOutAndDeleteUser();
         }
@@ -395,31 +394,31 @@ public class StudyTest {
 
     @Test
     public void developerCannotChangeAdminOnlySettings() throws Exception {
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(AppTest.class, false, DEVELOPER);
         try {
-            StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+            AppsApi appsApi = developer.getClient(AppsApi.class);
 
-            Study study = studiesApi.getUsersStudy().execute().body();
-            boolean originalHealthCodeExportEnabled = study.isHealthCodeExportEnabled();
-            boolean originalEmailVerificationEnabled = study.isEmailVerificationEnabled();
-            boolean originalStudyIdExcludedInExport = study.isStudyIdExcludedInExport();
-            boolean originalReauthenticationEnabled = study.isReauthenticationEnabled();
+            App app = appsApi.getUsersApp().execute().body();
+            boolean originalHealthCodeExportEnabled = app.isHealthCodeExportEnabled();
+            boolean originalEmailVerificationEnabled = app.isEmailVerificationEnabled();
+            boolean originalAppIdExcludedInExport = app.isAppIdExcludedInExport();
+            boolean originalReauthenticationEnabled = app.isReauthenticationEnabled();
 
-            study.setHealthCodeExportEnabled(!originalHealthCodeExportEnabled);
-            study.setEmailVerificationEnabled(!originalEmailVerificationEnabled);
-            study.setStudyIdExcludedInExport(!originalStudyIdExcludedInExport);
-            study.setReauthenticationEnabled(!originalReauthenticationEnabled);
-            studiesApi.updateUsersStudy(study).execute();
+            app.setHealthCodeExportEnabled(!originalHealthCodeExportEnabled);
+            app.setEmailVerificationEnabled(!originalEmailVerificationEnabled);
+            app.setAppIdExcludedInExport(!originalAppIdExcludedInExport);
+            app.setReauthenticationEnabled(!originalReauthenticationEnabled);
+            appsApi.updateUsersApp(app).execute();
 
-            study = studiesApi.getUsersStudy().execute().body();
+            app = appsApi.getUsersApp().execute().body();
             assertEquals("healthCodeExportEnabled should be unchanged", originalHealthCodeExportEnabled,
-                    study.isHealthCodeExportEnabled());
+                    app.isHealthCodeExportEnabled());
             assertEquals("emailVersificationEnabled should be unchanged", originalEmailVerificationEnabled,
-                    study.isEmailVerificationEnabled());
-            assertEquals("studyIdExcludedInExport should be unchanged", originalStudyIdExcludedInExport,
-                    study.isStudyIdExcludedInExport());
+                    app.isEmailVerificationEnabled());
+            assertEquals("appIdExcludedInExport should be unchanged", originalAppIdExcludedInExport,
+                    app.isAppIdExcludedInExport());
             assertEquals("reauthenticationEnabled should be unchanged", originalReauthenticationEnabled,
-                    study.isReauthenticationEnabled());
+                    app.isReauthenticationEnabled());
         } finally {
             developer.signOutAndDeleteUser();
         }
@@ -428,10 +427,10 @@ public class StudyTest {
     @Test
     public void resendVerifyConsentNotificationEmail() throws Exception {
         // We currently can't check an email address as part of a test. Just verify that the call succeeds.
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(AppTest.class, false, DEVELOPER);
         try {
-            StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-            Response<Message> response = studiesApi.resendVerifyEmail("consent_notification").execute();
+            AppsApi appsApi = developer.getClient(AppsApi.class);
+            Response<Message> response = appsApi.resendVerifyEmail("consent_notification").execute();
             assertEquals(200, response.code());
         } finally {
             developer.signOutAndDeleteUser();
@@ -442,9 +441,9 @@ public class StudyTest {
     public void verifyConsentNotificationEmail() throws Exception {
         // We can't currently check an email address to get a real verification token. This test is mainly to make sure
         // that our Java SDK is set up correctly.
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        AppsApi appsApi = admin.getClient(AppsApi.class);
         try {
-            studiesApi.verifyEmailForStudy(IntegTestUtils.STUDY_ID, "dummy-token", "consent_notification").execute();
+            appsApi.verifyEmailForApp(TEST_APP_ID, "dummy-token", "consent_notification").execute();
             fail("expected exception");
         } catch (BadRequestException ex) {
             assertTrue(ex.getMessage().contains("Email verification token has expired (or already been used)."));
@@ -462,17 +461,17 @@ public class StudyTest {
         UploadFieldDefinition modifiedField = new UploadFieldDefinition().name(fieldName).type(
                 UploadFieldType.INT);
 
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, DEVELOPER);
+        TestUser developer = TestUserHelper.createAndSignInUser(AppTest.class, false, DEVELOPER);
         try {
-            StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-            Study study = studiesApi.getUsersStudy().execute().body();
+            AppsApi appsApi = developer.getClient(AppsApi.class);
+            App app = appsApi.getUsersApp().execute().body();
 
-            // Append the field to the study's metadata.
-            appendToStudy(study, originalField);
-            studiesApi.updateUsersStudy(study).execute();
+            // Append the field to the app's metadata.
+            appendToApp(app, originalField);
+            appsApi.updateUsersApp(app).execute();
 
-            study = studiesApi.getUsersStudy().execute().body();
-            UploadFieldDefinition returnedFieldDef = getFieldDefByName(fieldName, study);
+            app = appsApi.getUsersApp().execute().body();
+            UploadFieldDefinition returnedFieldDef = getFieldDefByName(fieldName, app);
             assertEqualFieldDefs(originalField, returnedFieldDef);
 
             // One large text exceeds the metadata byte limit.
@@ -480,15 +479,15 @@ public class StudyTest {
             UploadFieldDefinition largeTextField = new UploadFieldDefinition().name(largeFieldName).type(
                     UploadFieldType.LARGE_TEXT_ATTACHMENT);
             try {
-                appendToStudy(study, largeTextField);
-                studiesApi.updateUsersStudy(study).execute();
+                appendToApp(app, largeTextField);
+                appsApi.updateUsersApp(app).execute();
                 fail("expected exception");
             } catch (InvalidEntityException ex) {
                 assertTrue(ex.getMessage().contains("cannot be greater than 2500 bytes combined"));
             }
-            study = studiesApi.getUsersStudy().execute().body();
-            assertNotNull(study);
-            returnedFieldDef = getFieldDefByName(largeFieldName, study);
+            app = appsApi.getUsersApp().execute().body();
+            assertNotNull(app);
+            returnedFieldDef = getFieldDefByName(largeFieldName, app);
             assertNull(returnedFieldDef);
 
             // One multi-choice field with 21 answers exceeds the column limit.
@@ -500,80 +499,80 @@ public class StudyTest {
             UploadFieldDefinition multiChoiceField = new UploadFieldDefinition().name(multiChoiceFieldName)
                     .type(UploadFieldType.MULTI_CHOICE).multiChoiceAnswerList(answerList);
             try {
-                appendToStudy(study, multiChoiceField);
-                studiesApi.updateUsersStudy(study).execute();
+                appendToApp(app, multiChoiceField);
+                appsApi.updateUsersApp(app).execute();
                 fail("expected exception");
             } catch (InvalidEntityException ex) {
                 assertTrue(ex.getMessage().contains("cannot be greater than 20 columns combined"));
             }
-            study = studiesApi.getUsersStudy().execute().body();
-            assertNotNull(study);
-            returnedFieldDef = getFieldDefByName(multiChoiceFieldName, study);
+            app = appsApi.getUsersApp().execute().body();
+            assertNotNull(app);
+            returnedFieldDef = getFieldDefByName(multiChoiceFieldName, app);
             assertNull(returnedFieldDef);
 
             // Non-admin can't modify the field.
             try {
-                removeFieldDefByName(fieldName, study);
-                appendToStudy(study, modifiedField);
-                studiesApi.updateUsersStudy(study).execute();
+                removeFieldDefByName(fieldName, app);
+                appendToApp(app, modifiedField);
+                appsApi.updateUsersApp(app).execute();
                 fail("expected exception");
             } catch (UnauthorizedException ex) {
                 // Verify that the error message tells us about the field we can't modify.
                 assertTrue(ex.getMessage().contains(fieldName));
             }
-            study = studiesApi.getUsersStudy().execute().body();
-            returnedFieldDef = getFieldDefByName(fieldName, study);
+            app = appsApi.getUsersApp().execute().body();
+            returnedFieldDef = getFieldDefByName(fieldName, app);
             assertEqualFieldDefs(originalField, returnedFieldDef);
 
             // Non-admin can't remove the field.
             try {
-                removeFieldDefByName(fieldName, study);
-                studiesApi.updateUsersStudy(study).execute();
+                removeFieldDefByName(fieldName, app);
+                appsApi.updateUsersApp(app).execute();
                 fail("expected exception");
             } catch (UnauthorizedException ex) {
                 // Verify that the error message tells us about the field we can't modify.
                 assertTrue(ex.getMessage().contains(fieldName));
             }
-            study = studiesApi.getUsersStudy().execute().body();
-            returnedFieldDef = getFieldDefByName(fieldName, study);
+            app = appsApi.getUsersApp().execute().body();
+            returnedFieldDef = getFieldDefByName(fieldName, app);
             assertEqualFieldDefs(originalField, returnedFieldDef);
 
             // Admin can modify field.
-            removeFieldDefByName(fieldName, study);
-            appendToStudy(study, modifiedField);
-            superadminApi.updateStudy(STUDY_ID, study).execute();
+            removeFieldDefByName(fieldName, app);
+            appendToApp(app, modifiedField);
+            superadminApi.updateApp(TEST_APP_ID, app).execute();
 
-            study = studiesApi.getUsersStudy().execute().body();
-            returnedFieldDef = getFieldDefByName(fieldName, study);
+            app = appsApi.getUsersApp().execute().body();
+            returnedFieldDef = getFieldDefByName(fieldName, app);
             assertEqualFieldDefs(modifiedField, returnedFieldDef);
 
             // Admin can delete field.
-            removeFieldDefByName(fieldName, study);
-            superadminApi.updateStudy(STUDY_ID, study).execute();
+            removeFieldDefByName(fieldName, app);
+            superadminApi.updateApp(TEST_APP_ID, app).execute();
 
-            study = studiesApi.getUsersStudy().execute().body();
-            returnedFieldDef = getFieldDefByName(fieldName, study);
+            app = appsApi.getUsersApp().execute().body();
+            returnedFieldDef = getFieldDefByName(fieldName, app);
             assertNull(returnedFieldDef);
         } finally {
             developer.signOutAndDeleteUser();
         }
     }
 
-    // Helper method to append a field def to a study. Encapsulates null checks and creating the initial list.
-    private static void appendToStudy(Study study, UploadFieldDefinition fieldDef) {
-        if (study.getUploadMetadataFieldDefinitions() == null) {
-            study.setUploadMetadataFieldDefinitions(new ArrayList<>());
+    // Helper method to append a field def to a app. Encapsulates null checks and creating the initial list.
+    private static void appendToApp(App app, UploadFieldDefinition fieldDef) {
+        if (app.getUploadMetadataFieldDefinitions() == null) {
+            app.setUploadMetadataFieldDefinitions(new ArrayList<>());
         }
-        study.addUploadMetadataFieldDefinitionsItem(fieldDef);
+        app.addUploadMetadataFieldDefinitionsItem(fieldDef);
     }
 
-    // Helper method to get a field def from a study by name. Returns null if not present.
-    private static UploadFieldDefinition getFieldDefByName(String fieldName, Study study) {
-        if (study.getUploadMetadataFieldDefinitions() == null) {
+    // Helper method to get a field def from a app by name. Returns null if not present.
+    private static UploadFieldDefinition getFieldDefByName(String fieldName, App app) {
+        if (app.getUploadMetadataFieldDefinitions() == null) {
             return null;
         }
 
-        for (UploadFieldDefinition oneFieldDef : study.getUploadMetadataFieldDefinitions()) {
+        for (UploadFieldDefinition oneFieldDef : app.getUploadMetadataFieldDefinitions()) {
             if (oneFieldDef.getName().equals(fieldName)) {
                 return oneFieldDef;
             }
@@ -588,9 +587,9 @@ public class StudyTest {
         assertEquals(expected.getType(), actual.getType());
     }
 
-    // Helper method to remove a field def from a study by name.
-    private static void removeFieldDefByName(String fieldName, Study study) {
-        Iterator<UploadFieldDefinition> fieldDefIter = study.getUploadMetadataFieldDefinitions().iterator();
+    // Helper method to remove a field def from a app by name.
+    private static void removeFieldDefByName(String fieldName, App app) {
+        Iterator<UploadFieldDefinition> fieldDefIter = app.getUploadMetadataFieldDefinitions().iterator();
         while (fieldDefIter.hasNext()) {
             UploadFieldDefinition oneFieldDef = fieldDefIter.next();
             if (oneFieldDef.getName().equals(fieldName)) {
@@ -602,22 +601,22 @@ public class StudyTest {
 
     @Test
     public void adminCanGetAllStudies() throws Exception {
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        AppsApi appsApi = admin.getClient(AppsApi.class);
 
-        StudyList studies = studiesApi.getStudies(null).execute().body();
-        assertTrue("Should be more than zero studies", studies.getItems().size() > 0);
+        AppList apps = appsApi.getApps(null).execute().body();
+        assertTrue("Should be more than zero studies", apps.getItems().size() > 0);
     }
 
     @Test
     public void userCannotAccessApisWithDeprecatedClient() throws Exception {
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
         // Set a minimum value that should not any other tests
-        if (study.getMinSupportedAppVersions().get("Android") == null) {
-            study.getMinSupportedAppVersions().put("Android", 1);
-            superadminApi.updateStudy(STUDY_ID, study).execute();
+        if (app.getMinSupportedAppVersions().get("Android") == null) {
+            app.getMinSupportedAppVersions().put("Android", 1);
+            superadminApi.updateApp(TEST_APP_ID, app).execute();
         }
-        TestUser user = TestUserHelper.createAndSignInUser(StudyTest.class, true);
+        TestUser user = TestUserHelper.createAndSignInUser(AppTest.class, true);
         try {
 
             // This is a version zero client, it should not be accepted
@@ -646,8 +645,8 @@ public class StudyTest {
     }
 
     @Test
-    public void getStudyUploads() throws Exception {
-        TestUser developer = TestUserHelper.createAndSignInUser(StudyTest.class, false, DEVELOPER);
+    public void getAppUploads() throws Exception {
+        TestUser developer = TestUserHelper.createAndSignInUser(AppTest.class, false, DEVELOPER);
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         TestUser user2 = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         try {
@@ -672,9 +671,9 @@ public class StudyTest {
             Thread.sleep(1000); // This does depend on a GSI, so pause for a bit.
 
             // This should retrieve both of the user's uploads.
-            // NOTE: This assumes that there aren't more than a few dozen uploads in the API study in the last few
+            // NOTE: This assumes that there aren't more than a few dozen uploads in the API app in the last few
             // hours.
-            StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+            AppsApi studiesApi = admin.getClient(AppsApi.class);
 
             UploadList results = studiesApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body();
           
@@ -733,20 +732,20 @@ public class StudyTest {
         return null;
     }
 
-    private void alterStudy(Study study) {
-        study.setAutoVerificationEmailSuppressed(false);
-        study.setName("Altered Test Study [SDK]");
-        study.setStrictUploadValidationEnabled(false);
-        study.setSupportEmail("test3@test.com");
-        study.setUploadValidationStrictness(UploadValidationStrictness.WARNING);
-        study.setConsentNotificationEmail("bridge-testing+test4@sagebase.org");
+    private void alterApp(App app) {
+        app.setAutoVerificationEmailSuppressed(false);
+        app.setName("Altered Test App [SDK]");
+        app.setStrictUploadValidationEnabled(false);
+        app.setSupportEmail("test3@test.com");
+        app.setUploadValidationStrictness(UploadValidationStrictness.WARNING);
+        app.setConsentNotificationEmail("bridge-testing+test4@sagebase.org");
         
-        OAuthProvider provider = study.getOAuthProviders().get("myProvider");
+        OAuthProvider provider = app.getOAuthProviders().get("myProvider");
         provider.endpoint("endpoint2");
         provider.callbackUrl("callbackUrl2");
 
-        study.setAppleAppLinks(null);
-        study.setAndroidAppLinks(null);
+        app.setAppleAppLinks(null);
+        app.setAndroidAppLinks(null);
     }
 
 }

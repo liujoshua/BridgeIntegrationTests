@@ -179,7 +179,7 @@ public class ScheduledActivityAutoResolutionTest {
             List<ScheduledActivity> scheduledActivityList = user.getClient(ActivitiesApi.class).getScheduledActivities(
                     "+0:00", 2, null).execute().body().getItems();
 
-            // Study may have other schedules. Find the scheduled activity for our test using the label.
+            // App may have other schedules. Find the scheduled activity for our test using the label.
             ScheduledActivity gettedScheduledActivity = findScheduledActivityByLabel(activityLabel,
                     scheduledActivityList);
             SchemaReference gettedSchemaRef = gettedScheduledActivity.getActivity().getTask().getSchema();

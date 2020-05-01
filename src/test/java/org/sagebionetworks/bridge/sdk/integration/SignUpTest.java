@@ -7,10 +7,10 @@ import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -59,7 +59,7 @@ public class SignUpTest {
     }
     
     @Test(expected = EntityNotFoundException.class)
-    public void badStudyReturns404() throws IOException {
+    public void badAppIdReturns404() throws IOException {
         TestUser testUser = TestUserHelper.createAndSignInUser(SignUpTest.class, true);
         try {
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
@@ -85,17 +85,17 @@ public class SignUpTest {
     }
     
     @Test
-    public void signUpForStudyWithExternalIdValidation() throws Exception {
-        Study study = Tests.getStudy(Tests.randomIdentifier(SignUpTest.class), null);
-        study.setExternalIdRequiredOnSignup(true);
+    public void signUpForAppWithExternalIdValidation() throws Exception {
+        App app = Tests.getApp(Tests.randomIdentifier(SignUpTest.class), null);
+        app.setExternalIdRequiredOnSignup(true);
         
         TestUser admin = TestUserHelper.getSignedInAdmin();
         
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-        superadminApi.createStudy(study).execute();
+        superadminApi.createApp(app).execute();
 
         SignUp signUp = new SignUp()
-                .appId(study.getIdentifier())
+                .appId(app.getIdentifier())
                 .email(IntegTestUtils.makeEmail(SignUpTest.class))
                 .password("P@ssword`1");
         AuthenticationApi authApi = admin.getClient(AuthenticationApi.class);
@@ -107,7 +107,7 @@ public class SignUpTest {
                 assertEquals("StudyParticipant is invalid: externalId is required", e.getMessage());
             }
             try {
-                // Wrong ID. We can't add an ID to this study, as we can't add a user.
+                // Wrong ID. We can't add an ID to this app, as we can't add a user.
                 signUp.setExternalId("ABC");
                 authApi.signUp(signUp).execute();
                 fail("Should have thrown exception");
@@ -115,7 +115,7 @@ public class SignUpTest {
                 assertEquals("externalId is not a valid external ID", e.getErrors().get("externalId").get(0));
             }
         } finally {
-            superadminApi.deleteStudy(study.getIdentifier(), true).execute();
+            superadminApi.deleteApp(app.getIdentifier(), true).execute();
         }
     }
 }

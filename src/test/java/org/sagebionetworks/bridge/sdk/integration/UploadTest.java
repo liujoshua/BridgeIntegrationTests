@@ -6,7 +6,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
 
 import java.io.File;
 import java.util.List;
@@ -92,7 +92,7 @@ public class UploadTest {
         // developer is to ensure schemas exist. user is to do uploads
         worker = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.WORKER);
         developer = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.DEVELOPER);
-        otherStudyAdmin = TestUserHelper.createAndSignInUser(UploadTest.class, SHARED_STUDY_ID, Role.ADMIN);
+        otherStudyAdmin = TestUserHelper.createAndSignInUser(UploadTest.class, SHARED_APP_ID, Role.ADMIN);
         researcher = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.RESEARCHER);
         studyAdmin = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.ADMIN);
 

@@ -11,7 +11,7 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -301,7 +301,7 @@ public class AssessmentTest {
         Assessment shared = sharedApi.getLatestSharedAssessmentRevision(id).execute().body();
         
         assertEquals(shared.getGuid(), firstRevision.getOriginGuid());
-        assertEquals(STUDY_ID+":"+SUBSTUDY_ID_1, shared.getOwnerId());
+        assertEquals(TEST_APP_ID+":"+SUBSTUDY_ID_1, shared.getOwnerId());
         
         assertNotEquals(firstRevision.getGuid(), shared.getGuid());
         assertEquals(firstRevision.getIdentifier(), shared.getIdentifier());
@@ -342,7 +342,7 @@ public class AssessmentTest {
         ForSuperadminsApi superAdminApi = admin.getClient(ForSuperadminsApi.class);
         SharedAssessmentsApi adminSharedApi = admin.getClient(SharedAssessmentsApi.class);
 
-        // Import a shared assessment back into the study
+        // Import a shared assessment back into the app
         Assessment newAssessment = sharedApi.importSharedAssessment(shared.getGuid(), 
                 SUBSTUDY_ID_1, null).execute().body();        
         assertEquals(shared.getGuid(), newAssessment.getOriginGuid());
@@ -368,7 +368,7 @@ public class AssessmentTest {
             adminAssessmentsApi.deleteAssessment(revision.getGuid(), true).execute();
         }
         try {
-            superAdminApi.adminChangeStudy(SHARED_SIGNIN).execute();
+            superAdminApi.adminChangeApp(SHARED_SIGNIN).execute();
             // test logical delete of shared assessments
             adminSharedApi.deleteSharedAssessment(shared.getGuid(), false).execute().body();
             
@@ -382,7 +382,7 @@ public class AssessmentTest {
             
             adminSharedApi.deleteSharedAssessment(shared.getGuid(), true).execute().body();
         } finally {
-            superAdminApi.adminChangeStudy(API_SIGNIN).execute();
+            superAdminApi.adminChangeApp(API_SIGNIN).execute();
         }
         // Should all be gone...
         list = sharedApi.getSharedAssessments(null, null, ImmutableList.of(markerTag), true).execute().body();

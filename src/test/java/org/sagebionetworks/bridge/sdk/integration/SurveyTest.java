@@ -58,7 +58,8 @@ import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_ID
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_QUESTION_EARLIEST_VALUE;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEARMONTH_QUESTION_LATEST_VALUE;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.YEAR_ID;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 import static org.sagebionetworks.bridge.sdk.integration.TestSurvey.POSTALCODE_ID;
 
 import java.io.IOException;
@@ -95,6 +96,7 @@ import org.sagebionetworks.bridge.rest.exceptions.PublishedSurveyException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ActivityType;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.BloodPressureConstraints;
 import org.sagebionetworks.bridge.rest.model.BooleanConstraints;
 import org.sagebionetworks.bridge.rest.model.DataType;
@@ -117,7 +119,6 @@ import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.SharedModuleMetadata;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyElement;
 import org.sagebionetworks.bridge.rest.model.SurveyInfoScreen;
@@ -134,7 +135,6 @@ import org.sagebionetworks.bridge.rest.model.YearConstraints;
 import org.sagebionetworks.bridge.rest.model.YearMonthConstraints;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,7 +168,7 @@ public class SurveyTest {
         user = TestUserHelper.createAndSignInUser(SurveyTest.class, true);
         worker = TestUserHelper.createAndSignInUser(SurveyTest.class, false, Role.WORKER);
 
-        sharedDeveloper = TestUserHelper.createAndSignInUser(SurveyTest.class, SHARED_STUDY_ID, DEVELOPER);        
+        sharedDeveloper = TestUserHelper.createAndSignInUser(SurveyTest.class, SHARED_APP_ID, DEVELOPER);        
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
         sharedSurveysApi = sharedDeveloper.getClient(SurveysApi.class);
     }
@@ -415,7 +415,7 @@ public class SurveyTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            superadminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            superadminsApi.adminChangeApp(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
@@ -424,7 +424,7 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
-            superadminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminsApi.adminChangeApp(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -447,7 +447,7 @@ public class SurveyTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            superadminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            superadminsApi.adminChangeApp(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(), retSurvey.getCreatedOn(), true).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
@@ -456,7 +456,7 @@ public class SurveyTest {
             // finally delete shared module and uploaded schema
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(), retSurvey.getCreatedOn(), true).execute();
-            superadminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminsApi.adminChangeApp(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -483,10 +483,10 @@ public class SurveyTest {
             thrownEx = e;
         } finally {
             // finally delete shared module and uploaded schema
-            superadminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            superadminsApi.adminChangeApp(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(retSurvey.getGuid(), retSurvey.getCreatedOn(), true).execute();
-            superadminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminsApi.adminChangeApp(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -513,10 +513,10 @@ public class SurveyTest {
             thrownEx = e;
         } finally {
             // finally delete shared module and uploaded schema
-            superadminsApi.adminChangeStudy(Tests.SHARED_SIGNIN).execute();
+            superadminsApi.adminChangeApp(Tests.SHARED_SIGNIN).execute();
             adminsApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
             adminsApi.deleteSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(), retSurvey.getCreatedOn(), true).execute();
-            superadminsApi.adminChangeStudy(Tests.API_SIGNIN).execute();
+            superadminsApi.adminChangeApp(Tests.API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -976,7 +976,7 @@ public class SurveyTest {
         
         Survey survey = new Survey();
         survey.setIdentifier(surveyId);
-        survey.setName("Test study");
+        survey.setName("Test survey");
         
         SurveyInfoScreen screen = new SurveyInfoScreen();
         screen.setIdentifier("foo");
@@ -1034,7 +1034,7 @@ public class SurveyTest {
         
         Survey survey = new Survey();
         survey.setIdentifier(surveyId);
-        survey.setName("Test study");
+        survey.setName("Test survey");
         
         SurveyInfoScreen screen = new SurveyInfoScreen();
         screen.setIdentifier("foo");
@@ -1094,7 +1094,7 @@ public class SurveyTest {
     public void workerCanGetSurveys() throws Exception {
         // One of the key functionalities of worker accounts is that they can get surveys across studies.
         // Unfortunately, integration tests are set up so it's difficult to test across studies. As such, we do all our
-        // testing in the API study to test basic functionality.
+        // testing in the API app to test basic functionality.
 
         // Create two surveys with two published versions.
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
@@ -1129,7 +1129,7 @@ public class SurveyTest {
         assertKeysEqual(survey1aKeys, survey1aAgain);
 
         // We only expect the most recently published versions, namely 1b and 2b.
-        SurveyList surveyResourceList = workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID, false).execute().body();
+        SurveyList surveyResourceList = workerApi.getAllPublishedSurveys(TEST_APP_ID, false).execute().body();
         containsAll(surveyResourceList.getItems(), new MutableHolder(survey1b), new MutableHolder(survey2b));
         
         // Delete 2b.
@@ -1139,8 +1139,8 @@ public class SurveyTest {
         Thread.sleep(2000);
 
         // Verify includeDeleted works
-        noneDeleted(workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID, false));
-        anyDeleted(workerApi.getAllPublishedSurveys(IntegTestUtils.STUDY_ID, true));
+        noneDeleted(workerApi.getAllPublishedSurveys(TEST_APP_ID, false));
+        anyDeleted(workerApi.getAllPublishedSurveys(TEST_APP_ID, true));
     }
     
     @Test
@@ -1149,7 +1149,7 @@ public class SurveyTest {
         
         Survey survey = new Survey();
         survey.setIdentifier(surveyId);
-        survey.setName("Test study");
+        survey.setName("Test survey");
 
         SurveyRule rule = new SurveyRule();
         rule.setOperator(Operator.EQ);
@@ -1267,8 +1267,8 @@ public class SurveyTest {
     
     @Test
     public void canCreateAndSaveVariousKindsOfBeforeRules() throws Exception {
-        Study study = adminsApi.getUsersStudy().execute().body();
-        String dataGroup = study.getDataGroups().get(0);
+        App app = adminsApi.getUsersApp().execute().body();
+        String dataGroup = app.getDataGroups().get(0);
 
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
         SurveyElement element = survey.getElements().get(0);
@@ -1315,8 +1315,8 @@ public class SurveyTest {
     
     @Test
     public void canCreateAndSaveVariousKindsOfAfterRules() throws Exception {
-        Study study = adminsApi.getUsersStudy().execute().body();
-        String dataGroup = study.getDataGroups().get(0);
+        App app = adminsApi.getUsersApp().execute().body();
+        String dataGroup = app.getDataGroups().get(0);
 
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
         SurveyElement element = survey.getElements().get(0);
@@ -1357,8 +1357,8 @@ public class SurveyTest {
     
     @Test
     public void displayActionsInAfterRulesValidated() throws Exception {
-        Study study = adminsApi.getUsersStudy().execute().body();
-        String dataGroup = study.getDataGroups().get(0);
+        App app = adminsApi.getUsersApp().execute().body();
+        String dataGroup = app.getDataGroups().get(0);
 
         Survey survey = TestSurvey.getSurvey(SurveyTest.class);
         SurveyElement element = survey.getElements().get(0);

@@ -5,7 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,6 +22,7 @@ import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
 import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
@@ -29,12 +30,10 @@ import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.Lists;
 
@@ -71,8 +70,8 @@ public class ExternalIdsV4Test {
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
         String userId = null;
         try {
-            Study study = superadminClient.getStudy(STUDY_ID).execute().body();
-            superadminClient.updateStudy(study.getIdentifier(), study).execute();
+            App app = superadminClient.getApp(TEST_APP_ID).execute().body();
+            superadminClient.updateApp(app.getIdentifier(), app).execute();
 
             // Create some substudies
             Substudy substudyA = new Substudy().id(idA).name("Substudy " + idA);
@@ -116,7 +115,7 @@ public class ExternalIdsV4Test {
             // Sign up a user with an external ID specified. Just one of them: we don't have plans to
             // allow the assignment of multiple external IDs on sign up. Adding new substudies is probably
             // going to happen by signing additional consents, but that's TBD.
-            SignUp signUp = new SignUp().appId(IntegTestUtils.STUDY_ID);
+            SignUp signUp = new SignUp().appId(TEST_APP_ID);
             signUp.setPassword(Tests.PASSWORD);
             signUp.setExternalId(extIdA);
             researcher.getClient(AuthenticationApi.class).signUp(signUp).execute();
@@ -147,7 +146,7 @@ public class ExternalIdsV4Test {
             }
 
             // In this test only, all=2 so assigned and unassigned are both 1, but there can be external IDs
-            // in the test study left over from test failures, manual testing, etc.
+            // in the test app left over from test failures, manual testing, etc.
             ExternalIdentifierList unassigned = researcherApi.getExternalIds(null, 50, prefix, false).execute().body();
             assertEquals(all.getItems().size()-1, unassigned.getItems().size());
             for (ExternalIdentifier id : unassigned.getItems()) {
@@ -158,7 +157,7 @@ public class ExternalIdsV4Test {
             // be usable to retrieve the account (demonstrating that this is not simply because in the interim 
             // while migrating, we're writing the external ID to the singular externalId field).
             
-            SignIn signIn = new SignIn().appId(IntegTestUtils.STUDY_ID);
+            SignIn signIn = new SignIn().appId(TEST_APP_ID);
             signIn.setExternalId(extIdA);
             signIn.setPassword(Tests.PASSWORD);
             
@@ -172,8 +171,8 @@ public class ExternalIdsV4Test {
             assertEquals(userId, found1.getId());
             assertEquals(userId, found2.getId());
         } finally {
-            Study study = superadminClient.getStudy(STUDY_ID).execute().body();
-            superadminClient.updateStudy(study.getIdentifier(), study).execute();
+            App app = superadminClient.getApp(TEST_APP_ID).execute().body();
+            superadminClient.updateApp(app.getIdentifier(), app).execute();
             
             ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
             if (userId != null) {
@@ -253,8 +252,8 @@ public class ExternalIdsV4Test {
                 assertEquals(ids.get(i).getIdentifier(), list.getItems().get(i).getIdentifier());
             }
             
-            // Create a researcher in study B, and run this stuff again, it should be filtered
-            SignUp signUp = new SignUp().appId(IntegTestUtils.STUDY_ID);
+            // Create a researcher in app B, and run this stuff again, it should be filtered
+            SignUp signUp = new SignUp().appId(TEST_APP_ID);
             signUp.setExternalId(ids.get(0).getIdentifier());
             user = new TestUserHelper.Builder(ExternalIdsV4Test.class)
                     .withRoles(Role.RESEARCHER, Role.DEVELOPER)

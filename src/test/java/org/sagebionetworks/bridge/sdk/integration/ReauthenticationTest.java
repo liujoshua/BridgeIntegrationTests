@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -19,8 +19,8 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.SignIn;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -61,9 +61,9 @@ public class ReauthenticationTest {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
         
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
-        study.setReauthenticationEnabled(true);
-        superadminApi.updateStudy(STUDY_ID, study).execute();
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
+        app.setReauthenticationEnabled(true);
+        superadminApi.updateApp(TEST_APP_ID, app).execute();
     }
     
     @AfterClass
@@ -71,9 +71,9 @@ public class ReauthenticationTest {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
         
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
-        study.setReauthenticationEnabled(false);
-        superadminApi.updateStudy(STUDY_ID, study).execute();
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
+        app.setReauthenticationEnabled(false);
+        superadminApi.updateApp(TEST_APP_ID, app).execute();
     }
     
     @Test
@@ -107,7 +107,7 @@ public class ReauthenticationTest {
         // You can re-authenticate.
         String oldSessionToken = session.getSessionToken();
         String reauthToken = session.getReauthToken();
-        SignIn signIn = new SignIn().appId(user.getStudyId())
+        SignIn signIn = new SignIn().appId(user.getAppId())
                 .email(user.getSession().getEmail()).reauthToken(reauthToken);
         
         Set<String> sessionTokens = new HashSet<>();
@@ -151,7 +151,7 @@ public class ReauthenticationTest {
         user.signOut();
         
         try {
-            signIn = new SignIn().appId(user.getStudyId()).email(email).reauthToken(thirdSession.getReauthToken());
+            signIn = new SignIn().appId(user.getAppId()).email(email).reauthToken(thirdSession.getReauthToken());
             authApi.reauthenticate(signIn).execute().body();
             fail("Should have thrown exception.");
         } catch(EntityNotFoundException e) {
@@ -193,7 +193,7 @@ public class ReauthenticationTest {
             // Pause for 16 seconds... becuase we're caching this value
             Thread.sleep(16000);
             
-            SignIn signIn = new SignIn().appId(testUser.getStudyId()).email(testUser.getEmail()).reauthToken(reauthToken);
+            SignIn signIn = new SignIn().appId(testUser.getAppId()).email(testUser.getEmail()).reauthToken(reauthToken);
             AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
             UserSessionInfo newSession = authApi.reauthenticate(signIn).execute().body();
             assertNotEquals(reauthToken, newSession.getReauthToken());

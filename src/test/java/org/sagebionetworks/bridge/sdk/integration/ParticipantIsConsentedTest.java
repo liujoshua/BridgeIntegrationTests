@@ -3,7 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -47,10 +47,10 @@ public class ParticipantIsConsentedTest {
         // Set up subpops:
         // 1. Default subpop prohibits data group sdk-int-2 and is required.
         // 2. Subpop2 any of data group sdk-int-2 and is optional.
-        Subpopulation defaultSubpop = subpopApi.getSubpopulation(IntegTestUtils.STUDY_ID).execute().body();
+        Subpopulation defaultSubpop = subpopApi.getSubpopulation(TEST_APP_ID).execute().body();
         Criteria defaultSubpopCriteria = new Criteria().addNoneOfGroupsItem(DATA_GROUP);
         defaultSubpop.setCriteria(defaultSubpopCriteria);
-        subpopApi.updateSubpopulation(IntegTestUtils.STUDY_ID, defaultSubpop).execute();
+        subpopApi.updateSubpopulation(TEST_APP_ID, defaultSubpop).execute();
 
         Criteria criteria2 = new Criteria().addAllOfGroupsItem(DATA_GROUP);
         Subpopulation subpop2 = new Subpopulation().name("subpop2").criteria(criteria2);
@@ -60,9 +60,9 @@ public class ParticipantIsConsentedTest {
     @AfterClass
     public static void teardown() throws Exception {
         // Reset default criteria.
-        Subpopulation defaultSubpop = subpopApi.getSubpopulation(IntegTestUtils.STUDY_ID).execute().body();
+        Subpopulation defaultSubpop = subpopApi.getSubpopulation(TEST_APP_ID).execute().body();
         defaultSubpop.setCriteria(null);
-        subpopApi.updateSubpopulation(IntegTestUtils.STUDY_ID, defaultSubpop).execute();
+        subpopApi.updateSubpopulation(TEST_APP_ID, defaultSubpop).execute();
 
         // Delete subpop2.
         if (subpopGuid2 != null) {
@@ -111,7 +111,7 @@ public class ParticipantIsConsentedTest {
 
     @Test
     public void optionalSubpopNotSigned() throws Exception {
-        SignUp signUp = new SignUp().appId(STUDY_ID)
+        SignUp signUp = new SignUp().appId(TEST_APP_ID)
                 .email(IntegTestUtils.makeEmail(ParticipantIsConsentedTest.class)).password(Tests.PASSWORD);
         signUp.addDataGroupsItem(DATA_GROUP);
         user = new TestUserHelper.Builder(ParticipantIsConsentedTest.class).withConsentUser(false).withSignUp(signUp)

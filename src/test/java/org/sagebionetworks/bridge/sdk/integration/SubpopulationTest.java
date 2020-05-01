@@ -19,21 +19,21 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.rest.model.SubpopulationList;
 import org.sagebionetworks.bridge.rest.model.Substudy;
@@ -79,10 +79,10 @@ public class SubpopulationTest {
     public void canCRUD() throws Exception {
         // First, to do this test, we need to create some valid data groups and substudies if they
         // don't already exist.
-        StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-        Study study = studiesApi.getUsersStudy().execute().body();
+        AppsApi appsApi = developer.getClient(AppsApi.class);
+        App app = appsApi.getUsersApp().execute().body();
 
-        String dataGroup = Iterables.getFirst(study.getDataGroups(), null);
+        String dataGroup = Iterables.getFirst(app.getDataGroups(), null);
         List<String> dataGroupList = ImmutableList.of(dataGroup);
 
         // Create a substudy, if needed
@@ -95,7 +95,7 @@ public class SubpopulationTest {
         // Now proceed with the subpopulation test
         SubpopulationsApi subpopulationsApi = developer.getClient(SubpopulationsApi.class);
         
-        // Study has a default subpopulation
+        // App has a default subpopulation
         SubpopulationList subpops = subpopulationsApi.getSubpopulations(false).execute().body();
         int initialCount = subpops.getItems().size();
         assertNotNull(findByName(subpops.getItems(), "Default Consent Group"));

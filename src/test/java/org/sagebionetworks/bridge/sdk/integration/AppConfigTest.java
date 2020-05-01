@@ -19,11 +19,11 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
+import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.FilesApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.PublicApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -184,7 +184,7 @@ public class AppConfigTest {
         
         // create it
         schemaKeys = schemasApi.createOrUpdateUploadSchema(schema).execute().body();
-        StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+        AppsApi studiesApi = developer.getClient(AppsApi.class);
         int initialCount = appConfigsApi.getAppConfigs(false).execute().body().getItems().size();
 
         SurveyReference surveyRef1 = new SurveyReference().guid(surveyKeys.getGuid()).createdOn(surveyKeys.getCreatedOn());
@@ -248,7 +248,7 @@ public class AppConfigTest {
         assertTrue(secondOneRetrieved.getFileReferences().isEmpty());
         
         // You can get it as the user
-        AppConfig userAppConfig = studiesApi.getAppConfigForStudy(developer.getStudyId()).execute().body();
+        AppConfig userAppConfig = studiesApi.getConfigForApp(developer.getAppId()).execute().body();
         assertNotNull(userAppConfig);
         
         // Create a second app config
@@ -273,7 +273,7 @@ public class AppConfigTest {
         
         try {
             // This should not match the clientInfo provided
-            publicApi.getAppConfigForStudy(developer.getStudyId()).execute().body();
+            publicApi.getConfigForApp(developer.getAppId()).execute().body();
             fail("Should have thrown an exception");
         } catch(EntityNotFoundException e) {
             // None have matched
@@ -283,7 +283,7 @@ public class AppConfigTest {
         appConfigsApi.updateAppConfig(appConfig.getGuid(), appConfig).execute();
         
         // Having changed the config to match the criteria, we should be able to retrieve it.
-        AppConfig config = publicApi.getAppConfigForStudy(developer.getStudyId()).execute().body();
+        AppConfig config = publicApi.getConfigForApp(developer.getAppId()).execute().body();
         assertEquals(appConfig.getGuid(), config.getGuid());
         
         // test logical deletion
@@ -367,7 +367,7 @@ public class AppConfigTest {
         
         // Verify that for the user, the config is included in the app config itself
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
-        AppConfig usersAppConfig = userApi.getAppConfigForStudy(user.getStudyId()).execute().body();
+        AppConfig usersAppConfig = userApi.getConfigForApp(user.getAppId()).execute().body();
         
         SchedulePlan plan = RestUtils.toType(usersAppConfig.getConfigElements().get(elementId), SchedulePlan.class);        
         assertEquals("Cron-based schedule", plan.getLabel());
@@ -378,7 +378,7 @@ public class AppConfigTest {
         element.setVersion(version.getVersion());
         
         // The user's config has been correctly updated
-        usersAppConfig = userApi.getAppConfigForStudy(user.getStudyId()).execute().body();
+        usersAppConfig = userApi.getConfigForApp(user.getAppId()).execute().body();
         SchedulePlan secondPlan = RestUtils.toType(usersAppConfig.getConfigElements().get(elementId), SchedulePlan.class);
         assertEquals("Persistent schedule", secondPlan.getLabel());
 
@@ -408,9 +408,9 @@ public class AppConfigTest {
         String baseUrl = developer.getClientManager().getHostUrl();
         String userAgent = ua;
         String acceptLanguage = "en";
-        String study = developer.getStudyId();
+        String appId = developer.getAppId();
         
-        ApiClientProvider provider = new ApiClientProvider(baseUrl, userAgent, acceptLanguage, study);
+        ApiClientProvider provider = new ApiClientProvider(baseUrl, userAgent, acceptLanguage, appId);
         return provider.getClient(clazz);
     }
 }

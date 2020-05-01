@@ -10,8 +10,8 @@ import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.API_SIGNIN;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -73,7 +73,7 @@ public class UploadSchemaTest {
         developer = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, DEVELOPER);
         user = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, true);
         worker = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, false, WORKER);
-        sharedDeveloper = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, SHARED_STUDY_ID, DEVELOPER);
+        sharedDeveloper = TestUserHelper.createAndSignInUser(UploadSchemaTest.class, SHARED_APP_ID, DEVELOPER);
         sharedDeveloperModulesApi = sharedDeveloper.getClient(SharedModulesApi.class);
 
         adminApi = admin.getClient(ForAdminsApi.class);
@@ -91,7 +91,7 @@ public class UploadSchemaTest {
     @After
     public void deleteSchemas() throws Exception {
         try {
-            superadminApi.adminChangeStudy(API_SIGNIN).execute();
+            superadminApi.adminChangeApp(API_SIGNIN).execute();
             adminApi.deleteAllRevisionsOfUploadSchema(schemaId, true).execute();
         } catch (EntityNotFoundException ex) {
             // Suppress the exception, as the test may have already deleted the schema.
@@ -142,9 +142,9 @@ public class UploadSchemaTest {
         // execute delete
         Exception thrownEx = null;
         try {
-            superadminApi.adminChangeStudy(SHARED_SIGNIN).execute();
+            superadminApi.adminChangeApp(SHARED_SIGNIN).execute();
             adminApi.deleteAllRevisionsOfUploadSchema(retSchema.getSchemaId(), true).execute();
-            superadminApi.adminChangeStudy(API_SIGNIN).execute();
+            superadminApi.adminChangeApp(API_SIGNIN).execute();
             fail("expected exception");
         } catch (BadRequestException e) {
             thrownEx = e;
@@ -152,9 +152,9 @@ public class UploadSchemaTest {
             // finally delete shared module and uploaded schema
             adminApi.deleteMetadataByIdAllVersions(moduleId, true).execute();
 
-            superadminApi.adminChangeStudy(SHARED_SIGNIN).execute();
+            superadminApi.adminChangeApp(SHARED_SIGNIN).execute();
             adminApi.deleteAllRevisionsOfUploadSchema(retSchema.getSchemaId(), true).execute();
-            superadminApi.adminChangeStudy(API_SIGNIN).execute();
+            superadminApi.adminChangeApp(API_SIGNIN).execute();
         }
         assertNotNull(thrownEx);
     }
@@ -183,14 +183,14 @@ public class UploadSchemaTest {
 
         // Step 3b: Worker client can also get schemas, and can get schemas by study, schema, and rev.
         // This schema should be identical to updatedSchemaV2, except it also has the study ID.
-        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevision(STUDY_ID, schemaId, 2L).execute().body();
-        assertEquals(STUDY_ID, workerSchemaV2.getStudyId());
+        UploadSchema workerSchemaV2 = workerUploadSchemasApi.getSchemaRevision(TEST_APP_ID, schemaId, 2L).execute().body();
+        assertEquals(TEST_APP_ID, workerSchemaV2.getAppId());
         assertSchemaFilledIn(workerSchemaV2);
 
         UploadSchema workerSchemaV2MinusStudyId = copy(null, workerSchemaV2);
         workerSchemaV2MinusStudyId.setMaxAppVersions(ImmutableMap.of());
         workerSchemaV2MinusStudyId.setMinAppVersions(ImmutableMap.of());
-        Tests.setVariableValueInObject(workerSchemaV2MinusStudyId, "studyId", null);
+        Tests.setVariableValueInObject(workerSchemaV2MinusStudyId, "appId", null);
         
         assertEquals(updatedSchemaV2, workerSchemaV2MinusStudyId);
 
@@ -287,7 +287,7 @@ public class UploadSchemaTest {
         assertEquals(schema.getSchemaType(), returnedSchema.getSchemaType());
 
         // developer APIs never return study IDs
-        assertNull(schema.getStudyId());
+        assertNull(schema.getAppId());
 
         long newSchemaRev;
         if (schema.getRevision() == null) {
@@ -367,7 +367,7 @@ public class UploadSchemaTest {
         assertEquals(1, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
         assertEquals(UploadSchemaType.IOS_SURVEY, createdSchema.getSchemaType());
-        assertNull(createdSchema.getStudyId());
+        assertNull(createdSchema.getAppId());
         assertEquals("survey", createdSchema.getSurveyGuid());
         assertEquals(surveyCreatedOnMillis, createdSchema.getSurveyCreatedOn().getMillis());
     }
@@ -460,7 +460,7 @@ public class UploadSchemaTest {
         assertEquals(2, createdSchema.getRevision().intValue());
         assertEquals(schemaId, createdSchema.getSchemaId());
         assertEquals(UploadSchemaType.IOS_DATA, createdSchema.getSchemaType());
-        assertNull(createdSchema.getStudyId());
+        assertNull(createdSchema.getAppId());
         assertEquals(fieldDefListV1, createdSchema.getFieldDefinitions());
 
         // Get the schema back. Should match created schema.
@@ -501,7 +501,7 @@ public class UploadSchemaTest {
         schemaV2.setRevision(fetchedSchemaV1.getRevision());
         schemaV2.setSchemaId(fetchedSchemaV1.getSchemaId());
         schemaV2.setSchemaType(fetchedSchemaV1.getSchemaType());
-        Tests.setVariableValueInObject(schemaV2, "studyId", fetchedSchemaV1.getStudyId());
+        Tests.setVariableValueInObject(schemaV2, "appId", fetchedSchemaV1.getAppId());
         schemaV2.setSurveyGuid(fetchedSchemaV1.getSurveyGuid());
         schemaV2.setSurveyCreatedOn(fetchedSchemaV1.getSurveyCreatedOn());
         schemaV2.setVersion(fetchedSchemaV1.getVersion());
@@ -512,7 +512,7 @@ public class UploadSchemaTest {
         assertEquals(2, updatedSchema.getRevision().intValue());
         assertEquals(schemaId, updatedSchema.getSchemaId());
         assertEquals(UploadSchemaType.IOS_DATA, updatedSchema.getSchemaType());
-        assertNull(updatedSchema.getStudyId());
+        assertNull(updatedSchema.getAppId());
         assertEquals(fieldDefListV2, updatedSchema.getFieldDefinitions());
 
         // Get the schema back again. Should match updated schema.
@@ -631,7 +631,7 @@ public class UploadSchemaTest {
         destination.setSurveyGuid(source.getSurveyGuid());
         destination.setDeleted(source.isDeleted());
         destination.setVersion(source.getVersion());
-        Tests.setVariableValueInObject(destination, "studyId", source.getStudyId());
+        Tests.setVariableValueInObject(destination, "appId", source.getAppId());
         destination.setMinAppVersions(source.getMinAppVersions());
         destination.setMaxAppVersions(source.getMaxAppVersions());
         Tests.setVariableValueInObject(destination, "type", source.getType());
