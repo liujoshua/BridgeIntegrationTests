@@ -148,7 +148,7 @@ public class ScheduledActivityRecurringTest {
         activities = filterList(usersApi.getScheduledActivities("-12:00", 2, null).execute().body(),
                 schedulePlan.getGuid());
         
-        assertEquals(3, activities.getItems().size());
+        assertEquals(4, activities.getItems().size());
         assertEquals(ytz1, activities.getItems().get(0).getScheduledOn().toString());
         assertEquals(ytz2, activities.getItems().get(1).getScheduledOn().toString());
         assertEquals(ytz3, activities.getItems().get(2).getScheduledOn().toString());
