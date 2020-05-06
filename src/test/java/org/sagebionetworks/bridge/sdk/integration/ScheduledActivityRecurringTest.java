@@ -147,7 +147,7 @@ public class ScheduledActivityRecurringTest {
         // One activity was created beyond the window, in +12:00 land.... that is not returned because although it 
         // exists, we filter it out from the persisted activities retrieved from the db.
         activities = filterList(usersApi.getScheduledActivities("-12:00", 2, null).execute().body(),
-                schedulePlan.getGuid());        
+                schedulePlan.getGuid());
         assertEquals(4, activities.getItems().size());
         assertEquals(ytz1, activities.getItems().get(0).getScheduledOn().toString());
         assertEquals(ytz2, activities.getItems().get(1).getScheduledOn().toString());
