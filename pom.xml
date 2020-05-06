@@ -68,12 +68,12 @@
         <repository>
             <id>org-sagebridge-repo-maven-releases</id>
             <name>org-sagebridge-repo-maven-releases</name>
-            <url>http://repo-maven.sagebridge.org/</url>
+            <url>https://repo-maven.sagebridge.org/</url>
         </repository>
         <repository>
             <id>org-sagebridge-repo-maven-local</id>
             <name>org-sagebridge-repo-maven-local</name>
-            <url>http://sagebionetworks.artifactoryonline.com/sagebionetworks/libs-releases-local/</url>
+            <url>https://sagebionetworks.artifactoryonline.com/sagebionetworks/libs-releases-local/</url>
         </repository>
     </repositories>
 
