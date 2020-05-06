@@ -133,6 +133,7 @@ public class ScheduledActivityRecurringTest {
         String ytz1 = now.withZone(YTZ).toLocalDate().toString()+Y_TIME_OF_DAY;
         String ytz2 = now.withZone(YTZ).plusDays(1).toLocalDate().toString()+Y_TIME_OF_DAY;
         String ytz3 = now.withZone(YTZ).plusDays(2).toLocalDate().toString()+Y_TIME_OF_DAY;
+        String ytz4 = now.withZone(YTZ).plusDays(3).toLocalDate().toString()+Y_TIME_OF_DAY;
         
         // Get three tasks in the Gilbert Island for today and next 2 days
         ScheduledActivityList activities = filterList(
@@ -142,19 +143,19 @@ public class ScheduledActivityRecurringTest {
         assertEquals(mtz2, activities.getItems().get(1).getScheduledOn().toString());
         assertEquals(mtz3, activities.getItems().get(2).getScheduledOn().toString());
         
-        // Cross the dateline to the prior day. You get 3 activities (yesterday, today, and tomorrow). Two activities 
-        // were created beyond the window, in +12:00 land.... those are not returned because although it exists, we 
-        // filter it out from the persisted activities retrieved from the db.
+        // Cross the dateline to the prior day. You get 4 activities (yesterday, today, tomorrow and the next day). 
+        // One activity was created beyond the window, in +12:00 land.... that is not returned because although it 
+        // exists, we filter it out from the persisted activities retrieved from the db.
         activities = filterList(usersApi.getScheduledActivities("-12:00", 2, null).execute().body(),
-                schedulePlan.getGuid());
-        
+                schedulePlan.getGuid());        
         assertEquals(4, activities.getItems().size());
         assertEquals(ytz1, activities.getItems().get(0).getScheduledOn().toString());
         assertEquals(ytz2, activities.getItems().get(1).getScheduledOn().toString());
         assertEquals(ytz3, activities.getItems().get(2).getScheduledOn().toString());
-        //assertEquals(ytz4, activities.getItems().get(3).getScheduledOn().toString());
+        assertEquals(ytz4, activities.getItems().get(3).getScheduledOn().toString());
         
         // Return to +12:00 land and ask for activites for three days, but one day in the future
+        // TODO
         ScheduledActivityListV4 activitiesV4 = filterList(usersApi
                 .getScheduledActivitiesByDateRange(now.plusDays(1).withZone(MTZ), now.plusDays(3).plusMinutes(1).withZone(MTZ))
                 .execute().body(), schedulePlan.getGuid());
