@@ -15,11 +15,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.CriteriaScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.CustomActivityEventRequest;
@@ -31,7 +32,6 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -61,13 +61,13 @@ public class ScheduledActivityRecurringTest {
         user = new TestUserHelper.Builder(ScheduledActivityRecurringTest.class).withConsentUser(true).withSignUp(signUp)
                 .createAndSignInUser();
         
-        Study study = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
-        if (study.isExternalIdRequiredOnSignup() || !study.getActivityEventKeys().contains(CUSTOM_EVENT)) {
-            study.setExternalIdRequiredOnSignup(false);
-            study.getActivityEventKeys().add(CUSTOM_EVENT);
+        App app = admin.getClient(AppsApi.class).getUsersApp().execute().body();
+        if (app.isExternalIdRequiredOnSignup() || !app.getActivityEventKeys().contains(CUSTOM_EVENT)) {
+            app.setExternalIdRequiredOnSignup(false);
+            app.getActivityEventKeys().add(CUSTOM_EVENT);
             
-            VersionHolder version = admin.getClient(ForSuperadminsApi.class).updateStudy(study.getIdentifier(), study).execute().body();
-            study.setVersion(version.getVersion());
+            VersionHolder version = admin.getClient(ForSuperadminsApi.class).updateApp(app.getIdentifier(), app).execute().body();
+            app.setVersion(version.getVersion());
         }
         Schedule schedule = new Schedule();
         schedule.setEventId("custom:"+CUSTOM_EVENT);

@@ -23,9 +23,9 @@ import org.sagebionetworks.bridge.rest.api.ForDevelopersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.model.ActivityEvent;
 import org.sagebionetworks.bridge.rest.model.ActivityEventList;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.CustomActivityEventRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 
@@ -48,23 +48,23 @@ public class ActivityEventTest {
         developer = TestUserHelper.createAndSignInUser(ActivityEventTest.class, false, Role.DEVELOPER);
         ForDevelopersApi developersApi = developer.getClient(ForDevelopersApi.class);
 
-        Study study = developersApi.getUsersStudy().execute().body();
-        boolean updateStudy = false;
+        App app = developersApi.getUsersApp().execute().body();
+        boolean updateApp = false;
 
         // Add custom event key, if not already present.
-        if (!study.getActivityEventKeys().contains(EVENT_KEY)) {
-            study.addActivityEventKeysItem(EVENT_KEY);
-            updateStudy = true;
+        if (!app.getActivityEventKeys().contains(EVENT_KEY)) {
+            app.addActivityEventKeysItem(EVENT_KEY);
+            updateApp = true;
         }
 
         // Add automatic custom event.
-        if (!study.getAutomaticCustomEvents().containsKey(TWO_WEEKS_AFTER_KEY)) {
-            study.putAutomaticCustomEventsItem(TWO_WEEKS_AFTER_KEY, TWO_WEEKS_AFTER_VALUE);
-            updateStudy = true;
+        if (!app.getAutomaticCustomEvents().containsKey(TWO_WEEKS_AFTER_KEY)) {
+            app.putAutomaticCustomEventsItem(TWO_WEEKS_AFTER_KEY, TWO_WEEKS_AFTER_VALUE);
+            updateApp = true;
         }
 
-        if (updateStudy) {
-            developersApi.updateUsersStudy(study).execute();
+        if (updateApp) {
+            developersApi.updateUsersApp(app).execute();
         }
 
         // Create user last, so the automatic custom events are created

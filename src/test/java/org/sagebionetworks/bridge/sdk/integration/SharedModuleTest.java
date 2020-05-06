@@ -6,7 +6,7 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.API_SIGNIN;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
@@ -53,7 +53,7 @@ public class SharedModuleTest {
     public static void beforeClass() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         apiDeveloper = TestUserHelper.createAndSignInUser(SharedModuleTest.class, false, DEVELOPER);
-        sharedDeveloper = TestUserHelper.createAndSignInUser(SharedModuleTest.class, SHARED_STUDY_ID, DEVELOPER);
+        sharedDeveloper = TestUserHelper.createAndSignInUser(SharedModuleTest.class, SHARED_APP_ID, DEVELOPER);
     }
 
     @Before
@@ -85,12 +85,12 @@ public class SharedModuleTest {
 
         if (module != null) {
             try {
-                superadminApi.adminChangeStudy(SHARED_SIGNIN).execute();
+                superadminApi.adminChangeApp(SHARED_SIGNIN).execute();
                 adminApi.deleteMetadataByIdAllVersions(module.getId(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting module " + module.getId() + ": "  + ex.getMessage(), ex);
             } finally {
-                superadminApi.adminChangeStudy(API_SIGNIN).execute();
+                superadminApi.adminChangeApp(API_SIGNIN).execute();
             }
         }
 
@@ -99,20 +99,20 @@ public class SharedModuleTest {
                 adminApi.deleteAllRevisionsOfUploadSchema(localSchema.getSchemaId(), true)
                         .execute();
             } catch (BridgeSDKException ex) {
-                LOG.error("Error deleting schema " + localSchema.getSchemaId() + " in study " +
-                        apiDeveloper.getStudyId() + ": "  + ex.getMessage(), ex);
+                LOG.error("Error deleting schema " + localSchema.getSchemaId() + " in app " +
+                        apiDeveloper.getAppId() + ": "  + ex.getMessage(), ex);
             }
         }
 
         if (sharedSchema != null) {
             try {
-                superadminApi.adminChangeStudy(SHARED_SIGNIN).execute();
+                superadminApi.adminChangeApp(SHARED_SIGNIN).execute();
                 adminApi.deleteAllRevisionsOfUploadSchema(sharedSchema.getSchemaId(), true).execute();
             } catch (BridgeSDKException ex) {
-                LOG.error("Error deleting schema " + sharedSchema.getSchemaId() + " in study " +
-                        sharedDeveloper.getStudyId() + ": "  + ex.getMessage(), ex);
+                LOG.error("Error deleting schema " + sharedSchema.getSchemaId() + " in app " +
+                        sharedDeveloper.getAppId() + ": "  + ex.getMessage(), ex);
             } finally {
-                superadminApi.adminChangeStudy(API_SIGNIN).execute();
+                superadminApi.adminChangeApp(API_SIGNIN).execute();
             }
         }
 
@@ -126,12 +126,12 @@ public class SharedModuleTest {
 
         if (sharedSurvey != null) {
             try {
-                superadminApi.adminChangeStudy(SHARED_SIGNIN).execute();
+                superadminApi.adminChangeApp(SHARED_SIGNIN).execute();
                 adminApi.deleteSurvey(sharedSurvey.getGuid(), sharedSurvey.getCreatedOn(), true).execute();
             } catch (BridgeSDKException ex) {
                 LOG.error("Error deleting shared survey " + sharedSurvey.getGuid() + ": "  + ex.getMessage(), ex);
             } finally {
-                superadminApi.adminChangeStudy(API_SIGNIN).execute();
+                superadminApi.adminChangeApp(API_SIGNIN).execute();
             }
         }
     }
@@ -142,7 +142,7 @@ public class SharedModuleTest {
         sharedSchema = createSharedSchema();
         module = createModuleForSchema(sharedSchema);
 
-        // Copy to local study.
+        // Copy to local app.
         SharedModuleImportStatus importStatus = apiDeveloper.getClient(SharedModulesApi.class)
                 .importModuleByIdAndVersion(module.getId(), module.getVersion()).execute().body();
 
@@ -162,7 +162,7 @@ public class SharedModuleTest {
         sharedSurvey = createAndPublishSharedSurvey();
         module = createModuleForSurvey(sharedSurvey);
 
-        // Copy to local study.
+        // Copy to local app.
         SharedModuleImportStatus importStatus = apiDeveloper.getClient(SharedModulesApi.class)
                 .importModuleByIdAndVersion(module.getId(), module.getVersion()).execute().body();
 
@@ -181,7 +181,7 @@ public class SharedModuleTest {
         sharedSchema = createSharedSchema();
         module = createModuleForSchema(sharedSchema);
 
-        // Copy to local study.
+        // Copy to local app.
         SharedModuleImportStatus importStatus = apiDeveloper.getClient(SharedModulesApi.class)
                 .importModuleByIdLatestPublishedVersion(module.getId()).execute().body();
 

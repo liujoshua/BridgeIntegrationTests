@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.HashSet;
 import java.util.List;
@@ -17,18 +18,19 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.CriteriaScheduleStrategy;
@@ -42,7 +44,6 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.rest.model.Substudy;
@@ -60,7 +61,7 @@ public class SubstudyFilteringTest {
         private final SignIn signIn;
         public UserInfo(String userId, String email) {
             this.userId = userId;
-            this.signIn = new SignIn().email(email).password(Tests.PASSWORD).study(IntegTestUtils.STUDY_ID);
+            this.signIn = new SignIn().email(email).password(Tests.PASSWORD).appId(TEST_APP_ID);
         }
         public String getId() { return userId; }
         public SignIn getSignIn() { return signIn; }
@@ -218,12 +219,12 @@ public class SubstudyFilteringTest {
     public void filterScheduling() throws Exception {
         String activityLabel = Tests.randomIdentifier(SubstudyFilteringTest.class);
         
-        Study study = admin.getClient(StudiesApi.class).getUsersStudy().execute().body();
-        if (study.getTaskIdentifiers().isEmpty()) {
-            study.setTaskIdentifiers(ImmutableList.of("task1"));
-            admin.getClient(StudiesApi.class).updateUsersStudy(study).execute();
+        App app = admin.getClient(AppsApi.class).getUsersApp().execute().body();
+        if (app.getTaskIdentifiers().isEmpty()) {
+            app.setTaskIdentifiers(ImmutableList.of("task1"));
+            admin.getClient(AppsApi.class).updateUsersApp(app).execute();
         }
-        String taskId = study.getTaskIdentifiers().get(0);
+        String taskId = app.getTaskIdentifiers().get(0);
         
         Criteria criteria = new Criteria();
         criteria.setAllOfSubstudyIds(ImmutableList.of(substudyIdA, substudyIdB));
@@ -307,7 +308,7 @@ public class SubstudyFilteringTest {
     
     private static UserInfo createUser(Role role, String... substudyIds) throws Exception {
         String email = IntegTestUtils.makeEmail(SubstudyTest.class);
-        SignUp signUp = new SignUp().email(email).password(Tests.PASSWORD).study(IntegTestUtils.STUDY_ID).consent(true);
+        SignUp signUp = new SignUp().email(email).password(Tests.PASSWORD).appId(TEST_APP_ID).consent(true);
         signUp.substudyIds(ImmutableList.copyOf(substudyIds));
         if (role != null) {
             signUp.setRoles(ImmutableList.of(role));

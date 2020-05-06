@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import com.google.common.collect.ImmutableMap;
 import org.joda.time.DateTime;
@@ -20,6 +20,7 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.IntentToParticipateApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.IntentToParticipate;
@@ -28,7 +29,6 @@ import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
 import org.sagebionetworks.bridge.rest.model.SmsType;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -46,9 +46,9 @@ public class IntentToParticipateTest {
 
         // Add dummy install link to trigger Intent SMS.
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
-        study.setInstallLinks(ImmutableMap.of("Universal", "http://example.com/"));
-        superadminApi.updateStudy(study.getIdentifier(), study).execute();
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
+        app.setInstallLinks(ImmutableMap.of("Universal", "http://example.com/"));
+        superadminApi.updateApp(app.getIdentifier(), app).execute();
     }
     
     @After
@@ -69,8 +69,8 @@ public class IntentToParticipateTest {
             
             IntentToParticipate intent = new IntentToParticipate()
                     .phone(IntegTestUtils.PHONE)
-                    .studyId(IntegTestUtils.STUDY_ID)
-                    .subpopGuid(IntegTestUtils.STUDY_ID)
+                    .appId(TEST_APP_ID)
+                    .subpopGuid(TEST_APP_ID)
                     .osName("iPhone")
                     .consentSignature(sig);
             
@@ -79,13 +79,13 @@ public class IntentToParticipateTest {
             String clientInfo = RestUtils.getUserAgent(admin.getClientManager().getClientInfo());
             String lang = RestUtils.getAcceptLanguage(admin.getClientManager().getAcceptedLanguages());
             
-            ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang, IntegTestUtils.STUDY_ID);
+            ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang, TEST_APP_ID);
             
             IntentToParticipateApi intentApi = provider.getClient(IntentToParticipateApi.class);
             intentApi.submitIntentToParticipate(intent).execute();
             
             SignUp signUp = new SignUp()
-                    .study(IntegTestUtils.STUDY_ID)
+                    .appId(TEST_APP_ID)
                     .phone(IntegTestUtils.PHONE)
                     .password(Tests.PASSWORD)
                     .checkForConsent(true);
@@ -96,13 +96,13 @@ public class IntentToParticipateTest {
 
             // Verify message logs contains the expected message. We do this after we create the account, but before
             // we sign-in, because intent is checked on sign-in and sends another SMS message with the consent doc (if
-            // the study is configured to do so).
+            // the app is configured to do so).
             SmsMessage message = admin.getClient(InternalApi.class).getMostRecentSmsMessage(user.getUserId()).execute()
                     .body();
             assertEquals(IntegTestUtils.PHONE.getNumber(), message.getPhoneNumber());
             assertNotNull(message.getMessageId());
             assertEquals(SmsType.TRANSACTIONAL, message.getSmsType());
-            assertEquals(IntegTestUtils.STUDY_ID, message.getStudyId());
+            assertEquals(TEST_APP_ID, message.getAppId());
 
             // Message body isn't constrained by the test, so just check that it exists.
             assertNotNull(message.getMessageBody());
@@ -119,7 +119,7 @@ public class IntentToParticipateTest {
             UserSessionInfo session = authApi.signInV4(user.getSignIn()).execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
             
-            ConsentStatus status = session.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
+            ConsentStatus status = session.getConsentStatuses().get(TEST_APP_ID);
             assertTrue(status.isConsented());
         } finally {
             if (user != null) {
@@ -140,8 +140,8 @@ public class IntentToParticipateTest {
             
             IntentToParticipate intent = new IntentToParticipate()
                     .email(email)
-                    .studyId(IntegTestUtils.STUDY_ID)
-                    .subpopGuid(IntegTestUtils.STUDY_ID)
+                    .appId(TEST_APP_ID)
+                    .subpopGuid(TEST_APP_ID)
                     .osName("iPhone")
                     .consentSignature(sig);
             
@@ -150,13 +150,13 @@ public class IntentToParticipateTest {
             String clientInfo = RestUtils.getUserAgent(admin.getClientManager().getClientInfo());
             String lang = RestUtils.getAcceptLanguage(admin.getClientManager().getAcceptedLanguages());
             
-            ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang, IntegTestUtils.STUDY_ID);
+            ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang, TEST_APP_ID);
             
             IntentToParticipateApi intentApi = provider.getClient(IntentToParticipateApi.class);
             intentApi.submitIntentToParticipate(intent).execute();
             
             SignUp signUp = new SignUp()
-                    .study(IntegTestUtils.STUDY_ID)
+                    .appId(TEST_APP_ID)
                     .email(email)
                     .password(Tests.PASSWORD)
                     .checkForConsent(true);
@@ -170,7 +170,7 @@ public class IntentToParticipateTest {
             UserSessionInfo session = authApi.signInV4(user.getSignIn()).execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
             
-            ConsentStatus status = session.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
+            ConsentStatus status = session.getConsentStatuses().get(TEST_APP_ID);
             assertTrue(status.isConsented());
         } finally {
             if (user != null) {

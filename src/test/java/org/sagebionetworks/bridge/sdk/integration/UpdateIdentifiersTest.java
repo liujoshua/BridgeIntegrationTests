@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.NATIONAL_PHONE_FORMAT;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.PHONE;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
@@ -35,7 +35,7 @@ public class UpdateIdentifiersTest {
     
     @Test
     public void addPhoneViaUpdate() throws Exception {
-        SignUp signUp = new SignUp().study(STUDY_ID).password(PASSWORD);
+        SignUp signUp = new SignUp().appId(TEST_APP_ID).password(PASSWORD);
         user = TestUserHelper.createAndSignInUser(UpdateIdentifiersTest.class, true, signUp);
         
         IdentifierUpdate update = new IdentifierUpdate().signIn(user.getSignIn()).phoneUpdate(PHONE);
@@ -51,7 +51,7 @@ public class UpdateIdentifiersTest {
     @Test
     public void addSynapseUserIdViaUpdate() throws Exception {
         String synapseUserId = RandomStringUtils.randomNumeric(5);
-        SignUp signUp = new SignUp().study(STUDY_ID).password(PASSWORD);
+        SignUp signUp = new SignUp().appId(TEST_APP_ID).password(PASSWORD);
         user = TestUserHelper.createAndSignInUser(UpdateIdentifiersTest.class, true, signUp);
         
         IdentifierUpdate update = new IdentifierUpdate().signIn(user.getSignIn()).synapseUserIdUpdate(synapseUserId);

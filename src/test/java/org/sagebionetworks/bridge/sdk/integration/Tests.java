@@ -3,6 +3,8 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -25,6 +27,7 @@ import org.sagebionetworks.bridge.rest.model.ABTestGroup;
 import org.sagebionetworks.bridge.rest.model.ABTestScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
@@ -37,7 +40,6 @@ import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.SubstudyList;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
@@ -46,8 +48,8 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class Tests {
-    public static final SignIn API_SIGNIN = new SignIn().study(IntegTestUtils.STUDY_ID);
-    public static final SignIn SHARED_SIGNIN = new SignIn().study("shared");
+    public static final SignIn API_SIGNIN = new SignIn().appId(TEST_APP_ID);
+    public static final SignIn SHARED_SIGNIN = new SignIn().appId(SHARED_APP_ID);
     public static final String PACKAGE = "org.sagebionetworks.bridge";
     public static final String MOBILE_APP_NAME = "DummyApp";
     public static final String APP_ID = PACKAGE + "." + MOBILE_APP_NAME;
@@ -215,57 +217,57 @@ public class Tests {
         return ((SimpleScheduleStrategy)plan.getStrategy()).getSchedule().getActivities().get(0);    
     }
     
-    public static Study getStudy(String identifier, Long version) {
-        Study study = new Study();
-        study.setIdentifier(identifier);
-        study.setAutoVerificationEmailSuppressed(true);
-        study.setMinAgeOfConsent(18);
-        study.setName("Test Study [SDK]");
-        study.setSponsorName("The Test Study Folks [SDK]");
-        study.setStrictUploadValidationEnabled(true);
-        study.setStudyIdExcludedInExport(true);
-        study.setSupportEmail("test@test.com");
-        study.setConsentNotificationEmail("bridge-testing+test2@sagebase.org");
-        study.setTechnicalEmail("test3@test.com");
-        study.setUsesCustomExportSchedule(true);
-        study.setUserProfileAttributes(Lists.newArrayList("new_profile_attribute"));
-        study.setTaskIdentifiers(Lists.newArrayList("taskA")); // setting it differently just for the heck of it 
-        study.setDataGroups(Lists.newArrayList("beta_users", "production_users"));
-        study.setEmailVerificationEnabled(true);
-        study.setEmailSignInEnabled(true);
-        study.setHealthCodeExportEnabled(true);
-        study.setDisableExport(true);
+    public static App getApp(String identifier, Long version) {
+        App app = new App();
+        app.setIdentifier(identifier);
+        app.setAutoVerificationEmailSuppressed(true);
+        app.setMinAgeOfConsent(18);
+        app.setName("Test App [SDK]");
+        app.setSponsorName("The Test App Folks [SDK]");
+        app.setStrictUploadValidationEnabled(true);
+        app.setAppIdExcludedInExport(true);
+        app.setSupportEmail("test@test.com");
+        app.setConsentNotificationEmail("bridge-testing+test2@sagebase.org");
+        app.setTechnicalEmail("test3@test.com");
+        app.setUsesCustomExportSchedule(true);
+        app.setUserProfileAttributes(Lists.newArrayList("new_profile_attribute"));
+        app.setTaskIdentifiers(Lists.newArrayList("taskA")); // setting it differently just for the heck of it 
+        app.setDataGroups(Lists.newArrayList("beta_users", "production_users"));
+        app.setEmailVerificationEnabled(true);
+        app.setEmailSignInEnabled(true);
+        app.setHealthCodeExportEnabled(true);
+        app.setDisableExport(true);
         
         Map<String,Integer> map = new HashMap<>();
         map.put("Android", 10);
         map.put("iPhone OS", 14);
-        study.setMinSupportedAppVersions(map);
+        app.setMinSupportedAppVersions(map);
         
         Map<String,String> platformMap = new HashMap<>();
         platformMap.put("Android", "arn:android:"+identifier);
         platformMap.put("iPhone OS", "arn:ios:"+identifier);
-        study.setPushNotificationARNs(platformMap);
+        app.setPushNotificationARNs(platformMap);
         
         OAuthProvider oauthProvider = new OAuthProvider().clientId("clientId").secret("secret")
                 .endpoint("https://www.server.com/").callbackUrl("https://client.callback.com/")
                 .introspectEndpoint("http://example.com/introspect");
         Map<String,OAuthProvider> oauthProviders = new HashMap<>();
         oauthProviders.put("myProvider", oauthProvider);
-        study.setOAuthProviders(oauthProviders);
+        app.setOAuthProviders(oauthProviders);
 
         List<AndroidAppLink> androidAppLinks = new ArrayList<>();
         androidAppLinks.add(new AndroidAppLink().namespace(PACKAGE).packageName(MOBILE_APP_NAME)
                 .addSha256CertFingerprintsItem(FINGERPRINT));
-        study.setAndroidAppLinks(androidAppLinks);
+        app.setAndroidAppLinks(androidAppLinks);
         
         List<AppleAppLink> appleAppLinks = new ArrayList<>();
         appleAppLinks.add(new AppleAppLink().appID(APP_ID).addPathsItem("/" + identifier + "/*"));
-        study.setAppleAppLinks(appleAppLinks);
+        app.setAppleAppLinks(appleAppLinks);
         
         if (version != null) {
-            study.setVersion(version);
+            app.setVersion(version);
         }
-        return study;
+        return app;
     }
 
     public static void assertDatesWithTimeZoneEqual(DateTime expected, DateTime actual) {

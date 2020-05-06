@@ -116,7 +116,7 @@ public class AccountSummarySearchTest {
     @Test
     public void testSearchingApiForWorker() throws Exception {
         ForWorkersApi workerApi = worker.getClient(ForWorkersApi.class);
-        testSuite(search -> workerApi.searchAccountSummariesForStudy("api", search).execute().body());
+        testSuite(search -> workerApi.searchAccountSummariesForApp("api", search).execute().body());
     }
     
     @FunctionalInterface

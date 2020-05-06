@@ -11,7 +11,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
 
 import org.joda.time.DateTime;
 
@@ -22,7 +22,7 @@ public class SessionRefreshTest {
     @BeforeClass
     public static void createUser() throws Exception {
         user = TestUserHelper.createAndSignInUser(SessionRefreshTest.class, false);
-        sharedDeveloper = TestUserHelper.createAndSignInUser(SessionRefreshTest.class, SHARED_STUDY_ID, DEVELOPER);
+        sharedDeveloper = TestUserHelper.createAndSignInUser(SessionRefreshTest.class, SHARED_APP_ID, DEVELOPER);
     }
 
     @AfterClass
@@ -55,7 +55,7 @@ public class SessionRefreshTest {
 
     @Test
     public void testReauthenticationAcrossStudies() throws Exception {
-        // Use developer from the Shared study to test across studies. Initial call succeeds.
+        // Use developer from the Shared app to test across studies. Initial call succeeds.
         sharedDeveloper.getClient(ParticipantsApi.class).getUsersParticipantRecord(false).execute();
 
         // Sign user out.

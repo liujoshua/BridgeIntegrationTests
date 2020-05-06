@@ -16,7 +16,7 @@ import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
@@ -42,6 +42,7 @@ import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
@@ -57,7 +58,6 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UploadList;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
@@ -101,12 +101,12 @@ public class ParticipantsTest {
         IntegTestUtils.deletePhoneUser(researcher);
         
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
-        if (!study.isPhoneSignInEnabled() || !study.isEmailSignInEnabled()) {
-            study.setPhoneSignInEnabled(true);
-            study.setEmailSignInEnabled(true);
-            VersionHolder keys = superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
-            study.version(keys.getVersion());
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
+        if (!app.isPhoneSignInEnabled() || !app.isEmailSignInEnabled()) {
+            app.setPhoneSignInEnabled(true);
+            app.setEmailSignInEnabled(true);
+            VersionHolder keys = superadminApi.updateApp(app.getIdentifier(), app).execute().body();
+            app.version(keys.getVersion());
         }
     }
     
@@ -185,12 +185,12 @@ public class ParticipantsTest {
         
         ParticipantsApi researcherParticipantsApi = researcher.getClient(ParticipantsApi.class);
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-        Study study = superadminApi.getStudy(admin.getStudyId()).execute().body();
+        App app = superadminApi.getApp(admin.getAppId()).execute().body();
         
         try {
-            study.setHealthCodeExportEnabled(true);
-            VersionHolder version = superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
-            study.version(version.getVersion());
+            app.setHealthCodeExportEnabled(true);
+            VersionHolder version = superadminApi.updateApp(app.getIdentifier(), app).execute().body();
+            app.version(version.getVersion());
             
             StudyParticipant participant = researcherParticipantsApi.getParticipantById(
                     user.getSession().getId(), true).execute().body();
@@ -214,9 +214,9 @@ public class ParticipantsTest {
             assertTrue(participant2.getConsentHistories().isEmpty());
         } finally {
             user.signOutAndDeleteUser();
-            study.setHealthCodeExportEnabled(false);
-            VersionHolder version = superadminApi.updateStudy(study.getIdentifier(), study).execute().body();
-            study.version(version.getVersion());
+            app.setHealthCodeExportEnabled(false);
+            VersionHolder version = superadminApi.updateApp(app.getIdentifier(), app).execute().body();
+            app.version(version.getVersion());
         }
     }
     
@@ -453,7 +453,7 @@ public class ParticipantsTest {
     }
     
     @Test
-    public void canWithdrawUserFromStudy() throws Exception {
+    public void canWithdrawUserFromApp() throws Exception {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true);
         String userId = user.getSession().getId();
         try {
@@ -468,7 +468,7 @@ public class ParticipantsTest {
             withdrawal.setReason("Testing withdrawal API.");
             
             ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
-            participantsApi.withdrawParticipantFromStudy(userId, withdrawal).execute();
+            participantsApi.withdrawParticipantFromApp(userId, withdrawal).execute();
             
             user.signInAgain();
             fail("Should have thrown exception");
@@ -689,10 +689,10 @@ public class ParticipantsTest {
     
     @Test
     public void addEmailToPhoneUser() throws Exception {
-        SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1").study(IntegTestUtils.STUDY_ID);
+        SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1").appId(TEST_APP_ID);
         phoneUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
         
-        SignIn signIn = new SignIn().phone(signUp.getPhone()).password(signUp.getPassword()).study(IntegTestUtils.STUDY_ID);
+        SignIn signIn = new SignIn().phone(signUp.getPhone()).password(signUp.getPassword()).appId(TEST_APP_ID);
 
         String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
         IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(email);
@@ -716,20 +716,20 @@ public class ParticipantsTest {
     @Test
     public void addPhoneToEmailUser() throws Exception {
         String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
-        SignUp signUp = new SignUp().email(email).password("P@ssword`1").study(IntegTestUtils.STUDY_ID);
+        SignUp signUp = new SignUp().email(email).password("P@ssword`1").appId(TEST_APP_ID);
         emailUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
         
-        SignIn signIn = new SignIn().email(signUp.getEmail()).password(signUp.getPassword()).study(IntegTestUtils.STUDY_ID);
+        SignIn signIn = new SignIn().email(signUp.getEmail()).password(signUp.getPassword()).appId(TEST_APP_ID);
 
-        IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(IntegTestUtils.PHONE);
+        IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(PHONE);
         
         ForConsentedUsersApi usersApi = emailUser.getClient(ForConsentedUsersApi.class);
         UserSessionInfo info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
-        assertEquals(IntegTestUtils.PHONE.getNumber(), info.getPhone().getNumber());
+        assertEquals(PHONE.getNumber(), info.getPhone().getNumber());
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         StudyParticipant retrieved = participantsApi.getParticipantById(emailUser.getSession().getId(), true).execute().body();
-        assertEquals(IntegTestUtils.PHONE.getNumber(), retrieved.getPhone().getNumber());
+        assertEquals(PHONE.getNumber(), retrieved.getPhone().getNumber());
         
         // But if you do it again, it should not work
         Phone otherPhone = new Phone().number("4082588569").regionCode("US");

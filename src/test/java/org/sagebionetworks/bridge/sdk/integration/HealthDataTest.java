@@ -24,14 +24,15 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.json.DefaultObjectMapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.HealthDataApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.DataType;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
@@ -40,7 +41,6 @@ import org.sagebionetworks.bridge.rest.model.HealthDataSubmission;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.StringConstraints;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyQuestion;
@@ -65,7 +65,7 @@ public class HealthDataTest {
 
     private static TestUserHelper.TestUser developer;
     private static ExternalIdentifier externalIdentifier;
-    private static StudiesApi studiesApi;
+    private static AppsApi studiesApi;
     private static DateTime surveyCreatedOn;
     private static String surveyGuid;
     private static TestUserHelper.TestUser user;
@@ -75,7 +75,7 @@ public class HealthDataTest {
     @BeforeClass
     public static void beforeClass() throws Exception {
         developer = TestUserHelper.createAndSignInUser(HealthDataTest.class, false, Role.DEVELOPER);
-        studiesApi = developer.getClient(StudiesApi.class);
+        studiesApi = developer.getClient(AppsApi.class);
 
         // Ensure schema exists, so we have something to submit against.
         UploadSchemasApi uploadSchemasApi = developer.getClient(UploadSchemasApi.class);
@@ -196,9 +196,9 @@ public class HealthDataTest {
     }
 
     private static void setUploadValidationStrictness(UploadValidationStrictness strictness) throws Exception {
-        Study study = studiesApi.getUsersStudy().execute().body();
-        study.setUploadValidationStrictness(strictness);
-        studiesApi.updateUsersStudy(study).execute();
+        App app = studiesApi.getUsersApp().execute().body();
+        app.setUploadValidationStrictness(strictness);
+        studiesApi.updateUsersApp(app).execute();
     }
 
     @Before
@@ -208,7 +208,7 @@ public class HealthDataTest {
 
     @Test
     public void submitBySchema() throws Exception {
-        // Set study to strict validation, so we throw if validation fails.
+        // Set app to strict validation, so we throw if validation fails.
         setUploadValidationStrictness(UploadValidationStrictness.STRICT);
 
         // make health data to submit - Use a map instead of a Jackson JSON node, because mixing JSON libraries causes

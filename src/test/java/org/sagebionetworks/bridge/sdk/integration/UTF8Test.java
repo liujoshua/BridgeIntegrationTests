@@ -5,8 +5,8 @@ import org.junit.experimental.categories.Category;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.SignIn;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -19,34 +19,34 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.API_SIGNIN;
 public class UTF8Test {
     @Test
     public void canSaveAndRetrieveDataStoredInDynamo() throws Exception {
-        String studyId = Tests.randomIdentifier(UTF8Test.class);
-        String studyName = "☃지구상의　３대　극지라　불리는";
+        String appId = Tests.randomIdentifier(UTF8Test.class);
+        String appName = "☃지구상의　３대　극지라　불리는";
         ForSuperadminsApi superadminApi = TestUserHelper.getSignedInAdmin().getClient(ForSuperadminsApi.class);
 
         // make minimal study
-        Study study = new Study();
-        study.setIdentifier(studyId);
-        study.setName(studyName);
-        study.setSponsorName(studyName);
-        study.setTechnicalEmail("bridge-testing+technical@sagebase.org");
-        study.setSupportEmail("bridge-testing+support@sagebase.org");
-        study.setConsentNotificationEmail("bridge-testing+consent@sagebase.org");
-        study.setEmailVerificationEnabled(true);
+        App app = new App();
+        app.setIdentifier(appId);
+        app.setName(appName);
+        app.setSponsorName(appName);
+        app.setTechnicalEmail("bridge-testing+technical@sagebase.org");
+        app.setSupportEmail("bridge-testing+support@sagebase.org");
+        app.setConsentNotificationEmail("bridge-testing+consent@sagebase.org");
+        app.setEmailVerificationEnabled(true);
 
         // create study
-        superadminApi.createStudy(study).execute();
+        superadminApi.createApp(app).execute();
 
         try {
-            superadminApi.adminChangeStudy(new SignIn().study(studyId)).execute();
+            superadminApi.adminChangeApp(new SignIn().appId(appId)).execute();
             
             // get study back and verify fields
-            Study returnedStudy = superadminApi.getStudy(studyId).execute().body();
-            assertEquals(studyId, returnedStudy.getIdentifier());
-            assertEquals(studyName, returnedStudy.getName());
+            App returnedApp = superadminApi.getApp(appId).execute().body();
+            assertEquals(appId, returnedApp.getIdentifier());
+            assertEquals(appName, returnedApp.getName());
         } finally {
-            superadminApi.adminChangeStudy(API_SIGNIN).execute();
+            superadminApi.adminChangeApp(API_SIGNIN).execute();
             // clean-up: delete study
-            superadminApi.deleteStudy(studyId, true).execute();
+            superadminApi.deleteApp(appId, true).execute();
         }
     }
 

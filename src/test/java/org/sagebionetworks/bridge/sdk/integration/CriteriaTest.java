@@ -2,7 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -73,10 +73,10 @@ public class CriteriaTest {
         
         // Force the accept language header, not what is set as a default for integration tests.
         ApiClientProvider provider = new ApiClientProvider(user.getClientManager().getHostUrl(),
-                userAgent, acceptLanguage, STUDY_ID);
+                userAgent, acceptLanguage, TEST_APP_ID);
         
         ForConsentedUsersApi userApi = provider.getClient(ForConsentedUsersApi.class);
-        AppConfig appConfig = userApi.getAppConfigForStudy(user.getStudyId()).execute().body();
+        AppConfig appConfig = userApi.getConfigForApp(user.getAppId()).execute().body();
         // voilà, c'est en francais
         assertEquals("fr", appConfig.getCriteria().getLanguage());
     }

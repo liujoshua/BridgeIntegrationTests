@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.List;
 
@@ -22,7 +23,6 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import com.google.common.collect.Lists;
 
@@ -46,9 +46,9 @@ public class SessionTest {
             assertEquals(user.getEmail(), session.getEmail());
             assertTrue(session.isConsented());
 
-            ConsentStatus status = session.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
+            ConsentStatus status = session.getConsentStatuses().get(TEST_APP_ID);
             assertEquals("Default Consent Group", status.getName());
-            assertEquals(IntegTestUtils.STUDY_ID, status.getSubpopulationGuid());
+            assertEquals(TEST_APP_ID, status.getSubpopulationGuid());
             assertTrue(status.isRequired());
             assertTrue(status.isConsented());
             assertTrue(status.isSignedMostRecentConsent());
@@ -57,11 +57,11 @@ public class SessionTest {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
 
             Withdrawal withdrawal = new Withdrawal().reason("No longer want to be a test subject");
-            UserSessionInfo session2 = usersApi.withdrawConsentFromSubpopulation(IntegTestUtils.STUDY_ID, withdrawal).execute().body();
+            UserSessionInfo session2 = usersApi.withdrawConsentFromSubpopulation(TEST_APP_ID, withdrawal).execute().body();
 
-            ConsentStatus status2 = session2.getConsentStatuses().get(IntegTestUtils.STUDY_ID);
+            ConsentStatus status2 = session2.getConsentStatuses().get(TEST_APP_ID);
             assertEquals("Default Consent Group", status2.getName());
-            assertEquals(IntegTestUtils.STUDY_ID, status2.getSubpopulationGuid());
+            assertEquals(TEST_APP_ID, status2.getSubpopulationGuid());
             assertTrue(status2.isRequired());
             assertFalse(status2.isConsented());
             assertFalse(status2.isSignedMostRecentConsent());

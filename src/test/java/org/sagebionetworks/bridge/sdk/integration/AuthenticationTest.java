@@ -18,6 +18,7 @@ import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.exceptions.AuthenticationFailedException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.EmailSignIn;
 import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
@@ -30,7 +31,6 @@ import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
 import org.sagebionetworks.bridge.rest.model.SmsType;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -51,7 +51,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 @Category(IntegrationSmokeTest.class)
 @SuppressWarnings("unchecked")
@@ -68,7 +68,7 @@ public class AuthenticationTest {
         researchUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true, RESEARCHER);
         
         // Make a test user with a phone number.
-        SignUp phoneOnlyUser = new SignUp().study(STUDY_ID).consent(true).phone(PHONE);
+        SignUp phoneOnlyUser = new SignUp().appId(TEST_APP_ID).consent(true).phone(PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(AuthenticationTest.class).withConsentUser(true)
                 .withSignUp(phoneOnlyUser).createUser();
         testUser = TestUserHelper.createAndSignInUser(AuthenticationTest.class, true);
@@ -78,13 +78,12 @@ public class AuthenticationTest {
         superadminApi = adminUser.getClient(ForSuperadminsApi.class);
 
         // Verify necessary flags (health code export, email sign in, phone sign in, reauth) are enabled
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
-        // Study study = adminApi.getUsersStudy().execute().body();
-        study.setHealthCodeExportEnabled(true);
-        study.setPhoneSignInEnabled(true);
-        study.setEmailSignInEnabled(true);
-        study.setReauthenticationEnabled(true);
-        superadminApi.updateStudy(study.getIdentifier(), study).execute();
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
+        app.setHealthCodeExportEnabled(true);
+        app.setPhoneSignInEnabled(true);
+        app.setEmailSignInEnabled(true);
+        app.setReauthenticationEnabled(true);
+        superadminApi.updateApp(app.getIdentifier(), app).execute();
     }
     
     @AfterClass
@@ -109,31 +108,31 @@ public class AuthenticationTest {
     @AfterClass
     public static void disableReauth() throws Exception {
         // Because of https://sagebionetworks.jira.com/browse/BRIDGE-2091, we don't want to leave reauth enabled.
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
-        study.setReauthenticationEnabled(false);
-        superadminApi.updateStudy(study.getIdentifier(), study).execute();
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
+        app.setReauthenticationEnabled(false);
+        superadminApi.updateApp(app.getIdentifier(), app).execute();
     }
 
     @Test
     public void requestEmailSignIn() throws Exception {
-        EmailSignInRequest emailSignInRequest = new EmailSignInRequest().study(testUser.getStudyId())
+        EmailSignInRequest emailSignInRequest = new EmailSignInRequest().appId(testUser.getAppId())
                 .email(testUser.getEmail());
-        Study study = superadminApi.getStudy(testUser.getStudyId()).execute().body();
+        App app = superadminApi.getApp(testUser.getAppId()).execute().body();
         try {
             // Turn on email-based sign in for test. We can't verify the email was sent... we can verify this call
             // works and returns the right error conditions.
-            study.setEmailSignInEnabled(true);
+            app.setEmailSignInEnabled(true);
             
-            // Bug: this call does not return VersionHolder (BRIDGE-1809). Retrieve study again.
-            superadminApi.updateStudy(study.getIdentifier(), study).execute();
-            study = superadminApi.getStudy(testUser.getStudyId()).execute().body();
-            assertTrue(study.isEmailSignInEnabled());
+            // Bug: this call does not return VersionHolder (BRIDGE-1809). Retrieve app again.
+            superadminApi.updateApp(app.getIdentifier(), app).execute();
+            app = superadminApi.getApp(testUser.getAppId()).execute().body();
+            assertTrue(app.isEmailSignInEnabled());
             
             Response<Message> response = authApi.requestEmailSignIn(emailSignInRequest).execute();
             assertEquals(202, response.code());
         } finally {
-            study.setEmailSignInEnabled(false);
-            superadminApi.updateStudy(study.getIdentifier(), study).execute();
+            app.setEmailSignInEnabled(false);
+            superadminApi.updateApp(app.getIdentifier(), app).execute();
         }
     }
     
@@ -141,7 +140,7 @@ public class AuthenticationTest {
     public void emailSignIn() throws Exception {
         // We can't read the email from the test in order to extract a useful token, but we
         // can verify this call is made and fails as we'd expect.
-        EmailSignIn emailSignIn = new EmailSignIn().study(testUser.getStudyId()).email(testUser.getEmail())
+        EmailSignIn emailSignIn = new EmailSignIn().appId(testUser.getAppId()).email(testUser.getEmail())
                 .token("ABD");
         try {
             authApi.signInViaEmail(emailSignIn).execute();
@@ -153,7 +152,7 @@ public class AuthenticationTest {
     
     @Test
     public void canResendEmailVerification() throws IOException {
-        Identifier email = new Identifier().study(testUser.getSignIn().getStudy()).email(testUser.getSignIn().getEmail());
+        Identifier email = new Identifier().appId(testUser.getSignIn().getAppId()).email(testUser.getSignIn().getEmail());
 
         Response<Message> response = authApi.resendEmailVerification(email).execute();
         assertEquals(200, response.code());
@@ -161,7 +160,7 @@ public class AuthenticationTest {
     
     @Test
     public void resendingEmailVerificationToUnknownEmailDoesNotThrowException() throws Exception {
-        Identifier email = new Identifier().study(testUser.getStudyId()).email("bridge-testing@sagebase.org");
+        Identifier email = new Identifier().appId(testUser.getAppId()).email("bridge-testing@sagebase.org");
         
         Response<Message> response = authApi.resendEmailVerification(email).execute();
         assertEquals(200, response.code());
@@ -169,7 +168,7 @@ public class AuthenticationTest {
     
     @Test
     public void requestingResetPasswordForUnknownEmailDoesNotThrowException() throws Exception {
-        SignIn email = new SignIn().study(testUser.getStudyId()).email("fooboo-sagebridge@antwerp.com");
+        SignIn email = new SignIn().appId(testUser.getAppId()).email("fooboo-sagebridge@antwerp.com");
         
         Response<Message> response = authApi.requestResetPassword(email).execute();
         assertEquals(200, response.code());
@@ -187,7 +186,7 @@ public class AuthenticationTest {
 
     @Test
     public void requestingResetPasswordForUnknownPhoneDoesNotThrowException() throws Exception {
-        SignIn email = new SignIn().study(testUser.getStudyId())
+        SignIn email = new SignIn().appId(testUser.getAppId())
                 .phone(new Phone().number("4082588569").regionCode("CA"));
         
         Response<Message> response = authApi.requestResetPassword(email).execute();
@@ -196,8 +195,8 @@ public class AuthenticationTest {
 
     @Test
     public void canResendPhoneVerification() throws Exception {
-        // Request resend phone verificaiton.
-        Identifier phone = new Identifier().study(phoneOnlyTestUser.getSignIn().getStudy())
+        // Request resend phone verification.
+        Identifier phone = new Identifier().appId(phoneOnlyTestUser.getSignIn().getAppId())
                 .phone(phoneOnlyTestUser.getPhone());
 
         Response<Message> response = authApi.resendPhoneVerification(phone).execute();
@@ -209,7 +208,7 @@ public class AuthenticationTest {
     
     @Test
     public void resendingPhoneVerificationToUnknownPhoneDoesNotThrowException() throws Exception {
-        Identifier identifier = new Identifier().study(testUser.getStudyId())
+        Identifier identifier = new Identifier().appId(testUser.getAppId())
                 .phone(new Phone().number("4082588569").regionCode("CA"));
         
         Response<Message> response = authApi.resendPhoneVerification(identifier).execute();
@@ -217,38 +216,38 @@ public class AuthenticationTest {
     }
     
     @Test
-    public void accountWithOneStudySeparateFromAccountWithSecondStudy() throws IOException {
-        String studyId = Tests.randomIdentifier(AuthenticationTest.class);
+    public void accountWithOneAppSeparateFromAccountWithSecondApp() throws IOException {
+        String appId = Tests.randomIdentifier(AuthenticationTest.class);
         try {
             testUser.signInAgain();
 
-            // Make a second study for this test:
-            Study study = new Study();
-            study.setIdentifier(studyId);
-            study.setName("Second Study");
-            study.setSponsorName("Second Study");
-            study.setSupportEmail("bridge-testing+support@sagebase.org");
-            study.setConsentNotificationEmail("bridge-testing+consent@sagebase.org");
-            study.setTechnicalEmail("bridge-testing+technical@sagebase.org");
-            study.setEmailVerificationEnabled(true);
+            // Make a second app for this test:
+            App app = new App();
+            app.setIdentifier(appId);
+            app.setName("Second App");
+            app.setSponsorName("Second App");
+            app.setSupportEmail("bridge-testing+support@sagebase.org");
+            app.setConsentNotificationEmail("bridge-testing+consent@sagebase.org");
+            app.setTechnicalEmail("bridge-testing+technical@sagebase.org");
+            app.setEmailVerificationEnabled(true);
 
-            superadminApi.createStudy(study).execute();
+            superadminApi.createApp(app).execute();
 
-            // Can we sign in to secondstudy? No.
+            // Can we sign in to secondapp? No.
             try {
-                SignIn otherStudySignIn = new SignIn().study(studyId).email(testUser.getEmail())
+                SignIn otherAppSignIn = new SignIn().appId(appId).email(testUser.getEmail())
                         .password(testUser.getPassword());
-                ClientManager otherStudyManager = new ClientManager.Builder().withSignIn(otherStudySignIn).build();
+                ClientManager otherAppManager = new ClientManager.Builder().withSignIn(otherAppSignIn).build();
                 
-                AuthenticationApi authClient = otherStudyManager.getClient(AuthenticationApi.class);
+                AuthenticationApi authClient = otherAppManager.getClient(AuthenticationApi.class);
                 
-                authClient.signInV4(otherStudySignIn).execute();
+                authClient.signInV4(otherAppSignIn).execute();
                 fail("Should not have allowed sign in");
             } catch (EntityNotFoundException e) {
                 assertEquals(404, e.getStatusCode());
             }
         } finally {
-            superadminApi.deleteStudy(studyId, true).execute();
+            superadminApi.deleteApp(appId, true).execute();
         }
     }
     
@@ -257,8 +256,8 @@ public class AuthenticationTest {
     public void emailVerificationThrowsTheCorrectError() throws Exception {
         String hostUrl = testUser.getClientManager().getHostUrl();
 
-        HttpResponse response = Request.Post(hostUrl + "/v3/auth/verifyEmail?study=api")
-                .body(new StringEntity("{\"sptoken\":\"testtoken\",\"study\":\"api\"}")).execute().returnResponse();
+        HttpResponse response = Request.Post(hostUrl + "/v3/auth/verifyEmail?appId=api")
+                .body(new StringEntity("{\"sptoken\":\"testtoken\",\"appId\":\"api\"}")).execute().returnResponse();
         assertEquals(400, response.getStatusLine().getStatusCode());
         
         JsonNode node = new ObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
@@ -269,8 +268,8 @@ public class AuthenticationTest {
     public void phoneVerificationThrowsTheCorrectError() throws Exception {
         String hostUrl = testUser.getClientManager().getHostUrl();
 
-        HttpResponse response = Request.Post(hostUrl + "/v3/auth/verifyPhone?study=api")
-                .body(new StringEntity("{\"sptoken\":\"testtoken\",\"study\":\"api\"}")).execute().returnResponse();
+        HttpResponse response = Request.Post(hostUrl + "/v3/auth/verifyPhone?appId=api")
+                .body(new StringEntity("{\"sptoken\":\"testtoken\",\"appId\":\"api\"}")).execute().returnResponse();
         assertEquals(400, response.getStatusLine().getStatusCode());
         
         JsonNode node = new ObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
@@ -278,7 +277,7 @@ public class AuthenticationTest {
     }
     
 
-    // Should not be able to tell from the sign up response if an email is enrolled in the study or not.
+    // Should not be able to tell from the sign up response if an email is enrolled in the app or not.
     // Server change is not yet checked in for this.
     @Test
     public void secondTimeSignUpLooksTheSameAsFirstTimeSignUp() throws Exception {
@@ -287,7 +286,7 @@ public class AuthenticationTest {
             testUser.signOut();
             
             // Now create the same user in terms of a sign up (same email).
-            SignUp signUp = new SignUp().study(testUser.getStudyId()).email(testUser.getEmail())
+            SignUp signUp = new SignUp().appId(testUser.getAppId()).email(testUser.getEmail())
                     .password(testUser.getPassword());
             
             // This should not throw an exception.
@@ -303,7 +302,7 @@ public class AuthenticationTest {
     public void requestPhoneSignInWithoutPhone() throws Exception {
         AuthenticationApi authApi = testUser.getClient(AuthenticationApi.class);
 
-        PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().study(testUser.getStudyId());
+        PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().appId(testUser.getAppId());
 
         Response<Message> response = authApi.requestPhoneSignIn(phoneSignIn).execute();
         assertEquals(202, response.code());
@@ -315,7 +314,7 @@ public class AuthenticationTest {
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
         
         PhoneSignInRequest phoneSignIn = new PhoneSignInRequest().phone(phoneOnlyTestUser.getPhone())
-                .study(phoneOnlyTestUser.getStudyId());
+                .appId(phoneOnlyTestUser.getAppId());
 
         Response<Message> response = authApi.requestPhoneSignIn(phoneSignIn).execute();
         assertEquals(202, response.code());
@@ -328,7 +327,7 @@ public class AuthenticationTest {
     public void phoneSignInThrows() throws Exception {
         AuthenticationApi authApi = phoneOnlyTestUser.getClient(AuthenticationApi.class);
 
-        PhoneSignIn phoneSignIn = new PhoneSignIn().phone(PHONE).study(phoneOnlyTestUser.getStudyId()).token("test-token");
+        PhoneSignIn phoneSignIn = new PhoneSignIn().phone(PHONE).appId(phoneOnlyTestUser.getAppId()).token("test-token");
 
         authApi.signInViaPhone(phoneSignIn).execute();
     }
@@ -351,7 +350,7 @@ public class AuthenticationTest {
         verifySession(200, session.getSessionToken());
 
         // Make sure signIn actually checks credentials even while already logged in.
-        SignIn badSignIn = new SignIn().study(STUDY_ID).email(testUser.getEmail())
+        SignIn badSignIn = new SignIn().appId(TEST_APP_ID).email(testUser.getEmail())
                 .password("bad password");
         try {
             authApi.signIn(badSignIn).execute();
@@ -367,7 +366,7 @@ public class AuthenticationTest {
         }
 
         // Also, reauth
-        SignIn badReauth = new SignIn().study(STUDY_ID).email(testUser.getEmail())
+        SignIn badReauth = new SignIn().appId(TEST_APP_ID).email(testUser.getEmail())
                 .reauthToken("bad token");
         try {
             authApi.reauthenticate(badReauth).execute();
@@ -390,7 +389,7 @@ public class AuthenticationTest {
         verifySession(200, newSessionV4.getSessionToken());
 
         // Reauth will reacquire the same session because the token has not expired
-        SignIn reauth = new SignIn().study(STUDY_ID).email(testUser.getEmail())
+        SignIn reauth = new SignIn().appId(TEST_APP_ID).email(testUser.getEmail())
                 .reauthToken(newSessionV4.getReauthToken());
         UserSessionInfo newSessionReauth = authApi.reauthenticate(reauth).execute().body();
         verifySession(200, newSessionV4.getSessionToken());
@@ -413,7 +412,7 @@ public class AuthenticationTest {
         assertEquals(phoneOnlyTestUser.getPhone().getNumber(), message.getPhoneNumber());
         assertNotNull(message.getMessageId());
         assertEquals(SmsType.TRANSACTIONAL, message.getSmsType());
-        assertEquals(phoneOnlyTestUser.getStudyId(), message.getStudyId());
+        assertEquals(phoneOnlyTestUser.getAppId(), message.getAppId());
 
         // Message body isn't constrained by the test, so just check that it exists.
         assertNotNull(message.getMessageBody());

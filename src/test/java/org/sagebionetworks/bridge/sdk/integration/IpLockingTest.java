@@ -15,9 +15,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.api.AppsApi;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.Role;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 
 // This test makes raw HTTP requests, because we need to spoof the X-Forwarded-For header.
@@ -27,14 +27,14 @@ public class IpLockingTest {
     private static TestUserHelper.TestUser basicUser;
     private static TestUserHelper.TestUser developer;
     private static String hostUrl;
-    private static StudiesApi studiesApi;
+    private static AppsApi appsApi;
 
     @BeforeClass
     public static void beforeClass() throws IOException {
         // Make test users
         basicUser = TestUserHelper.createAndSignInUser(IpLockingTest.class, true);
         developer = TestUserHelper.createAndSignInUser(IpLockingTest.class, true, Role.DEVELOPER);
-        studiesApi = developer.getClient(StudiesApi.class);
+        appsApi = developer.getClient(AppsApi.class);
 
         // Get host URL
         hostUrl = developer.getClientManager().getHostUrl();
@@ -72,20 +72,20 @@ public class IpLockingTest {
     }
 
     private static void updateIpLockingFlag(boolean participantIpLockingEnabled) throws Exception {
-        // Get study. We need an updated version of the study anyway to avoid concurrent modification errors.
-        Study study = studiesApi.getUsersStudy().execute().body();
+        // Get app. We need an updated version of the app anyway to avoid concurrent modification errors.
+        App app = appsApi.getUsersApp().execute().body();
 
-        // Only modify the study if the flag value is different.
-        if (study.isParticipantIpLockingEnabled() != participantIpLockingEnabled) {
-            study.setParticipantIpLockingEnabled(participantIpLockingEnabled);
-            studiesApi.updateUsersStudy(study).execute();
+        // Only modify the app if the flag value is different.
+        if (app.isParticipantIpLockingEnabled() != participantIpLockingEnabled) {
+            app.setParticipantIpLockingEnabled(participantIpLockingEnabled);
+            appsApi.updateUsersApp(app).execute();
         }
     }
 
     private static void test(TestUserHelper.TestUser user, boolean shouldLock) throws Exception {
         // Sign in and extract session ID.
         String signInText = "{\n" +
-                "   \"study\":\"" + user.getStudyId() + "\",\n" +
+                "   \"appId\":\"" + user.getAppId() + "\",\n" +
                 "   \"email\":\"" + user.getEmail() + "\",\n" +
                 "   \"password\":\"" + user.getPassword() + "\"\n" +
                 "}";

@@ -7,7 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.List;
 import java.util.Map;
@@ -27,6 +27,7 @@ import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.ActivityEventList;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
@@ -39,7 +40,6 @@ import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
 import org.sagebionetworks.bridge.rest.model.SmsTemplate;
 import org.sagebionetworks.bridge.rest.model.SmsType;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -69,10 +69,10 @@ public class WorkerApiTest {
         
         // Turn on healthcode sharing, it is usually off 
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
-        if (!study.isHealthCodeExportEnabled()) {
-            study.setHealthCodeExportEnabled(true);
-            superadminApi.updateStudy(STUDY_ID, study).execute();
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
+        if (!app.isHealthCodeExportEnabled()) {
+            app.setHealthCodeExportEnabled(true);
+            superadminApi.updateApp(TEST_APP_ID, app).execute();
         }
     }
 
@@ -84,10 +84,10 @@ public class WorkerApiTest {
 
         // Turn off healthcode sharing to clean up
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
-        Study study = superadminApi.getStudy(STUDY_ID).execute().body();
-        if (study.isHealthCodeExportEnabled()) {
-            study.setHealthCodeExportEnabled(false);
-            superadminApi.updateStudy(STUDY_ID, study).execute();
+        App app = superadminApi.getApp(TEST_APP_ID).execute().body();
+        if (app.isHealthCodeExportEnabled()) {
+            app.setHealthCodeExportEnabled(false);
+            superadminApi.updateApp(TEST_APP_ID, app).execute();
         }
     }
     @After
@@ -128,38 +128,38 @@ public class WorkerApiTest {
                 DateTime.now(TEST_USER_TIME_ZONE).plusDays(1)).execute();
 
         // Get all participants
-        AccountSummaryList list = workersApi.getParticipantsForStudy(STUDY_ID, 0, 5, "", null, null, null).execute()
+        AccountSummaryList list = workersApi.getParticipantsForApp(TEST_APP_ID, 0, 5, "", null, null, null).execute()
                 .body();
         assertTrue(list.getTotal() > 0);
 
         // Get worker participant.
-        list = workersApi.getParticipantsForStudy(STUDY_ID, 0, 5, worker.getEmail(), null, null, null).execute().body();
+        list = workersApi.getParticipantsForApp(TEST_APP_ID, 0, 5, worker.getEmail(), null, null, null).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(worker.getEmail(), list.getItems().get(0).getEmail());
         
         // Get user participant. Include consent history in this call.
-        StudyParticipant participant = workersApi.getParticipantByIdForStudy(STUDY_ID, user.getSession().getId(), true)
+        StudyParticipant participant = workersApi.getParticipantByIdForApp(TEST_APP_ID, user.getSession().getId(), true)
                 .execute().body();
         assertEquals(user.getEmail(), participant.getEmail());
         assertEquals(TEST_USER_TIME_ZONE_STRING, participant.getTimeZone());
         assertNotNull(participant.getHealthCode());
-        assertNotNull(participant.getConsentHistories().get(STUDY_ID).get(0));
+        assertNotNull(participant.getConsentHistories().get(TEST_APP_ID).get(0));
         
         // get by health code, also verify we do not include consent histories.
         StudyParticipant participant2 = workersApi
-                .getParticipantByHealthCodeForStudy(STUDY_ID, participant.getHealthCode(), false).execute().body();
+                .getParticipantByHealthCodeForApp(TEST_APP_ID, participant.getHealthCode(), false).execute().body();
         assertEquals(participant.getId(), participant2.getId());
-        assertNull(participant2.getConsentHistories().get(STUDY_ID));
+        assertNull(participant2.getConsentHistories().get(TEST_APP_ID));
         
         // get by external Id, also verify we do not include consent histories.
         StudyParticipant participant3 = workersApi
-                .getParticipantByExternalIdForStudy(STUDY_ID, externalId.getIdentifier(), false).execute().body();
+                .getParticipantByExternalIdForApp(TEST_APP_ID, externalId.getIdentifier(), false).execute().body();
         assertEquals(participant.getId(), participant3.getId());
-        assertNull(participant3.getConsentHistories().get(STUDY_ID));
+        assertNull(participant3.getConsentHistories().get(TEST_APP_ID));
         
         // get by synapse user id
         StudyParticipant participant4 = workersApi
-                .getParticipantBySynapseUserIdForStudy(STUDY_ID, SYNAPSE_USER_ID, false).execute().body();
+                .getParticipantBySynapseUserIdForApp(TEST_APP_ID, SYNAPSE_USER_ID, false).execute().body();
         assertEquals(participant.getId(), participant4.getId());
         
         Tests.deleteExternalId(externalId);
@@ -173,12 +173,12 @@ public class WorkerApiTest {
         SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1");
         phoneUser = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, signUp);
         
-        AccountSummaryList list = workersApi.getParticipantsForStudy(STUDY_ID, 0, 5, null, "248-6796", null, null).execute().body();
+        AccountSummaryList list = workersApi.getParticipantsForApp(TEST_APP_ID, 0, 5, null, "248-6796", null, null).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(phoneUser.getPhone().getNumber(), list.getItems().get(0).getPhone().getNumber());
         
         String userId = list.getItems().get(0).getId();
-        StudyParticipant participant = workersApi.getParticipantByIdForStudy(STUDY_ID, userId, false).execute().body();
+        StudyParticipant participant = workersApi.getParticipantByIdForApp(TEST_APP_ID, userId, false).execute().body();
         
         assertEquals(phoneUser.getPhone().getNumber(), participant.getPhone().getNumber());
         assertNotNull(participant.getHealthCode());
@@ -192,7 +192,7 @@ public class WorkerApiTest {
         try {
             guid = planApi.createSchedulePlan(plan).execute().body();
             
-            SchedulePlanList plans = workersApi.getSchedulePlansForStudy(STUDY_ID, false).execute().body();
+            SchedulePlanList plans = workersApi.getSchedulePlansForApp(TEST_APP_ID, false).execute().body();
             
             final String theGuid = guid.getGuid();
             if (!plans.getItems().stream().anyMatch((onePlan) -> onePlan.getGuid().equals(theGuid))) {
@@ -208,7 +208,7 @@ public class WorkerApiTest {
     @Test
     public void retrieveUsersActivityEvents() throws Exception {
         ActivityEventList list = workersApi
-                .getActivityEventsForParticipantAndStudy(worker.getStudyId(), worker.getSession().getId()).execute().body();
+                .getActivityEventsForParticipantAndApp(worker.getAppId(), worker.getSession().getId()).execute().body();
         
         assertFalse(list.getItems().isEmpty());
     }
@@ -230,8 +230,8 @@ public class WorkerApiTest {
             
             String activityGuid = ((SimpleScheduleStrategy) plan.getStrategy())
                     .getSchedule().getActivities().get(0).getGuid();
-            ForwardCursorScheduledActivityList list = workersApi.getParticipantActivityHistoryForStudy(
-                    user.getStudyId(), user.getSession().getId(), activityGuid, DateTime.now().minusDays(2), 
+            ForwardCursorScheduledActivityList list = workersApi.getParticipantActivityHistoryForApp(
+                    user.getAppId(), user.getSession().getId(), activityGuid, DateTime.now().minusDays(2), 
                     DateTime.now().plusDays(2), null, 50).execute().body();
 
             assertFalse(list.getItems().isEmpty());
@@ -260,7 +260,7 @@ public class WorkerApiTest {
             // Sleep to wait for global secondary index
             Thread.sleep(2000);
 
-            ForwardCursorScheduledActivityList list = workersApi.getParticipantTaskHistoryForStudy(user.getStudyId(), 
+            ForwardCursorScheduledActivityList list = workersApi.getParticipantTaskHistoryForApp(user.getAppId(), 
                     user.getSession().getId(), "task:CCC", DateTime.now().minusDays(2), DateTime.now().plusDays(2), 
                     null, 50).execute().body();
 
@@ -276,7 +276,7 @@ public class WorkerApiTest {
     public void sendUserSmsMessage() throws Exception {
         SignUp signUp = new SignUp();
         signUp.setPhone(IntegTestUtils.PHONE);
-        signUp.setStudy(IntegTestUtils.STUDY_ID);
+        signUp.setAppId(TEST_APP_ID);
         signUp.setConsent(true);
 
         user = new TestUserHelper.Builder(WorkerApiTest.class).withSignUp(signUp).withConsentUser(true)
@@ -289,7 +289,7 @@ public class WorkerApiTest {
 
         // Test sending SMS from worker.
         String messageFromWorker = "Test message from worker.";
-        workersApi.sendSmsMessageToParticipantForStudy(user.getStudyId(), user.getSession().getId(),
+        workersApi.sendSmsMessageToParticipantForApp(user.getAppId(), user.getSession().getId(),
                 new SmsTemplate().message(messageFromWorker)).execute();
         verifyPromotionalMessage(messageFromWorker);
     }
@@ -302,14 +302,14 @@ public class WorkerApiTest {
         assertEquals(expectedMessageBody, message.getMessageBody());
         assertNotNull(message.getMessageId());
         assertEquals(SmsType.PROMOTIONAL, message.getSmsType());
-        assertEquals(user.getStudyId(), message.getStudyId());
+        assertEquals(user.getAppId(), message.getAppId());
 
         // Clock skew on Jenkins can be known to go as high as 10 minutes. For a robust test, simply check that the
         // message was sent within the last hour.
         assertTrue(message.getSentOn().isAfter(DateTime.now().minusHours(1)));
 
         // Verify the health code matches.
-        StudyParticipant participant = workersApi.getParticipantByIdForStudy(user.getStudyId(), user.getUserId(),
+        StudyParticipant participant = workersApi.getParticipantByIdForApp(user.getAppId(), user.getUserId(),
                 false).execute().body();
         assertEquals(participant.getHealthCode(), message.getHealthCode());
 

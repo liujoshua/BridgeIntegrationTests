@@ -13,7 +13,7 @@ import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.SPONSORS_AND_PARTNERS;
 import static org.sagebionetworks.bridge.rest.model.SmsType.TRANSACTIONAL;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.STUDY_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -26,19 +26,20 @@ import org.joda.time.format.ISODateTimeFormat;
 import retrofit2.Response;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
@@ -46,7 +47,6 @@ import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.rest.model.Substudy;
@@ -83,15 +83,15 @@ public class ConsentTest {
 
         // Make phone user.
         IntegTestUtils.deletePhoneUser(researchUser);
-        SignUp phoneOnlyUser = new SignUp().study(STUDY_ID).consent(true).phone(PHONE);
+        SignUp phoneOnlyUser = new SignUp().appId(TEST_APP_ID).consent(true).phone(PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(ConsentTest.class).withConsentUser(true)
                 .withSignUp(phoneOnlyUser).createAndSignInUser();
 
         // Verify necessary flags (health code export) are enabled
         ForSuperadminsApi adminApi = adminUser.getClient(ForSuperadminsApi.class);
-        Study study = adminApi.getStudy(STUDY_ID).execute().body();
-        study.setHealthCodeExportEnabled(true);
-        adminApi.updateStudy(study.getIdentifier(), study).execute();
+        App app = adminApi.getApp(TEST_APP_ID).execute().body();
+        app.setHealthCodeExportEnabled(true);
+        adminApi.updateApp(app.getIdentifier(), app).execute();
     }
 
     @AfterClass
@@ -136,9 +136,9 @@ public class ConsentTest {
             assertEquals(NO_SHARING, participant.getSharingScope());
             
             Map<String,List<UserConsentHistory>> map = participant.getConsentHistories();
-            UserConsentHistory history = map.get(STUDY_ID).get(0);
+            UserConsentHistory history = map.get(TEST_APP_ID).get(0);
             
-            assertEquals(STUDY_ID, history.getSubpopulationGuid());
+            assertEquals(TEST_APP_ID, history.getSubpopulationGuid());
             assertNotNull(history.getConsentCreatedOn());
             assertNotNull(history.getName());
             assertNotNull(history.getBirthdate());
@@ -178,7 +178,7 @@ public class ConsentTest {
             // then withdraw from the optional consent, and this should work where it didn't before.
             ForConsentedUsersApi usersApi = user.getClientManager().getClient(ForConsentedUsersApi.class);
 
-            usersApi.createConsentSignature(user.getStudyId(), signature).execute();
+            usersApi.createConsentSignature(user.getAppId(), signature).execute();
             usersApi.createConsentSignature(keys.getGuid(), signature).execute();
             // Withdrawing the optional consent first, you should then be able to get the second consent
             usersApi.withdrawConsentFromSubpopulation(keys.getGuid(), withdrawal).execute();
@@ -186,7 +186,7 @@ public class ConsentTest {
             user.signOut();
             user.signInAgain();
 
-            usersApi.withdrawConsentFromSubpopulation(user.getStudyId(), withdrawal).execute();
+            usersApi.withdrawConsentFromSubpopulation(user.getAppId(), withdrawal).execute();
 
             user.signOut();
             try {
@@ -429,7 +429,7 @@ public class ConsentTest {
         assertEquals(phoneOnlyTestUser.getPhone().getNumber(), message.getPhoneNumber());
         assertNotNull(message.getMessageId());
         assertEquals(TRANSACTIONAL, message.getSmsType());
-        assertEquals(phoneOnlyTestUser.getStudyId(), message.getStudyId());
+        assertEquals(phoneOnlyTestUser.getAppId(), message.getAppId());
 
         // Message body isn't constrained by the test, so just check that it exists.
         assertNotNull(message.getMessageBody());
@@ -464,7 +464,7 @@ public class ConsentTest {
     }
 
     @Test
-    public void canWithdrawFromStudy() throws Exception {
+    public void canWithdrawFromApp() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         try {
             UserSessionInfo session = testUser.getSession();
@@ -476,7 +476,7 @@ public class ConsentTest {
             assertTrue(RestUtils.isUserConsented(session));
 
             Withdrawal withdrawal = new Withdrawal().reason("I'm just a test user.");
-            testUser.getClient(ForConsentedUsersApi.class).withdrawFromStudy(withdrawal).execute();
+            testUser.getClient(ForConsentedUsersApi.class).withdrawFromApp(withdrawal).execute();
 
             try {
                 testUser.signInAgain();
@@ -489,15 +489,15 @@ public class ConsentTest {
     }
 
     @Test
-    public void canWithdrawParticipantFromStudy() throws Exception {
+    public void canWithdrawParticipantFromApp() throws Exception {
         TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
         String userId = testUser.getSession().getId();
         try {
             ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
 
             Withdrawal withdrawal = new Withdrawal().reason("Reason for withdrawal.");
-            Message message = participantsApi.withdrawParticipantFromStudy(userId, withdrawal).execute().body();
-            assertEquals("User has been withdrawn from the study.", message.getMessage());
+            Message message = participantsApi.withdrawParticipantFromApp(userId, withdrawal).execute().body();
+            assertEquals("User has been withdrawn from one or more studies in the app.", message.getMessage());
 
             // Retrieve the account and verify it has been processed correctly.
             StudyParticipant theUser = participantsApi.getParticipantById(userId, true).execute().body();
@@ -537,10 +537,10 @@ public class ConsentTest {
     }
     
     @Test
-    public void consentAndWithdrawFromStudyUpdatesDataGroupsAndSubstudies() throws Exception {
+    public void consentAndWithdrawFromAppUpdatesDataGroupsAndSubstudies() throws Exception {
         withdrawalTest((user, substudyIds, subpop) -> {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
-            usersApi.withdrawFromStudy(WITHDRAWAL).execute();
+            usersApi.withdrawFromApp(WITHDRAWAL).execute();
             
             ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
 
@@ -559,10 +559,10 @@ public class ConsentTest {
         SubstudiesApi substudiesApi = adminUser.getClient(SubstudiesApi.class);
         SubpopulationsApi subpopApi = devUser.getClient(SubpopulationsApi.class);
         try {
-            StudiesApi studiesApi = devUser.getClient(StudiesApi.class);
-            Study study = studiesApi.getUsersStudy().execute().body();
+            AppsApi studiesApi = devUser.getClient(AppsApi.class);
+            App app = studiesApi.getUsersApp().execute().body();
 
-            String dataGroup = Iterables.getFirst(study.getDataGroups(), null);
+            String dataGroup = Iterables.getFirst(app.getDataGroups(), null);
             List<String> dataGroupList = ImmutableList.of(dataGroup);
 
             // Csreate a substudy, if needed

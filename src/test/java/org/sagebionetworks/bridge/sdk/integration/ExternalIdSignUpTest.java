@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import org.junit.After;
 import org.junit.Before;
@@ -23,7 +24,6 @@ import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class ExternalIdSignUpTest {
     
@@ -48,7 +48,7 @@ public class ExternalIdSignUpTest {
         externalId3 = Tests.randomIdentifier(ExternalIdSignUpTest.class);
         devIdsClient = devResearcher.getClient(ExternalIdentifiersApi.class);
         researchersClient = devResearcher.getClient(ForResearchersApi.class);        
-        authClient = TestUserHelper.getNonAuthClient(AuthenticationApi.class, IntegTestUtils.STUDY_ID);
+        authClient = TestUserHelper.getNonAuthClient(AuthenticationApi.class, TEST_APP_ID);
     }
     
     @After
@@ -73,7 +73,7 @@ public class ExternalIdSignUpTest {
             devIdsClient.createExternalId(new ExternalIdentifier().substudyId(idA).identifier(externalId2)).execute();
             devIdsClient.createExternalId(new ExternalIdentifier().substudyId(idA).identifier(externalId3)).execute();
             
-            SignUp signUp = new SignUp().study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
+            SignUp signUp = new SignUp().appId(TEST_APP_ID).password(Tests.PASSWORD);
             signUp.externalId(externalId1);
             authClient.signUp(signUp).execute();
             
@@ -82,7 +82,7 @@ public class ExternalIdSignUpTest {
             assertTrue(list.getItems().get(0).isAssigned());
             
             // Prove you can sign in with this account (status = enabled)
-            SignIn signIn = new SignIn().externalId(externalId1).study(IntegTestUtils.STUDY_ID).password(Tests.PASSWORD);
+            SignIn signIn = new SignIn().externalId(externalId1).appId(TEST_APP_ID).password(Tests.PASSWORD);
             try {
                 authClient.signInV4(signIn).execute().body();
                 fail("Should have thrown exception.");
@@ -106,7 +106,7 @@ public class ExternalIdSignUpTest {
             // Let's do that again, with otherExternalId, and ask for the account to be created.
             GeneratedPassword generatedPassword2 = researchersClient.generatePassword(
                     externalId2, true).execute().body();
-            SignIn signIn2 = new SignIn().externalId(externalId2).study(IntegTestUtils.STUDY_ID)
+            SignIn signIn2 = new SignIn().externalId(externalId2).appId(TEST_APP_ID)
                     .password(generatedPassword2.getPassword());
             try {
                 authClient.signInV4(signIn2).execute().body();
@@ -120,12 +120,12 @@ public class ExternalIdSignUpTest {
             // account should now be usable (enabled)
             signUp = new SignUp();
             signUp.externalId(externalId3);
-            signUp.study(IntegTestUtils.STUDY_ID);
+            signUp.appId(TEST_APP_ID);
             authClient.signUp(signUp).execute();
             
             GeneratedPassword generatedPassword3 = researchersClient.generatePassword(
                     externalId3, false).execute().body();
-            SignIn signIn3 = new SignIn().externalId(externalId3).study(IntegTestUtils.STUDY_ID)
+            SignIn signIn3 = new SignIn().externalId(externalId3).appId(TEST_APP_ID)
                     .password(generatedPassword3.getPassword());
             try {
                 authClient.signInV4(signIn3).execute().body();
