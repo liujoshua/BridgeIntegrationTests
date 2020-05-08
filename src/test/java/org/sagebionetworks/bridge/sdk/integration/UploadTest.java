@@ -15,6 +15,9 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.Files;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -434,6 +437,43 @@ public class UploadTest {
         HealthDataRecord record2 = status2.getRecord();
         assertEquals(SharingScope.SPONSORS_AND_PARTNERS, record2.getUserSharingScope());
         assertEquals(record.getData(), record2.getData());
+    }
+
+    @Test
+    public void notEncryptedNotZipped() throws Exception {
+        // Manually make the upload request for this test. We need to write a file, since RestUtils expects a file.
+        byte[] uploadContent = "dummy content".getBytes();
+        File file = File.createTempFile("notEncryptedNotZipped", "txt");
+        Files.write(uploadContent, file);
+        String contentMd5 = Base64.encodeBase64String(DigestUtils.md5(uploadContent));
+
+        // Create and return request.
+        UploadRequest request = new UploadRequest();
+        request.setName(file.getName());
+        request.setContentLength(file.length());
+        request.setContentMd5(contentMd5);
+        request.setEncrypted(false);
+        request.setZipped(false);
+
+        // We use application/zip for MIME type because that's what RestUtils expects. The MIME type doesn't actually
+        // matter for this test.
+        request.setContentType("application/zip");
+
+        // Upload the file.
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+        UploadSession session = usersApi.requestUploadSession(request).execute().body();
+        RestUtils.uploadToS3(file, session.getUrl());
+        String uploadId = session.getId();
+
+        // Complete upload in synchronous mode.
+        UploadValidationStatus status = usersApi.completeUploadSession(uploadId, true, false)
+                .execute().body();
+        assertEquals(UploadStatus.SUCCEEDED, status.getStatus());
+        assertTrue(status.getMessageList().isEmpty());
+
+        // Integ Tests doesn't have the capability to download from S3, so just verify the record has raw data.
+        HealthDataRecord record = status.getRecord();
+        assertNotNull(record.getRawDataAttachmentId());
     }
 
     // returns the path relative to the root of the project
