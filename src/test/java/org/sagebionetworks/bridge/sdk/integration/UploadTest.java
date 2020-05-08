@@ -452,17 +452,14 @@ public class UploadTest {
         request.setName(file.getName());
         request.setContentLength(file.length());
         request.setContentMd5(contentMd5);
+        request.setContentType("text/plain");
         request.setEncrypted(false);
         request.setZipped(false);
-
-        // We use application/zip for MIME type because that's what RestUtils expects. The MIME type doesn't actually
-        // matter for this test.
-        request.setContentType("application/zip");
 
         // Upload the file.
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         UploadSession session = usersApi.requestUploadSession(request).execute().body();
-        RestUtils.uploadToS3(file, session.getUrl());
+        RestUtils.uploadToS3(file, session.getUrl(), "text/plain");
         String uploadId = session.getId();
 
         // Complete upload in synchronous mode.
