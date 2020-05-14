@@ -2,8 +2,6 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 import static org.junit.Assert.assertEquals;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.API_SIGNIN;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.CONFIG;
 
 import java.io.IOException;
 import java.util.Base64;
@@ -18,22 +16,25 @@ import org.hl7.fhir.dstu3.model.Identifier;
 import org.hl7.fhir.dstu3.model.Observation;
 import org.hl7.fhir.dstu3.model.ProcedureRequest;
 import org.joda.time.LocalDate;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.RestUtils;
-import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
+import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantReportsApi;
+import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ReportData;
 import org.sagebionetworks.bridge.rest.model.ReportDataList;
-import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.Substudy;
+import org.sagebionetworks.bridge.rest.model.SubstudyList;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
-import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -45,46 +46,64 @@ import ca.uhn.fhir.parser.IParser;
 public class CRCTest {
 
     static final String BRIDGE_USER_ID_NS = "https://ws.sagebridge.org/#userId";
-    static final String APP_ID = "czi-coronavirus";
     static final LocalDate JAN1 = LocalDate.parse("1970-01-01");
     static final LocalDate JAN2 = LocalDate.parse("1970-01-02");
     static final FhirContext CONTEXT = FhirContext.forDstu3();
+    static final String TEST_EXTERNAL_ID = "pFLaYky-7ToEH7MB6ZhzqpKe";
     
-    TestUser user;
-    TestUser adminUser;
+    static TestUser user;
+    static TestUser adminUser;
     
-    String host;
-    String credentials;
+    static String substudyId;
+    static String host;
+    static String credentials;
+    static ExternalIdentifier id;
     
-    @Before
-    public void beforeMethod() throws IOException {
+    @BeforeClass
+    public static void beforeMethod() throws IOException {
         adminUser = TestUserHelper.getSignedInAdmin();
-        adminUser.getClient(ForSuperadminsApi.class).adminChangeApp(new SignIn().appId(APP_ID)).execute();
+        SubstudiesApi substudiesApi = adminUser.getClient(SubstudiesApi.class);
+        ExternalIdentifiersApi externalIdsApi = adminUser.getClient(ExternalIdentifiersApi.class);
+
+        // Create an associated externalId
+        ExternalIdentifierList extIds = externalIdsApi.getExternalIds(
+                null, 5, TEST_EXTERNAL_ID, null).execute().body();
+        if (extIds.getItems().isEmpty()) {
+            // Create a substudy
+            SubstudyList substudies = substudiesApi.getSubstudies(false).execute().body();
+            if (substudies.getItems().isEmpty()) {
+                Substudy substudy = new Substudy().id("substudy1").name("substudy1");
+                substudiesApi.createSubstudy(substudy).execute();
+            }
+        }
+        String substudyId = substudiesApi.getSubstudies(false)
+                .execute().body().getItems().get(0).getId();
+        if (extIds.getItems().isEmpty()) {
+            ExternalIdentifier id = new ExternalIdentifier().identifier(TEST_EXTERNAL_ID)
+                    .substudyId(substudyId);
+            externalIdsApi.createExternalId(id).execute();
+        }
         
+        // Create an account that is a system account and the target user account
+        String password = Tests.randomIdentifier(CRCTest.class);
         user = new TestUserHelper.Builder(CRCTest.class)
-                .withAppId(APP_ID)
-                .withConsentUser(true)
-                .withSubstudyIds(ImmutableSet.of("columbia"))
-                .createAndSignInUser();
+                .withSetPassword(false)
+                .withExternalId(TEST_EXTERNAL_ID)
+                .withSignUp(new SignUp().password(password))
+                .withSubstudyIds(ImmutableSet.of(substudyId))
+                .createUser();
         
-        // These are the external integration credentials for the caller.
-        String externalId = IntegTestUtils.CONFIG.get("crc.external.id").trim();
-        String password = IntegTestUtils.CONFIG.get("crc.password").trim();
-        
-        host = new ClientManager.Builder()
-            .withConfig(CONFIG)
-            .withSignIn(new SignIn().appId(APP_ID).externalId(externalId).password(password))
-            .build().getHostUrl();
-        credentials = new String(Base64.getEncoder().encode((externalId + ":" + password).getBytes()));
+        host = adminUser.getClientManager().getHostUrl();
+        credentials = new String(Base64.getEncoder().encode((TEST_EXTERNAL_ID + ":" + password).getBytes()));
     }
     
-    @After
-    public void afterMethod() throws Exception {
+    @AfterClass
+    public static void afterMethod() throws Exception {
         if (user != null) {
-            user.signOutAndDeleteUser();    
+            user.signOutAndDeleteUser();
         }
-        adminUser = TestUserHelper.getSignedInAdmin();
-        adminUser.getClient(ForSuperadminsApi.class).adminChangeApp(API_SIGNIN).execute();
+        ExternalIdentifiersApi externalIdsApi = adminUser.getClient(ExternalIdentifiersApi.class);
+        externalIdsApi.deleteExternalId(TEST_EXTERNAL_ID).execute();
     }
     
     @Test
@@ -119,8 +138,6 @@ public class CRCTest {
         assertEquals("Appointment updated.", message.getMessage());
         assertEquals(200, response.getStatusLine().getStatusCode());
         
-        TestUser adminUser = TestUserHelper.getSignedInAdmin();
-        adminUser.getClient(ForSuperadminsApi.class).adminChangeApp(new SignIn().appId(APP_ID)).execute();
         ParticipantReportsApi reportsApi = adminUser.getClient(ParticipantReportsApi.class);
         
         ReportDataList list = reportsApi.getUsersParticipantReportRecords(
@@ -164,8 +181,6 @@ public class CRCTest {
         assertEquals("ProcedureRequest updated.", message.getMessage());
         assertEquals(200, response.getStatusLine().getStatusCode());
 
-        TestUser adminUser = TestUserHelper.getSignedInAdmin();
-        adminUser.getClient(ForSuperadminsApi.class).adminChangeApp(new SignIn().appId(APP_ID)).execute();
         ParticipantReportsApi reportsApi = adminUser.getClient(ParticipantReportsApi.class);
         
         ReportDataList list = reportsApi.getUsersParticipantReportRecords(
@@ -209,8 +224,6 @@ public class CRCTest {
         assertEquals("Observation updated.", message.getMessage());
         assertEquals(200, response.getStatusLine().getStatusCode());
 
-        TestUser adminUser = TestUserHelper.getSignedInAdmin();
-        adminUser.getClient(ForSuperadminsApi.class).adminChangeApp(new SignIn().appId(APP_ID)).execute();
         ParticipantReportsApi reportsApi = adminUser.getClient(ParticipantReportsApi.class);
         
         ReportDataList list = reportsApi.getUsersParticipantReportRecords(
