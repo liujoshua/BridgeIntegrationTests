@@ -25,6 +25,7 @@ import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -51,8 +52,8 @@ public class AccountSummarySearchTest {
 
         testUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
                 .withSignUp(new SignUp().email(emailPrefix + "test@sagebase.org")
-                        .languages(Lists.newArrayList("es"))
-                        .dataGroups(TEST_USER_GROUPS)).createUser();
+                    .languages(Lists.newArrayList("es"))    
+                    .dataGroups(TEST_USER_GROUPS)).createUser();
         taggedUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
                 .withSignUp(new SignUp().email(emailPrefix + "tagged@sagebase.org")
                         .languages(Lists.newArrayList("es"))
@@ -60,6 +61,7 @@ public class AccountSummarySearchTest {
         frenchUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
                 .withSignUp(new SignUp().email(emailPrefix + "french@sagebase.org")
                         .languages(Lists.newArrayList("fr"))
+                        .attributes(ImmutableMap.of("can_be_recontacted", "true"))
                         .dataGroups(FRENCH_USER_GROUPS)).createUser();
         
         researcher = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.RESEARCHER);
@@ -133,6 +135,12 @@ public class AccountSummarySearchTest {
         assertFalse(userIds.contains(taggedUser.getUserId()));
         assertTrue(userIds.contains(frenchUser.getUserId()));
         assertEquals("fr", list.getRequestParams().getLanguage());
+        
+        // verify the French testUser has attributes
+        AccountSummary summary = list.getItems().stream()
+            .filter(sum -> !sum.getId().equals(testUser.getUserId()))
+            .findFirst().get();
+        assertEquals("true", summary.getAttributes().get("can_be_recontacted"));
         
         // Unsuccessful language search
         search = makeAccountSummarySearch().language("en");
