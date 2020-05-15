@@ -21,7 +21,6 @@ import org.hl7.fhir.dstu3.model.ProcedureRequest;
 import org.joda.time.LocalDate;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
@@ -248,7 +247,6 @@ public class CRCTest {
     }
     
     @Test
-    @Ignore
     public void createObservation() throws IOException {
         Identifier identifier = new Identifier();
         identifier.setSystem(BRIDGE_USER_ID_NS);
