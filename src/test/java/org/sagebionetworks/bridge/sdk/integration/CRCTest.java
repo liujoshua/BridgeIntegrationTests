@@ -2,10 +2,13 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Base64;
+import java.util.List;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import org.apache.http.HttpResponse;
@@ -22,15 +25,19 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantReportsApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
+import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ReportData;
 import org.sagebionetworks.bridge.rest.model.ReportDataList;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.SubstudyList;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -50,6 +57,8 @@ public class CRCTest {
     static final LocalDate JAN2 = LocalDate.parse("1970-01-02");
     static final FhirContext CONTEXT = FhirContext.forDstu3();
     static final String TEST_EXTERNAL_ID = "pFLaYky-7ToEH7MB6ZhzqpKe";
+    static final List<String> WORKFLOW_TAGS = ImmutableList.of("enrolled", "selected", 
+            "declined", "tests_requested", "tests_scheduled", "tests_collected", "tests_available");
     
     static TestUser user;
     static TestUser adminUser;
@@ -64,7 +73,17 @@ public class CRCTest {
         adminUser = TestUserHelper.getSignedInAdmin();
         SubstudiesApi substudiesApi = adminUser.getClient(SubstudiesApi.class);
         ExternalIdentifiersApi externalIdsApi = adminUser.getClient(ExternalIdentifiersApi.class);
-
+        AppsApi appsApi = adminUser.getClient(AppsApi.class);
+        
+        App app = appsApi.getUsersApp().execute().body();
+        if (!app.getDataGroups().containsAll(WORKFLOW_TAGS) ||
+            !app.getUserProfileAttributes().contains("state_change_timestamp")) {
+            
+            app.getDataGroups().addAll(WORKFLOW_TAGS);
+            app.getUserProfileAttributes().add("state_change_timestamp");
+            appsApi.updateUsersApp(app).execute();
+        }
+        
         // Create an associated externalId
         ExternalIdentifierList extIds = externalIdsApi.getExternalIds(
                 null, 5, TEST_EXTERNAL_ID, null).execute().body();
@@ -104,6 +123,34 @@ public class CRCTest {
         }
         ExternalIdentifiersApi externalIdsApi = adminUser.getClient(ExternalIdentifiersApi.class);
         externalIdsApi.deleteExternalId(TEST_EXTERNAL_ID).execute();
+    }
+    
+    @Test
+    public void updateParticipant() throws IOException {
+        // This is a normal call but I have not bothered to create a Java SDK method for
+        // it. Don't set 'selected' as a data group, it'll trigger a call to our external
+        // partner.
+        StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
+            .getParticipantById(user.getUserId(), false).execute().body();
+        
+        participant.setLastName("Updated field");
+        participant.getDataGroups().add("declined");
+        String body = RestUtils.GSON.toJson(participant);
+        
+        HttpResponse response = Request.Post(host + "/v1/cuimc/participants/" + user.getUserId())
+                .addHeader("Bridge-Session", adminUser.getSession().getSessionToken())
+                .bodyString(body, APPLICATION_JSON)
+                .execute()
+                .returnResponse();
+        
+        Message message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
+        assertEquals("Participant updated.", message.getMessage());
+        assertEquals(200, response.getStatusLine().getStatusCode());
+        
+        participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertEquals("Updated field", participant.getLastName());
+        assertTrue(participant.getDataGroups().contains("declined"));
     }
     
     @Test
@@ -147,10 +194,14 @@ public class CRCTest {
         String json = RestUtils.GSON.toJson(report.getData());
         Appointment retrieved = parser.parseResource(Appointment.class, json);
         assertEquals(user.getUserId(), retrieved.getIdentifier().get(0).getValue());
+        
+        StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertTrue(participant.getDataGroups().contains("tests_scheduled"));
     }
     
     @Test
-    public void createProcedure() throws IOException {
+    public void createProcedureRequest() throws IOException {
         Identifier identifier = new Identifier();
         identifier.setSystem(BRIDGE_USER_ID_NS);
         identifier.setValue(user.getUserId());
@@ -190,6 +241,10 @@ public class CRCTest {
         String json = RestUtils.GSON.toJson(report.getData());
         ProcedureRequest retrieved = parser.parseResource(ProcedureRequest.class, json);
         assertEquals(user.getUserId(), retrieved.getIdentifier().get(0).getValue());
+        
+        StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertTrue(participant.getDataGroups().contains("tests_collected"));
     }
     
     @Test
@@ -233,6 +288,10 @@ public class CRCTest {
         String json = RestUtils.GSON.toJson(report.getData());
         Observation retrieved = parser.parseResource(Observation.class, json);
         assertEquals(user.getUserId(), retrieved.getIdentifier().get(0).getValue());
+        
+        StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertTrue(participant.getDataGroups().contains("tests_available"));
     }
     
 }
