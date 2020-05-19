@@ -107,7 +107,7 @@ public class CRCTest {
         user = new TestUserHelper.Builder(CRCTest.class)
                 .withSetPassword(false)
                 .withExternalId(TEST_EXTERNAL_ID)
-                .withSignUp(new SignUp().password(password))
+                .withSignUp(new SignUp().password(password).dataGroups(ImmutableList.of("test_user")))
                 .withSubstudyIds(ImmutableSet.of(substudyId))
                 .createUser();
         
@@ -123,17 +123,44 @@ public class CRCTest {
         ExternalIdentifiersApi externalIdsApi = adminUser.getClient(ExternalIdentifiersApi.class);
         externalIdsApi.deleteExternalId(TEST_EXTERNAL_ID).execute();
     }
-    
+
     @Test
-    public void updateParticipant() throws IOException {
+    public void updateParticipantWithSelected() throws IOException {
         // This is a normal call but I have not bothered to create a Java SDK method for
         // it. Don't set 'selected' as a data group, it'll trigger a call to our external
         // partner.
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
             .getParticipantById(user.getUserId(), false).execute().body();
         
-        participant.setLastName("Updated field");
-        participant.getDataGroups().add("declined");
+        participant.lastName("Updated field").addDataGroupsItem("selected");
+        String body = RestUtils.GSON.toJson(participant);
+        
+        HttpResponse response = Request.Post(host + "/v1/cuimc/participants/" + user.getUserId())
+                .addHeader("Bridge-Session", adminUser.getSession().getSessionToken())
+                .bodyString(body, APPLICATION_JSON)
+                .execute()
+                .returnResponse();
+        
+        Message message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
+        assertEquals("Participant updated (although eligible, a lab order was not placed for this test account).", 
+                message.getMessage());
+        assertEquals(200, response.getStatusLine().getStatusCode());
+        
+        participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertEquals("Updated field", participant.getLastName());
+        assertTrue(participant.getDataGroups().contains("selected"));
+    }
+    
+    @Test
+    public void updateParticipantWithDeclined() throws IOException {
+     // This is a normal call but I have not bothered to create a Java SDK method for
+        // it. Don't set 'selected' as a data group, it'll trigger a call to our external
+        // partner.
+        StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
+            .getParticipantById(user.getUserId(), false).execute().body();
+        
+        participant.lastName("Updated field").addDataGroupsItem("declined");
         String body = RestUtils.GSON.toJson(participant);
         
         HttpResponse response = Request.Post(host + "/v1/cuimc/participants/" + user.getUserId())
@@ -149,7 +176,7 @@ public class CRCTest {
         participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertEquals("Updated field", participant.getLastName());
-        assertTrue(participant.getDataGroups().contains("declined"));
+        assertTrue(participant.getDataGroups().contains("declined"));        
     }
     
     @Test
