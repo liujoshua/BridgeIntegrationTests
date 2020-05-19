@@ -154,7 +154,7 @@ public class CRCTest {
     
     @Test
     public void updateParticipantWithDeclined() throws IOException {
-     // This is a normal call but I have not bothered to create a Java SDK method for
+        // This is a normal call but I have not bothered to create a Java SDK method for
         // it. Don't set 'selected' as a data group, it'll trigger a call to our external
         // partner.
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
