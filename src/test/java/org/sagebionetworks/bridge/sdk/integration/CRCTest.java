@@ -10,6 +10,7 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.gson.JsonElement;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Request;
@@ -18,20 +19,24 @@ import org.hl7.fhir.dstu3.model.Appointment;
 import org.hl7.fhir.dstu3.model.Identifier;
 import org.hl7.fhir.dstu3.model.Observation;
 import org.hl7.fhir.dstu3.model.ProcedureRequest;
+import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
+import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantReportsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
+import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
+import org.sagebionetworks.bridge.rest.model.HealthDataRecordList;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ReportData;
 import org.sagebionetworks.bridge.rest.model.ReportDataList;
@@ -67,8 +72,8 @@ public class CRCTest {
     static String credentials;
     static ExternalIdentifier id;
     
-    @BeforeClass
-    public static void beforeMethod() throws IOException {
+    @Before
+    public void beforeMethod() throws IOException {
         adminUser = TestUserHelper.getSignedInAdmin();
         SubstudiesApi substudiesApi = adminUser.getClient(SubstudiesApi.class);
         ExternalIdentifiersApi externalIdsApi = adminUser.getClient(ExternalIdentifiersApi.class);
@@ -105,9 +110,10 @@ public class CRCTest {
         // Create an account that is a system account and the target user account
         String password = Tests.randomIdentifier(CRCTest.class);
         user = new TestUserHelper.Builder(CRCTest.class)
+                .withConsentUser(true)
                 .withSetPassword(false)
                 .withExternalId(TEST_EXTERNAL_ID)
-                .withSignUp(new SignUp().password(password))
+                .withSignUp(new SignUp().password(password).addDataGroupsItem("test_user"))
                 .withSubstudyIds(ImmutableSet.of(substudyId))
                 .createUser();
         
@@ -115,8 +121,8 @@ public class CRCTest {
         credentials = new String(Base64.getEncoder().encode((TEST_EXTERNAL_ID + ":" + password).getBytes()));
     }
     
-    @AfterClass
-    public static void afterMethod() throws Exception {
+    @After
+    public void afterMethod() throws Exception {
         if (user != null) {
             user.signOutAndDeleteUser();
         }
@@ -125,20 +131,13 @@ public class CRCTest {
     }
     
     @Test
-    public void updateParticipant() throws IOException {
-        // This is a normal call but I have not bothered to create a Java SDK method for
-        // it. Don't set 'selected' as a data group, it'll trigger a call to our external
-        // partner.
+    public void orderLabs() throws IOException {
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
-            .getParticipantById(user.getUserId(), false).execute().body();
+                .getParticipantById(user.getUserId(), false).execute().body();
+        String healthCode = participant.getHealthCode();
         
-        participant.setLastName("Updated field");
-        participant.getDataGroups().add("declined");
-        String body = RestUtils.GSON.toJson(participant);
-        
-        HttpResponse response = Request.Post(host + "/v1/cuimc/participants/" + user.getUserId())
-                .addHeader("Bridge-Session", adminUser.getSession().getSessionToken())
-                .bodyString(body, APPLICATION_JSON)
+        HttpResponse response = Request.Post(host + "/v1/cuimc/participants/healthcode:" + healthCode + "/laborders")
+                .addHeader("Authorization", "Basic " + credentials)
                 .execute()
                 .returnResponse();
         
@@ -148,8 +147,7 @@ public class CRCTest {
         
         participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
-        assertEquals("Updated field", participant.getLastName());
-        assertTrue(participant.getDataGroups().contains("declined"));
+        assertTrue(participant.getDataGroups().containsAll(ImmutableList.of("test_user", "tests_requested")));
     }
     
     @Test
@@ -197,6 +195,21 @@ public class CRCTest {
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_scheduled"));
+        
+        HealthDataRecordList records = user.getClient(InternalApi.class)
+                .getHealthDataByCreatedOn(DateTime.now().minusMinutes(10), DateTime.now().plusMinutes(10))
+                .execute().body();
+        verifyHealthDataRecords(records, "appointment");
+    }
+    
+    private void verifyHealthDataRecords(HealthDataRecordList records, String typeName) {
+        // There will be two records and they will both be appointments
+        assertEquals(records.getItems().size(), 2);
+        for (HealthDataRecord record : records.getItems()) {
+            JsonElement el = RestUtils.toJSON(record.getUserMetadata());
+            String type = el.getAsJsonObject().get("fhir-type").getAsString();
+            assertEquals(typeName, type);
+        }
     }
     
     @Test
@@ -244,10 +257,15 @@ public class CRCTest {
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_collected"));
+        
+        HealthDataRecordList records = user.getClient(InternalApi.class)
+                .getHealthDataByCreatedOn(DateTime.now().minusMinutes(10), DateTime.now().plusMinutes(10))
+                .execute().body();
+        verifyHealthDataRecords(records, "procedurerequest");
     }
     
     @Test
-    public void createObservation() throws IOException {
+    public void createObservation() throws Exception {
         Identifier identifier = new Identifier();
         identifier.setSystem(BRIDGE_USER_ID_NS);
         identifier.setValue(user.getUserId());
@@ -290,6 +308,10 @@ public class CRCTest {
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_available"));
+        
+        HealthDataRecordList records = user.getClient(InternalApi.class)
+                .getHealthDataByCreatedOn(DateTime.now().minusMinutes(10), DateTime.now().plusMinutes(10))
+                .execute().body();
+        verifyHealthDataRecords(records, "observation");
     }
-    
 }
