@@ -9,7 +9,6 @@ import java.util.Base64;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonElement;
 
 import org.apache.http.HttpResponse;
@@ -27,14 +26,13 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppsApi;
-import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantReportsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
+import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
+import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.App;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecordList;
 import org.sagebionetworks.bridge.rest.model.Message;
@@ -42,8 +40,6 @@ import org.sagebionetworks.bridge.rest.model.ReportData;
 import org.sagebionetworks.bridge.rest.model.ReportDataList;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.rest.model.Substudy;
-import org.sagebionetworks.bridge.rest.model.SubstudyList;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -60,24 +56,28 @@ public class CRCTest {
     static final LocalDate JAN1 = LocalDate.parse("1970-01-01");
     static final LocalDate JAN2 = LocalDate.parse("1970-01-02");
     static final FhirContext CONTEXT = FhirContext.forDstu3();
-    static final String TEST_EXTERNAL_ID = "pFLaYky-7ToEH7MB6ZhzqpKe";
+    static final String TEST_EMAIL = "bridge-testing+crc@sagebase.org";
     static final List<String> WORKFLOW_TAGS = ImmutableList.of("enrolled", "selected", 
             "declined", "tests_requested", "tests_scheduled", "tests_collected", "tests_available");
     
     static TestUser user;
     static TestUser adminUser;
     
-    static String substudyId;
     static String host;
     static String credentials;
-    static ExternalIdentifier id;
     
     @Before
     public void beforeMethod() throws IOException {
         adminUser = TestUserHelper.getSignedInAdmin();
-        SubstudiesApi substudiesApi = adminUser.getClient(SubstudiesApi.class);
-        ExternalIdentifiersApi externalIdsApi = adminUser.getClient(ExternalIdentifiersApi.class);
         AppsApi appsApi = adminUser.getClient(AppsApi.class);
+        
+        AccountSummarySearch search = new AccountSummarySearch()
+                .emailFilter(TEST_EMAIL);
+        AccountSummaryList list = adminUser.getClient(ParticipantsApi.class).searchAccountSummaries(search).execute().body();
+        if (!list.getItems().isEmpty()) {
+            String userId = list.getItems().get(0).getId();
+            adminUser.getClient(ForAdminsApi.class).deleteUser(userId).execute();
+        }
         
         App app = appsApi.getUsersApp().execute().body();
         if (!app.getDataGroups().containsAll(WORKFLOW_TAGS) ||
@@ -87,38 +87,16 @@ public class CRCTest {
             app.getUserProfileAttributes().add("state_change_timestamp");
             appsApi.updateUsersApp(app).execute();
         }
-        
-        // Create an associated externalId
-        ExternalIdentifierList extIds = externalIdsApi.getExternalIds(
-                null, 5, TEST_EXTERNAL_ID, null).execute().body();
-        if (extIds.getItems().isEmpty()) {
-            // Create a substudy
-            SubstudyList substudies = substudiesApi.getSubstudies(false).execute().body();
-            if (substudies.getItems().isEmpty()) {
-                Substudy substudy = new Substudy().id("substudy1").name("substudy1");
-                substudiesApi.createSubstudy(substudy).execute();
-            }
-        }
-        String substudyId = substudiesApi.getSubstudies(false)
-                .execute().body().getItems().get(0).getId();
-        if (extIds.getItems().isEmpty()) {
-            ExternalIdentifier id = new ExternalIdentifier().identifier(TEST_EXTERNAL_ID)
-                    .substudyId(substudyId);
-            externalIdsApi.createExternalId(id).execute();
-        }
-        
         // Create an account that is a system account and the target user account
         String password = Tests.randomIdentifier(CRCTest.class);
         user = new TestUserHelper.Builder(CRCTest.class)
                 .withConsentUser(true)
                 .withSetPassword(false)
-                .withExternalId(TEST_EXTERNAL_ID)
-                .withSignUp(new SignUp().password(password).addDataGroupsItem("test_user"))
-                .withSubstudyIds(ImmutableSet.of(substudyId))
+                .withSignUp(new SignUp().email(TEST_EMAIL).password(password).addDataGroupsItem("test_user"))
                 .createUser();
         
         host = adminUser.getClientManager().getHostUrl();
-        credentials = new String(Base64.getEncoder().encode((TEST_EXTERNAL_ID + ":" + password).getBytes()));
+        credentials = new String(Base64.getEncoder().encode((TEST_EMAIL + ":" + password).getBytes()));
     }
     
     @After
@@ -126,8 +104,6 @@ public class CRCTest {
         if (user != null) {
             user.signOutAndDeleteUser();
         }
-        ExternalIdentifiersApi externalIdsApi = adminUser.getClient(ExternalIdentifiersApi.class);
-        externalIdsApi.deleteExternalId(TEST_EXTERNAL_ID).execute();
     }
 
     @Test
@@ -263,7 +239,7 @@ public class CRCTest {
         Thread.sleep(2000);
 
         HealthDataRecordList records = user.getClient(InternalApi.class)
-                .getHealthDataByCreatedOn(DateTime.now().minusMinutes(10), DateTime.now().plusMinutes(10))
+                .getHealthDataByCreatedOn(DateTime.now().minusHours(1), DateTime.now().plusHours(1))
                 .execute().body();
         verifyHealthDataRecords(records, "procedurerequest");
     }
@@ -316,7 +292,7 @@ public class CRCTest {
         Thread.sleep(2000);
         
         HealthDataRecordList records = user.getClient(InternalApi.class)
-                .getHealthDataByCreatedOn(DateTime.now().minusMinutes(10), DateTime.now().plusMinutes(10))
+                .getHealthDataByCreatedOn(DateTime.now().minusHours(1), DateTime.now().plusHours(1))
                 .execute().body();
         verifyHealthDataRecords(records, "observation");
     }
