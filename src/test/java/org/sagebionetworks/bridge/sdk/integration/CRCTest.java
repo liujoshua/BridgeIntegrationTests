@@ -131,29 +131,6 @@ public class CRCTest {
     }
 
     @Test
-    public void updateParticipantWithSelected() throws IOException {
-        // This is a normal call but I have not bothered to create a Java SDK method for
-        // it. Don't set 'selected' as a data group, it'll trigger a call to our external
-        // partner.
-        StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
-            .getParticipantById(user.getUserId(), false).execute().body();
-        String healthCode = participant.getHealthCode();
-        
-        HttpResponse response = Request.Post(host + "/v1/cuimc/participants/healthcode:" + healthCode + "/laborders")
-                .addHeader("Authorization", "Basic " + credentials)
-                .execute()
-                .returnResponse();
-        
-        Message message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
-        assertEquals("Participant updated.", message.getMessage());
-        assertEquals(200, response.getStatusLine().getStatusCode());
-        
-        participant = adminUser.getClient(ParticipantsApi.class)
-                .getParticipantById(user.getUserId(), false).execute().body();
-        assertTrue(participant.getDataGroups().contains("tests_requested"));
-    }
-    
-    @Test
     public void orderLabs() throws IOException {
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
