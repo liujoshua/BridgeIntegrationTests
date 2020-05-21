@@ -129,6 +129,29 @@ public class CRCTest {
         ExternalIdentifiersApi externalIdsApi = adminUser.getClient(ExternalIdentifiersApi.class);
         externalIdsApi.deleteExternalId(TEST_EXTERNAL_ID).execute();
     }
+
+    @Test
+    public void updateParticipantWithSelected() throws IOException {
+        // This is a normal call but I have not bothered to create a Java SDK method for
+        // it. Don't set 'selected' as a data group, it'll trigger a call to our external
+        // partner.
+        StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
+            .getParticipantById(user.getUserId(), false).execute().body();
+        String healthCode = participant.getHealthCode();
+        
+        HttpResponse response = Request.Post(host + "/v1/cuimc/participants/healthcode:" + healthCode + "/laborders")
+                .addHeader("Authorization", "Basic " + credentials)
+                .execute()
+                .returnResponse();
+        
+        Message message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
+        assertEquals("Participant updated.", message.getMessage());
+        assertEquals(200, response.getStatusLine().getStatusCode());
+        
+        participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertTrue(participant.getDataGroups().contains("tests_requested"));
+    }
     
     @Test
     public void orderLabs() throws IOException {
@@ -151,7 +174,7 @@ public class CRCTest {
     }
     
     @Test
-    public void createAppointment() throws IOException {
+    public void createAppointment() throws Exception {
         Identifier identifier = new Identifier();
         identifier.setSystem(BRIDGE_USER_ID_NS);
         identifier.setValue(user.getUserId());
@@ -196,8 +219,10 @@ public class CRCTest {
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_scheduled"));
         
+        Thread.sleep(2000);
+        
         HealthDataRecordList records = user.getClient(InternalApi.class)
-                .getHealthDataByCreatedOn(DateTime.now().minusMinutes(10), DateTime.now().plusMinutes(10))
+                .getHealthDataByCreatedOn(DateTime.now().minusHours(1), DateTime.now().plusHours(1))
                 .execute().body();
         verifyHealthDataRecords(records, "appointment");
     }
@@ -213,7 +238,7 @@ public class CRCTest {
     }
     
     @Test
-    public void createProcedureRequest() throws IOException {
+    public void createProcedureRequest() throws Exception {
         Identifier identifier = new Identifier();
         identifier.setSystem(BRIDGE_USER_ID_NS);
         identifier.setValue(user.getUserId());
@@ -258,6 +283,8 @@ public class CRCTest {
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_collected"));
         
+        Thread.sleep(2000);
+
         HealthDataRecordList records = user.getClient(InternalApi.class)
                 .getHealthDataByCreatedOn(DateTime.now().minusMinutes(10), DateTime.now().plusMinutes(10))
                 .execute().body();
@@ -308,6 +335,8 @@ public class CRCTest {
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_available"));
+        
+        Thread.sleep(2000);
         
         HealthDataRecordList records = user.getClient(InternalApi.class)
                 .getHealthDataByCreatedOn(DateTime.now().minusMinutes(10), DateTime.now().plusMinutes(10))
