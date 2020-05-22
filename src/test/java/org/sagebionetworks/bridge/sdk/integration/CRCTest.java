@@ -185,7 +185,7 @@ public class CRCTest {
         assertEquals(records.getItems().size(), 2);
         for (HealthDataRecord record : records.getItems()) {
             JsonElement el = RestUtils.toJSON(record.getUserMetadata());
-            String type = el.getAsJsonObject().get("fhir-type").getAsString();
+            String type = el.getAsJsonObject().get("type").getAsString();
             assertEquals(typeName, type);
         }
     }
