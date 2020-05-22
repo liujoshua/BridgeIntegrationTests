@@ -11,7 +11,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.model.Environment;
@@ -39,11 +38,9 @@ public class HttpTest {
         this.testBaseUrl = TestUserHelper.getSignedInAdmin().getClientManager().getHostUrl();
     }
 
-    // CORS cannot work in BridgePF and BridgeServer2 simultaneously. Disable this test until the migration is complete.
     @Test
-    @Ignore
     public void testPreflight() throws Exception {
-        HttpResponse response = Request.Options(testBaseUrl+"/v3/studies?summary=true")
+        HttpResponse response = Request.Options(testBaseUrl+"/v1/apps?summary=true")
             .setHeader(ACCESS_CONTROL_REQUEST_HEADERS, "accept, content-type")
             .setHeader(ACCESS_CONTROL_REQUEST_METHOD, "POST")
             .setHeader(ORIGIN, "https://some.remote.server.org")
@@ -51,11 +48,11 @@ public class HttpTest {
         assertEquals(200, response.getStatusLine().getStatusCode());
         
         assertEquals("Should echo back the origin",
-                "https://some.remote.server.org", response.getFirstHeader(ACCESS_CONTROL_ALLOW_ORIGIN).getValue());
+                "*", response.getFirstHeader(ACCESS_CONTROL_ALLOW_ORIGIN).getValue());
         assertEquals("Should echo back the access-control-allow-methods",
                 "POST", response.getFirstHeader(ACCESS_CONTROL_ALLOW_METHODS).getValue());
         assertEquals("Should echo back the access-control-allow-headers",
-                "accept,content-type", response.getFirstHeader(ACCESS_CONTROL_ALLOW_HEADERS).getValue());
+                "accept, content-type", response.getFirstHeader(ACCESS_CONTROL_ALLOW_HEADERS).getValue());
     }
 
     @Test
