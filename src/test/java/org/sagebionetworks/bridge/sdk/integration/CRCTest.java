@@ -81,8 +81,10 @@ public class CRCTest {
         
         App app = appsApi.getUsersApp().execute().body();
         if (!app.getDataGroups().containsAll(WORKFLOW_TAGS) ||
-            !app.getUserProfileAttributes().contains("state_change_timestamp")) {
+            !app.getUserProfileAttributes().contains("state_change_timestamp") ||
+            !app.isHealthCodeExportEnabled()) {
             
+            app.setHealthCodeExportEnabled(true);
             app.getDataGroups().addAll(WORKFLOW_TAGS);
             app.getUserProfileAttributes().add("state_change_timestamp");
             appsApi.updateUsersApp(app).execute();
