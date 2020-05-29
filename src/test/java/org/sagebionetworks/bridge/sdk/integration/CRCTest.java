@@ -15,9 +15,10 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.util.EntityUtils;
 import org.hl7.fhir.dstu3.model.Appointment;
-import org.hl7.fhir.dstu3.model.Identifier;
+import org.hl7.fhir.dstu3.model.Appointment.AppointmentParticipantComponent;
 import org.hl7.fhir.dstu3.model.Observation;
 import org.hl7.fhir.dstu3.model.ProcedureRequest;
+import org.hl7.fhir.dstu3.model.Reference;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.After;
@@ -52,7 +53,6 @@ import ca.uhn.fhir.parser.IParser;
  */
 public class CRCTest {
 
-    static final String BRIDGE_USER_ID_NS = "https://ws.sagebridge.org/#userId";
     static final LocalDate JAN1 = LocalDate.parse("1970-01-01");
     static final LocalDate JAN2 = LocalDate.parse("1970-01-02");
     static final FhirContext CONTEXT = FhirContext.forDstu3();
@@ -130,13 +130,11 @@ public class CRCTest {
     
     @Test
     public void createAppointment() throws Exception {
-        Identifier identifier = new Identifier();
-        identifier.setSystem(BRIDGE_USER_ID_NS);
-        identifier.setValue(user.getUserId());
-        
         Appointment appointment = new Appointment();
         appointment.setId("appointmentId");
-        appointment.addIdentifier(identifier);
+        AppointmentParticipantComponent comp = new AppointmentParticipantComponent();
+        comp.setActor(new Reference("Patient/" + user.getUserId()));
+        appointment.addParticipant(comp);
         
         IParser parser = CONTEXT.newJsonParser();
         String body = parser.encodeResourceToString(appointment);
@@ -168,7 +166,8 @@ public class CRCTest {
         
         String json = RestUtils.GSON.toJson(report.getData());
         Appointment retrieved = parser.parseResource(Appointment.class, json);
-        assertEquals(user.getUserId(), retrieved.getIdentifier().get(0).getValue());
+        assertEquals("Patient/" + user.getUserId(), retrieved.getParticipant()
+                .get(0).getActor().getReference());
         
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
@@ -194,13 +193,9 @@ public class CRCTest {
     
     @Test
     public void createProcedureRequest() throws Exception {
-        Identifier identifier = new Identifier();
-        identifier.setSystem(BRIDGE_USER_ID_NS);
-        identifier.setValue(user.getUserId());
-        
         ProcedureRequest procedure = new ProcedureRequest();
         procedure.setId("procedureId");
-        procedure.addIdentifier(identifier);
+        procedure.setSubject(new Reference("Patient/" + user.getUserId()));
         
         IParser parser = CONTEXT.newJsonParser();
         String body = parser.encodeResourceToString(procedure);
@@ -232,7 +227,7 @@ public class CRCTest {
         
         String json = RestUtils.GSON.toJson(report.getData());
         ProcedureRequest retrieved = parser.parseResource(ProcedureRequest.class, json);
-        assertEquals(user.getUserId(), retrieved.getIdentifier().get(0).getValue());
+        assertEquals("Patient/" + user.getUserId(), retrieved.getSubject().getReference());
         
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
@@ -248,13 +243,9 @@ public class CRCTest {
     
     @Test
     public void createObservation() throws Exception {
-        Identifier identifier = new Identifier();
-        identifier.setSystem(BRIDGE_USER_ID_NS);
-        identifier.setValue(user.getUserId());
-        
         Observation observation = new Observation();
         observation.setId("observationId");
-        observation.addIdentifier(identifier);
+        observation.setSubject(new Reference("Patient/" + user.getUserId()));
         
         IParser parser = CONTEXT.newJsonParser();
         String body = parser.encodeResourceToString(observation);
@@ -285,7 +276,7 @@ public class CRCTest {
         
         String json = RestUtils.GSON.toJson(report.getData());
         Observation retrieved = parser.parseResource(Observation.class, json);
-        assertEquals(user.getUserId(), retrieved.getIdentifier().get(0).getValue());
+        assertEquals("Patient/" + user.getUserId(), retrieved.getSubject().getReference());
         
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
