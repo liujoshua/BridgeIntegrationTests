@@ -155,7 +155,7 @@ public class AuthenticationTest {
         Identifier email = new Identifier().appId(testUser.getSignIn().getAppId()).email(testUser.getSignIn().getEmail());
 
         Response<Message> response = authApi.resendEmailVerification(email).execute();
-        assertEquals(200, response.code());
+        assertEquals(202, response.code());
     }
     
     @Test
@@ -163,7 +163,7 @@ public class AuthenticationTest {
         Identifier email = new Identifier().appId(testUser.getAppId()).email("bridge-testing@sagebase.org");
         
         Response<Message> response = authApi.resendEmailVerification(email).execute();
-        assertEquals(200, response.code());
+        assertEquals(202, response.code());
     }
     
     @Test
@@ -171,14 +171,14 @@ public class AuthenticationTest {
         SignIn email = new SignIn().appId(testUser.getAppId()).email("fooboo-sagebridge@antwerp.com");
         
         Response<Message> response = authApi.requestResetPassword(email).execute();
-        assertEquals(200, response.code());
+        assertEquals(202, response.code());
     }
 
     @Test
     public void canRequestPasswordForPhone() throws Exception {
         // Request reset password.
         Response<Message> response = authApi.requestResetPassword(phoneOnlyTestUser.getSignIn()).execute();
-        assertEquals(200, response.code());
+        assertEquals(202, response.code());
 
         // Verify message logs contains the expected message.
         verifyTransactionalMessage();
@@ -190,7 +190,7 @@ public class AuthenticationTest {
                 .phone(new Phone().number("4082588569").regionCode("CA"));
         
         Response<Message> response = authApi.requestResetPassword(email).execute();
-        assertEquals(200, response.code());
+        assertEquals(202, response.code());
     }
 
     @Test
@@ -200,7 +200,7 @@ public class AuthenticationTest {
                 .phone(phoneOnlyTestUser.getPhone());
 
         Response<Message> response = authApi.resendPhoneVerification(phone).execute();
-        assertEquals(200, response.code());
+        assertEquals(202, response.code());
 
         // Verify message logs contains the expected message.
         verifyTransactionalMessage();
@@ -212,7 +212,7 @@ public class AuthenticationTest {
                 .phone(new Phone().number("4082588569").regionCode("CA"));
         
         Response<Message> response = authApi.resendPhoneVerification(identifier).execute();
-        assertEquals(200, response.code());
+        assertEquals(202, response.code());
     }
     
     @Test
