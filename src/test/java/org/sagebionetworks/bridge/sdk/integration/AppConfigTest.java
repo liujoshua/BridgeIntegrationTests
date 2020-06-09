@@ -3,8 +3,11 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,16 +23,20 @@ import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppConfigsApi;
 import org.sagebionetworks.bridge.rest.api.AppsApi;
+import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
 import org.sagebionetworks.bridge.rest.api.FilesApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.PublicApi;
+import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 import org.sagebionetworks.bridge.rest.model.AppConfigElement;
+import org.sagebionetworks.bridge.rest.model.Assessment;
+import org.sagebionetworks.bridge.rest.model.AssessmentReference;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.ConfigReference;
 import org.sagebionetworks.bridge.rest.model.Criteria;
@@ -43,6 +50,7 @@ import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
@@ -71,24 +79,38 @@ public class AppConfigTest {
     private UploadSchemasApi schemasApi;
     private SurveysApi surveysApi;
     private FilesApi filesApi;
+    private AssessmentsApi assessmentsApi;
     private List<String> configsToDelete = new ArrayList<>();
     
     private GuidCreatedOnVersionHolder surveyKeys;
     private UploadSchema schemaKeys;
     private GuidVersionHolder fileKeys;
+    private String assessmentGuid;
     private AppConfigElement element;
     
     @Before
     public void before() throws IOException {
         developer = TestUserHelper.createAndSignInUser(AppConfigTest.class, false, Role.DEVELOPER);
         admin = TestUserHelper.getSignedInAdmin();
+        user = TestUserHelper.createAndSignInUser(AppConfigTest.class, true);
         
         adminApi = admin.getClient(ForAdminsApi.class);
         appConfigsApi = developer.getClient(AppConfigsApi.class);
         schemasApi = developer.getClient(UploadSchemasApi.class);
         surveysApi = developer.getClient(SurveysApi.class);
         filesApi = developer.getClient(FilesApi.class);
+        assessmentsApi = developer.getClient(AssessmentsApi.class);
         
+        // Getting ahead of our skis here, as we haven't refactored substudies to be organizations
+        // and we're already using them that way.
+        SubstudiesApi subApi = admin.getClient(SubstudiesApi.class);
+        try {
+            subApi.getSubstudy(SUBSTUDY_ID_1).execute();
+        } catch (EntityNotFoundException ex) {
+            Substudy substudy = new Substudy().id(SUBSTUDY_ID_1).name(SUBSTUDY_ID_1);
+            subApi.createSubstudy(substudy).execute();
+        }
+
         // App configs with no criteria will conflict with the run of this test. Set the range on these
         // for Android to 1-1.
         List<AppConfig> appConfigs = appConfigsApi.getAppConfigs(false).execute().body().getItems();
@@ -103,7 +125,7 @@ public class AppConfigTest {
             }
         }
     }
-    
+
     @After
     public void deleteAppConfigs() throws Exception {
         for (String configGuid : configsToDelete) {
@@ -134,6 +156,13 @@ public class AppConfigTest {
     }
     
     @After
+    public void deleteAssessment() throws Exception {
+        if (assessmentGuid != null) {
+            assessmentsApi.deleteAssessment(assessmentGuid, true).execute();
+        }
+    }
+    
+    @After
     public void deleteAppConfigElement() throws IOException {
         if (element != null) {
             adminApi.deleteAppConfigElement(element.getId(), element.getRevision(), true).execute();    
@@ -153,10 +182,23 @@ public class AppConfigTest {
             user.signOutAndDeleteUser();
         }
     }
-    
+
     @SuppressWarnings("deprecation")
     @Test
     public void crudAppConfig() throws Exception {
+        String id = randomIdentifier(AssessmentTest.class);
+        Assessment unsavedAssessment = new Assessment()
+                .identifier(id)
+                .title("Title")
+                .summary("Summary")
+                .validationStatus("Not validated")
+                .normingStatus("Not normed")
+                .osName("Both")
+                .ownerId(SUBSTUDY_ID_1);
+        
+        Assessment assessment = assessmentsApi.createAssessment(unsavedAssessment).execute().body();
+        assessmentGuid = assessment.getGuid();
+        
         FileMetadata meta = new FileMetadata();
         meta.setName("test file");
         fileKeys = filesApi.createFile(meta).execute().body();
@@ -201,19 +243,31 @@ public class AppConfigTest {
         appConfig.criteria(criteria);
         appConfig.surveyReferences(ImmutableList.of(surveyRef1));
         appConfig.fileReferences(ImmutableList.of(fileRef));
+        appConfig.assessmentReferences(ImmutableList.of(new AssessmentReference().guid(assessmentGuid)));
         
         // Create
         GuidVersionHolder holder = appConfigsApi.createAppConfig(appConfig).execute().body();
-        configsToDelete.add(holder.getGuid());
         
         AppConfig firstOneRetrieved = appConfigsApi.getAppConfig(holder.getGuid()).execute().body();
+        configsToDelete.add(holder.getGuid());
         
+        // Let's verify resolution of the identifiers...
+        AppConfig resolvedAppConfig = user.getClient(ForConsentedUsersApi.class)
+                .getConfigForApp(user.getAppId()).execute().body();
+        AssessmentReference retAssessmentRef = resolvedAppConfig.getAssessmentReferences().get(0);
+        assertEquals(assessmentGuid, retAssessmentRef.getGuid());
+        assertEquals(id, retAssessmentRef.getId());
+        assertNull(retAssessmentRef.getSharedId());
+        assertTrue(retAssessmentRef.getConfigHref().contains("/v1/assessments/" + assessmentGuid + "/config"));
+
         Tests.setVariableValueInObject(firstOneRetrieved.getSurveyReferences().get(0), "href", null);
         assertEquals(appConfig.getLabel(), firstOneRetrieved.getLabel());
+        
         assertSurveyReference(surveyRef1, firstOneRetrieved.getSurveyReferences().get(0));
         assertNotNull(firstOneRetrieved.getCreatedOn());
         assertNotNull(firstOneRetrieved.getModifiedOn());
         assertEquals(firstOneRetrieved.getCreatedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
+        
         StudyParticipant savedUser = RestUtils.toType(firstOneRetrieved.getClientData(), StudyParticipant.class);
         assertEquals("externalId", savedUser.getExternalId());
         
@@ -285,7 +339,7 @@ public class AppConfigTest {
         // Having changed the config to match the criteria, we should be able to retrieve it.
         AppConfig config = publicApi.getConfigForApp(developer.getAppId()).execute().body();
         assertEquals(appConfig.getGuid(), config.getGuid());
-        
+
         // test logical deletion
         appConfigsApi.deleteAppConfig(config.getGuid(), false).execute(); // flag does not matter here however
         
