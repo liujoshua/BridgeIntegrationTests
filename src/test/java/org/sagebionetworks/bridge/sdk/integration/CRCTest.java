@@ -172,18 +172,19 @@ public class CRCTest {
         StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_scheduled"));
-        
-        Thread.sleep(2000);
+        verifyHealthDataRecords("appointment");
+    }
+    
+    private void verifyHealthDataRecords(String typeName) throws IOException, InterruptedException {
+        // Pause for GSI on the health data table
+        Thread.sleep(3000);
         
         HealthDataRecordList records = user.getClient(InternalApi.class)
                 .getHealthDataByCreatedOn(DateTime.now().minusHours(1), DateTime.now().plusHours(1))
                 .execute().body();
-        verifyHealthDataRecords(records, "appointment");
-    }
-    
-    private void verifyHealthDataRecords(HealthDataRecordList records, String typeName) {
+        
         // There will be two records and they will both be appointments
-        assertEquals(records.getItems().size(), 2);
+        assertEquals(2, records.getItems().size());
         for (HealthDataRecord record : records.getItems()) {
             JsonElement el = RestUtils.toJSON(record.getUserMetadata());
             String type = el.getAsJsonObject().get("type").getAsString();
@@ -233,12 +234,7 @@ public class CRCTest {
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_collected"));
         
-        Thread.sleep(2000);
-
-        HealthDataRecordList records = user.getClient(InternalApi.class)
-                .getHealthDataByCreatedOn(DateTime.now().minusHours(1), DateTime.now().plusHours(1))
-                .execute().body();
-        verifyHealthDataRecords(records, "procedurerequest");
+        verifyHealthDataRecords("procedurerequest");
     }
     
     @Test
@@ -282,11 +278,6 @@ public class CRCTest {
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_available"));
         
-        Thread.sleep(2000);
-        
-        HealthDataRecordList records = user.getClient(InternalApi.class)
-                .getHealthDataByCreatedOn(DateTime.now().minusHours(1), DateTime.now().plusHours(1))
-                .execute().body();
-        verifyHealthDataRecords(records, "observation");
+        verifyHealthDataRecords("observation");
     }
 }
