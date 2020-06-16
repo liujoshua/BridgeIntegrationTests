@@ -68,11 +68,11 @@ public class OrganizationTest {
         assertEquals(Integer.valueOf(50), list.getRequestParams().getPageSize());
         
         Organization found = findOrganization(list, orgId);
-        assertNull(found.getDescription());
         assertNull(found.getCreatedOn());
         assertNull(found.getModifiedOn());
         assertEquals("Test Name", found.getName());
         assertEquals(orgId, found.getIdentifier());
+        assertEquals("Description updated", found.getDescription());
         
         Message message = orgApi.deleteOrganization(orgId).execute().body();
         org = null;
