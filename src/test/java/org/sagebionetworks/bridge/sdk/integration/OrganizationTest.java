@@ -48,8 +48,6 @@ public class OrganizationTest {
         newOrg.setIdentifier(orgId);
         newOrg.setName("Test Name");
         newOrg.setDescription("A description");
-        newOrg.setSynapseDataAccessTeamId("synapseAccessTeamId");
-        newOrg.setSynapseProjectId("synapseProjectId");
         
         org = orgApi.createOrganization(newOrg).execute().body();
         assertNotNull(org.getVersion());
