@@ -72,6 +72,15 @@ public class OrganizationTest {
         assertEquals(orgId, found.getIdentifier());
         assertEquals("Description updated", found.getDescription());
         
+        found = orgApi.getOrganization(orgId).execute().body();
+        assertNotNull(found.getCreatedOn());
+        assertNotNull(found.getModifiedOn());
+        assertNotNull(found.getVersion());
+        assertEquals("Organization", found.getType());
+        assertEquals("Test Name", found.getName());
+        assertEquals(orgId, found.getIdentifier());
+        assertEquals("Description updated", found.getDescription());
+        
         Message message = orgApi.deleteOrganization(orgId).execute().body();
         org = null;
         assertEquals("Organization deleted.", message.getMessage());
