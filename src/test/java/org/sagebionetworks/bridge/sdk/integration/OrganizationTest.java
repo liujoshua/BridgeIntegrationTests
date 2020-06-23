@@ -74,7 +74,6 @@ public class OrganizationTest {
     }
     
     @Test
-    @Ignore
     public void test() throws Exception {
         OrganizationsApi orgApi = admin.getClient(OrganizationsApi.class);
         
