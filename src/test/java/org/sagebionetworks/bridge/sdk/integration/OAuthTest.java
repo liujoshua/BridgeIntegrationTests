@@ -26,7 +26,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.Config;
@@ -79,7 +78,6 @@ public class OAuthTest {
     }
     
     @Test(expected = EntityNotFoundException.class)
-    @Ignore
     public void requestOAuthAccessTokenExists() throws Exception {
         user = TestUserHelper.createAndSignInUser(OAuthTest.class, true);
         
@@ -90,7 +88,6 @@ public class OAuthTest {
     }
     
     @Test
-    @Ignore
     public void test() throws Exception {
         String synapseUserId = admin.getConfig().get("synapse.test.user.id");
         worker = TestUserHelper.createAndSignInUser(OAuthTest.class, true, 
@@ -135,7 +132,6 @@ public class OAuthTest {
     }
     
     @Test
-    @Ignore
     public void signInWithSynapseAccount() throws Exception {
         String synapseUserId = admin.getConfig().get("synapse.test.user.id");
         worker = TestUserHelper.createAndSignInUser(OAuthTest.class, true, 
@@ -200,7 +196,6 @@ public class OAuthTest {
     }
     
     @Test
-    @Ignore
     public void synapseUserCanSwitchBetweenStudies() throws Exception {
         // Going to use the shared app as well as the API app for this test.
         String synapseUserId = admin.getConfig().get("synapse.test.user.id");
