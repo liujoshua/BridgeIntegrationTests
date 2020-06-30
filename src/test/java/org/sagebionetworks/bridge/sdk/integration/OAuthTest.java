@@ -152,7 +152,7 @@ public class OAuthTest {
         String sessionToken = getValue(response, "sessionToken");
 
         // Consent to return OAuth authorization token
-        payload = escapeJSON("{'clientId':'100020','scope':'openid','claims':'{\\\"id_token\\\":{\\\"userid\\\":null}}',"+
+        payload = escapeJSON("{'clientId':'100020','scope':'openid','claims':{'id_token':{'userid':null}},"+
                 "'responseType':'code','redirectUri':'https://research-staging.sagebridge.org'}");
         response = Request.Post(SYNAPSE_OAUTH_CONSENT)
                 .setHeader("content-type", "application/json")
