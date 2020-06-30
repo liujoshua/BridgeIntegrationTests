@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,15 +18,19 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
+import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -50,6 +56,21 @@ public class AccountSummarySearchTest {
         // '%[emailFilter]%', so an email prefix works.
         emailPrefix = "bridge-testing+AccountSummarySearchTest-" + RandomStringUtils.randomAlphabetic(4) + "-";
 
+        TestUser admin = TestUserHelper.getSignedInAdmin();
+        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
+        try {
+            orgsApi.getOrganization(ORG_ID_1).execute();
+        } catch(EntityNotFoundException e) {
+            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
+            orgsApi.createOrganization(org).execute();
+        }
+        try {
+            orgsApi.getOrganization(ORG_ID_2).execute();
+        } catch(EntityNotFoundException e) {
+            Organization org = new Organization().identifier(ORG_ID_2).name(ORG_ID_2);
+            orgsApi.createOrganization(org).execute();
+        }
+        
         testUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
                 .withSignUp(new SignUp().email(emailPrefix + "test@sagebase.org")
                     .languages(Lists.newArrayList("es"))    
@@ -57,6 +78,7 @@ public class AccountSummarySearchTest {
         taggedUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
                 .withSignUp(new SignUp().email(emailPrefix + "tagged@sagebase.org")
                         .languages(Lists.newArrayList("es"))
+                        .roles(ImmutableList.of(Role.DEVELOPER))
                         .dataGroups(TAGGED_USER_GROUPS)).createUser();
         frenchUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
                 .withSignUp(new SignUp().email(emailPrefix + "french@sagebase.org")
@@ -64,6 +86,9 @@ public class AccountSummarySearchTest {
                         .attributes(ImmutableMap.of("can_be_recontacted", "true"))
                         .dataGroups(FRENCH_USER_GROUPS)).createUser();
         
+        // Assign frenchUser to org1.
+        orgsApi.addMember(ORG_ID_1, frenchUser.getUserId()).execute();
+
         researcher = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.RESEARCHER);
         worker = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.WORKER);
     }
@@ -223,6 +248,35 @@ public class AccountSummarySearchTest {
         assertFalse(userIds.contains(testUser.getUserId()));
         assertFalse(userIds.contains(taggedUser.getUserId()));
         assertTrue(userIds.contains(frenchUser.getUserId()));
+        
+        // tagged user has a role, the other two do not.
+        search = makeAccountSummarySearch().adminOnly(true);
+        list = supplier.apply(search);
+        userIds = mapUserIds(list);
+        assertFalse(userIds.contains(testUser.getUserId()));
+        assertTrue(userIds.contains(taggedUser.getUserId()));
+        assertFalse(userIds.contains(frenchUser.getUserId()));
+        
+        search = makeAccountSummarySearch().adminOnly(false);
+        list = supplier.apply(search);
+        userIds = mapUserIds(list);
+        assertTrue(userIds.contains(testUser.getUserId()));
+        assertFalse(userIds.contains(taggedUser.getUserId()));
+        assertTrue(userIds.contains(frenchUser.getUserId()));
+        
+        search = makeAccountSummarySearch().orgMembership(ORG_ID_1);
+        list = supplier.apply(search);
+        userIds = mapUserIds(list);
+        assertFalse(userIds.contains(testUser.getUserId()));
+        assertFalse(userIds.contains(taggedUser.getUserId()));
+        assertTrue(userIds.contains(frenchUser.getUserId()));
+        
+        search = makeAccountSummarySearch().orgMembership(ORG_ID_2);
+        list = supplier.apply(search);
+        userIds = mapUserIds(list);
+        assertFalse(userIds.contains(testUser.getUserId()));
+        assertFalse(userIds.contains(taggedUser.getUserId()));
+        assertFalse(userIds.contains(frenchUser.getUserId()));
     }
 
     private static AccountSummarySearch makeAccountSummarySearch() {
