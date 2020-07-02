@@ -25,6 +25,7 @@ import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.Organization;
+import org.sagebionetworks.bridge.rest.model.RequestParams;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -248,7 +249,12 @@ public class AccountSummarySearchTest {
         assertFalse(userIds.contains(testUser.getUserId()));
         assertFalse(userIds.contains(taggedUser.getUserId()));
         assertTrue(userIds.contains(frenchUser.getUserId()));
-        
+
+        RequestParams rp = list.getRequestParams();
+        assertEquals(rp.getLanguage(), "fr");
+        assertEquals(rp.getAllOfGroups(), ImmutableList.of("sdk-int-1"));
+        assertEquals(rp.getNoneOfGroups(), ImmutableList.of("sdk-int-2"));
+
         // tagged user has a role, the other two do not.
         search = makeAccountSummarySearch().adminOnly(true);
         list = supplier.apply(search);
@@ -256,6 +262,9 @@ public class AccountSummarySearchTest {
         assertFalse(userIds.contains(testUser.getUserId()));
         assertTrue(userIds.contains(taggedUser.getUserId()));
         assertFalse(userIds.contains(frenchUser.getUserId()));
+        
+        rp = list.getRequestParams();
+        assertTrue(rp.isAdminOnly());
         
         search = makeAccountSummarySearch().adminOnly(false);
         list = supplier.apply(search);
@@ -277,6 +286,10 @@ public class AccountSummarySearchTest {
         assertFalse(userIds.contains(testUser.getUserId()));
         assertFalse(userIds.contains(taggedUser.getUserId()));
         assertFalse(userIds.contains(frenchUser.getUserId()));
+        
+        rp = list.getRequestParams();
+        assertEquals(rp.getOrgMembership(), ORG_ID_2);
+        assertEquals(rp.getEmailFilter(), emailPrefix);
     }
 
     private static AccountSummarySearch makeAccountSummarySearch() {
