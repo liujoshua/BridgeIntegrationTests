@@ -5,7 +5,7 @@ import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import com.google.common.collect.Lists;
@@ -90,7 +90,7 @@ public class SignInTest {
     public void createComplexUser() throws Exception {
         AuthenticationApi authApi = researcher.getClient(AuthenticationApi.class);
         
-        ExternalIdentifier externalId = Tests.createExternalId(SignInTest.class, developer, SUBSTUDY_ID_1);
+        ExternalIdentifier externalId = Tests.createExternalId(SignInTest.class, developer, STUDY_ID_1);
         
         Map<String,String> map = Maps.newHashMap();
         map.put("can_be_recontacted", "true");

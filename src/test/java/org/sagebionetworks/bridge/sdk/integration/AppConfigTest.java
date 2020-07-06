@@ -6,7 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
 
 import java.io.File;
@@ -28,7 +28,7 @@ import org.sagebionetworks.bridge.rest.api.FilesApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.PublicApi;
-import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -49,8 +49,8 @@ import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
@@ -101,14 +101,12 @@ public class AppConfigTest {
         filesApi = developer.getClient(FilesApi.class);
         assessmentsApi = developer.getClient(AssessmentsApi.class);
         
-        // Getting ahead of our skis here, as we haven't refactored substudies to be organizations
-        // and we're already using them that way.
-        SubstudiesApi subApi = admin.getClient(SubstudiesApi.class);
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         try {
-            subApi.getSubstudy(SUBSTUDY_ID_1).execute();
+            studiesApi.getStudy(STUDY_ID_1).execute();
         } catch (EntityNotFoundException ex) {
-            Substudy substudy = new Substudy().id(SUBSTUDY_ID_1).name(SUBSTUDY_ID_1);
-            subApi.createSubstudy(substudy).execute();
+            Study study = new Study().id(STUDY_ID_1).name(STUDY_ID_1);
+            studiesApi.createStudy(study).execute();
         }
 
         // App configs with no criteria will conflict with the run of this test. Set the range on these
@@ -194,7 +192,7 @@ public class AppConfigTest {
                 .validationStatus("Not validated")
                 .normingStatus("Not normed")
                 .osName("Both")
-                .ownerId(SUBSTUDY_ID_1);
+                .ownerId(STUDY_ID_1);
         
         Assessment assessment = assessmentsApi.createAssessment(unsavedAssessment).execute().body();
         assessmentGuid = assessment.getGuid();

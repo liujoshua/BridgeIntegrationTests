@@ -22,8 +22,8 @@ import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
-import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -34,9 +34,9 @@ import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.rest.model.SubpopulationList;
-import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -46,7 +46,7 @@ public class SubpopulationTest {
     private TestUser developer;
     private Subpopulation subpop1;
     private Subpopulation subpop2;
-    private Substudy substudy;
+    private Study study;
     
     @Before
     public void before() throws Exception {
@@ -70,8 +70,8 @@ public class SubpopulationTest {
         if (subpop2 != null) {
             admin.getClient(ForAdminsApi.class).deleteSubpopulation(subpop2.getGuid(), true).execute();
         }
-        if (substudy != null) {
-            admin.getClient(SubstudiesApi.class).deleteSubstudy(substudy.getId(), true).execute();
+        if (study != null) {
+            admin.getClient(StudiesApi.class).deleteStudy(study.getId(), true).execute();
         }
     }
     
@@ -85,12 +85,12 @@ public class SubpopulationTest {
         String dataGroup = Iterables.getFirst(app.getDataGroups(), null);
         List<String> dataGroupList = ImmutableList.of(dataGroup);
 
-        // Create a substudy, if needed
-        SubstudiesApi substudiesApi = admin.getClient(SubstudiesApi.class);
-        String substudyId = Tests.randomIdentifier(SubpopulationTest.class);
-        substudy = new Substudy().id(substudyId).name("Substudy " + substudyId);
-        substudiesApi.createSubstudy(substudy).execute().body();
-        List<String> substudyIds = ImmutableList.of(substudy.getId());
+        // Create a study, if needed
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        String studyId = Tests.randomIdentifier(SubpopulationTest.class);
+        study = new Study().id(studyId).name("Study " + studyId);
+        studiesApi.createStudy(study).execute().body();
+        List<String> studyIds = ImmutableList.of(study.getId());
         
         // Now proceed with the subpopulation test
         SubpopulationsApi subpopulationsApi = developer.getClient(SubpopulationsApi.class);
@@ -104,8 +104,8 @@ public class SubpopulationTest {
         // Set empty collections so this object is equal to the object returned by the API
         criteria.setAllOfGroups(ImmutableList.of());
         criteria.setNoneOfGroups(ImmutableList.of());
-        criteria.setAllOfSubstudyIds(ImmutableList.of());
-        criteria.setNoneOfSubstudyIds(ImmutableList.of());
+        criteria.setAllOfStudyIds(ImmutableList.of());
+        criteria.setNoneOfStudyIds(ImmutableList.of());
         criteria.setMaxAppVersions(ImmutableMap.of());        
         criteria.setMinAppVersions(ImmutableMap.of("Android", 10));
         
@@ -113,7 +113,7 @@ public class SubpopulationTest {
         subpop1 = new Subpopulation();
         subpop1.setName("Later Consent Group");
         subpop1.setCriteria(criteria);
-        subpop1.setSubstudyIdsAssignedOnConsent(substudyIds);
+        subpop1.setStudyIdsAssignedOnConsent(studyIds);
         subpop1.setDataGroupsAssignedWhileConsented(dataGroupList);
         GuidVersionHolder keys = subpopulationsApi.createSubpopulation(subpop1).execute().body();
         subpop1.setGuid(keys.getGuid());
@@ -126,13 +126,13 @@ public class SubpopulationTest {
         assertEquals(criteria, retrieved.getCriteria());
         assertEquals(keys.getGuid(), retrieved.getGuid());
         assertEquals(keys.getVersion(), retrieved.getVersion());
-        assertEquals(substudyIds, retrieved.getSubstudyIdsAssignedOnConsent());
+        assertEquals(studyIds, retrieved.getStudyIdsAssignedOnConsent());
         assertEquals(dataGroupList, retrieved.getDataGroupsAssignedWhileConsented());
         
         // Update it
         retrieved.setDescription("Adding a description");
         retrieved.getCriteria().getMinAppVersions().put("Android", 8);
-        retrieved.setSubstudyIdsAssignedOnConsent(null);
+        retrieved.setStudyIdsAssignedOnConsent(null);
         retrieved.setDataGroupsAssignedWhileConsented(ImmutableList.of());
         keys = subpopulationsApi.updateSubpopulation(retrieved.getGuid(), retrieved).execute().body();
         retrieved.setGuid(keys.getGuid());
@@ -142,7 +142,7 @@ public class SubpopulationTest {
         Subpopulation retrievedAgain = subpopulationsApi.getSubpopulation(subpop1.getGuid()).execute().body();
         assertEquals("Adding a description", retrievedAgain.getDescription());
         assertEquals(new Integer(8), retrievedAgain.getCriteria().getMinAppVersions().get("Android"));
-        assertTrue(retrievedAgain.getSubstudyIdsAssignedOnConsent().isEmpty());
+        assertTrue(retrievedAgain.getStudyIdsAssignedOnConsent().isEmpty());
         assertTrue(retrievedAgain.getDataGroupsAssignedWhileConsented().isEmpty());
         
         // Verify it is available in the list

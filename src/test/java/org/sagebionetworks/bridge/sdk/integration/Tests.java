@@ -22,7 +22,7 @@ import org.joda.time.DateTime;
 
 import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.model.ABTestGroup;
 import org.sagebionetworks.bridge.rest.model.ABTestScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.Activity;
@@ -40,8 +40,8 @@ import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
-import org.sagebionetworks.bridge.rest.model.Substudy;
-import org.sagebionetworks.bridge.rest.model.SubstudyList;
+import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -56,8 +56,8 @@ public class Tests {
     public static final String FINGERPRINT = "14:6D:E9:83:C5:73:06:50:D8:EE:B9:95:2F:34:FC:64:16:A0:83:42:E6:1D:BE:A8:8A:04:96:B2:3F:CF:44:E5";
     public static final String APP_NAME = "Integration Tests";
     public static final String PASSWORD = "P@ssword`1";
-    public static final String SUBSTUDY_ID_1 = "substudy1";
-    public static final String SUBSTUDY_ID_2 = "substudy2";
+    public static final String STUDY_ID_1 = "study1";
+    public static final String STUDY_ID_2 = "study2";
     public static final String ORG_ID_1 = "org1";
     public static final String ORG_ID_2 = "org2";
     public static final Phone PHONE = new Phone().number("9712486796").regionCode("US");
@@ -314,16 +314,16 @@ public class Tests {
     public static ExternalIdentifier createExternalId(Class<?> clazz, TestUser developer, String substudyId) throws Exception {
         String externalId = Tests.randomIdentifier(clazz);
         
-        SubstudiesApi substudiesApi = developer.getClient(SubstudiesApi.class);
-        SubstudyList substudyList = substudiesApi.getSubstudies(false).execute().body();
+        StudiesApi studiesApi = developer.getClient(StudiesApi.class);
+        StudyList studyList = studiesApi.getStudies(false).execute().body();
         
-        Set<String> existingSubstudyIds = substudyList.getItems().stream().map(Substudy::getId).collect(Collectors.toSet());
-        if (!existingSubstudyIds.contains(substudyId)) {
+        Set<String> existingStudyIds = studyList.getItems().stream().map(Study::getId).collect(Collectors.toSet());
+        if (!existingStudyIds.contains(substudyId)) {
             TestUser admin = TestUserHelper.getSignedInAdmin();
-            Substudy substudy = new Substudy().id(substudyId).name(substudyId);
-            admin.getClient(SubstudiesApi.class).createSubstudy(substudy).execute();
+            Study study = new Study().id(substudyId).name(substudyId);
+            admin.getClient(StudiesApi.class).createStudy(study).execute();
         }
-        ExternalIdentifier externalIdentifier = new ExternalIdentifier().identifier(externalId).substudyId(substudyId);
+        ExternalIdentifier externalIdentifier = new ExternalIdentifier().identifier(externalId).studyId(substudyId);
         int code = developer.getClient(ExternalIdentifiersApi.class).createExternalId(externalIdentifier).execute().code();
         assertEquals(code, 201);
         return externalIdentifier;
