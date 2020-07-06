@@ -153,11 +153,9 @@ public class OrganizationTest {
         superadminOrgApi.addMember(orgId1, orgAdmin.getUserId()).execute();
         OrganizationsApi appAdminOrgApi = orgAdmin.getClient(OrganizationsApi.class);
         
-        // The org admin has to sign in again to see these changes...
-        orgAdmin.signInAgain();
-        
         // session should show organizational membership
-        assertEquals(orgAdmin.getSession().getOrgMembership(), orgId1);
+        orgAdmin.signInAgain();
+        assertEquals(orgId1, orgAdmin.getSession().getOrgMembership());
         
         // create a user
         user = TestUserHelper.createAndSignInUser(OrganizationTest.class, true);
@@ -191,7 +189,7 @@ public class OrganizationTest {
                 list.getItems().stream().map(AccountSummary::getEmail).collect(Collectors.toSet()));
         assertEquals(Integer.valueOf(2), list.getTotal()); // the admin and the user
         for (AccountSummary summary : list.getItems()) { 
-            assertEquals(summary.getOrgMembership(), orgId1);
+            assertEquals(orgId1, summary.getOrgMembership());
         }
         
         // can remove someone from your org

@@ -6,7 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
 
 import java.io.File;
@@ -27,8 +27,8 @@ import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
 import org.sagebionetworks.bridge.rest.api.FilesApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.PublicApi;
-import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -46,11 +46,11 @@ import org.sagebionetworks.bridge.rest.model.FileRevision;
 import org.sagebionetworks.bridge.rest.model.FileRevisionList;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
+import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
@@ -90,26 +90,28 @@ public class AppConfigTest {
     
     @Before
     public void before() throws IOException {
-        developer = TestUserHelper.createAndSignInUser(AppConfigTest.class, false, Role.DEVELOPER);
         admin = TestUserHelper.getSignedInAdmin();
+        
+        developer = TestUserHelper.createAndSignInUser(AppConfigTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(AppConfigTest.class, true);
         
+        // Getting ahead of our skis here, as we haven't refactored substudies to be organizations
+        // and we're already using them that way.
+        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
+        try {
+            orgsApi.getOrganization(ORG_ID_1).execute();
+        } catch (EntityNotFoundException ex) {
+            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
+            orgsApi.createOrganization(org).execute();
+        }
+        admin.getClient(OrganizationsApi.class).addMember(ORG_ID_1, developer.getUserId()).execute();
+
         adminApi = admin.getClient(ForAdminsApi.class);
         appConfigsApi = developer.getClient(AppConfigsApi.class);
         schemasApi = developer.getClient(UploadSchemasApi.class);
         surveysApi = developer.getClient(SurveysApi.class);
         filesApi = developer.getClient(FilesApi.class);
         assessmentsApi = developer.getClient(AssessmentsApi.class);
-        
-        // Getting ahead of our skis here, as we haven't refactored substudies to be organizations
-        // and we're already using them that way.
-        SubstudiesApi subApi = admin.getClient(SubstudiesApi.class);
-        try {
-            subApi.getSubstudy(SUBSTUDY_ID_1).execute();
-        } catch (EntityNotFoundException ex) {
-            Substudy substudy = new Substudy().id(SUBSTUDY_ID_1).name(SUBSTUDY_ID_1);
-            subApi.createSubstudy(substudy).execute();
-        }
 
         // App configs with no criteria will conflict with the run of this test. Set the range on these
         // for Android to 1-1.
@@ -194,7 +196,7 @@ public class AppConfigTest {
                 .validationStatus("Not validated")
                 .normingStatus("Not normed")
                 .osName("Both")
-                .ownerId(SUBSTUDY_ID_1);
+                .ownerId(ORG_ID_1);
         
         Assessment assessment = assessmentsApi.createAssessment(unsavedAssessment).execute().body();
         assessmentGuid = assessment.getGuid();
