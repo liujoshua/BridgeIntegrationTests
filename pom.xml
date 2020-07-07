@@ -44,7 +44,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>19.0</version>
+            <version>29.0-jre</version>
         </dependency>
         <dependency>
             <groupId>org.sagebionetworks</groupId>
@@ -76,8 +76,8 @@
             <url>https://repo-maven.sagebridge.org/</url>
         </repository>
         <repository>
-            <id>org-sagebridge-repo-maven-local</id>
-            <name>org-sagebridge-repo-maven-local</name>
+            <id>sagebionetworks-libs-releases-local</id>
+            <name>sagebionetworks-libs-releases-local</name>
             <url>https://sagebionetworks.artifactoryonline.com/sagebionetworks/libs-releases-local/</url>
         </repository>
     </repositories>
