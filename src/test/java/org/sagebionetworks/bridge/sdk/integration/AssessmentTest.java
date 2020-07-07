@@ -7,9 +7,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.API_SIGNIN;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
@@ -31,17 +31,17 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.SharedAssessmentsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.TagsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentList;
+import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.PropertyInfo;
 import org.sagebionetworks.bridge.rest.model.RequestParams;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -74,25 +74,27 @@ public class AssessmentTest {
         markerTag = "test:" + randomIdentifier(AssessmentTest.class);
 
         admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
         
         try {
-            studiesApi.getStudy(STUDY_ID_1).execute();
+            orgsApi.getOrganization(ORG_ID_1).execute();
         } catch (EntityNotFoundException ex) {
-            Study study = new Study().id(STUDY_ID_1).name(STUDY_ID_1);
-            studiesApi.createStudy(study).execute();
+            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
+            orgsApi.createOrganization(org).execute();
         }
         try {
-            studiesApi.getStudy(STUDY_ID_2).execute().body();
+            orgsApi.getOrganization(ORG_ID_2).execute().body();
         } catch (EntityNotFoundException ex) {
-            Study study = new Study().id(STUDY_ID_2).name(STUDY_ID_2);
-            studiesApi.createStudy(study).execute();
+            Organization org = new Organization().identifier(ORG_ID_2).name(ORG_ID_2);
+            orgsApi.createOrganization(org).execute();
         }
         
-        developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER)
-                .withStudyIds(ImmutableSet.of(STUDY_ID_1)).createAndSignInUser();
-        otherDeveloper = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER)
-                .withStudyIds(ImmutableSet.of(STUDY_ID_2)).createAndSignInUser();
+        developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER).createAndSignInUser();
+        orgsApi.addMember(ORG_ID_1, developer.getUserId()).execute();
+        
+        otherDeveloper = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER).createAndSignInUser();
+        orgsApi.addMember(ORG_ID_2, otherDeveloper.getUserId()).execute();
+        
         assessmentApi = developer.getClient(AssessmentsApi.class);
         badDevApi = otherDeveloper.getClient(AssessmentsApi.class);
     }
@@ -143,7 +145,7 @@ public class AssessmentTest {
                 .validationStatus("Not validated")
                 .normingStatus("Not normed")
                 .osName("Both")
-                .ownerId(STUDY_ID_1)
+                .ownerId(ORG_ID_1)
                 .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
         
@@ -179,7 +181,7 @@ public class AssessmentTest {
         
         // createAssessmentRevision works
         firstRevision.setIdentifier(id);
-        firstRevision.setOwnerId(STUDY_ID_1);
+        firstRevision.setOwnerId(ORG_ID_1);
         firstRevision.setTitle("Title 2");
         firstRevision.setRevision(2L);
         // Note: that the GUIDs here don't matter at all, which makes this an odd API. Should enforce this?
@@ -299,7 +301,7 @@ public class AssessmentTest {
         Assessment shared = sharedApi.getLatestSharedAssessmentRevision(id).execute().body();
         
         assertEquals(shared.getGuid(), firstRevision.getOriginGuid());
-        assertEquals(TEST_APP_ID+":"+STUDY_ID_1, shared.getOwnerId());
+        assertEquals(TEST_APP_ID+":"+ORG_ID_1, shared.getOwnerId());
         
         assertNotEquals(firstRevision.getGuid(), shared.getGuid());
         assertEquals(firstRevision.getIdentifier(), shared.getIdentifier());
@@ -324,7 +326,7 @@ public class AssessmentTest {
         try {
             SharedAssessmentsApi badDevSharedApi = otherDeveloper.getClient(SharedAssessmentsApi.class);
             otherAssessment = badDevSharedApi.importSharedAssessment(
-                    shared.getGuid(), STUDY_ID_2, null).execute().body();
+                    shared.getGuid(), ORG_ID_2, null).execute().body();
             badDevApi.publishAssessment(otherAssessment.getGuid(), null).execute();
             fail("Should have thrown exception");
         } catch(UnauthorizedException e) {
@@ -342,9 +344,9 @@ public class AssessmentTest {
 
         // Import a shared assessment back into the app
         Assessment newAssessment = sharedApi.importSharedAssessment(shared.getGuid(), 
-                STUDY_ID_1, null).execute().body();        
+                ORG_ID_1, null).execute().body();        
         assertEquals(shared.getGuid(), newAssessment.getOriginGuid());
-        assertEquals(STUDY_ID_1, newAssessment.getOwnerId());
+        assertEquals(ORG_ID_1, newAssessment.getOwnerId());
         assertNotEquals(shared.getGuid(), newAssessment.getGuid());
         // The revision of this thing should be 3 because there are two copies in app (one is logically 
         // deleted, but this does not break things)
@@ -396,7 +398,7 @@ public class AssessmentTest {
                     .identifier(id+i)
                     .title(TITLE)
                     .osName("Both")
-                    .ownerId(STUDY_ID_1)
+                    .ownerId(ORG_ID_1)
                     .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                     .customizationFields(CUSTOMIZATION_FIELDS);
             assessmentApi.createAssessment(unsavedAssessment).execute();
@@ -434,7 +436,7 @@ public class AssessmentTest {
                 .identifier(parentId)
                 .title(TITLE)
                 .osName("Both")
-                .ownerId(STUDY_ID_1)
+                .ownerId(ORG_ID_1)
                 .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
         for (int i=0; i < 10; i++) {
@@ -569,7 +571,7 @@ public class AssessmentTest {
         assertEquals("Not validated", assessment.getValidationStatus());
         assertEquals("Not normed", assessment.getNormingStatus());
         assertEquals("Universal", assessment.getOsName());
-        assertEquals(STUDY_ID_1, assessment.getOwnerId());
+        assertEquals(ORG_ID_1, assessment.getOwnerId());
         assertTrue(assessment.getTags().contains(markerTag));
         assertTrue(assessment.getTags().contains(TAG1));
         assertTrue(assessment.getTags().contains(TAG2));

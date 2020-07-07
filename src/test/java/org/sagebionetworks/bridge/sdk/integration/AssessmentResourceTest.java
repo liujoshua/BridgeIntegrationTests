@@ -10,8 +10,8 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.ResourceCategory.DATA_REPOSITORY;
 import static org.sagebionetworks.bridge.rest.model.ResourceCategory.LICENSE;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
 
 import java.io.IOException;
@@ -19,23 +19,22 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.SharedAssessmentsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentList;
 import org.sagebionetworks.bridge.rest.model.ExternalResource;
+import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.PagedExternalResourceList;
 import org.sagebionetworks.bridge.rest.model.RequestParams;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -55,25 +54,28 @@ public class AssessmentResourceTest {
     public void before() throws Exception {
         id = randomIdentifier(AssessmentResourceTest.class);
         admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
 
         try {
-            studiesApi.getStudy(STUDY_ID_1).execute().body();
+            orgsApi.getOrganization(ORG_ID_1).execute().body();
         } catch(EntityNotFoundException e) {
-            Study study = new Study().id(STUDY_ID_1).name(STUDY_ID_1);
-            studiesApi.createStudy(study).execute();
+            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
+            orgsApi.createOrganization(org).execute();
         }
         try {
-            studiesApi.getStudy(STUDY_ID_2).execute().body();
+            orgsApi.getOrganization(ORG_ID_2).execute().body();
         } catch(EntityNotFoundException e) {
-            Study study = new Study().id(STUDY_ID_2).name(STUDY_ID_2);
-            studiesApi.createStudy(study).execute();
+            Organization org = new Organization().identifier(ORG_ID_2).name(ORG_ID_2);
+            orgsApi.createOrganization(org).execute();
         }
 
-        developer = new TestUserHelper.Builder(AssessmentResourceTest.class).withRoles(DEVELOPER)
-                .withStudyIds(ImmutableSet.of(STUDY_ID_1)).createAndSignInUser();
+        developer = new TestUserHelper.Builder(AssessmentResourceTest.class).withRoles(DEVELOPER).createAndSignInUser();
+        orgsApi.addMember(ORG_ID_1, developer.getUserId()).execute();
+        
         otherDeveloper = new TestUserHelper.Builder(AssessmentResourceTest.class).withRoles(DEVELOPER)
-                .withStudyIds(ImmutableSet.of(STUDY_ID_2)).createAndSignInUser();
+                .createAndSignInUser();
+        orgsApi.addMember(ORG_ID_2, otherDeveloper.getUserId()).execute();
+        
         assessmentApi = developer.getClient(AssessmentsApi.class);
         sharedAssessmentsApi = developer.getClient(SharedAssessmentsApi.class);
         badDevApi = otherDeveloper.getClient(AssessmentsApi.class);
@@ -105,7 +107,7 @@ public class AssessmentResourceTest {
     @Test
     public void test() throws Exception {
         Assessment unsavedAssessment = new Assessment().identifier(id).title("AssessmentResourceTest assessment")
-                .osName("Android").ownerId(STUDY_ID_1).revision(1L);
+                .osName("Android").ownerId(ORG_ID_1).revision(1L);
 
         Assessment assessment = assessmentApi.createAssessment(unsavedAssessment).execute().body();
         

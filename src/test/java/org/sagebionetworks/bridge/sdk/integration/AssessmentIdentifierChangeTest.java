@@ -3,7 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
 
 import java.io.IOException;
@@ -17,13 +17,13 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.SharedAssessmentsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.TagsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentList;
-import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -40,16 +40,16 @@ public class AssessmentIdentifierChangeTest {
         markerTag = "test:" + randomIdentifier(AssessmentTest.class);
 
         admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
         
         try {
-            studiesApi.getStudy(STUDY_ID_1).execute();
+            orgsApi.getOrganization(ORG_ID_1).execute();
         } catch (EntityNotFoundException ex) {
-            Study study = new Study().id(STUDY_ID_1).name(STUDY_ID_1);
-            studiesApi.createStudy(study).execute();
+            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
+            orgsApi.createOrganization(org).execute();
         }
-        developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER)
-                .withStudyIds(ImmutableSet.of(STUDY_ID_1)).createAndSignInUser();
+        developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER).createAndSignInUser();
+        orgsApi.addMember(ORG_ID_1, developer.getUserId()).execute();
         assessmentApi = developer.getClient(AssessmentsApi.class);
     }
     
@@ -94,14 +94,14 @@ public class AssessmentIdentifierChangeTest {
                 .validationStatus("Not validated")
                 .normingStatus("Not normed")
                 .osName("Android")
-                .ownerId(STUDY_ID_1)
+                .ownerId(ORG_ID_1)
                 .tags(ImmutableList.of(markerTag));
         SharedAssessmentsApi sharedApi = developer.getClient(SharedAssessmentsApi.class);
         
         Assessment assessment = assessmentApi.createAssessment(unsavedAssessment).execute().body();
         assessmentApi.publishAssessment(assessment.getGuid(), id+"A").execute().body();
         Assessment shared = sharedApi.getLatestSharedAssessmentRevision(id+"A").execute().body();
-        sharedApi.importSharedAssessment(shared.getGuid(), STUDY_ID_1, id + "B").execute().body();
+        sharedApi.importSharedAssessment(shared.getGuid(), ORG_ID_1, id + "B").execute().body();
         
         // There should be a published assessment under (id + "A"), and two local assessments under id and (id + "B")
         AssessmentList list = sharedApi.getSharedAssessments(null, null, ImmutableList.of(markerTag), false).execute().body();

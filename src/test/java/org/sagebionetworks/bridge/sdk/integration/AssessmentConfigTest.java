@@ -2,7 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
 
 import java.io.IOException;
@@ -11,7 +11,6 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -23,15 +22,15 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.SharedAssessmentsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.TagsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentConfig;
 import org.sagebionetworks.bridge.rest.model.AssessmentList;
+import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.PropertyInfo;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -57,17 +56,18 @@ public class AssessmentConfigTest {
         markerTag = "test:" + randomIdentifier(AssessmentTest.class);
 
         admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
         
         try {
-            studiesApi.getStudy(STUDY_ID_1).execute();
+            orgsApi.getOrganization(ORG_ID_1).execute();
         } catch (EntityNotFoundException ex) {
-            Study study = new Study().id(STUDY_ID_1).name(STUDY_ID_1);
-            studiesApi.createStudy(study).execute();
+            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
+            orgsApi.createOrganization(org).execute();
         }
         
-        developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER)
-                .withStudyIds(ImmutableSet.of(STUDY_ID_1)).createAndSignInUser();
+        developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER).createAndSignInUser();
+        orgsApi.addMember(ORG_ID_1, developer.getUserId()).execute();
+        
         assessmentApi = developer.getClient(AssessmentsApi.class);
     }
     
@@ -112,7 +112,7 @@ public class AssessmentConfigTest {
                 .validationStatus("Not validated")
                 .normingStatus("Not normed")
                 .osName("Android")
-                .ownerId(STUDY_ID_1)
+                .ownerId(ORG_ID_1)
                 .tags(ImmutableList.of(markerTag))
                 .customizationFields(CUSTOMIZATION_FIELDS);
         Assessment assessment = assessmentApi.createAssessment(unsavedAssessment).execute().body();
@@ -161,7 +161,7 @@ public class AssessmentConfigTest {
         assertEquals(ORIGINAL, obj1.get("field2").getAsString());
         assertEquals(ORIGINAL, obj1.get("field3").getAsString());
         
-        Assessment newAssessment = sharedApi.importSharedAssessment(shared.getGuid(), STUDY_ID_1, null).execute().body();
+        Assessment newAssessment = sharedApi.importSharedAssessment(shared.getGuid(), ORG_ID_1, null).execute().body();
         
         JsonElement textNode = RestUtils.toJSON(CHANGED);
         Map<String, JsonElement> propMap1 = ImmutableMap.of("field1", textNode, "field2", textNode, "field3", textNode);
