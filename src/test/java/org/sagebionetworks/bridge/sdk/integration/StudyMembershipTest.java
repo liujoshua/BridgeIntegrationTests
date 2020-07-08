@@ -170,7 +170,7 @@ public class StudyMembershipTest {
     
     @Test
     public void userCanAddExternalIdMembership() throws Exception {
-        // Create two substudies
+        // Create two studies
         String idA = createStudy();
         String idB = createStudy();
 

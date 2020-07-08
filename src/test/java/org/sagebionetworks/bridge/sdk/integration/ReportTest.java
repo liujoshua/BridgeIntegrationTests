@@ -469,7 +469,7 @@ public class ReportTest {
     }
     
     @Test
-    public void studyReportsNotVisibleOutsideOfSubstudy() throws Exception {
+    public void studyReportsNotVisibleOutsideOfStudy() throws Exception {
         StudyReportsApi devReportClient = appScopedDeveloper.getClient(StudyReportsApi.class);
         
         ReportData data1 = makeReportData(DATE1, "asdf", "A");

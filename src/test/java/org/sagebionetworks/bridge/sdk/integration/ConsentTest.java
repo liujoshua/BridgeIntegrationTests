@@ -565,13 +565,13 @@ public class ConsentTest {
             String dataGroup = Iterables.getFirst(app.getDataGroups(), null);
             List<String> dataGroupList = ImmutableList.of(dataGroup);
 
-            // Csreate a study, if needed
+            // create a study, if needed
             String studyId = Tests.randomIdentifier(ConsentTest.class);
             study = new Study().id(studyId).name("Study " + studyId);
             studiesApi.createStudy(study).execute().body();
             List<String> studyIds = ImmutableList.of(study.getId());
 
-            // Create an (optional) subpopulation that associates both to a user
+            // create an (optional) subpopulation that associates both to a user
             subpop = new Subpopulation().name("Test Subpopulation").required(false);
             subpop.setStudyIdsAssignedOnConsent(studyIds);
             subpop.setDataGroupsAssignedWhileConsented(dataGroupList);

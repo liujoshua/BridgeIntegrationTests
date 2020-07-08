@@ -311,19 +311,19 @@ public class Tests {
         return retValue;
     }
 
-    public static ExternalIdentifier createExternalId(Class<?> clazz, TestUser developer, String substudyId) throws Exception {
+    public static ExternalIdentifier createExternalId(Class<?> clazz, TestUser developer, String studyId) throws Exception {
         String externalId = Tests.randomIdentifier(clazz);
         
         StudiesApi studiesApi = developer.getClient(StudiesApi.class);
         StudyList studyList = studiesApi.getStudies(false).execute().body();
         
         Set<String> existingStudyIds = studyList.getItems().stream().map(Study::getId).collect(Collectors.toSet());
-        if (!existingStudyIds.contains(substudyId)) {
+        if (!existingStudyIds.contains(studyId)) {
             TestUser admin = TestUserHelper.getSignedInAdmin();
-            Study study = new Study().id(substudyId).name(substudyId);
+            Study study = new Study().id(studyId).name(studyId);
             admin.getClient(StudiesApi.class).createStudy(study).execute();
         }
-        ExternalIdentifier externalIdentifier = new ExternalIdentifier().identifier(externalId).studyId(substudyId);
+        ExternalIdentifier externalIdentifier = new ExternalIdentifier().identifier(externalId).studyId(studyId);
         int code = developer.getClient(ExternalIdentifiersApi.class).createExternalId(externalIdentifier).execute().code();
         assertEquals(code, 201);
         return externalIdentifier;

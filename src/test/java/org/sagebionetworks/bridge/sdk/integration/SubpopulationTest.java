@@ -77,7 +77,7 @@ public class SubpopulationTest {
     
     @Test
     public void canCRUD() throws Exception {
-        // First, to do this test, we need to create some valid data groups and substudies if they
+        // First, to do this test, we need to create some valid data groups and studies if they
         // don't already exist.
         AppsApi appsApi = developer.getClient(AppsApi.class);
         App app = appsApi.getUsersApp().execute().body();
