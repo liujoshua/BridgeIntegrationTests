@@ -65,6 +65,6 @@ public class UpdateIdentifiersTest {
         assertEquals(participant.getSynapseUserId(), synapseUserId);
     }
     
-    // SubstudyMembershipTest covers the more complicated case of adding an external ID, due to 
+    // StudyMembershipTest covers the more complicated case of adding an external ID, due to 
     // the complicated set-up that is necessary. Email address has proven to be very hard due to authentication.
 }

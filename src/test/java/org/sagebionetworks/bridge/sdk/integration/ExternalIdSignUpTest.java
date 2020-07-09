@@ -21,7 +21,7 @@ import org.sagebionetworks.bridge.rest.model.GeneratedPassword;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.Substudy;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -66,12 +66,12 @@ public class ExternalIdSignUpTest {
         String idA = null;
         try {
             idA = Tests.randomIdentifier(ExternalIdSignUpTest.class);
-            Substudy substudyA = new Substudy().id(idA).name("Substudy " + idA);
-            admin.getClient(ForSuperadminsApi.class).createSubstudy(substudyA).execute();
+            Study studyA = new Study().id(idA).name("Study " + idA);
+            admin.getClient(ForSuperadminsApi.class).createStudy(studyA).execute();
             
-            devIdsClient.createExternalId(new ExternalIdentifier().substudyId(idA).identifier(externalId1)).execute();
-            devIdsClient.createExternalId(new ExternalIdentifier().substudyId(idA).identifier(externalId2)).execute();
-            devIdsClient.createExternalId(new ExternalIdentifier().substudyId(idA).identifier(externalId3)).execute();
+            devIdsClient.createExternalId(new ExternalIdentifier().studyId(idA).identifier(externalId1)).execute();
+            devIdsClient.createExternalId(new ExternalIdentifier().studyId(idA).identifier(externalId2)).execute();
+            devIdsClient.createExternalId(new ExternalIdentifier().studyId(idA).identifier(externalId3)).execute();
             
             SignUp signUp = new SignUp().appId(TEST_APP_ID).password(Tests.PASSWORD);
             signUp.externalId(externalId1);
@@ -148,7 +148,7 @@ public class ExternalIdSignUpTest {
             adminClient.deleteExternalId(externalId2).execute();
             adminClient.deleteExternalId(externalId3).execute();
             if (idA != null) {
-                admin.getClient(ForSuperadminsApi.class).deleteSubstudy(idA, true).execute();    
+                admin.getClient(ForSuperadminsApi.class).deleteStudy(idA, true).execute();    
             }
         }
     }

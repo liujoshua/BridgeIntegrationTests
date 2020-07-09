@@ -95,8 +95,6 @@ public class AppConfigTest {
         developer = TestUserHelper.createAndSignInUser(AppConfigTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(AppConfigTest.class, true);
         
-        // Getting ahead of our skis here, as we haven't refactored substudies to be organizations
-        // and we're already using them that way.
         OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
         try {
             orgsApi.getOrganization(ORG_ID_1).execute();

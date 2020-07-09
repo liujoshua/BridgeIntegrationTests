@@ -4,8 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_2;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 
 import com.google.common.collect.ImmutableList;
@@ -94,8 +94,8 @@ public class UserParticipantTest {
 
     @Test
     public void canAddButNotChangeExternalIdentifier() throws Exception {
-        ExternalIdentifier externalId1 = Tests.createExternalId(UserParticipantTest.class, developer, SUBSTUDY_ID_1);
-        ExternalIdentifier externalId2 = Tests.createExternalId(UserParticipantTest.class, developer, SUBSTUDY_ID_2);
+        ExternalIdentifier externalId1 = Tests.createExternalId(UserParticipantTest.class, developer, STUDY_ID_1);
+        ExternalIdentifier externalId2 = Tests.createExternalId(UserParticipantTest.class, developer, STUDY_ID_2);
         
         TestUser user = TestUserHelper.createAndSignInUser(UserParticipantTest.class, true);
         try {
@@ -104,7 +104,7 @@ public class UserParticipantTest {
             participant.setExternalId(externalId1.getIdentifier());
 
             UserSessionInfo session = usersApi.updateUsersParticipantRecord(participant).execute().body();
-            assertEquals(externalId1.getIdentifier(), session.getExternalIds().get(SUBSTUDY_ID_1));
+            assertEquals(externalId1.getIdentifier(), session.getExternalIds().get(STUDY_ID_1));
 
             participant = usersApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(user.getEmail(), participant.getEmail());

@@ -42,8 +42,6 @@ public class AssessmentIdentifierChangeTest {
         admin = TestUserHelper.getSignedInAdmin();
         OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
         
-        // Getting ahead of our skis here, as we haven't refactored substudies to be organizations
-        // and we're already using them that way.
         try {
             orgsApi.getOrganization(ORG_ID_1).execute();
         } catch (EntityNotFoundException ex) {

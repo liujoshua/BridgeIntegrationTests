@@ -33,8 +33,8 @@ import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
-import org.sagebionetworks.bridge.rest.api.SubstudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -47,9 +47,9 @@ import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
-import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.UserConsentHistory;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
@@ -520,25 +520,25 @@ public class ConsentTest {
 
     @FunctionalInterface
     public abstract interface WithdrawMethod {
-        public void withdraw(TestUser user, List<String> substudyIds, Subpopulation subpop) throws Exception;
+        public void withdraw(TestUser user, List<String> studyIds, Subpopulation subpop) throws Exception;
     }
 
     @Test
-    public void consentAndWithdrawFromSubpopUpdatesDataGroupsAndSubstudies() throws Exception {
-        withdrawalTest((user, substudyIds, subpop) -> {
+    public void consentAndWithdrawFromSubpopUpdatesDataGroupsAndStudies() throws Exception {
+        withdrawalTest((user, studyIds, subpop) -> {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             UserSessionInfo updatedSession = usersApi.withdrawConsentFromSubpopulation(
                     subpop.getGuid(), WITHDRAWAL).execute().body();
             
             // verify that the session contains all the correct information
-            assertEquals(substudyIds, updatedSession.getSubstudyIds());
+            assertEquals(studyIds, updatedSession.getStudyIds());
             assertTrue(updatedSession.getDataGroups().isEmpty());
         });
     }
     
     @Test
-    public void consentAndWithdrawFromAppUpdatesDataGroupsAndSubstudies() throws Exception {
-        withdrawalTest((user, substudyIds, subpop) -> {
+    public void consentAndWithdrawFromAppUpdatesDataGroupsAndStudies() throws Exception {
+        withdrawalTest((user, studyIds, subpop) -> {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             usersApi.withdrawFromApp(WITHDRAWAL).execute();
             
@@ -546,34 +546,34 @@ public class ConsentTest {
 
             // verify the participant contains all the correct information
             StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
-            assertEquals(substudyIds, participant.getSubstudyIds());
+            assertEquals(studyIds, participant.getStudyIds());
             assertTrue(participant.getDataGroups().isEmpty());
         });
     }
     
     private void withdrawalTest(WithdrawMethod withdrawMethod) throws Exception {
         TestUser user = null;
-        Substudy substudy = null;
+        Study study = null;
         Subpopulation subpop = null;
         TestUser devUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, DEVELOPER);
-        SubstudiesApi substudiesApi = adminUser.getClient(SubstudiesApi.class);
+        StudiesApi studiesApi = adminUser.getClient(StudiesApi.class);
         SubpopulationsApi subpopApi = devUser.getClient(SubpopulationsApi.class);
         try {
-            AppsApi studiesApi = devUser.getClient(AppsApi.class);
-            App app = studiesApi.getUsersApp().execute().body();
+            AppsApi appsApi = devUser.getClient(AppsApi.class);
+            App app = appsApi.getUsersApp().execute().body();
 
             String dataGroup = Iterables.getFirst(app.getDataGroups(), null);
             List<String> dataGroupList = ImmutableList.of(dataGroup);
 
-            // Csreate a substudy, if needed
-            String substudyId = Tests.randomIdentifier(ConsentTest.class);
-            substudy = new Substudy().id(substudyId).name("Substudy " + substudyId);
-            substudiesApi.createSubstudy(substudy).execute().body();
-            List<String> substudyIds = ImmutableList.of(substudy.getId());
+            // create a study, if needed
+            String studyId = Tests.randomIdentifier(ConsentTest.class);
+            study = new Study().id(studyId).name("Study " + studyId);
+            studiesApi.createStudy(study).execute().body();
+            List<String> studyIds = ImmutableList.of(study.getId());
 
-            // Create an (optional) subpopulation that associates both to a user
+            // create an (optional) subpopulation that associates both to a user
             subpop = new Subpopulation().name("Test Subpopulation").required(false);
-            subpop.setSubstudyIdsAssignedOnConsent(substudyIds);
+            subpop.setStudyIdsAssignedOnConsent(studyIds);
             subpop.setDataGroupsAssignedWhileConsented(dataGroupList);
             GuidVersionHolder subpopKeys = subpopApi.createSubpopulation(subpop).execute().body();
             subpop.setGuid(subpopKeys.getGuid());
@@ -587,11 +587,11 @@ public class ConsentTest {
             UserSessionInfo session = usersApi.createConsentSignature(subpop.getGuid(), sig).execute().body();
 
             // verify that the session contains all the correct information
-            assertEquals(substudyIds, session.getSubstudyIds());
+            assertEquals(studyIds, session.getStudyIds());
             assertEquals(dataGroupList, session.getDataGroups());
 
             // withdraw and verify
-            withdrawMethod.withdraw(user, substudyIds, subpop);
+            withdrawMethod.withdraw(user, studyIds, subpop);
         } finally {
             // delete the user
             if (user != null) {
@@ -601,8 +601,8 @@ public class ConsentTest {
             if (subpop != null && subpop.getGuid() != null) {
                 adminUser.getClient(SubpopulationsApi.class).deleteSubpopulation(subpop.getGuid(), true).execute();
             }
-            if (substudy != null) {
-                adminUser.getClient(SubstudiesApi.class).deleteSubstudy(substudy.getId(), true).execute();
+            if (study != null) {
+                adminUser.getClient(StudiesApi.class).deleteStudy(study.getId(), true).execute();
             }
             devUser.signOutAndDeleteUser();
         }

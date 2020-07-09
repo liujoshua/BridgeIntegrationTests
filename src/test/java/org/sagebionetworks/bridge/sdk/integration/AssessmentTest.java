@@ -76,8 +76,6 @@ public class AssessmentTest {
         admin = TestUserHelper.getSignedInAdmin();
         OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
         
-        // Getting ahead of our skis here, as we haven't refactored substudies to be organizations
-        // and we're already using them that way.
         try {
             orgsApi.getOrganization(ORG_ID_1).execute();
         } catch (EntityNotFoundException ex) {
@@ -161,7 +159,7 @@ public class AssessmentTest {
         } catch(EntityAlreadyExistsException e) {
         }
         
-        // createAssessment fails when substudy does not exist
+        // createAssessment fails when study does not exist
         unsavedAssessment.setOwnerId("not-real");
         unsavedAssessment.setIdentifier(randomIdentifier(AssessmentTest.class));
         try {

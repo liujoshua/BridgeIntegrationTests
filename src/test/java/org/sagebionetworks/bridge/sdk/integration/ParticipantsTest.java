@@ -13,7 +13,7 @@ import static org.sagebionetworks.bridge.rest.model.AccountStatus.UNVERIFIED;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
@@ -96,7 +96,7 @@ public class ParticipantsTest {
         researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(RESEARCHER).withConsentUser(true)
                 .createAndSignInUser();
         
-        externalId = Tests.createExternalId(ParticipantsTest.class, developer, SUBSTUDY_ID_1);
+        externalId = Tests.createExternalId(ParticipantsTest.class, developer, STUDY_ID_1);
         
         IntegTestUtils.deletePhoneUser(researcher);
         

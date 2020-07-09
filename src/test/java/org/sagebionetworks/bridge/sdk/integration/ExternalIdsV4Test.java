@@ -30,8 +30,8 @@ import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -73,23 +73,23 @@ public class ExternalIdsV4Test {
             App app = superadminClient.getApp(TEST_APP_ID).execute().body();
             superadminClient.updateApp(app.getIdentifier(), app).execute();
 
-            // Create some substudies
-            Substudy substudyA = new Substudy().id(idA).name("Substudy " + idA);
-            Substudy substudyB = new Substudy().id(idB).name("Substudy " + idB);
-            superadminClient.createSubstudy(substudyA).execute();
-            superadminClient.createSubstudy(substudyB).execute();
+            // Create some studies
+            Study studyA = new Study().id(idA).name("Study " + idA);
+            Study studyB = new Study().id(idB).name("Study " + idB);
+            superadminClient.createStudy(studyA).execute();
+            superadminClient.createStudy(studyB).execute();
 
-            // Creating an external ID without a substudy now fails
+            // Creating an external ID without a study now fails
             try {
                 researcherApi.createExternalId(new ExternalIdentifier().identifier(extIdA)).execute();
                 fail("Should have thrown an exception");
             } catch (InvalidEntityException e) {
             }
 
-            // Create a couple of external IDs related to different substudies.
-            ExternalIdentifier extId1 = new ExternalIdentifier().identifier(extIdA).substudyId(idA);
-            ExternalIdentifier extId2 = new ExternalIdentifier().identifier(extIdB1).substudyId(idB);
-            ExternalIdentifier extId3 = new ExternalIdentifier().identifier(extIdB2).substudyId(idB);
+            // Create a couple of external IDs related to different studies.
+            ExternalIdentifier extId1 = new ExternalIdentifier().identifier(extIdA).studyId(idA);
+            ExternalIdentifier extId2 = new ExternalIdentifier().identifier(extIdB1).studyId(idB);
+            ExternalIdentifier extId3 = new ExternalIdentifier().identifier(extIdB2).studyId(idB);
             researcherApi.createExternalId(extId1).execute();
             researcherApi.createExternalId(extId2).execute();
             researcherApi.createExternalId(extId3).execute();
@@ -113,20 +113,20 @@ public class ExternalIdsV4Test {
             assertTrue(foundExtId1 & foundExtId2 & foundExtId3);
             
             // Sign up a user with an external ID specified. Just one of them: we don't have plans to
-            // allow the assignment of multiple external IDs on sign up. Adding new substudies is probably
+            // allow the assignment of multiple external IDs on sign up. Adding new studies is probably
             // going to happen by signing additional consents, but that's TBD.
             SignUp signUp = new SignUp().appId(TEST_APP_ID);
             signUp.setPassword(Tests.PASSWORD);
             signUp.setExternalId(extIdA);
             researcher.getClient(AuthenticationApi.class).signUp(signUp).execute();
 
-            // The created account has been associated to the external ID and its related substudy
+            // The created account has been associated to the external ID and its related study
             StudyParticipant participant = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();
             userId = participant.getId();
             assertEquals(1, participant.getExternalIds().size());
             assertEquals(extIdA, participant.getExternalIds().get(idA));
-            assertEquals(1, participant.getSubstudyIds().size());
-            assertEquals(idA, participant.getSubstudyIds().get(0));
+            assertEquals(1, participant.getStudyIds().size());
+            assertEquals(idA, participant.getStudyIds().get(0));
             assertTrue(participant.getExternalIds().values().contains(extIdA));
 
             // Cannot create another user with this external ID. This should do nothing and fail quietly.
@@ -181,8 +181,8 @@ public class ExternalIdsV4Test {
             adminClient.deleteExternalId(extIdA).execute();
             adminClient.deleteExternalId(extIdB1).execute();
             adminClient.deleteExternalId(extIdB2).execute();
-            superadminClient.deleteSubstudy(idA, true).execute();
-            superadminClient.deleteSubstudy(idB, true).execute();
+            superadminClient.deleteStudy(idA, true).execute();
+            superadminClient.deleteStudy(idB, true).execute();
         }
     }
 
@@ -193,9 +193,9 @@ public class ExternalIdsV4Test {
         
         List<ExternalIdentifier> ids = Lists.newArrayListWithCapacity(10);
         for (int i=0; i < 10; i++) {
-            String substudyId = (i % 2 == 0) ? idA : idB;
+            String studyId = (i % 2 == 0) ? idA : idB;
             String identifier = (i > 5) ? ((prefix+"-foo-"+i)) : (prefix+"-"+i);
-            ExternalIdentifier id = new ExternalIdentifier().identifier(identifier).substudyId(substudyId);
+            ExternalIdentifier id = new ExternalIdentifier().identifier(identifier).studyId(studyId);
             ids.add(id);
         }
         
@@ -203,11 +203,11 @@ public class ExternalIdsV4Test {
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
         TestUser user = null;
         try {
-            // Create substudy
-            Substudy substudyA = new Substudy().id(idA).name("Substudy " + idA);
-            Substudy substudyB = new Substudy().id(idB).name("Substudy " + idB);
-            superadminClient.createSubstudy(substudyA).execute();
-            superadminClient.createSubstudy(substudyB).execute();
+            // Create study
+            Study studyA = new Study().id(idA).name("Study " + idA);
+            Study studyB = new Study().id(idB).name("Study " + idB);
+            superadminClient.createStudy(studyA).execute();
+            superadminClient.createStudy(studyB).execute();
             
             // Create enough external IDs to page
             for (int i=0; i < 10; i++) {
@@ -263,15 +263,15 @@ public class ExternalIdsV4Test {
             ExternalIdentifierList scopedList = scopedResearcherApi.getExternalIds(null, null, null, null)
                     .execute().body();
             
-            // Only five of them have the substudy ID
+            // Only five of them have the study ID
             assertEquals(5, scopedList.getItems().stream()
-                    .filter(id -> id.getSubstudyId() != null).collect(Collectors.toList()).size());
+                    .filter(id -> id.getStudyId() != null).collect(Collectors.toList()).size());
             
-            // You can also filter the ids and it maintains the substudy scoping
+            // You can also filter the ids and it maintains the study scoping
             scopedList = scopedResearcherApi.getExternalIds(null, null, prefix+"-foo-", null).execute().body();
             
             assertEquals(2, scopedList.getItems().stream()
-                    .filter(id -> id.getSubstudyId() != null).collect(Collectors.toList()).size());
+                    .filter(id -> id.getStudyId() != null).collect(Collectors.toList()).size());
         } finally {
             if (user != null) {
                 user.signOutAndDeleteUser();    
@@ -280,8 +280,8 @@ public class ExternalIdsV4Test {
             for (int i=0; i < 10; i++) {
                 adminClient.deleteExternalId(ids.get(i).getIdentifier()).execute();    
             }
-            superadminClient.deleteSubstudy(idA, true).execute();
-            superadminClient.deleteSubstudy(idB, true).execute();
+            superadminClient.deleteStudy(idA, true).execute();
+            superadminClient.deleteStudy(idB, true).execute();
         }
     }
 

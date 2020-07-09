@@ -5,7 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SUBSTUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
 
 import java.io.File;
@@ -40,8 +40,8 @@ import org.sagebionetworks.bridge.rest.model.RecordExportStatusRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.rest.model.Substudy;
 import org.sagebionetworks.bridge.rest.model.SynapseExporterStatus;
 import org.sagebionetworks.bridge.rest.model.Upload;
 import org.sagebionetworks.bridge.rest.model.UploadFieldDefinition;
@@ -85,11 +85,11 @@ public class UploadTest {
         admin = TestUserHelper.getSignedInAdmin();
 
         try {
-            admin.getClient(ForSuperadminsApi.class).getSubstudy(SUBSTUDY_ID_1).execute();
+            admin.getClient(ForSuperadminsApi.class).getStudy(STUDY_ID_1).execute();
         } catch(EntityNotFoundException e) {
-            Substudy substudy = new Substudy().name(SUBSTUDY_ID_1).id(SUBSTUDY_ID_1);
-            VersionHolder version = admin.getClient(ForSuperadminsApi.class).createSubstudy(substudy).execute().body();
-            substudy.setVersion(version.getVersion());
+            Study study = new Study().name(STUDY_ID_1).id(STUDY_ID_1);
+            VersionHolder version = admin.getClient(ForSuperadminsApi.class).createStudy(study).execute().body();
+            study.setVersion(version.getVersion());
         }
         
         // developer is to ensure schemas exist. user is to do uploads
@@ -99,13 +99,13 @@ public class UploadTest {
         researcher = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.RESEARCHER);
         studyAdmin = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.ADMIN);
 
-        ExternalIdentifier extId = new ExternalIdentifier().identifier(EXTERNAL_ID).substudyId(SUBSTUDY_ID_1);
+        ExternalIdentifier extId = new ExternalIdentifier().identifier(EXTERNAL_ID).studyId(STUDY_ID_1);
         ForResearchersApi researchersApi = researcher.getClient(ForResearchersApi.class);
         researchersApi.createExternalId(extId).execute();
         
         String emailAddress = IntegTestUtils.makeEmail(UploadTest.class);
         SignUp signUp = new SignUp().email(emailAddress).password(Tests.PASSWORD);
-        signUp.setExternalId(EXTERNAL_ID); // which should, in turn, associate account to SUBSTUDY_ID.
+        signUp.setExternalId(EXTERNAL_ID); // which should, in turn, associate account to STUDY_ID.
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true, signUp);
 
         // ensure schemas exist, so we have something to upload against
@@ -234,7 +234,6 @@ public class UploadTest {
         testSurvey("generic-survey-encrypted");
     }
 
-    @SuppressWarnings("RedundantCast")
     private static void testSurvey(String fileLeafName) throws Exception {
         HealthDataRecord record = testUpload(fileLeafName);
         Map<String, Object> data = RestUtils.toType(record.getData(), Map.class);
@@ -369,8 +368,8 @@ public class UploadTest {
         // Validate the record data.
         HealthDataRecord record = status.getRecord();
         assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, record.getUserSharingScope());
-        assertEquals(1, record.getUserSubstudyMemberships().size());
-        assertEquals(EXTERNAL_ID, record.getUserSubstudyMemberships().get(SUBSTUDY_ID_1));
+        assertEquals(1, record.getUserStudyMemberships().size());
+        assertEquals(EXTERNAL_ID, record.getUserStudyMemberships().get(STUDY_ID_1));
 
         Map<String, Object> data = RestUtils.toType(record.getData(), Map.class);
         assertEquals(3, data.size());

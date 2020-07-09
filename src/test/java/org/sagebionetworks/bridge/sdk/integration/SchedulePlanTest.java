@@ -220,16 +220,16 @@ public class SchedulePlanTest {
             criteria1.setMaxAppVersions(ImmutableMap.of("Android", 5));
             criteria1.setAllOfGroups(ImmutableList.of());
             criteria1.setNoneOfGroups(ImmutableList.of());
-            criteria1.setAllOfSubstudyIds(ImmutableList.of());
-            criteria1.setNoneOfSubstudyIds(ImmutableList.of());
+            criteria1.setAllOfStudyIds(ImmutableList.of());
+            criteria1.setNoneOfStudyIds(ImmutableList.of());
             
             Criteria criteria2 = new Criteria();
             criteria2.setMinAppVersions(ImmutableMap.of("Android", 6));
             criteria2.setMaxAppVersions(ImmutableMap.of("Android", 10));
             criteria2.setAllOfGroups(ImmutableList.of());
             criteria2.setNoneOfGroups(ImmutableList.of());
-            criteria2.setAllOfSubstudyIds(ImmutableList.of());
-            criteria2.setNoneOfSubstudyIds(ImmutableList.of());
+            criteria2.setAllOfStudyIds(ImmutableList.of());
+            criteria2.setNoneOfStudyIds(ImmutableList.of());
             
             ScheduleCriteria scheduleCriteria1 = new ScheduleCriteria();
             scheduleCriteria1.setCriteria(criteria1);
