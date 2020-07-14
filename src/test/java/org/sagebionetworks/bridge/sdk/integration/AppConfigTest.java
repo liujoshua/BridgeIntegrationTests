@@ -388,8 +388,6 @@ public class AppConfigTest {
     
     @Test
     public void appConfigWithElements() throws Exception {
-        user = TestUserHelper.createAndSignInUser(AppConfigTest.class, true);
-        
         user.setClientInfo(new ClientInfo().appName(Tests.APP_NAME).appVersion(MIN_MAX_TEST_VALUE)
                 .deviceName("SomeAndroid").osName("Android").osVersion("2.0.0")
                 .sdkName(developer.getClientManager().getClientInfo().getSdkName())
