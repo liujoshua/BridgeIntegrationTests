@@ -1,12 +1,15 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.ADMIN;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 
 import java.util.stream.Collectors;
 
@@ -27,6 +30,7 @@ import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
+import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -44,7 +48,15 @@ public class OrganizationTest {
     
     @Before
     public void before() throws Exception {
-        admin = TestUserHelper.getSignedInAdmin();    
+        admin = TestUserHelper.getSignedInAdmin();   
+        
+        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
+        try {
+            orgsApi.getOrganization(ORG_ID_1).execute();
+        } catch(EntityNotFoundException e) {
+            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
+            orgsApi.createOrganization(org).execute();
+        }
     }
 
     @After
@@ -216,6 +228,27 @@ public class OrganizationTest {
         } catch(BadRequestException e) {
             assertTrue(e.getMessage().contains("Account is not a member of organization"));
         }
+    }
+    
+    @Test
+    public void testSponsorship() throws Exception {
+        OrganizationsApi adminOrgApi = admin.getClient(OrganizationsApi.class);
+        // In essence, let's clean this up before we test. It throws an exception if
+        // not associated.
+        try {
+            adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();    
+        } catch(BadRequestException e) {
+        }
+        
+        adminOrgApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+        
+        StudyList list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+        assertTrue(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+        
+        adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+
+        list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+        assertFalse(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
     }
     
     private Organization findOrganization(OrganizationList list, String id) {

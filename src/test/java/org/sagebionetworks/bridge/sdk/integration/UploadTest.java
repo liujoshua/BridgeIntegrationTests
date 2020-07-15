@@ -87,7 +87,7 @@ public class UploadTest {
         try {
             admin.getClient(ForSuperadminsApi.class).getStudy(STUDY_ID_1).execute();
         } catch(EntityNotFoundException e) {
-            Study study = new Study().name(STUDY_ID_1).id(STUDY_ID_1);
+            Study study = new Study().name(STUDY_ID_1).identifier(STUDY_ID_1);
             VersionHolder version = admin.getClient(ForSuperadminsApi.class).createStudy(study).execute().body();
             study.setVersion(version.getVersion());
         }

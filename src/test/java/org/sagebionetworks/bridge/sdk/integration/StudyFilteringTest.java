@@ -300,7 +300,7 @@ public class StudyFilteringTest {
     
     private static String createStudy() throws Exception {
         String id = Tests.randomIdentifier(StudyFilteringTest.class);
-        Study studyA = new Study().id(id).name("Study " + id);
+        Study studyA = new Study().identifier(id).name("Study " + id);
         studiesApi.createStudy(studyA).execute();
         studyIdsToDelete.add(id);
         return id;
