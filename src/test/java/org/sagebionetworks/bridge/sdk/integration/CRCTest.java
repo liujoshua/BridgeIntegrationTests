@@ -1,6 +1,8 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
+import static org.hl7.fhir.dstu3.model.Appointment.AppointmentStatus.BOOKED;
+import static org.hl7.fhir.dstu3.model.Appointment.AppointmentStatus.CANCELLED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -17,6 +19,7 @@ import org.apache.http.util.EntityUtils;
 import org.hl7.fhir.dstu3.model.Appointment;
 import org.hl7.fhir.dstu3.model.Identifier;
 import org.hl7.fhir.dstu3.model.Appointment.AppointmentParticipantComponent;
+import org.hl7.fhir.dstu3.model.Appointment.AppointmentStatus;
 import org.hl7.fhir.dstu3.model.Observation;
 import org.hl7.fhir.dstu3.model.ProcedureRequest;
 import org.hl7.fhir.dstu3.model.Reference;
@@ -134,6 +137,7 @@ public class CRCTest {
     public void createAppointment() throws Exception {
         Appointment appointment = new Appointment();
         appointment.setId("appointmentId");
+        appointment.setStatus(BOOKED);
         AppointmentParticipantComponent comp = new AppointmentParticipantComponent();
         
         Identifier id = new Identifier();
@@ -164,7 +168,7 @@ public class CRCTest {
                 .execute()
                 .returnResponse();
         message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
-        assertEquals("Appointment updated.", message.getMessage());
+        assertEquals("Appointment updated (to booked).", message.getMessage());
         assertEquals(200, response.getStatusLine().getStatusCode());
         
         ParticipantReportsApi reportsApi = adminUser.getClient(ParticipantReportsApi.class);
@@ -183,6 +187,26 @@ public class CRCTest {
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_scheduled"));
         verifyHealthDataRecords("appointment");
+        
+        // Now let's cancel
+        appointment.setStatus(CANCELLED);
+        
+        parser = CONTEXT.newJsonParser();
+        body = parser.encodeResourceToString(appointment);
+        
+        response = Request.Put(host + "/v1/cuimc/appointments")
+            .addHeader("Authorization", "Basic " + credentials)
+            .bodyString(body, APPLICATION_JSON)
+            .execute()
+            .returnResponse();
+        
+        message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
+        assertEquals("Appointment updated (to cancelled).", message.getMessage());
+        assertEquals(200, response.getStatusLine().getStatusCode());
+        
+        participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertTrue(participant.getDataGroups().contains("tests_cancelled"));
     }
     
     private void verifyHealthDataRecords(String typeName) throws IOException, InterruptedException {
