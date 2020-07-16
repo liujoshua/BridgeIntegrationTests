@@ -211,7 +211,7 @@ public class CRCTest {
     
     private void verifyHealthDataRecords(String typeName) throws IOException, InterruptedException {
         // Pause for GSI on the health data table
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         
         HealthDataRecordList records = user.getClient(InternalApi.class)
                 .getHealthDataByCreatedOn(DateTime.now().minusHours(1), DateTime.now().plusHours(1))
