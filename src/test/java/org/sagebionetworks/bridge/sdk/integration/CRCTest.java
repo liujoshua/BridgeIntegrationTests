@@ -190,8 +190,6 @@ public class CRCTest {
         
         // Now let's cancel
         appointment.setStatus(CANCELLED);
-        
-        parser = CONTEXT.newJsonParser();
         body = parser.encodeResourceToString(appointment);
         
         response = Request.Put(host + "/v1/cuimc/appointments")
@@ -207,6 +205,28 @@ public class CRCTest {
         participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_cancelled"));
+        
+        // tests were entered in error
+        appointment.setStatus(AppointmentStatus.ENTEREDINERROR);
+        body = parser.encodeResourceToString(appointment);
+        
+        response = Request.Put(host + "/v1/cuimc/appointments")
+                .addHeader("Authorization", "Basic " + credentials)
+                .bodyString(body, APPLICATION_JSON)
+                .execute()
+                .returnResponse();
+        message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
+        assertEquals("Appointment deleted.", message.getMessage());
+        assertEquals(200, response.getStatusLine().getStatusCode());
+        
+        participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertTrue(participant.getDataGroups().contains("selected"));
+        
+        // report doesn't exist
+        list = reportsApi.getUsersParticipantReportRecords(
+                user.getUserId(), "appointment", JAN1, JAN2).execute().body();
+        assertTrue(list.getItems().isEmpty());
     }
     
     private void verifyHealthDataRecords(String typeName) throws IOException, InterruptedException {
