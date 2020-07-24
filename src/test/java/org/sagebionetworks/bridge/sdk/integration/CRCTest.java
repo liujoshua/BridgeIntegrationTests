@@ -130,7 +130,7 @@ public class CRCTest {
         
         participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
-        assertTrue(participant.getDataGroups().containsAll(ImmutableList.of("test_user", "tests_requested")));
+        assertTrue(participant.getDataGroups().containsAll(ImmutableList.of("test_user", "selected")));
     }
     
     @Test
