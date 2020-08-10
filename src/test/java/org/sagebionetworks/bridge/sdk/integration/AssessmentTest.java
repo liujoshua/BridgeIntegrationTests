@@ -165,8 +165,8 @@ public class AssessmentTest {
         try {
             assessmentApi.createAssessment(unsavedAssessment).execute();
             fail("Should have thrown an exception");
-        } catch(UnauthorizedException e) {
-            // Note: this is a strange exception to be throwing, why not ENFE?
+        } catch(EntityNotFoundException e) {
+            assertEquals("Organization not found.", e.getMessage());
         }
         
         // getAssessmentByGUID works
