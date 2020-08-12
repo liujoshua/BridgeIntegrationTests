@@ -220,7 +220,8 @@ public class AssessmentResourceTest {
         assertEquals(TITLE1, sharedResourcesPage.getItems().get(0).getTitle());
         
         // publish assessment resource again. the existing record should be updated
-        resource1.setTitle("This is a different title");
+        String newTitle = "Different Title: " + randomIdentifier(AssessmentResourceTest.class);
+        resource1.setTitle(newTitle);
         resource1 = assessmentApi.updateAssessmentResource(id, resourceGuid, resource1).execute().body();
 
         ExternalResource sharedResource = assessmentApi.publishAssessmentResource(id, 
@@ -228,20 +229,20 @@ public class AssessmentResourceTest {
         
         sharedResourcesPage = sharedAssessmentsApi.getSharedAssessmentResources(id, null, null, 
                 null, null, null, true).execute().body();
-        assertEquals("This is a different title", sharedResourcesPage.getItems().get(0).getTitle());
+        assertEquals(newTitle, sharedResourcesPage.getItems().get(0).getTitle());
         
         // get individual shared assessment
         sharedResource = sharedAssessmentsApi.getSharedAssessmentResource(id, sharedResource.getGuid()).execute().body();
         assertNotNull(sharedResource);
         
         // import the assessment and resource back to the local context.
-        sharedResource.setTitle("This is a different shared title");
+        sharedResource.setTitle(newTitle);
         sharedResource = sharedAssessmentsApi.updateSharedAssessmentResource(
                 id, resourceGuid, sharedResource).execute().body();
         sharedAssessmentsApi.importSharedAssessmentResource(id, ImmutableList.of(resourceGuid)).execute();
 
         resourcesPage = assessmentApi.getAssessmentResources(id, null, null, null, null, null, true).execute().body();
-        assertTrue(resourcesPage.getItems().stream().anyMatch(res -> res.getTitle().equals("This is a different shared title")));
+        assertTrue(resourcesPage.getItems().stream().anyMatch(res -> res.getTitle().equals(newTitle)));
         
         // Okay, after these copies, there should still be two resources for the local and for the shared objects
         int localCount = assessmentApi.getAssessmentResources(id, null, null, null, null, null, false).execute().body()
