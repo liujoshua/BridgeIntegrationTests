@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.ResourceCategory.DATA_REPOSITORY;
 import static org.sagebionetworks.bridge.rest.model.ResourceCategory.LICENSE;
+import static org.sagebionetworks.bridge.rest.model.ResourceCategory.WEBSITE;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
@@ -40,8 +41,10 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 public class AssessmentResourceTest {
 
-    private static final String URL = "https://www.synapse.org/#!Synapse:syn4993293/wiki/247859";
-    private static final String TITLE = "mPower Public Research Portal";
+    private static final String URL1 = "https://www.synapse.org/#!Synapse:syn4993293/wiki/247859";
+    private static final String TITLE1 = "mPower Public Research Portal";
+    private static final String URL2 = "https://parkinsonmpower.org/your-story";
+    private static final String TITLE2 = "mPower Website";
     private TestUser admin;
     private TestUser developer;
     private TestUser otherDeveloper;
@@ -111,29 +114,44 @@ public class AssessmentResourceTest {
 
         Assessment assessment = assessmentApi.createAssessment(unsavedAssessment).execute().body();
         
-        ExternalResource resource = new ExternalResource().title(TITLE).url(URL).category(DATA_REPOSITORY)
+        ExternalResource resource1 = new ExternalResource().title(TITLE1).url(URL1).category(DATA_REPOSITORY)
                 .minRevision(1).maxRevision(1).publishers(ImmutableList.of("Sage Bionetworks"));
+        ExternalResource resource2 = new ExternalResource().title(TITLE2).url(URL2).category(WEBSITE)
+                .minRevision(1).maxRevision(10).publishers(ImmutableList.of("Sage Bionetworks"));
 
         // create a resource
-        resource = assessmentApi.createAssessmentResource(id, resource).execute().body();
-        assertNotNull(resource.getGuid());
-        assertEquals(TITLE, resource.getTitle());
-        assertEquals(URL, resource.getUrl());
-        assertTrue(resource.isUpToDate());
-        Long version = resource.getVersion();
+        resource1 = assessmentApi.createAssessmentResource(id, resource1).execute().body();
+        assertNotNull(resource1.getGuid());
+        assertEquals(TITLE1, resource1.getTitle());
+        assertEquals(URL1, resource1.getUrl());
+        assertTrue(resource1.isUpToDate());
+        Long version = resource1.getVersion();
         
-        String resourceGuid = resource.getGuid();
+        String resourceGuid = resource1.getGuid();
+        
+        // create this for later         
+        resource2 = assessmentApi.createAssessmentResource(id, resource2).execute().body();
 
-        // retrieve the resource and test some fields
+        // retrieve the resources and test some fields
         PagedExternalResourceList resourcesPage = assessmentApi.getAssessmentResources(
                 id, null, null, null, null, null, false).execute().body();
+        assertEquals(2, resourcesPage.getItems().size());
+        assertEquals(Integer.valueOf(2), resourcesPage.getTotal());
+        resource1 = resourcesPage.getItems().get(0);
+        assertEquals(TITLE1, resource1.getTitle());
+        assertEquals(URL1, resource1.getUrl());
+        assertTrue(resource1.isUpToDate());
+        assertEquals(version, resource1.getVersion());
+        
+        // retrieving by min/max works
+        resourcesPage = assessmentApi.getAssessmentResources(
+                id, null, null, null, null, 1, false).execute().body();
+        assertEquals(2, resourcesPage.getItems().size());
+        
+        resourcesPage = assessmentApi.getAssessmentResources(
+                id, null, null, null, 2, null, false).execute().body();
         assertEquals(1, resourcesPage.getItems().size());
-        assertEquals(Integer.valueOf(1), resourcesPage.getTotal());
-        resource = resourcesPage.getItems().get(0);
-        assertEquals(TITLE, resource.getTitle());
-        assertEquals(URL, resource.getUrl());
-        assertTrue(resource.isUpToDate());
-        assertEquals(version, resource.getVersion());
+        assertEquals(WEBSITE, resourcesPage.getItems().get(0).getCategory());
 
         // change and update assessment the assessment
         assessment.setTitle("new title");
@@ -141,15 +159,15 @@ public class AssessmentResourceTest {
         assessment = assessmentApi.updateAssessment(assessment.getGuid(), assessment).execute().body();
         
         // verify the resource is no longer up-to-date
-        resource = assessmentApi.getAssessmentResource(id, resourceGuid).execute().body();
-        assertFalse(resource.isUpToDate());
+        resource1 = assessmentApi.getAssessmentResource(id, resourceGuid).execute().body();
+        assertFalse(resource1.isUpToDate());
         
         // update the resource. this should increment the version.
-        resource.setUrl(URL + "2");
-        resource = assessmentApi.updateAssessmentResource(id, resourceGuid, resource).execute().body();
-        assertEquals(URL + "2", resource.getUrl());
-        assertNotEquals(version, resource.getVersion());
-        assertTrue(resource.isUpToDate());
+        resource1.setUrl(URL1 + "2");
+        resource1 = assessmentApi.updateAssessmentResource(id, resourceGuid, resource1).execute().body();
+        assertEquals(URL1 + "2", resource1.getUrl());
+        assertNotEquals(version, resource1.getVersion());
+        assertTrue(resource1.isUpToDate());
         
         // Does retrieve item with right category and min/max revision set (all matching)
         resourcesPage = assessmentApi.getAssessmentResources(id, null, null,
@@ -158,12 +176,12 @@ public class AssessmentResourceTest {
 
         // minRevision is too high to match
         resourcesPage = assessmentApi.getAssessmentResources(id, null, null, 
-                null, 2, null, null).execute().body();
+                null, 20, null, null).execute().body();
         assertTrue(resourcesPage.getItems().isEmpty());
 
         // maxRevision is higher and that's fine
         resourcesPage = assessmentApi.getAssessmentResources(id, null, null, 
-                null, null, 2, null).execute().body();
+                null, null, 20, null).execute().body();
         assertFalse(resourcesPage.getItems().isEmpty());
 
         // category doesn't match
@@ -184,8 +202,8 @@ public class AssessmentResourceTest {
         
         // however, they cannot update these resources
         try {
-            resource.setTitle("This will never be persisted");
-            badDevApi.updateAssessmentResource(id, resourceGuid, resource).execute();
+            resource1.setTitle("This will never be persisted");
+            badDevApi.updateAssessmentResource(id, resourceGuid, resource1).execute();
             fail("Should have thrown exception");
         } catch(UnauthorizedException e) {
             // expected
@@ -199,52 +217,53 @@ public class AssessmentResourceTest {
         PagedExternalResourceList sharedResourcesPage = sharedAssessmentsApi.getSharedAssessmentResources(
                 id, null, null, null, null, null, null).execute().body();
         assertEquals(1, sharedResourcesPage.getItems().size());
-        assertEquals(TITLE, sharedResourcesPage.getItems().get(0).getTitle());
+        assertEquals(TITLE1, sharedResourcesPage.getItems().get(0).getTitle());
         
         // publish assessment resource again. the existing record should be updated
-        resource.setTitle("This is a different title");
-        resource = assessmentApi.updateAssessmentResource(id, resourceGuid, resource).execute().body();
+        String newTitle = "Different Title: " + randomIdentifier(AssessmentResourceTest.class);
+        resource1.setTitle(newTitle);
+        resource1 = assessmentApi.updateAssessmentResource(id, resourceGuid, resource1).execute().body();
 
         ExternalResource sharedResource = assessmentApi.publishAssessmentResource(id, 
                 ImmutableList.of(resourceGuid)).execute().body().getItems().get(0);
         
         sharedResourcesPage = sharedAssessmentsApi.getSharedAssessmentResources(id, null, null, 
                 null, null, null, true).execute().body();
-        assertEquals(sharedResourcesPage.getItems().get(0).getTitle(), "This is a different title");
+        assertEquals(newTitle, sharedResourcesPage.getItems().get(0).getTitle());
         
         // get individual shared assessment
         sharedResource = sharedAssessmentsApi.getSharedAssessmentResource(id, sharedResource.getGuid()).execute().body();
         assertNotNull(sharedResource);
         
         // import the assessment and resource back to the local context.
-        sharedResource.setTitle("This is a different shared title");
+        sharedResource.setTitle(newTitle);
         sharedResource = sharedAssessmentsApi.updateSharedAssessmentResource(
                 id, resourceGuid, sharedResource).execute().body();
         sharedAssessmentsApi.importSharedAssessmentResource(id, ImmutableList.of(resourceGuid)).execute();
 
         resourcesPage = assessmentApi.getAssessmentResources(id, null, null, null, null, null, true).execute().body();
+        assertTrue(resourcesPage.getItems().stream().anyMatch(res -> res.getTitle().equals(newTitle)));
         
-        assertEquals(resourcesPage.getItems().get(0).getTitle(), "This is a different shared title");
-        
-        // Okay, after these copies, there should still be one resource for the local and for the shared objects
+        // Okay, after these copies, there should still be two resources for the local and for the shared objects
         int localCount = assessmentApi.getAssessmentResources(id, null, null, null, null, null, false).execute().body()
                 .getTotal();
         int sharedCount = sharedAssessmentsApi.getSharedAssessmentResources(id, null, null, null, null, null, false)
                 .execute().body().getTotal();
-        assertEquals(localCount, 1);
-        assertEquals(sharedCount, 1);
+        assertEquals(2, localCount);
+        assertEquals(1, sharedCount);
         
-        // logically delete the local resource
-        assessmentApi.deleteAssessmentResource(id, resource.getGuid(), false).execute();
+        // logically delete the local resources
+        assessmentApi.deleteAssessmentResource(id, resource1.getGuid(), false).execute();
+        assessmentApi.deleteAssessmentResource(id, resource2.getGuid(), false).execute();
         localCount = assessmentApi.getAssessmentResources(
                 id, null, null, null, null, null, false).execute().body().getTotal();
-        assertEquals(localCount, 0);
+        assertEquals(0, localCount);
         localCount = assessmentApi.getAssessmentResources(
                 id, null, null, null, null, null, true).execute().body().getTotal();
-        assertEquals(localCount, 1);
+        assertEquals(2, localCount);
         // can still be retrieved with knowledge of the GUID
-        resource = assessmentApi.getAssessmentResource(id, resource.getGuid()).execute().body();
-        assertNotNull(resource);
+        resource1 = assessmentApi.getAssessmentResource(id, resource1.getGuid()).execute().body();
+        assertNotNull(resource1);
         
         // logically delete the shared resource
         admin.getClient(SharedAssessmentsApi.class).deleteSharedAssessmentResource(
@@ -260,7 +279,7 @@ public class AssessmentResourceTest {
         
         // test paging values
         for (int i=0; i < 10; i++) {
-            ExternalResource res = assessmentApi.createAssessmentResource(id, resource).execute().body();;
+            ExternalResource res = assessmentApi.createAssessmentResource(id, resource1).execute().body();;
             assessmentApi.publishAssessmentResource(id, ImmutableList.of(res.getGuid())).execute();
         }
         PagedExternalResourceList page1 = assessmentApi.getAssessmentResources(id, 0, 5, null, null, null, false)
