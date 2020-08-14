@@ -202,7 +202,7 @@ public class StudyMembershipTest {
 
     private String createStudy() throws Exception {
         String id = Tests.randomIdentifier(StudyTest.class);
-        Study study = new Study().id(id).name("Study " + id);
+        Study study = new Study().identifier(id).name("Study " + id);
         studiesApi.createStudy(study).execute();
         studyIdsToDelete.add(id);
         return id;

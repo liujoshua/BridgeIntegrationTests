@@ -81,17 +81,17 @@ public class StudyTest {
         
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         
-        int initialCount = studiesApi.getStudies(false).execute().body().getItems().size();
+        int initialCount = studiesApi.getStudies(null, null, false).execute().body().getItems().size();
         
         String id = Tests.randomIdentifier(StudyTest.class);
-        Study study = new Study().id(id).name("Study " + id);
+        Study study = new Study().identifier(id).name("Study " + id);
         
         VersionHolder holder = studiesApi.createStudy(study).execute().body();
         study.setVersion(holder.getVersion());
         studyIdsToDelete.add(id);
         
         Study retrieved = studiesApi.getStudy(id).execute().body();
-        assertEquals(id, retrieved.getId());
+        assertEquals(id, retrieved.getIdentifier());
         assertEquals("Study " + id, retrieved.getName());
         assertTrue(retrieved.getCreatedOn().isAfter(DateTime.now().minusHours(1)));
         assertTrue(retrieved.getModifiedOn().isAfter(DateTime.now().minusHours(1)));
@@ -105,17 +105,17 @@ public class StudyTest {
         assertEquals("New test name " + id, retrieved2.getName());
         assertNotEquals(lastModified1, retrieved2.getModifiedOn());
         
-        StudyList list = studiesApi.getStudies(false).execute().body();
+        StudyList list = studiesApi.getStudies(null, null, false).execute().body();
         assertEquals(initialCount+1, list.getItems().size());
         assertFalse(list.getRequestParams().isIncludeDeleted());
         
         // logically delete it
         studiesApi.deleteStudy(id, false).execute();
         
-        list = studiesApi.getStudies(false).execute().body();
+        list = studiesApi.getStudies(null, null, false).execute().body();
         assertEquals(initialCount, list.getItems().size());
         
-        list = studiesApi.getStudies(true).execute().body();
+        list = studiesApi.getStudies(null, null, true).execute().body();
         assertEquals(initialCount+1, list.getItems().size());
         assertTrue(list.getRequestParams().isIncludeDeleted());
         
@@ -127,7 +127,7 @@ public class StudyTest {
         studiesApi.deleteStudy(id, true).execute();
         
         // Now it's really gone
-        list = studiesApi.getStudies(true).execute().body();
+        list = studiesApi.getStudies(null, null, true).execute().body();
         assertEquals(initialCount, list.getItems().size());
         
         try {
@@ -143,10 +143,10 @@ public class StudyTest {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         
         String id1 = Tests.randomIdentifier(StudyTest.class);
-        Study study1 = new Study().id(id1).name("Study " + id1);
+        Study study1 = new Study().identifier(id1).name("Study " + id1);
 
         String id2 = Tests.randomIdentifier(StudyTest.class);
-        Study study2 = new Study().id(id2).name("Study " + id2);
+        Study study2 = new Study().identifier(id2).name("Study " + id2);
         
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         studiesApi.createStudy(study1).execute();
