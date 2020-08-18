@@ -66,7 +66,7 @@ public class ExternalIdSignUpTest {
         String idA = null;
         try {
             idA = Tests.randomIdentifier(ExternalIdSignUpTest.class);
-            Study studyA = new Study().id(idA).name("Study " + idA);
+            Study studyA = new Study().identifier(idA).name("Study " + idA);
             admin.getClient(ForSuperadminsApi.class).createStudy(studyA).execute();
             
             devIdsClient.createExternalId(new ExternalIdentifier().studyId(idA).identifier(externalId1)).execute();

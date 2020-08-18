@@ -74,8 +74,8 @@ public class ExternalIdsV4Test {
             superadminClient.updateApp(app.getIdentifier(), app).execute();
 
             // Create some studies
-            Study studyA = new Study().id(idA).name("Study " + idA);
-            Study studyB = new Study().id(idB).name("Study " + idB);
+            Study studyA = new Study().identifier(idA).name("Study " + idA);
+            Study studyB = new Study().identifier(idB).name("Study " + idB);
             superadminClient.createStudy(studyA).execute();
             superadminClient.createStudy(studyB).execute();
 
@@ -204,8 +204,8 @@ public class ExternalIdsV4Test {
         TestUser user = null;
         try {
             // Create study
-            Study studyA = new Study().id(idA).name("Study " + idA);
-            Study studyB = new Study().id(idB).name("Study " + idB);
+            Study studyA = new Study().identifier(idA).name("Study " + idA);
+            Study studyB = new Study().identifier(idB).name("Study " + idB);
             superadminClient.createStudy(studyA).execute();
             superadminClient.createStudy(studyB).execute();
             

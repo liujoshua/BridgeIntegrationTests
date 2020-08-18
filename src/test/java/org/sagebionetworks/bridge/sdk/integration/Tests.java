@@ -315,12 +315,12 @@ public class Tests {
         String externalId = Tests.randomIdentifier(clazz);
         
         StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-        StudyList studyList = studiesApi.getStudies(false).execute().body();
+        StudyList studyList = studiesApi.getStudies(null, null, false).execute().body();
         
-        Set<String> existingStudyIds = studyList.getItems().stream().map(Study::getId).collect(Collectors.toSet());
+        Set<String> existingStudyIds = studyList.getItems().stream().map(Study::getIdentifier).collect(Collectors.toSet());
         if (!existingStudyIds.contains(studyId)) {
             TestUser admin = TestUserHelper.getSignedInAdmin();
-            Study study = new Study().id(studyId).name(studyId);
+            Study study = new Study().identifier(studyId).name(studyId);
             admin.getClient(StudiesApi.class).createStudy(study).execute();
         }
         ExternalIdentifier externalIdentifier = new ExternalIdentifier().identifier(externalId).studyId(studyId);
