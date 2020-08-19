@@ -151,8 +151,12 @@ public class CRCTest {
         Reference ref = new Reference();
         ref.setIdentifier(id);
         comp.setActor(ref);
-        
         appointment.addParticipant(comp);
+        
+
+        AppointmentParticipantComponent locationComp = new AppointmentParticipantComponent();
+        locationComp.setActor(new Reference("Location/CovidRecoveryChony"));
+        appointment.addParticipant(locationComp);
         
         IParser parser = CONTEXT.newJsonParser();
         String body = parser.encodeResourceToString(appointment);
