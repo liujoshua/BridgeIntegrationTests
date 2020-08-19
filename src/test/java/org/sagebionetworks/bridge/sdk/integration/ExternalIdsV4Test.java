@@ -67,6 +67,7 @@ public class ExternalIdsV4Test {
         final String extIdB2 = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
 
         ForSuperadminsApi superadminClient = admin.getClient(ForSuperadminsApi.class);
+        ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
         String userId = null;
         try {
@@ -76,8 +77,8 @@ public class ExternalIdsV4Test {
             // Create some studies
             Study studyA = new Study().identifier(idA).name("Study " + idA);
             Study studyB = new Study().identifier(idB).name("Study " + idB);
-            superadminClient.createStudy(studyA).execute();
-            superadminClient.createStudy(studyB).execute();
+            adminClient.createStudy(studyA).execute();
+            adminClient.createStudy(studyB).execute();
 
             // Creating an external ID without a study now fails
             try {
@@ -174,15 +175,14 @@ public class ExternalIdsV4Test {
             App app = superadminClient.getApp(TEST_APP_ID).execute().body();
             superadminClient.updateApp(app.getIdentifier(), app).execute();
             
-            ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
             if (userId != null) {
                 adminClient.deleteUser(userId).execute();    
             }
             adminClient.deleteExternalId(extIdA).execute();
             adminClient.deleteExternalId(extIdB1).execute();
             adminClient.deleteExternalId(extIdB2).execute();
-            superadminClient.deleteStudy(idA, true).execute();
-            superadminClient.deleteStudy(idB, true).execute();
+            adminClient.deleteStudy(idA, true).execute();
+            adminClient.deleteStudy(idB, true).execute();
         }
     }
 
@@ -199,15 +199,15 @@ public class ExternalIdsV4Test {
             ids.add(id);
         }
         
-        ForSuperadminsApi superadminClient = admin.getClient(ForSuperadminsApi.class);
+        ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
         TestUser user = null;
         try {
             // Create study
             Study studyA = new Study().identifier(idA).name("Study " + idA);
             Study studyB = new Study().identifier(idB).name("Study " + idB);
-            superadminClient.createStudy(studyA).execute();
-            superadminClient.createStudy(studyB).execute();
+            adminClient.createStudy(studyA).execute();
+            adminClient.createStudy(studyB).execute();
             
             // Create enough external IDs to page
             for (int i=0; i < 10; i++) {
@@ -276,12 +276,11 @@ public class ExternalIdsV4Test {
             if (user != null) {
                 user.signOutAndDeleteUser();    
             }
-            ForAdminsApi adminClient = admin.getClient(ForAdminsApi.class);
             for (int i=0; i < 10; i++) {
                 adminClient.deleteExternalId(ids.get(i).getIdentifier()).execute();    
             }
-            superadminClient.deleteStudy(idA, true).execute();
-            superadminClient.deleteStudy(idB, true).execute();
+            adminClient.deleteStudy(idA, true).execute();
+            adminClient.deleteStudy(idB, true).execute();
         }
     }
 

@@ -1,7 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.Map;
@@ -16,7 +16,6 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 public class TagTest {
-
     
     @Test
     public void test() throws Exception {
@@ -30,9 +29,9 @@ public class TagTest {
         tagsApi.addTag(new Tag().value("tag3")).execute();
         
         Map<String, List<String>> allTags = tagsApi.getTags().execute().body();
-        assertEquals(allTags.get("default"), ImmutableList.of("tag3"));
-        assertEquals(allTags.get("cat1"), ImmutableList.of("tag1.1", "tag1.2"));
-        assertEquals(allTags.get("cat2"), ImmutableList.of("tag2.1", "tag2.2"));
+        assertTrue(allTags.get("default").contains("tag3"));
+        assertTrue(allTags.get("cat1").containsAll(ImmutableList.of("tag1.1", "tag1.2")));
+        assertTrue(allTags.get("cat2").containsAll(ImmutableList.of("tag2.1", "tag2.2")));
         
         tagsApi.deleteTag("cat1:tag1.1").execute();
         tagsApi.deleteTag("cat1:tag1.2").execute();

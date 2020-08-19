@@ -20,7 +20,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
@@ -81,7 +80,6 @@ public class StudyTest {
     @After
     public void after() throws Exception {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
-        ForSuperadminsApi superadminsApi = admin.getClient(ForSuperadminsApi.class);
         for (String userId : userIdsToDelete) {
             try {
                 adminsApi.deleteUser(userId).execute();
@@ -90,7 +88,7 @@ public class StudyTest {
         }
         for (String studyId : studyIdsToDelete) {
             try {
-                superadminsApi.deleteStudy(studyId, true).execute();    
+                adminsApi.deleteStudy(studyId, true).execute();    
             } catch(EntityNotFoundException e) {
             }
         }

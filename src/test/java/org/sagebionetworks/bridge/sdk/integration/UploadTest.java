@@ -18,6 +18,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.fluent.Request;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -29,7 +31,6 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
-import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -85,10 +86,10 @@ public class UploadTest {
         admin = TestUserHelper.getSignedInAdmin();
 
         try {
-            admin.getClient(ForSuperadminsApi.class).getStudy(STUDY_ID_1).execute();
+            admin.getClient(ForAdminsApi.class).getStudy(STUDY_ID_1).execute();
         } catch(EntityNotFoundException e) {
             Study study = new Study().name(STUDY_ID_1).identifier(STUDY_ID_1);
-            VersionHolder version = admin.getClient(ForSuperadminsApi.class).createStudy(study).execute().body();
+            VersionHolder version = admin.getClient(ForAdminsApi.class).createStudy(study).execute().body();
             study.setVersion(version.getVersion());
         }
         
@@ -455,9 +456,26 @@ public class UploadTest {
         request.setEncrypted(false);
         request.setZipped(false);
 
-        // Upload the file.
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         UploadSession session = usersApi.requestUploadSession(request).execute().body();
+
+        // Test CORS configuration of this pre-signed URL. This enables browsers to make these non-encrypted,
+        // non-zipped uploads.
+        HttpResponse response = Request.Options(session.getUrl())
+                .setHeader(HttpTest.ACCESS_CONTROL_REQUEST_HEADERS, "accept, content-type")
+                .setHeader(HttpTest.ACCESS_CONTROL_REQUEST_METHOD, "PUT")
+                .setHeader(HttpTest.ORIGIN, "https://some.remote.server.org")
+                .connectTimeout(HttpTest.TIMEOUT).execute().returnResponse();
+        assertEquals(200, response.getStatusLine().getStatusCode());
+
+        assertEquals("Should echo back the origin", "*",
+                response.getFirstHeader(HttpTest.ACCESS_CONTROL_ALLOW_ORIGIN).getValue());
+        assertEquals("Should echo back the access-control-allow-methods", "PUT",
+                response.getFirstHeader(HttpTest.ACCESS_CONTROL_ALLOW_METHODS).getValue());
+        assertEquals("Should echo back the access-control-allow-headers", "accept, content-type",
+                response.getFirstHeader(HttpTest.ACCESS_CONTROL_ALLOW_HEADERS).getValue());
+
+        // Upload the file.
         RestUtils.uploadToS3(file, session.getUrl(), "text/plain");
         String uploadId = session.getId();
 

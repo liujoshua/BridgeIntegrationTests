@@ -159,8 +159,7 @@ public class OrganizationTest {
         newOrg2.setName("Test Org 2");
         org2 = superadminOrgApi.createOrganization(newOrg2).execute().body();
         
-        // Create an app admin in organization 1, with researcher permissions to access the 
-        // participant APIs
+        // Create an admin in organization 1, with researcher permissions to access the participant APIs
         orgAdmin = TestUserHelper.createAndSignInUser(OrganizationTest.class, false, ADMIN, RESEARCHER);
         superadminOrgApi.addMember(orgId1, orgAdmin.getUserId()).execute();
         OrganizationsApi appAdminOrgApi = orgAdmin.getClient(OrganizationsApi.class);
@@ -172,14 +171,6 @@ public class OrganizationTest {
         // create a user
         user = TestUserHelper.createAndSignInUser(OrganizationTest.class, true);
         
-        // cannot assign someone to an organization you are not a member of
-        try {
-            appAdminOrgApi.addMember(orgId2, user.getUserId()).execute();
-            fail("Should have thrown exception");
-        } catch(UnauthorizedException e) {
-            assertTrue(e.getMessage().contains("Caller is not a member of"));
-        }
-        
         // cannot change organizational affiliation on an update
         ParticipantsApi participantsApi = orgAdmin.getClient(ParticipantsApi.class);
         StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
@@ -190,7 +181,7 @@ public class OrganizationTest {
         participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
         assertNull(participant.getOrgMembership());
 
-        // can add someone to your own org
+        // add someone to the organization
         appAdminOrgApi.addMember(orgId1, user.getUserId()).execute();
         participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
         assertEquals(orgId1, participant.getOrgMembership());
@@ -204,7 +195,7 @@ public class OrganizationTest {
             assertEquals(orgId1, summary.getOrgMembership());
         }
         
-        // can remove someone from your org
+        // can remove someone from the organization
         appAdminOrgApi.removeMember(orgId1, user.getUserId()).execute();
         
         // account is no longer listed as a member
@@ -212,22 +203,6 @@ public class OrganizationTest {
         assertEquals(ImmutableSet.of(orgAdmin.getEmail()), 
                 list.getItems().stream().map(AccountSummary::getEmail).collect(Collectors.toSet()));
         assertEquals(Integer.valueOf(1), list.getTotal());
-        
-        // This still throws the appropriate exception
-        try {
-            appAdminOrgApi.removeMember(orgId2, user.getUserId()).execute();
-            fail("Should have thrown exception");
-        } catch(UnauthorizedException e) {
-            assertTrue(e.getMessage().contains("Caller is not a member of"));
-        }
-
-        // Throws bad request exception
-        try {
-            appAdminOrgApi.removeMember(orgId1, user.getUserId()).execute();
-            fail("Should have thrown exception");
-        } catch(BadRequestException e) {
-            assertTrue(e.getMessage().contains("Account is not a member of organization"));
-        }
     }
     
     @Test

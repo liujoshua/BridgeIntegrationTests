@@ -1,6 +1,8 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
+import static org.hl7.fhir.dstu3.model.Appointment.AppointmentStatus.BOOKED;
+import static org.hl7.fhir.dstu3.model.Appointment.AppointmentStatus.CANCELLED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -15,11 +17,17 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.util.EntityUtils;
 import org.hl7.fhir.dstu3.model.Appointment;
+import org.hl7.fhir.dstu3.model.CodeableConcept;
+import org.hl7.fhir.dstu3.model.Coding;
+import org.hl7.fhir.dstu3.model.Extension;
 import org.hl7.fhir.dstu3.model.Identifier;
 import org.hl7.fhir.dstu3.model.Appointment.AppointmentParticipantComponent;
+import org.hl7.fhir.dstu3.model.Appointment.AppointmentStatus;
 import org.hl7.fhir.dstu3.model.Observation;
 import org.hl7.fhir.dstu3.model.ProcedureRequest;
+import org.hl7.fhir.dstu3.model.Range;
 import org.hl7.fhir.dstu3.model.Reference;
+import org.hl7.fhir.dstu3.model.StringType;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.After;
@@ -127,13 +135,14 @@ public class CRCTest {
         
         participant = adminUser.getClient(ParticipantsApi.class)
                 .getParticipantById(user.getUserId(), false).execute().body();
-        assertTrue(participant.getDataGroups().containsAll(ImmutableList.of("test_user", "tests_requested")));
+        assertTrue(participant.getDataGroups().containsAll(ImmutableList.of("test_user", "selected")));
     }
     
     @Test
     public void createAppointment() throws Exception {
         Appointment appointment = new Appointment();
         appointment.setId("appointmentId");
+        appointment.setStatus(BOOKED);
         AppointmentParticipantComponent comp = new AppointmentParticipantComponent();
         
         Identifier id = new Identifier();
@@ -155,7 +164,7 @@ public class CRCTest {
             .returnResponse();
         
         Message message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
-        assertEquals("Appointment created.", message.getMessage());
+        assertEquals("Appointment created (status = booked).", message.getMessage());
         assertEquals(201, response.getStatusLine().getStatusCode());
         
         response = Request.Put(host + "/v1/cuimc/appointments")
@@ -164,7 +173,7 @@ public class CRCTest {
                 .execute()
                 .returnResponse();
         message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
-        assertEquals("Appointment updated.", message.getMessage());
+        assertEquals("Appointment updated (status = booked).", message.getMessage());
         assertEquals(200, response.getStatusLine().getStatusCode());
         
         ParticipantReportsApi reportsApi = adminUser.getClient(ParticipantReportsApi.class);
@@ -183,11 +192,51 @@ public class CRCTest {
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_scheduled"));
         verifyHealthDataRecords("appointment");
+        
+        // Now let's cancel
+        appointment.setStatus(CANCELLED);
+        body = parser.encodeResourceToString(appointment);
+        
+        response = Request.Put(host + "/v1/cuimc/appointments")
+            .addHeader("Authorization", "Basic " + credentials)
+            .bodyString(body, APPLICATION_JSON)
+            .execute()
+            .returnResponse();
+        
+        message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
+        assertEquals("Appointment updated (status = cancelled).", message.getMessage());
+        assertEquals(200, response.getStatusLine().getStatusCode());
+        
+        participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertTrue(participant.getDataGroups().contains("tests_cancelled"));
+        
+        // tests were entered in error
+        appointment.setStatus(AppointmentStatus.ENTEREDINERROR);
+        body = parser.encodeResourceToString(appointment);
+        
+        response = Request.Put(host + "/v1/cuimc/appointments")
+                .addHeader("Authorization", "Basic " + credentials)
+                .bodyString(body, APPLICATION_JSON)
+                .execute()
+                .returnResponse();
+        message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
+        assertEquals("Appointment deleted.", message.getMessage());
+        assertEquals(200, response.getStatusLine().getStatusCode());
+        
+        participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertTrue(participant.getDataGroups().contains("selected"));
+        
+        // report doesn't exist
+        list = reportsApi.getUsersParticipantReportRecords(
+                user.getUserId(), "appointment", JAN1, JAN2).execute().body();
+        assertTrue(list.getItems().isEmpty());
     }
     
     private void verifyHealthDataRecords(String typeName) throws IOException, InterruptedException {
         // Pause for GSI on the health data table
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         
         HealthDataRecordList records = user.getClient(InternalApi.class)
                 .getHealthDataByCreatedOn(DateTime.now().minusHours(1), DateTime.now().plusHours(1))
@@ -254,10 +303,20 @@ public class CRCTest {
         verifyHealthDataRecords("procedurerequest");
     }
     
-    @Test
-    public void createObservation() throws Exception {
+    private Observation makeObservation(String code, String result) {
         Observation observation = new Observation();
         observation.setId("observationId");
+        
+        Coding coding = new Coding().setCode(code);
+        CodeableConcept codeableConcept = new CodeableConcept().addCoding(coding);
+        observation.setCode(codeableConcept);
+        
+        Extension extension = new Extension();
+        extension.setUrl("some-value");
+        extension.setValue(new StringType(result));
+        Range range = new Range();
+        range.addExtension(extension);
+        observation.setValue(range);
         
         Identifier id = new Identifier();
         id.setSystem(USER_ID_VALUE_NS);
@@ -265,6 +324,13 @@ public class CRCTest {
         Reference ref = new Reference();
         ref.setIdentifier(id);
         observation.setSubject(ref);
+        return observation;
+    }
+    
+    
+    @Test
+    public void createObservation() throws Exception {
+        Observation observation = makeObservation("484670513", "Positive");
         
         IParser parser = CONTEXT.newJsonParser();
         String body = parser.encodeResourceToString(observation);
@@ -303,4 +369,47 @@ public class CRCTest {
         
         verifyHealthDataRecords("observation");
     }
+    
+    @Test
+    public void createUnknownObservationType() throws Exception {
+        Observation observation = makeObservation("111110111", "Positive");
+        
+        IParser parser = CONTEXT.newJsonParser();
+        String body = parser.encodeResourceToString(observation);
+        
+        HttpResponse response = Request.Put(host + "/v1/cuimc/observations")
+            .addHeader("Authorization", "Basic " + credentials)
+            .bodyString(body, APPLICATION_JSON)
+            .execute()
+            .returnResponse();
+        Message message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
+        assertEquals("Observation created.", message.getMessage());
+        assertEquals(201, response.getStatusLine().getStatusCode());
+        
+        response = Request.Put(host + "/v1/cuimc/observations")
+                .addHeader("Authorization", "Basic " + credentials)
+                .bodyString(body, APPLICATION_JSON)
+                .execute()
+                .returnResponse();
+        message = RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
+        assertEquals("Observation updated.", message.getMessage());
+        assertEquals(200, response.getStatusLine().getStatusCode());
+
+        ParticipantReportsApi reportsApi = adminUser.getClient(ParticipantReportsApi.class);
+        
+        ReportDataList list = reportsApi.getUsersParticipantReportRecords(
+                user.getUserId(), "observation", JAN1, JAN2).execute().body();
+        ReportData report = list.getItems().get(0);
+        
+        String json = RestUtils.GSON.toJson(report.getData());
+        Observation retrieved = parser.parseResource(Observation.class, json);
+        assertEquals(user.getUserId(), retrieved.getSubject().getIdentifier().getValue());
+        
+        StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        assertTrue(participant.getDataGroups().contains("tests_available_type_unknown"));
+        
+        verifyHealthDataRecords("observation");        
+    }
+
 }
