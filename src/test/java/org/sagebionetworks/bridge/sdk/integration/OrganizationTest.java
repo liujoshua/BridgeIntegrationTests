@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
@@ -29,6 +30,7 @@ import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -55,6 +57,13 @@ public class OrganizationTest {
         } catch(EntityNotFoundException e) {
             Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
             orgsApi.createOrganization(org).execute();
+        }
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        try {
+            studiesApi.getStudy(STUDY_ID_1).execute();
+        } catch(EntityNotFoundException e) {
+            Study study = new Study().identifier(STUDY_ID_1).name(STUDY_ID_1);
+            studiesApi.createStudy(study).execute();
         }
     }
 
