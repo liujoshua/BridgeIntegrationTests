@@ -162,10 +162,6 @@ public class CRCTest {
 //        locRef.setDisplay("Covid Recovery CHONY");
 //        locComp.setActor(locRef);
 //        appointment.addParticipant(locComp);
-
-        AppointmentParticipantComponent locationComp = new AppointmentParticipantComponent();
-        locationComp.setActor(new Reference("Location/CovidRecoveryChony"));
-        appointment.addParticipant(locationComp);
         
         IParser parser = CONTEXT.newJsonParser();
         String body = parser.encodeResourceToString(appointment);
