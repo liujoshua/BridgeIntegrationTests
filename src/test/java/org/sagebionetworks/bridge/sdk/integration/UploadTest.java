@@ -31,7 +31,6 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
-import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -87,10 +86,10 @@ public class UploadTest {
         admin = TestUserHelper.getSignedInAdmin();
 
         try {
-            admin.getClient(ForSuperadminsApi.class).getStudy(STUDY_ID_1).execute();
+            admin.getClient(ForAdminsApi.class).getStudy(STUDY_ID_1).execute();
         } catch(EntityNotFoundException e) {
             Study study = new Study().name(STUDY_ID_1).identifier(STUDY_ID_1);
-            VersionHolder version = admin.getClient(ForSuperadminsApi.class).createStudy(study).execute().body();
+            VersionHolder version = admin.getClient(ForAdminsApi.class).createStudy(study).execute().body();
             study.setVersion(version.getVersion());
         }
         

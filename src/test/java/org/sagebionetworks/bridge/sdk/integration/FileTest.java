@@ -154,6 +154,13 @@ public class FileTest {
             assertTrue(rev.getSize() > 0L);
             assertEquals(rev.getStatus(), AVAILABLE);
             
+            FileRevision oneRev = devsApi.getFileRevision(metadata.getGuid(), rev.getCreatedOn()).execute().body();
+            assertEquals(url, oneRev.getDownloadURL());
+            assertEquals("test.pdf", oneRev.getName());
+            assertEquals("application/pdf", oneRev.getMimeType());
+            assertTrue(oneRev.getSize() > 0L);
+            assertEquals(AVAILABLE, oneRev.getStatus());
+            
             // verify the pending object too
             FileRevision revision = new FileRevision();
             revision.setFileGuid(rev.getFileGuid());

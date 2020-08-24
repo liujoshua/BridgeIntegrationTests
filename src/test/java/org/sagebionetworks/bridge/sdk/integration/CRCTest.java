@@ -143,16 +143,25 @@ public class CRCTest {
         Appointment appointment = new Appointment();
         appointment.setId("appointmentId");
         appointment.setStatus(BOOKED);
-        AppointmentParticipantComponent comp = new AppointmentParticipantComponent();
         
+        AppointmentParticipantComponent idComp = new AppointmentParticipantComponent();
         Identifier id = new Identifier();
         id.setSystem(USER_ID_VALUE_NS);
         id.setValue(user.getUserId());
         Reference ref = new Reference();
         ref.setIdentifier(id);
-        comp.setActor(ref);
-        appointment.addParticipant(comp);
+        idComp.setActor(ref);
+        appointment.addParticipant(idComp);
         
+        // This stanza will trigger Bridge server to retrieve the location from our external partner.
+        // Disabled here so our tests don't depend on that API functioning. But useful for 
+        // manual integration tests.
+//        AppointmentParticipantComponent locComp = new AppointmentParticipantComponent();
+//        Reference locRef = new Reference();
+//        locRef.setReference("Location/CovidRecoveryChony");
+//        locRef.setDisplay("Covid Recovery CHONY");
+//        locComp.setActor(locRef);
+//        appointment.addParticipant(locComp);
 
         AppointmentParticipantComponent locationComp = new AppointmentParticipantComponent();
         locationComp.setActor(new Reference("Location/CovidRecoveryChony"));
