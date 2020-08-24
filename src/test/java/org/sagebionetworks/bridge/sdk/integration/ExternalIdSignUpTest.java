@@ -12,7 +12,6 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
-import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
@@ -67,7 +66,7 @@ public class ExternalIdSignUpTest {
         try {
             idA = Tests.randomIdentifier(ExternalIdSignUpTest.class);
             Study studyA = new Study().identifier(idA).name("Study " + idA);
-            admin.getClient(ForSuperadminsApi.class).createStudy(studyA).execute();
+            admin.getClient(ForAdminsApi.class).createStudy(studyA).execute();
             
             devIdsClient.createExternalId(new ExternalIdentifier().studyId(idA).identifier(externalId1)).execute();
             devIdsClient.createExternalId(new ExternalIdentifier().studyId(idA).identifier(externalId2)).execute();
@@ -148,7 +147,7 @@ public class ExternalIdSignUpTest {
             adminClient.deleteExternalId(externalId2).execute();
             adminClient.deleteExternalId(externalId3).execute();
             if (idA != null) {
-                admin.getClient(ForSuperadminsApi.class).deleteStudy(idA, true).execute();    
+                admin.getClient(ForAdminsApi.class).deleteStudy(idA, true).execute();    
             }
         }
     }
