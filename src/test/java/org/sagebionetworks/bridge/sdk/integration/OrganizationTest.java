@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.ADMIN;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
@@ -177,7 +178,13 @@ public class OrganizationTest {
         assertEquals(orgId1, orgAdmin.getSession().getOrgMembership());
         
         // create a user
-        user = TestUserHelper.createAndSignInUser(OrganizationTest.class, true);
+        user = TestUserHelper.createAndSignInUser(OrganizationTest.class, true, DEVELOPER);
+        
+        // the user is unassigned and should appear in the unassigned API
+        AccountSummarySearch search = new AccountSummarySearch();
+        AccountSummaryList list = orgAdmin.getClient(OrganizationsApi.class)
+                .getUnassignedAdminAccounts(search).execute().body();
+        assertTrue(list.getItems().stream().anyMatch((summary) -> summary.getId().equals(user.getUserId())));
         
         // cannot change organizational affiliation on an update
         ParticipantsApi participantsApi = orgAdmin.getClient(ParticipantsApi.class);
@@ -195,7 +202,7 @@ public class OrganizationTest {
         assertEquals(orgId1, participant.getOrgMembership());
         
         // The account should now be listed as a member
-        AccountSummaryList list = appAdminOrgApi.getMembers(orgId1, new AccountSummarySearch()).execute().body();
+        list = appAdminOrgApi.getMembers(orgId1, new AccountSummarySearch()).execute().body();
         assertEquals(ImmutableSet.of(user.getEmail(), orgAdmin.getEmail()), 
                 list.getItems().stream().map(AccountSummary::getEmail).collect(Collectors.toSet()));
         assertEquals(Integer.valueOf(2), list.getTotal()); // the admin and the user
@@ -203,6 +210,11 @@ public class OrganizationTest {
             assertEquals(orgId1, summary.getOrgMembership());
         }
         
+        // This user is no longer in the unassigned users list
+        list = orgAdmin.getClient(OrganizationsApi.class)
+                .getUnassignedAdminAccounts(search).execute().body();
+        assertFalse(list.getItems().stream().anyMatch((summary) -> summary.getId().equals(user.getUserId())));
+
         // can remove someone from the organization
         appAdminOrgApi.removeMember(orgId1, user.getUserId()).execute();
         
@@ -211,6 +223,10 @@ public class OrganizationTest {
         assertEquals(ImmutableSet.of(orgAdmin.getEmail()), 
                 list.getItems().stream().map(AccountSummary::getEmail).collect(Collectors.toSet()));
         assertEquals(Integer.valueOf(1), list.getTotal());
+        
+        list = orgAdmin.getClient(OrganizationsApi.class)
+                .getUnassignedAdminAccounts(search).execute().body();
+        assertTrue(list.getItems().stream().anyMatch((summary) -> summary.getId().equals(user.getUserId())));
     }
     
     @Test
