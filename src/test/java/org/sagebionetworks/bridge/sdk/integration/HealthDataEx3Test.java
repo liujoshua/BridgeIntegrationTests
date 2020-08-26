@@ -7,12 +7,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.AfterClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -20,6 +22,7 @@ import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecordEx3;
+import org.sagebionetworks.bridge.rest.model.HealthDataRecordEx3List;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
@@ -30,21 +33,25 @@ public class HealthDataEx3Test {
 
     private static TestUserHelper.TestUser admin;
     private static DateTime createdOn;
-    private static TestUserHelper.TestUser user;
-    private static String userHealthCode;
+
+    private TestUserHelper.TestUser user;
+    private String userHealthCode;
 
     @BeforeClass
-    public static void beforeClass() throws Exception {
+    public static void beforeClass() {
         admin = TestUserHelper.getSignedInAdmin();
-        user = TestUserHelper.createAndSignInUser(SurveyTest.class, true);
-        userHealthCode = admin.getClient(ParticipantsApi.class).getParticipantById(user.getUserId(), false)
-                .execute().body().getHealthCode();
-
         createdOn = DateTime.now(DateTimeZone.UTC);
     }
 
-    @AfterClass
-    public static void deleteUser() throws Exception {
+    @Before
+    public void before() throws Exception {
+        user = TestUserHelper.createAndSignInUser(SurveyTest.class, true);
+        userHealthCode = admin.getClient(ParticipantsApi.class).getParticipantById(user.getUserId(), false)
+                .execute().body().getHealthCode();
+    }
+
+    @After
+    public void deleteUser() throws Exception {
         if (user != null) {
             user.signOutAndDeleteUser();
         }
@@ -100,18 +107,18 @@ public class HealthDataEx3Test {
 
         // List by user.
         List<HealthDataRecordEx3> recordList = superadminsApi.getRecordsEx3ForUser(user.getUserId(), createdOnStart,
-                createdOnEnd).execute().body().getItems();
+                createdOnEnd, null, null).execute().body().getItems();
         assertEquals(1, recordList.size());
         assertEquals(record, recordList.get(0));
 
         // List by app. There may be more than one. Filter for the one that we know about.
-        recordList = superadminsApi.getRecordsEx3ForCurrentApp(createdOnStart, createdOnEnd).execute()
+        recordList = superadminsApi.getRecordsEx3ForCurrentApp(createdOnStart, createdOnEnd, null, null).execute()
                 .body().getItems().stream().filter(r -> r.getId().equals(recordId)).collect(Collectors.toList());
         assertEquals(1, recordList.size());
         assertEquals(record, recordList.get(0));
 
         // List by study. There may be more than one. Filter for the one that we know about.
-        recordList = superadminsApi.getRecordsEx3ForStudy(DUMMY_STUDY_ID, createdOnStart, createdOnEnd).execute()
+        recordList = superadminsApi.getRecordsEx3ForStudy(DUMMY_STUDY_ID, createdOnStart, createdOnEnd, null, null).execute()
                 .body().getItems().stream().filter(r -> r.getId().equals(recordId)).collect(Collectors.toList());
         assertEquals(1, recordList.size());
         assertEquals(record, recordList.get(0));
@@ -131,8 +138,79 @@ public class HealthDataEx3Test {
         Thread.sleep(2000);
 
         // List by user will now return an empty list.
-        recordList = superadminsApi.getRecordsEx3ForUser(user.getUserId(), createdOnStart, createdOnEnd).execute()
+        recordList = superadminsApi.getRecordsEx3ForUser(user.getUserId(), createdOnStart, createdOnEnd, null, null).execute()
                 .body().getItems();
         assertTrue(recordList.isEmpty());
+    }
+
+    @Test
+    public void testPagination() throws Exception {
+        ForSuperadminsApi superadminsApi = admin.getClient(ForSuperadminsApi.class);
+
+        // Create 5 health datas for the user. healthCode and createdOn are the only values required.
+        // App ID is automatically set by the server. Add study ID for tests.
+        // Space out the health datas a little bit to help set up our indices.
+        HealthDataRecordEx3[] recordArray = new HealthDataRecordEx3[5];
+        for (int i = 0; i < recordArray.length; i++) {
+            Thread.sleep(500);
+
+            recordArray[i] = new HealthDataRecordEx3();
+            recordArray[i].setCreatedOn(DateTime.now());
+            recordArray[i].setHealthCode(userHealthCode);
+            recordArray[i].setStudyId(DUMMY_STUDY_ID);
+            recordArray[i] = superadminsApi.createOrUpdateRecordEx3(recordArray[i]).execute().body();
+        }
+        DateTime createdOnStart = recordArray[0].getCreatedOn();
+        DateTime createdOnEnd = recordArray[4].getCreatedOn();
+
+        // The list APIs use a Global Secondary Index. Sleep for a bit.
+        Thread.sleep(2000);
+
+        paginationHelper(recordArray, createdOnStart, createdOnEnd, nextOffsetKey -> superadminsApi
+                .getRecordsEx3ForUser(user.getUserId(), createdOnStart, createdOnEnd, 2, nextOffsetKey)
+                .execute().body());
+
+        paginationHelper(recordArray, createdOnStart, createdOnEnd, nextOffsetKey -> superadminsApi
+                .getRecordsEx3ForCurrentApp(createdOnStart, createdOnEnd, 2, nextOffsetKey)
+                .execute().body());
+
+        paginationHelper(recordArray, createdOnStart, createdOnEnd, nextOffsetKey -> superadminsApi
+                .getRecordsEx3ForStudy(DUMMY_STUDY_ID, createdOnStart, createdOnEnd, 2, nextOffsetKey)
+                .execute().body());
+    }
+
+    private void paginationHelper(HealthDataRecordEx3[] recordArray, DateTime createdOnStart, DateTime createdOnEnd,
+            ThrowingFunction<String, HealthDataRecordEx3List> function) throws Exception {
+        // Call pagination APIs with page size 2. There should be a minimum of 3 pages per call.
+        List<HealthDataRecordEx3> recordList = new ArrayList<>();
+        String nextOffsetKey = null;
+        int numPages = 0;
+        do {
+            HealthDataRecordEx3List recordPageList = function.apply(nextOffsetKey);
+            assertEquals(createdOnStart, recordPageList.getRequestParams().getStartTime());
+            assertEquals(createdOnEnd, recordPageList.getRequestParams().getEndTime());
+            assertEquals(2, recordPageList.getRequestParams().getPageSize().intValue());
+            assertEquals(nextOffsetKey, recordPageList.getRequestParams().getOffsetKey());
+
+            // Filter out records that aren't from our user.
+            for (HealthDataRecordEx3 record : recordPageList.getItems()) {
+                if (userHealthCode.equals(record.getHealthCode())) {
+                    recordList.add(record);
+                }
+            }
+            nextOffsetKey = recordPageList.getNextPageOffsetKey();
+
+            numPages++;
+            if (numPages > 10) {
+                // If there this many records in the test study for this time range, something has gone wrong.
+                // Short-cut and error out.
+                fail("Too many health data records");
+            }
+        } while (nextOffsetKey != null);
+
+        assertEquals(5, recordList.size());
+        for (int i = 0; i < 5; i++) {
+            assertEquals(recordArray[i].getId(), recordList.get(i).getId());
+        }
     }
 }

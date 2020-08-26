@@ -146,12 +146,7 @@ public class AccountSummarySearchTest {
         ForWorkersApi workerApi = worker.getClient(ForWorkersApi.class);
         testSuite(search -> workerApi.searchAccountSummariesForApp("api", search).execute().body());
     }
-    
-    @FunctionalInterface
-    public interface ThrowingFunction<S,T> {
-        T apply(S s) throws Exception;
-    }
-    
+
     private void testSuite(ThrowingFunction<AccountSummarySearch, AccountSummaryList> supplier) throws Exception {
         // Successful language search
         AccountSummarySearch search = makeAccountSummarySearch().language("fr");
