@@ -1,12 +1,16 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.ADMIN;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 
 import java.util.stream.Collectors;
 
@@ -18,15 +22,17 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
+import org.sagebionetworks.bridge.rest.model.Study;
+import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -44,7 +50,22 @@ public class OrganizationTest {
     
     @Before
     public void before() throws Exception {
-        admin = TestUserHelper.getSignedInAdmin();    
+        admin = TestUserHelper.getSignedInAdmin();   
+        
+        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
+        try {
+            orgsApi.getOrganization(ORG_ID_1).execute();
+        } catch(EntityNotFoundException e) {
+            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
+            orgsApi.createOrganization(org).execute();
+        }
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        try {
+            studiesApi.getStudy(STUDY_ID_1).execute();
+        } catch(EntityNotFoundException e) {
+            Study study = new Study().identifier(STUDY_ID_1).name(STUDY_ID_1);
+            studiesApi.createStudy(study).execute();
+        }
     }
 
     @After
@@ -147,8 +168,7 @@ public class OrganizationTest {
         newOrg2.setName("Test Org 2");
         org2 = superadminOrgApi.createOrganization(newOrg2).execute().body();
         
-        // Create an app admin in organization 1, with researcher permissions to access the 
-        // participant APIs
+        // Create an admin in organization 1, with researcher permissions to access the participant APIs
         orgAdmin = TestUserHelper.createAndSignInUser(OrganizationTest.class, false, ADMIN, RESEARCHER);
         superadminOrgApi.addMember(orgId1, orgAdmin.getUserId()).execute();
         OrganizationsApi appAdminOrgApi = orgAdmin.getClient(OrganizationsApi.class);
@@ -158,15 +178,13 @@ public class OrganizationTest {
         assertEquals(orgId1, orgAdmin.getSession().getOrgMembership());
         
         // create a user
-        user = TestUserHelper.createAndSignInUser(OrganizationTest.class, true);
+        user = TestUserHelper.createAndSignInUser(OrganizationTest.class, true, DEVELOPER);
         
-        // cannot assign someone to an organization you are not a member of
-        try {
-            appAdminOrgApi.addMember(orgId2, user.getUserId()).execute();
-            fail("Should have thrown exception");
-        } catch(UnauthorizedException e) {
-            assertTrue(e.getMessage().contains("Caller is not a member of"));
-        }
+        // the user is unassigned and should appear in the unassigned API
+        AccountSummarySearch search = new AccountSummarySearch();
+        AccountSummaryList list = orgAdmin.getClient(OrganizationsApi.class)
+                .getUnassignedAdminAccounts(search).execute().body();
+        assertTrue(list.getItems().stream().anyMatch((summary) -> summary.getId().equals(user.getUserId())));
         
         // cannot change organizational affiliation on an update
         ParticipantsApi participantsApi = orgAdmin.getClient(ParticipantsApi.class);
@@ -178,13 +196,13 @@ public class OrganizationTest {
         participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
         assertNull(participant.getOrgMembership());
 
-        // can add someone to your own org
+        // add someone to the organization
         appAdminOrgApi.addMember(orgId1, user.getUserId()).execute();
         participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
         assertEquals(orgId1, participant.getOrgMembership());
         
         // The account should now be listed as a member
-        AccountSummaryList list = appAdminOrgApi.getMembers(orgId1, new AccountSummarySearch()).execute().body();
+        list = appAdminOrgApi.getMembers(orgId1, new AccountSummarySearch()).execute().body();
         assertEquals(ImmutableSet.of(user.getEmail(), orgAdmin.getEmail()), 
                 list.getItems().stream().map(AccountSummary::getEmail).collect(Collectors.toSet()));
         assertEquals(Integer.valueOf(2), list.getTotal()); // the admin and the user
@@ -192,7 +210,12 @@ public class OrganizationTest {
             assertEquals(orgId1, summary.getOrgMembership());
         }
         
-        // can remove someone from your org
+        // This user is no longer in the unassigned users list
+        list = orgAdmin.getClient(OrganizationsApi.class)
+                .getUnassignedAdminAccounts(search).execute().body();
+        assertFalse(list.getItems().stream().anyMatch((summary) -> summary.getId().equals(user.getUserId())));
+
+        // can remove someone from the organization
         appAdminOrgApi.removeMember(orgId1, user.getUserId()).execute();
         
         // account is no longer listed as a member
@@ -201,21 +224,30 @@ public class OrganizationTest {
                 list.getItems().stream().map(AccountSummary::getEmail).collect(Collectors.toSet()));
         assertEquals(Integer.valueOf(1), list.getTotal());
         
-        // This still throws the appropriate exception
+        list = orgAdmin.getClient(OrganizationsApi.class)
+                .getUnassignedAdminAccounts(search).execute().body();
+        assertTrue(list.getItems().stream().anyMatch((summary) -> summary.getId().equals(user.getUserId())));
+    }
+    
+    @Test
+    public void testSponsorship() throws Exception {
+        OrganizationsApi adminOrgApi = admin.getClient(OrganizationsApi.class);
+        // In essence, let's clean this up before we test. It throws an exception if
+        // not associated.
         try {
-            appAdminOrgApi.removeMember(orgId2, user.getUserId()).execute();
-            fail("Should have thrown exception");
-        } catch(UnauthorizedException e) {
-            assertTrue(e.getMessage().contains("Caller is not a member of"));
-        }
-
-        // Throws bad request exception
-        try {
-            appAdminOrgApi.removeMember(orgId1, user.getUserId()).execute();
-            fail("Should have thrown exception");
+            adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();    
         } catch(BadRequestException e) {
-            assertTrue(e.getMessage().contains("Account is not a member of organization"));
         }
+        
+        adminOrgApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+        
+        StudyList list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+        assertTrue(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+        
+        adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+
+        list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+        assertFalse(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
     }
     
     private Organization findOrganization(OrganizationList list, String id) {

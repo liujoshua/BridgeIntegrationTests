@@ -60,6 +60,7 @@ public class StudyMembershipTest {
     @After
     public void after() throws Exception {
         ForSuperadminsApi superadminsApi = admin.getClient(ForSuperadminsApi.class);
+        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         App app = superadminsApi.getApp(TEST_APP_ID).execute().body();
         app.setExternalIdRequiredOnSignup(false);
         superadminsApi.updateApp(app.getIdentifier(), app).execute();
@@ -85,7 +86,7 @@ public class StudyMembershipTest {
         }
         for (String studyId : studyIdsToDelete) {
             try {
-                superadminsApi.deleteStudy(studyId, true).execute();    
+                adminsApi.deleteStudy(studyId, true).execute();    
             } catch(Exception e) {
                 e.printStackTrace();
             }
@@ -202,7 +203,7 @@ public class StudyMembershipTest {
 
     private String createStudy() throws Exception {
         String id = Tests.randomIdentifier(StudyTest.class);
-        Study study = new Study().id(id).name("Study " + id);
+        Study study = new Study().identifier(id).name("Study " + id);
         studiesApi.createStudy(study).execute();
         studyIdsToDelete.add(id);
         return id;

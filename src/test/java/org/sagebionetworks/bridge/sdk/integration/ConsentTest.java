@@ -567,9 +567,9 @@ public class ConsentTest {
 
             // create a study, if needed
             String studyId = Tests.randomIdentifier(ConsentTest.class);
-            study = new Study().id(studyId).name("Study " + studyId);
+            study = new Study().identifier(studyId).name("Study " + studyId);
             studiesApi.createStudy(study).execute().body();
-            List<String> studyIds = ImmutableList.of(study.getId());
+            List<String> studyIds = ImmutableList.of(study.getIdentifier());
 
             // create an (optional) subpopulation that associates both to a user
             subpop = new Subpopulation().name("Test Subpopulation").required(false);
@@ -602,7 +602,7 @@ public class ConsentTest {
                 adminUser.getClient(SubpopulationsApi.class).deleteSubpopulation(subpop.getGuid(), true).execute();
             }
             if (study != null) {
-                adminUser.getClient(StudiesApi.class).deleteStudy(study.getId(), true).execute();
+                adminUser.getClient(StudiesApi.class).deleteStudy(study.getIdentifier(), true).execute();
             }
             devUser.signOutAndDeleteUser();
         }

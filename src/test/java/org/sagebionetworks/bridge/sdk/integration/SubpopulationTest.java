@@ -71,7 +71,7 @@ public class SubpopulationTest {
             admin.getClient(ForAdminsApi.class).deleteSubpopulation(subpop2.getGuid(), true).execute();
         }
         if (study != null) {
-            admin.getClient(StudiesApi.class).deleteStudy(study.getId(), true).execute();
+            admin.getClient(StudiesApi.class).deleteStudy(study.getIdentifier(), true).execute();
         }
     }
     
@@ -88,9 +88,9 @@ public class SubpopulationTest {
         // Create a study, if needed
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         String studyId = Tests.randomIdentifier(SubpopulationTest.class);
-        study = new Study().id(studyId).name("Study " + studyId);
+        study = new Study().identifier(studyId).name("Study " + studyId);
         studiesApi.createStudy(study).execute().body();
-        List<String> studyIds = ImmutableList.of(study.getId());
+        List<String> studyIds = ImmutableList.of(study.getIdentifier());
         
         // Now proceed with the subpopulation test
         SubpopulationsApi subpopulationsApi = developer.getClient(SubpopulationsApi.class);

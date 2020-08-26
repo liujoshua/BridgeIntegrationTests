@@ -22,7 +22,6 @@ import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
-import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
@@ -110,7 +109,6 @@ public class StudyFilteringTest {
     @AfterClass
     public static void after() throws Exception {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
-        ForSuperadminsApi superadminsApi = admin.getClient(ForSuperadminsApi.class);
         for (String userId : userIdsToDelete) {
             try {
                 adminsApi.deleteUser(userId).execute();    
@@ -120,7 +118,7 @@ public class StudyFilteringTest {
         }
         for (String studyId : studyIdsToDelete) {
             try {
-                superadminsApi.deleteStudy(studyId, true).execute();    
+                adminsApi.deleteStudy(studyId, true).execute();    
             } catch(Exception e) {
                 e.printStackTrace();
             }
@@ -300,7 +298,7 @@ public class StudyFilteringTest {
     
     private static String createStudy() throws Exception {
         String id = Tests.randomIdentifier(StudyFilteringTest.class);
-        Study studyA = new Study().id(id).name("Study " + id);
+        Study studyA = new Study().identifier(id).name("Study " + id);
         studiesApi.createStudy(studyA).execute();
         studyIdsToDelete.add(id);
         return id;
