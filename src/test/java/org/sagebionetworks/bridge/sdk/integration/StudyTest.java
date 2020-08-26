@@ -48,6 +48,7 @@ public class StudyTest {
     private List<String> userIdsToDelete = new ArrayList<>();
     private TestUser testResearcher;
     private TestUser admin;
+    private String tempStudyId;
     
     @Before
     public void before() throws Exception {
@@ -92,11 +93,16 @@ public class StudyTest {
             } catch(EntityNotFoundException e) {
             }
         }
+        if (tempStudyId != null) {
+            try {
+                adminsApi.deleteStudy(tempStudyId, true).execute();    
+            } catch(EntityNotFoundException e) {
+            }
+        }
     }
 
     @Test
     public void test() throws IOException {
-        
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         
         int initialCount = studiesApi.getStudies(null, null, false).execute().body().getItems().size();
@@ -230,36 +236,31 @@ public class StudyTest {
     @Test
     public void testSponsorship() throws Exception {
         StudiesApi adminStudiesApi = admin.getClient(StudiesApi.class);
-        // In essence, let's clean this up before we test. It throws an exception if
-        // not associated.
-        try {
-            adminStudiesApi.removeStudySponsor(STUDY_ID_1, ORG_ID_1).execute();    
-        } catch(BadRequestException e) {
-        }
-        try {
-            adminStudiesApi.addStudySponsor(STUDY_ID_1, ORG_ID_1).execute();
-            
-            OrganizationList list = adminStudiesApi.getSponsors(STUDY_ID_1, null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch((org) -> org.getIdentifier().equals(ORG_ID_1)));
+        
+        tempStudyId = Tests.randomIdentifier(StudyTest.class);
+        Study tempStudy = new Study().identifier(tempStudyId).name(tempStudyId);
+        adminStudiesApi.createStudy(tempStudy).execute();
+        
+        adminStudiesApi.addStudySponsor(tempStudyId, ORG_ID_1).execute();
+        
+        OrganizationList list = adminStudiesApi.getSponsors(tempStudyId, null, null).execute().body();
+        assertTrue(list.getItems().stream().anyMatch((org) -> org.getIdentifier().equals(ORG_ID_1)));
 
-            // The organization should see this as a sponsored study
-            StudyList studyList = admin.getClient(OrganizationsApi.class).getSponsoredStudies(ORG_ID_1, null, null).execute().body();
-            assertTrue(studyList.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+        // The organization should see this as a sponsored study
+        StudyList studyList = admin.getClient(OrganizationsApi.class).getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+        assertTrue(studyList.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(tempStudyId)));
 
-            adminStudiesApi.deleteStudy(STUDY_ID_1, false).execute();
-            
-            // Now if we ask, we should not see this as a sponsored study
-            studyList = admin.getClient(OrganizationsApi.class).getSponsoredStudies(ORG_ID_1, null, null).execute().body();
-            assertFalse(studyList.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
-            
-            adminStudiesApi.removeStudySponsor(STUDY_ID_1, ORG_ID_1).execute();
+        adminStudiesApi.deleteStudy(tempStudyId, false).execute();
+        
+        // Now if we ask, we should not see this as a sponsored study
+        studyList = admin.getClient(OrganizationsApi.class).getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+        assertFalse(studyList.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+        
+        adminStudiesApi.removeStudySponsor(tempStudyId, ORG_ID_1).execute();
 
-            list = adminStudiesApi.getSponsors(STUDY_ID_1, null, null).execute().body();
-            assertFalse(list.getItems().stream().anyMatch((org) -> org.getIdentifier().equals(ORG_ID_1)));
+        list = adminStudiesApi.getSponsors(tempStudyId, null, null).execute().body();
+        assertFalse(list.getItems().stream().anyMatch((org) -> org.getIdentifier().equals(ORG_ID_1)));
             
-        } finally {
-            // Need to recreate this for other tests, undeleted.
-            adminStudiesApi.deleteStudy(STUDY_ID_1, true).execute();
-        }
+        adminStudiesApi.deleteStudy(tempStudyId, true).execute();
     }    
 }
