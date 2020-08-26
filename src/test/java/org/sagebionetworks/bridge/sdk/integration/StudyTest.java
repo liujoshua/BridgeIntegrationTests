@@ -134,7 +134,7 @@ public class StudyTest {
         assertEquals(initialCount, list.getItems().size());
         
         list = studiesApi.getStudies(null, null, true).execute().body();
-        assertEquals(initialCount+1, list.getItems().size());
+        assertTrue(list.getItems().size() > initialCount);
         assertTrue(list.getRequestParams().isIncludeDeleted());
         
         // you can still retrieve it
