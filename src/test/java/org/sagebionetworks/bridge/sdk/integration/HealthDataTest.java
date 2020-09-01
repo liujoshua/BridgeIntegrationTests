@@ -8,8 +8,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
@@ -260,12 +260,11 @@ public class HealthDataTest {
         assertEquals(3.0, (double) returnedUserMetadataMap.get("lastMedicationHoursAgo"), 0.001);
 
         // We can get the record back from the API.
-        Thread.sleep(2000);
-        List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(createdOn,
-                createdOn).execute().body().getItems();
-        HealthDataRecord returnedRecord = recordList.stream().filter(r -> r.getSchemaId().equals(SCHEMA_ID)).findAny()
-                .get();
-        assertEquals(record, returnedRecord);
+        Optional<HealthDataRecord> returnedRecord = Tests.retryHelper(() -> user.getClient(InternalApi.class)
+                        .getHealthDataByCreatedOn(createdOn, createdOn).execute().body().getItems().stream()
+                        .filter(r -> r.getSchemaId().equals(SCHEMA_ID)).findAny(),
+                Optional::isPresent);
+        assertEquals(record, returnedRecord.get());
     }
 
     @Test
@@ -330,12 +329,11 @@ public class HealthDataTest {
         assertNotNull(returnedDataMap.get("answers"));
 
         // User can get the health data too.
-        Thread.sleep(2000);
-        List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(createdOn,
-                createdOn).execute().body().getItems();
-        HealthDataRecord returnedRecord = recordList.stream().filter(r -> r.getSchemaId().equals(SURVEY_ID)).findAny()
-                .get();
-        assertEquals(record, returnedRecord);
+        Optional<HealthDataRecord> returnedRecord = Tests.retryHelper(() -> user.getClient(InternalApi.class)
+                        .getHealthDataByCreatedOn(createdOn, createdOn).execute().body().getItems().stream()
+                        .filter(r -> r.getSchemaId().equals(SURVEY_ID)).findAny(),
+                Optional::isPresent);
+        assertEquals(record, returnedRecord.get());
     }
 
     @Test

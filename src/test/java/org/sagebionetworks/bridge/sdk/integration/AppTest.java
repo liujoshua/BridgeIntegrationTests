@@ -71,7 +71,7 @@ import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
-@SuppressWarnings("deprecation")
+@SuppressWarnings({ "ConstantConditions", "deprecation" })
 public class AppTest {
     
     private TestUser admin;
@@ -668,19 +668,18 @@ public class AppTest {
 
             UploadSession uploadSession2 = usersApi.requestUploadSession(request).execute().body();
 
-            Thread.sleep(1000); // This does depend on a GSI, so pause for a bit.
-
             // This should retrieve both of the user's uploads.
             // NOTE: This assumes that there aren't more than a few dozen uploads in the API app in the last few
             // hours.
             AppsApi studiesApi = admin.getClient(AppsApi.class);
 
-            UploadList results = studiesApi.getUploads(startTime, endTime, MAX_PAGE_SIZE, null).execute().body();
+            UploadList results = Tests.retryHelper(() -> studiesApi.getUploads(startTime, endTime, MAX_PAGE_SIZE,
+                    null).execute().body(),
+                    r -> r.getItems().size() == count+2);
           
             assertEquals(startTime, results.getRequestParams().getStartTime());
             assertEquals(endTime, results.getRequestParams().getEndTime());
 
-            assertEquals(count+2, results.getItems().size());
             assertNotNull(getUpload(results, uploadSession.getId()));
             assertNotNull(getUpload(results, uploadSession2.getId()));
 
