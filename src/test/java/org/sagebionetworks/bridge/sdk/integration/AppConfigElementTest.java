@@ -23,6 +23,7 @@ import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
+@SuppressWarnings("ConstantConditions")
 public class AppConfigElementTest {
     private static final String TEST_STRING = "This is no longer a participant";
     private TestUser developer;
@@ -229,29 +230,16 @@ public class AppConfigElementTest {
         configsApi.deleteAppConfigElement(id, 1L, false).execute();
         configsApi.deleteAppConfigElement(id2, 2L, false).execute();
 
-        // We're about to rely on a GSI so pause for a bit
-        Thread.sleep(1000);
-
-        AppConfigElementList list = configsApi.getMostRecentAppConfigElements(true).execute().body();
         // With deleted included, these should be v1 r2, and v2 r2 (both the most recent)
-        assertElementVersion(list, id, 2L);
-        assertElementVersion(list, id2, 2L);
+        Tests.retryHelper(() -> configsApi.getMostRecentAppConfigElements(true).execute().body().getItems(),
+                list -> list.stream().anyMatch(config -> isElementVersion(config, id, 2L))
+                        && list.stream().anyMatch(config -> isElementVersion(config, id2, 2L)));
 
         // With deleted excluded, this picture looks different:
-        list = configsApi.getMostRecentAppConfigElements(false).execute().body();
         // Now we get a prior version in the list.
-        assertElementVersion(list, id, 2L);
-        assertElementVersion(list, id2, 1L);
-
-    }
-
-    private void assertElementVersion(AppConfigElementList list, String id, long revision) {
-        for (AppConfigElement config : list.getItems()) {
-            if (isElementVersion(config, id, revision)) {
-                return;
-            }
-        }
-        fail("Should have found an app config version");
+        Tests.retryHelper(() -> configsApi.getMostRecentAppConfigElements(false).execute().body().getItems(),
+                list -> list.stream().anyMatch(config -> isElementVersion(config, id, 2L))
+                        && list.stream().anyMatch(config -> isElementVersion(config, id2, 1L)));
     }
 
     private boolean isElementVersion(AppConfigElement config, String id, long revision) {

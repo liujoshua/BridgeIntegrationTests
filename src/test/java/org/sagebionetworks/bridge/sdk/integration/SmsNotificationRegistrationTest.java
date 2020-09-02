@@ -31,6 +31,7 @@ import org.sagebionetworks.bridge.rest.model.SubscriptionStatus;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
+@SuppressWarnings("ConstantConditions")
 public class SmsNotificationRegistrationTest {
     private static String autoTopicGuid1;
     private static String autoTopicGuid2;
@@ -136,43 +137,27 @@ public class SmsNotificationRegistrationTest {
         assertEquals(NotificationProtocol.SMS, registration.getProtocol());
         assertEquals(IntegTestUtils.PHONE.getNumber(), registration.getEndpoint());
 
-        // Sleep for eventual consistency.
-        Thread.sleep(2000);
-
         // We automatically subscribed to autoTopic1.
-        Map<String, Boolean> subscriptionsByGuid = api.getTopicSubscriptions(registrationGuid).execute().body()
-                .getItems().stream()
-                .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed));
-        assertTrue(subscriptionsByGuid.get(autoTopicGuid1));
-        assertFalse(subscriptionsByGuid.get(autoTopicGuid2));
-        assertFalse(subscriptionsByGuid.get(manualTopicGuid));
+        Tests.retryHelper(() -> api.getTopicSubscriptions(registrationGuid).execute().body().getItems().stream()
+                        .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed)),
+                map -> map.get(autoTopicGuid1) && !map.get(autoTopicGuid2) && !map.get(manualTopicGuid));
 
         // Manually subscribe to the manual topic. This doesn't affect the auto-topics.
         SubscriptionRequest subscriptionRequest = new SubscriptionRequest().addTopicGuidsItem(manualTopicGuid);
         api.subscribeToTopics(registrationGuid, subscriptionRequest).execute();
 
-        // Sleep for eventual consistency.
-        Thread.sleep(2000);
-
-        subscriptionsByGuid = api.getTopicSubscriptions(registrationGuid).execute().body().getItems().stream()
-                .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed));
-        assertTrue(subscriptionsByGuid.get(autoTopicGuid1));
-        assertFalse(subscriptionsByGuid.get(autoTopicGuid2));
-        assertTrue(subscriptionsByGuid.get(manualTopicGuid));
+        Tests.retryHelper(() -> api.getTopicSubscriptions(registrationGuid).execute().body().getItems().stream()
+                        .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed)),
+                map -> map.get(autoTopicGuid1) && !map.get(autoTopicGuid2) && map.get(manualTopicGuid));
 
         // Switch to data group sdk-int-2. This flips the auto topics, but doesn't touch the manual topic.
         StudyParticipant participant = api.getUsersParticipantRecord(false).execute().body();
         participant.setDataGroups(ImmutableList.of("sdk-int-2"));
         api.updateUsersParticipantRecord(participant).execute();
 
-        // Sleep for eventual consistency.
-        Thread.sleep(2000);
-
-        subscriptionsByGuid = api.getTopicSubscriptions(registrationGuid).execute().body().getItems().stream()
-                .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed));
-        assertFalse(subscriptionsByGuid.get(autoTopicGuid1));
-        assertTrue(subscriptionsByGuid.get(autoTopicGuid2));
-        assertTrue(subscriptionsByGuid.get(manualTopicGuid));
+        Tests.retryHelper(() -> api.getTopicSubscriptions(registrationGuid).execute().body().getItems().stream()
+                        .collect(Collectors.toMap(SubscriptionStatus::getTopicGuid, SubscriptionStatus::isSubscribed)),
+                map -> !map.get(autoTopicGuid1) && map.get(autoTopicGuid2) && map.get(manualTopicGuid));
 
         // Test delete API.
         api.deleteNotificationRegistration(registrationGuid).execute();

@@ -243,13 +243,11 @@ public class CRCTest {
         assertTrue(list.getItems().isEmpty());
     }
     
-    private void verifyHealthDataRecords(String typeName) throws IOException, InterruptedException {
-        // Pause for GSI on the health data table
-        Thread.sleep(5000);
-        
-        HealthDataRecordList records = user.getClient(InternalApi.class)
-                .getHealthDataByCreatedOn(DateTime.now().minusHours(1), DateTime.now().plusHours(1))
-                .execute().body();
+    private void verifyHealthDataRecords(String typeName) {
+        HealthDataRecordList records = Tests.retryHelper(() -> user.getClient(InternalApi.class)
+                        .getHealthDataByCreatedOn(DateTime.now().minusHours(1), DateTime.now().plusHours(1))
+                        .execute().body(),
+                l -> l.getItems().size() == 2);
         
         // There will be two records and they will both be appointments
         assertEquals(2, records.getItems().size());

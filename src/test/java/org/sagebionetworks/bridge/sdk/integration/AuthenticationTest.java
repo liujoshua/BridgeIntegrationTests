@@ -42,8 +42,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import retrofit2.Response;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -54,7 +54,7 @@ import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 @Category(IntegrationSmokeTest.class)
-@SuppressWarnings("unchecked")
+@SuppressWarnings({ "ConstantConditions", "unchecked" })
 public class AuthenticationTest {
     private static TestUser adminUser;
     private static TestUser researchUser;
@@ -427,12 +427,13 @@ public class AuthenticationTest {
         assertEquals(participant.getHealthCode(), message.getHealthCode());
 
         // Verify the SMS message log was written to health data.
-        Thread.sleep(2000);
         DateTime messageSentOn = message.getSentOn();
-        List<HealthDataRecord> recordList = phoneOnlyTestUser.getClient(InternalApi.class).getHealthDataByCreatedOn(
-                messageSentOn, messageSentOn).execute().body().getItems();
-        HealthDataRecord smsMessageRecord = recordList.stream()
-                .filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge")).findAny().get();
+        Optional<HealthDataRecord> smsMessageRecordOpt = Tests.retryHelper(() -> phoneOnlyTestUser
+                        .getClient(InternalApi.class).getHealthDataByCreatedOn(messageSentOn, messageSentOn).execute()
+                        .body().getItems().stream().filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge"))
+                        .findAny(),
+                Optional::isPresent);
+        HealthDataRecord smsMessageRecord = smsMessageRecordOpt.get();
         assertEquals("sms-messages-sent-from-bridge", smsMessageRecord.getSchemaId());
         assertEquals(1, smsMessageRecord.getSchemaRevision().intValue());
 

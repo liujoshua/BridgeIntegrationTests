@@ -18,6 +18,7 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualI
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
+import com.google.common.base.Predicates;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -79,6 +80,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@SuppressWarnings({ "ConstantConditions", "Guava" })
 public class ParticipantsTest {
     private static final String DUMMY_SYNAPSE_USER_ID = "00000";
     private TestUser admin;
@@ -607,23 +609,19 @@ public class ParticipantsTest {
             usersApi.getScheduledActivities("+00:00", 4, null).execute().body();
             ParticipantsApi api = researcher.getClient(ParticipantsApi.class);
 
-            // getTaskHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index is consistent.
-            Thread.sleep(2000);
-
-            ForwardCursorScheduledActivityList list = api
-                    .getParticipantTaskHistory(userId, taskReferentGuid, startsOn, endsOn, null, 100).execute().body();
-
             // There should be activities...
-            assertFalse(list.getItems().isEmpty());
-            
+            Tests.retryHelper(() -> api.getParticipantTaskHistory(userId, taskReferentGuid, startsOn, endsOn,
+                    null, 100).execute().body().getItems(),
+                    Predicates.not(List::isEmpty));
+
             // These other calls return nothing though
-            list = api.getParticipantSurveyHistory(userId, taskReferentGuid, startsOn, endsOn, null, 100).execute()
-                    .body();
-            assertTrue(list.getItems().isEmpty());
-            
-            list = api.getParticipantCompoundActivityHistory(userId, taskReferentGuid, startsOn, endsOn, null, 100)
-                    .execute().body();
-            assertTrue(list.getItems().isEmpty());
+            Tests.retryHelper(() -> api.getParticipantSurveyHistory(userId, taskReferentGuid, startsOn, endsOn,
+                    null, 100).execute().body().getItems(),
+                    List::isEmpty);
+
+            Tests.retryHelper(() -> api.getParticipantCompoundActivityHistory(userId, taskReferentGuid, startsOn,
+                    endsOn, null, 100).execute().body().getItems(),
+                    List::isEmpty);
         } finally {
             admin.getClient(SchedulesApi.class).deleteSchedulePlan(planKeys.getGuid(), true).execute();
             user.signOutAndDeleteUser();
@@ -645,9 +643,6 @@ public class ParticipantsTest {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             UploadSession uploadSession = usersApi.requestUploadSession(request).execute().body();
             
-            // This does depend on a GSI, so pause for a bit.
-            Thread.sleep(500);
-            
             ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
             
             // Jenkins has gotten minutes off from the current time, causing this query to fail. Adjust the range
@@ -655,7 +650,9 @@ public class ParticipantsTest {
             DateTime endTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
             DateTime startTime = endTime.minusDays(1).minusHours(21);
 
-            UploadList results = participantsApi.getParticipantUploads(userId, startTime, endTime, null, null).execute().body();
+            UploadList results = Tests.retryHelper(() -> participantsApi.getParticipantUploads(userId, startTime,
+                    endTime, null, null).execute().body(),
+                    r -> !r.getItems().isEmpty() && uploadSession.getId().equals(r.getItems().get(0).getUploadId()));
             
             String uploadId = results.getItems().get(0).getUploadId();
 
