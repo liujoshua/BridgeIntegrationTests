@@ -5,7 +5,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertDatesWithTimeZoneEqual;
 
 import java.io.IOException;
@@ -362,11 +361,8 @@ public class ScheduledActivityTest {
         
         usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
 
-        // getTaskHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index is consistent.
-        Thread.sleep(2000);
-
         // Now we should see those in the latest API:
-        ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
+        ForwardCursorScheduledActivityList list = filterPages(16, (offsetKey) ->
             usersApi.getTaskHistory(TASK_ID, STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
         
         // Joda DateTime equality is only object instance equality, use strings to compare
@@ -611,11 +607,7 @@ public class ScheduledActivityTest {
         
         usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
 
-        // getCompoundActivityHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index
-        // is consistent.
-        Thread.sleep(2000);
-
-        ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
+        ForwardCursorScheduledActivityList list = filterPages(16, (offsetKey) ->
             userApi.getCompoundActivityHistory(TASK_ID, STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
 
         for (ScheduledActivity act : list.getItems()) {
@@ -629,15 +621,15 @@ public class ScheduledActivityTest {
         assertNotNull(list.getNextPageOffsetKey());
         
         // And these tasks don't show up through any of the other methods
-        ForwardCursorScheduledActivityList list2 = filterPages(false, (key) ->
+        ForwardCursorScheduledActivityList list2 = filterPages(0, (key) ->
             userApi.getCompoundActivityHistory("not the right ID", STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list2.getItems().isEmpty());
         
-        ForwardCursorScheduledActivityList list3 = filterPages(false, (key) -> 
+        ForwardCursorScheduledActivityList list3 = filterPages(0, (key) ->
             userApi.getSurveyHistory(TASK_ID, STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list3.getItems().isEmpty());
 
-        ForwardCursorScheduledActivityList list4 = filterPages(false, (key) -> 
+        ForwardCursorScheduledActivityList list4 = filterPages(0, (key) ->
             userApi.getTaskHistory(TASK_ID, STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list4.getItems().isEmpty());
     }
@@ -650,11 +642,7 @@ public class ScheduledActivityTest {
         
         usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
 
-        // getSurveyHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index
-        // is consistent.
-        Thread.sleep(2000);
-
-        ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
+        ForwardCursorScheduledActivityList list = filterPages(16, (offsetKey) ->
             userApi.getSurveyHistory(surveyKeys.getGuid(), STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
 
         for (ScheduledActivity act : list.getItems()) {
@@ -666,18 +654,18 @@ public class ScheduledActivityTest {
         assertEquals(STARTS_ON, list.getRequestParams().getScheduledOnStart());
         assertEquals(ENDS_ON, list.getRequestParams().getScheduledOnEnd());
         assertNotNull(list.getNextPageOffsetKey());
-        
+
         // And these tasks don't show up through any of the other methods
-        ForwardCursorScheduledActivityList list2 = userApi.getSurveyHistory(
-                "not the right ID", STARTS_ON, ENDS_ON, null, null).execute().body();
+        ForwardCursorScheduledActivityList list2 = filterPages(0, (key) ->
+                userApi.getCompoundActivityHistory(surveyKeys.getGuid(), STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list2.getItems().isEmpty());
-        
-        ForwardCursorScheduledActivityList list3 = userApi
-                .getCompoundActivityHistory(surveyKeys.getGuid(), STARTS_ON, ENDS_ON, null, null).execute().body();
+
+        ForwardCursorScheduledActivityList list3 = filterPages(0, (key) ->
+                userApi.getSurveyHistory("not the right ID", STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list3.getItems().isEmpty());
 
-        ForwardCursorScheduledActivityList list4 = userApi.getTaskHistory(surveyKeys.getGuid(), STARTS_ON, ENDS_ON, null, null)
-                .execute().body();
+        ForwardCursorScheduledActivityList list4 = filterPages(0, (key) ->
+                userApi.getTaskHistory(surveyKeys.getGuid(), STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list4.getItems().isEmpty());
     }
     
@@ -689,11 +677,7 @@ public class ScheduledActivityTest {
         
         usersApi.getScheduledActivitiesByDateRange(STARTS_ON, ENDS_ON).execute();
 
-        // getTaskHistory() uses a secondary global index. Sleep for 2 seconds to help make sure the index
-        // is consistent.
-        Thread.sleep(2000);
-
-        ForwardCursorScheduledActivityList list = filterPages(true, (offsetKey) ->
+        ForwardCursorScheduledActivityList list = filterPages(16, (offsetKey) ->
             userApi.getTaskHistory(TASK_ID, STARTS_ON, ENDS_ON, offsetKey, 10).execute().body());
         
         for (ScheduledActivity act : list.getItems()) {
@@ -705,18 +689,18 @@ public class ScheduledActivityTest {
         assertEquals(STARTS_ON, list.getRequestParams().getScheduledOnStart());
         assertEquals(ENDS_ON, list.getRequestParams().getScheduledOnEnd());
         assertEquals(10, list.getRequestParams().getPageSize().intValue());
-        
+
         // And these tasks don't show up through any of the other methods
-        ForwardCursorScheduledActivityList list2 = filterPages(false, (key) ->
-            userApi.getTaskHistory("not the right ID", STARTS_ON, ENDS_ON, null, null).execute().body());
+        ForwardCursorScheduledActivityList list2 = filterPages(0, (key) ->
+                userApi.getCompoundActivityHistory(TASK_ID, STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list2.getItems().isEmpty());
-        
-        ForwardCursorScheduledActivityList list3 = filterPages(false, (key) ->
-            userApi.getCompoundActivityHistory(TASK_ID, STARTS_ON, ENDS_ON, null, null).execute().body());
+
+        ForwardCursorScheduledActivityList list3 = filterPages(0, (key) ->
+                userApi.getSurveyHistory(TASK_ID, STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list3.getItems().isEmpty());
 
-        ForwardCursorScheduledActivityList list4 = filterPages(false, (key) ->
-            userApi.getSurveyHistory(TASK_ID, STARTS_ON, ENDS_ON, null, null).execute().body());
+        ForwardCursorScheduledActivityList list4 = filterPages(0, (key) ->
+                userApi.getTaskHistory("not the right ID", STARTS_ON, ENDS_ON, null, null).execute().body());
         assertTrue(list4.getItems().isEmpty());
     }
     
@@ -740,7 +724,7 @@ public class ScheduledActivityTest {
         
         final String activityGuid = actList.getItems().get(0).getGuid().split(":")[0];
         
-        ForwardCursorScheduledActivityList list = filterPages(true, (nextPageOffset) -> 
+        ForwardCursorScheduledActivityList list = filterPages(16, (nextPageOffset) ->
             userApi.getActivityHistory(activityGuid, STARTS_ON, ENDS_ON, nextPageOffset, 10).execute().body());
         
         for (ScheduledActivity act : list.getItems()) {
@@ -768,40 +752,40 @@ public class ScheduledActivityTest {
      * request params object returned from the server. If pagesExpected is true, we also assert that we receive at 
      * least two pages. This method will also fail after 100 pages in case of defects.
      */
-    private ForwardCursorScheduledActivityList filterPages(boolean pagesExpected,
+    private ForwardCursorScheduledActivityList filterPages(int expectedCount,
             ExceptionThrowingFunction<String, ForwardCursorScheduledActivityList> caller) throws Exception {
         ForwardCursorScheduledActivityList filteredList = new ForwardCursorScheduledActivityList();
-        
+
         List<ScheduledActivity> activities = new ArrayList<>();
-        String nextPageOffsetKey = null;
-        int tries = 1;
-        do {
-            
-            ForwardCursorScheduledActivityList results = caller.apply(nextPageOffsetKey);
-            for (ScheduledActivity act : results.getItems()) {
-                if (act.getActivity().getLabel().equals(runId)) {
-                    activities.add(act);    
-                }
-            }
-            // What was sent is returned back.
-            assertEquals(nextPageOffsetKey, results.getRequestParams().getOffsetKey());
-            
-            nextPageOffsetKey = results.getNextPageOffsetKey();
-            tries++;
-            // Take the first request values to examine in origin test
-            if (filteredList.getNextPageOffsetKey() == null) {
-                Tests.setVariableValueInObject(filteredList,  "nextPageOffsetKey", nextPageOffsetKey);
-            }
-            if (filteredList.getRequestParams() == null) {
-                Tests.setVariableValueInObject(filteredList,  "requestParams", results.getRequestParams());
-            }
-            
-        } while(nextPageOffsetKey != null && tries < 100);
-        if (tries >= 100) {
-            fail("Test failed due to a pathological number of scheduled activity pages");
-        } else if (pagesExpected && tries == 1) {
-            fail("Expected more than one page of results, but only one page was returned");
-        }
+        Tests.retryHelper(
+                () -> {
+                    String nextPageOffsetKey = null;
+                    int tries = 1;
+                    do {
+
+                        ForwardCursorScheduledActivityList results = caller.apply(nextPageOffsetKey);
+                        for (ScheduledActivity act : results.getItems()) {
+                            if (act.getActivity().getLabel().equals(runId)) {
+                                activities.add(act);
+                            }
+                        }
+                        // What was sent is returned back.
+                        assertEquals(nextPageOffsetKey, results.getRequestParams().getOffsetKey());
+
+                        nextPageOffsetKey = results.getNextPageOffsetKey();
+                        tries++;
+                        // Take the first request values to examine in origin test
+                        if (filteredList.getNextPageOffsetKey() == null) {
+                            Tests.setVariableValueInObject(filteredList, "nextPageOffsetKey", nextPageOffsetKey);
+                        }
+                        if (filteredList.getRequestParams() == null) {
+                            Tests.setVariableValueInObject(filteredList, "requestParams", results.getRequestParams());
+                        }
+
+                    } while (nextPageOffsetKey != null && tries < 100);
+                    return activities;
+                },
+                l -> l.size() == expectedCount);
         Tests.setVariableValueInObject(filteredList, "items", activities);
         return filteredList;
     }

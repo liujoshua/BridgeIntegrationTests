@@ -11,7 +11,9 @@ import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
+import com.google.common.base.Predicates;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
@@ -45,7 +47,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
-@SuppressWarnings("unchecked")
+@SuppressWarnings({ "ConstantConditions", "Guava", "unchecked" })
 public class WorkerApiTest {
     private static final String SYNAPSE_USER_ID = "00000";
     private static final DateTimeZone TEST_USER_TIME_ZONE = DateTimeZone.forOffsetHours(-8);
@@ -257,14 +259,10 @@ public class WorkerApiTest {
             ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
             userApi.getScheduledActivities("-07:00", 4, 1).execute();
 
-            // Sleep to wait for global secondary index
-            Thread.sleep(2000);
-
-            ForwardCursorScheduledActivityList list = workersApi.getParticipantTaskHistoryForApp(user.getAppId(), 
-                    user.getSession().getId(), "task:CCC", DateTime.now().minusDays(2), DateTime.now().plusDays(2), 
-                    null, 50).execute().body();
-
-            assertFalse(list.getItems().isEmpty());
+            Tests.retryHelper(() -> workersApi.getParticipantTaskHistoryForApp(user.getAppId(),
+                    user.getSession().getId(), "task:CCC", DateTime.now().minusDays(2), DateTime.now().plusDays(2),
+                    null, 50).execute().body().getItems(),
+                    Predicates.not(List::isEmpty));
         } finally {
             if (guid != null) {
                 admin.getClient(SchedulesApi.class).deleteSchedulePlan(guid.getGuid(), true).execute();    
@@ -314,12 +312,12 @@ public class WorkerApiTest {
         assertEquals(participant.getHealthCode(), message.getHealthCode());
 
         // Verify the SMS message log was written to health data.
-        Thread.sleep(2000);
         DateTime messageSentOn = message.getSentOn();
-        List<HealthDataRecord> recordList = user.getClient(InternalApi.class).getHealthDataByCreatedOn(messageSentOn,
-                messageSentOn).execute().body().getItems();
-        HealthDataRecord smsMessageRecord = recordList.stream()
-                .filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge")).findAny().get();
+        Optional<HealthDataRecord> smsMessageRecordOpt = Tests.retryHelper(() -> user.getClient(InternalApi.class)
+                        .getHealthDataByCreatedOn(messageSentOn, messageSentOn).execute().body().getItems().stream()
+                        .filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge")).findAny(),
+                Optional::isPresent);
+        HealthDataRecord smsMessageRecord = smsMessageRecordOpt.get();
         assertEquals("sms-messages-sent-from-bridge", smsMessageRecord.getSchemaId());
         assertEquals(1, smsMessageRecord.getSchemaRevision().intValue());
 

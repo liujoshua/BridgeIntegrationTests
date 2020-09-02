@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
@@ -19,6 +21,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
@@ -48,6 +52,8 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class Tests {
+    private static final Logger LOG = LoggerFactory.getLogger(Tests.class);
+
     public static final SignIn API_SIGNIN = new SignIn().appId(TEST_APP_ID);
     public static final SignIn SHARED_SIGNIN = new SignIn().appId(SHARED_APP_ID);
     public static final String PACKAGE = "org.sagebionetworks.bridge";
@@ -64,6 +70,9 @@ public class Tests {
     public static final String NATIONAL_PHONE_FORMAT = "(971) 248-6796";
     public static final String SYNAPSE_USER_ID = "88888";
 
+    private static final int RETRY_MAX_TRIES = 5;
+    private static final long RETRY_SLEEP_MILLIS = 1000;
+
     public static ClientInfo getClientInfoWithVersion(String osName, int version) {
         return new ClientInfo().appName(APP_NAME).appVersion(version).deviceName(APP_NAME).osName(osName)
                 .osVersion("2.0.0").sdkName("BridgeJavaSDK").sdkVersion(Integer.parseInt(IntegTestUtils.CONFIG.getSdkVersion()));
@@ -71,6 +80,38 @@ public class Tests {
 
     public static String randomIdentifier(Class<?> cls) {
         return ("sdk-" + cls.getSimpleName().toLowerCase() + "-" + RandomStringUtils.randomAlphabetic(5)).toLowerCase();
+    }
+
+    /**
+     * Helper function that wraps around retries. Used for tests that can fail sporadically (e.g. anything that uses a
+     * DynamoDB secondary index.
+     *
+     * @param testCall
+     *         the test code that might sporadically fail (e.g. a server call using DynamoDB secondary index)
+     * @param validationCall
+     *         a callable that returns true if the test code succeeded, false if we need to retry
+     */
+    public static <T> T retryHelper(Callable<T> testCall, Predicate<T> validationCall) {
+        for (int i = 0; i < RETRY_MAX_TRIES; i++) {
+            try {
+                Thread.sleep(RETRY_SLEEP_MILLIS);
+            } catch (InterruptedException ex) {
+                // Ignore exception.
+            }
+
+            try {
+                T result = testCall.call();
+                if (validationCall.test(result)) {
+                    return result;
+                } else {
+                    LOG.warn("Validation failed in retryHelper (try #" + i + ")");
+                }
+            } catch (Exception ex) {
+                LOG.warn("Exception thrown in retryHelper (try #" + i + "): " + ex.getMessage(), ex);
+            }
+        }
+
+        throw new RuntimeException("retryHelper failed");
     }
 
     public static List<Activity> labelActivities(List<Activity> activities, String randomLabel) {

@@ -59,12 +59,13 @@ import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 @Category(IntegrationSmokeTest.class)
-@SuppressWarnings("unchecked")
+@SuppressWarnings({ "ConstantConditions", "unchecked" })
 public class ConsentTest {
     private static final Withdrawal WITHDRAWAL = new Withdrawal().reason("Reasons");
     private static final String FAKE_IMAGE_DATA = "VGVzdCBzdHJpbmc=";
@@ -444,12 +445,13 @@ public class ConsentTest {
         assertEquals(participant.getHealthCode(), message.getHealthCode());
 
         // Verify the SMS message log was written to health data.
-        Thread.sleep(2000);
         DateTime messageSentOn = message.getSentOn();
-        List<HealthDataRecord> recordList = phoneOnlyTestUser.getClient(InternalApi.class)
-                .getHealthDataByCreatedOn(messageSentOn, messageSentOn).execute().body().getItems();
-        HealthDataRecord smsMessageRecord = recordList.stream()
-                .filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge")).findAny().get();
+        Optional<HealthDataRecord> smsMessageRecordOpt = Tests.retryHelper(() -> phoneOnlyTestUser
+                        .getClient(InternalApi.class).getHealthDataByCreatedOn(messageSentOn, messageSentOn).execute()
+                        .body().getItems().stream()
+                        .filter(r -> r.getSchemaId().equals("sms-messages-sent-from-bridge")).findAny(),
+                Optional::isPresent);
+        HealthDataRecord smsMessageRecord = smsMessageRecordOpt.get();
         assertEquals("sms-messages-sent-from-bridge", smsMessageRecord.getSchemaId());
         assertEquals(1, smsMessageRecord.getSchemaRevision().intValue());
 

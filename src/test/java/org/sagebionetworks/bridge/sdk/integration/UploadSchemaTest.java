@@ -50,6 +50,7 @@ import org.sagebionetworks.bridge.rest.model.UploadSchemaList;
 import org.sagebionetworks.bridge.rest.model.UploadSchemaType;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 
+@SuppressWarnings("ConstantConditions")
 public class UploadSchemaTest {
     // We put spaces in the schema ID to test URL encoding.
     private static final String TEST_SCHEMA_ID_PREFIX = "integration test schema ";
@@ -213,26 +214,22 @@ public class UploadSchemaTest {
         Long mostRecentRev = devUploadSchemasApi.getMostRecentUploadSchema(schemaId).execute().body().getRevision();
         adminApi.deleteUploadSchema(schemaId, mostRecentRev, false).execute();
 
-        // getMostRecentUploadSchemas() uses a Global Secondary Index. Sleep to help mitigate consistency issues.
-        Thread.sleep(1000);
-
         // Get the schemas with and without the logically deleted schema. the version numbers of these schemas
         // should be different as a result of including/excluding logically deleted versions
-        UploadSchemaList schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(true).execute().body();
-        List<Long> firstRevisions = schemasList.getItems().stream().filter(s -> schemaId.equals(s.getSchemaId()))
-                .map(UploadSchema::getRevision).collect(Collectors.toList());
-        
+        Tests.retryHelper(() -> devUploadSchemasApi.getMostRecentUploadSchemas(true).execute().body()
+                        .getItems().stream().filter(s -> schemaId.equals(s.getSchemaId()))
+                        .map(UploadSchema::getRevision).collect(Collectors.toList()),
+                list -> list.contains(mostRecentRev));
+
         // This will return different version numbers, as more recent versions are deleted
-        schemasList = devUploadSchemasApi.getMostRecentUploadSchemas(false).execute().body();
-        List<Long> secondRevisions = schemasList.getItems().stream().filter(s -> schemaId.equals(s.getSchemaId()))
-                .map(UploadSchema::getRevision).collect(Collectors.toList());
-        
-        // Not equal because different revisions are now returned
-        assertTrue(firstRevisions.contains(mostRecentRev));
-        assertFalse(secondRevisions.contains(mostRecentRev));
-        
+        Tests.retryHelper(() -> devUploadSchemasApi.getMostRecentUploadSchemas(false).execute().body()
+                        .getItems().stream().filter(s -> schemaId.equals(s.getSchemaId()))
+                        .map(UploadSchema::getRevision).collect(Collectors.toList()),
+                list -> !list.contains(mostRecentRev));
+
         // Only some are returned if deleted are excluded
-        schemasList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId, false).execute().body();
+        UploadSchemaList schemasList = devUploadSchemasApi.getAllRevisionsOfUploadSchema(schemaId, false)
+                .execute().body();
         assertEquals(2, schemasList.getItems().size());
         
         // All are returned if deleted are included
