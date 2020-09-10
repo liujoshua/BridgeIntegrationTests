@@ -3,6 +3,9 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+
+import com.google.common.collect.ImmutableList;
 
 import org.junit.After;
 import org.junit.Before;
@@ -78,6 +81,7 @@ public class StudyConsentTest {
         Subpopulation subpop = new Subpopulation();
         subpop.setName(Tests.randomIdentifier(StudyConsentTest.class));
         subpop.setRequired(false);
+        subpop.setStudyIdsAssignedOnConsent(ImmutableList.of(STUDY_ID_1));
         GuidVersionHolder holder = subpopulationsApi.createSubpopulation(subpop).execute().body();
         
         subpop.setGuid(holder.getGuid());

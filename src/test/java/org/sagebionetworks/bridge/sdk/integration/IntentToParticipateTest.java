@@ -115,7 +115,7 @@ public class IntentToParticipateTest {
             assertNull(message.getHealthCode());
 
             // This does not throw a consent exception.
-            AuthenticationApi authApi = provider.getClient(AuthenticationApi.class);
+            AuthenticationApi authApi = user.getClient(AuthenticationApi.class);
             UserSessionInfo session = authApi.signInV4(user.getSignIn()).execute().body();
             assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, session.getSharingScope());
             

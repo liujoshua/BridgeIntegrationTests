@@ -22,8 +22,6 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
@@ -31,7 +29,6 @@ import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -51,21 +48,6 @@ public class OrganizationTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();   
-        
-        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        try {
-            studiesApi.getStudy(STUDY_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Study study = new Study().identifier(STUDY_ID_1).name(STUDY_ID_1);
-            studiesApi.createStudy(study).execute();
-        }
     }
 
     @After
@@ -85,6 +67,7 @@ public class OrganizationTest {
     @After
     public void after() throws Exception {
         OrganizationsApi orgApi = admin.getClient(OrganizationsApi.class);
+        
         if (org1 != null && orgId1 != null) {
             orgApi.deleteOrganization(orgId1).execute();    
         }
@@ -177,8 +160,9 @@ public class OrganizationTest {
         orgAdmin.signInAgain();
         assertEquals(orgId1, orgAdmin.getSession().getOrgMembership());
         
-        // create a user
+        // create a user (and remove from Sage Bionetworks, which is the default of the helper).
         user = TestUserHelper.createAndSignInUser(OrganizationTest.class, true, DEVELOPER);
+        admin.getClient(OrganizationsApi.class).removeMember("sage-bionetworks", user.getUserId()).execute();
         
         // the user is unassigned and should appear in the unassigned API
         AccountSummarySearch search = new AccountSummarySearch();
@@ -232,21 +216,22 @@ public class OrganizationTest {
     @Test
     public void testSponsorship() throws Exception {
         OrganizationsApi adminOrgApi = admin.getClient(OrganizationsApi.class);
-        // In essence, let's clean this up before we test. It throws an exception if
-        // not associated.
-        try {
-            adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();    
-        } catch(BadRequestException e) {
-        }
         
-        adminOrgApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+        orgId1 = Tests.randomIdentifier(OrganizationTest.class);
+        Organization newOrg = new Organization();
+        newOrg.setIdentifier(orgId1);
+        newOrg.setName("Test Name");
+        newOrg.setDescription("A description");
+        org1 = adminOrgApi.createOrganization(newOrg).execute().body();
         
-        StudyList list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+        adminOrgApi.addStudySponsorship(orgId1, STUDY_ID_1).execute();
+        
+        StudyList list = adminOrgApi.getSponsoredStudies(orgId1, null, null).execute().body();
         assertTrue(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
         
-        adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+        adminOrgApi.removeStudySponsorship(orgId1, STUDY_ID_1).execute();
 
-        list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+        list = adminOrgApi.getSponsoredStudies(orgId1, null, null).execute().body();
         assertFalse(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
     }
     

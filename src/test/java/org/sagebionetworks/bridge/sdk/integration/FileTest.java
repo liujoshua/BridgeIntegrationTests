@@ -36,7 +36,7 @@ public class FileTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        developer = TestUserHelper.createAndSignInUser(FileTest.class, true, DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(FileTest.class, false, DEVELOPER);
     }
     
     @After

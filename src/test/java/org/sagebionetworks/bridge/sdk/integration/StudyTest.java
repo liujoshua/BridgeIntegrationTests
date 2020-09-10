@@ -6,8 +6,11 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.io.IOException;
@@ -27,9 +30,7 @@ import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
-import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
-import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
@@ -48,27 +49,11 @@ public class StudyTest {
     private List<String> userIdsToDelete = new ArrayList<>();
     private TestUser testResearcher;
     private TestUser admin;
-    private String tempStudyId;
     
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        testResearcher = TestUserHelper.createAndSignInUser(StudyTest.class, false, Role.RESEARCHER);
-        
-        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        try {
-            studiesApi.getStudy(STUDY_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Study study = new Study().identifier(STUDY_ID_1).name(STUDY_ID_1);
-            studiesApi.createStudy(study).execute();
-        }
+        testResearcher = TestUserHelper.createAndSignInUser(StudyTest.class, false, RESEARCHER);
     }
     
     @After
@@ -93,14 +78,8 @@ public class StudyTest {
             } catch(EntityNotFoundException e) {
             }
         }
-        if (tempStudyId != null) {
-            try {
-                adminsApi.deleteStudy(tempStudyId, true).execute();    
-            } catch(EntityNotFoundException e) {
-            }
-        }
     }
-
+    
     @Test
     public void test() throws IOException {
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
@@ -109,9 +88,7 @@ public class StudyTest {
         
         String id = Tests.randomIdentifier(StudyTest.class);
         Study study = new Study().identifier(id).name("Study " + id);
-        
-        VersionHolder holder = studiesApi.createStudy(study).execute().body();
-        study.setVersion(holder.getVersion());
+        study.setVersion(studiesApi.createStudy(study).execute().body().getVersion());
         studyIdsToDelete.add(id);
         
         Study retrieved = studiesApi.getStudy(id).execute().body();
@@ -122,8 +99,8 @@ public class StudyTest {
         DateTime lastModified1 = retrieved.getModifiedOn();
         
         study.name("New test name " + id);
-        VersionHolder holder2 = studiesApi.updateStudy(id, study).execute().body();
-        assertNotEquals(holder.getVersion(), holder2.getVersion());
+        VersionHolder holder = studiesApi.updateStudy(id, study).execute().body();
+        assertNotEquals(study.getVersion(), holder.getVersion());
         
         Study retrieved2 = studiesApi.getStudy(id).execute().body();
         assertEquals("New test name " + id, retrieved2.getName());
@@ -163,37 +140,22 @@ public class StudyTest {
     
     @Test
     public void usersAreTaintedByStudyAssociation() throws Exception {
-        // Create a study for this test.
-        
-        String id1 = Tests.randomIdentifier(StudyTest.class);
-        Study study1 = new Study().identifier(id1).name("Study " + id1);
-
-        String id2 = Tests.randomIdentifier(StudyTest.class);
-        Study study2 = new Study().identifier(id2).name("Study " + id2);
-        
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        studiesApi.createStudy(study1).execute();
-        studyIdsToDelete.add(id1);
-        studiesApi.createStudy(study2).execute();
-        studyIdsToDelete.add(id2);
-        
-        // Create a user associated to this sub-study.
+        // Create a researcher associated to study1 through organization 1
         String researcherEmail = IntegTestUtils.makeEmail(StudyTest.class);
-        SignUp researcherSignUp = new SignUp().email(researcherEmail).password("P@ssword`1").appId(TEST_APP_ID);
-        researcherSignUp.roles(ImmutableList.of(Role.RESEARCHER));
-        researcherSignUp.studyIds(ImmutableList.of(id1));
+        SignUp researcherSignUp = new SignUp().email(researcherEmail).password(PASSWORD).appId(TEST_APP_ID);
+        researcherSignUp.roles(ImmutableList.of(RESEARCHER));
 
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         String researcherId = adminApi.createUser(researcherSignUp).execute().body().getId();
+        adminApi.addMember(ORG_ID_1, researcherId).execute();
         userIdsToDelete.add(researcherId);
         
         ParticipantsApi participantApi = testResearcher.getClient(ParticipantsApi.class);
         StudyParticipant researcher = participantApi.getParticipantById(researcherId, false).execute().body();
-        assertEquals(id1, researcher.getStudyIds().get(0));
         
         // Cannot associate this user to a non-existent sub-study
         try {
-            researcher.setStudyIds(ImmutableList.of(id1, "bad-id"));
+            researcher.setStudyIds(ImmutableList.of(STUDY_ID_1, "bad-id"));
             participantApi.updateParticipant(researcherId, researcher).execute().body();
             fail("Should have thrown exception");
         } catch(InvalidEntityException e) {
@@ -202,33 +164,26 @@ public class StudyTest {
         
         // Sign in this researcher, verify all the rules.
         ClientManager manager = new ClientManager.Builder()
-                .withSignIn(new SignIn().email(researcherEmail).password("P@ssword`1").appId(TEST_APP_ID))
+                .withSignIn(new SignIn().email(researcherEmail).password(PASSWORD).appId(TEST_APP_ID))
                 .build();
         ParticipantsApi participantsApi = manager.getClient(ParticipantsApi.class);
 
         String email2 = IntegTestUtils.makeEmail(StudyTest.class);
-        SignUp signUp2 = new SignUp().email(email2).password("P@ssword`1").appId(TEST_APP_ID);
+        SignUp signUp2 = new SignUp().email(email2).password(PASSWORD).appId(TEST_APP_ID);
         
         // Cannot sign this user up because the studies include one the researcher does not possess.
         try {
-            signUp2.studyIds(ImmutableList.of(id1, id2));
-            participantsApi.createParticipant(signUp2).execute().body();
+            // testResearcher
+            signUp2.studyIds(ImmutableList.of(STUDY_ID_1, STUDY_ID_2));
+            String id = participantsApi.createParticipant(signUp2).execute().body().getIdentifier();
+            userIdsToDelete.add(id);
             fail("Should have thrown exception");
         } catch(BadRequestException e) {
             assertTrue(e.getMessage().contains("is not a study of the caller"));
         }
         
-        // Assigning no studies also does not work
-        try {
-            signUp2.studyIds(ImmutableList.of());
-            participantsApi.createParticipant(signUp2).execute().body();
-            fail("Should have thrown exception");
-        } catch(BadRequestException e) {
-            assertTrue(e.getMessage().contains("must be assigned to one or more of these studies"));
-        }
-        
         // User can be created if it has at least one study from the researcher creating it
-        signUp2.studyIds(ImmutableList.of(id1));
+        signUp2.studyIds(ImmutableList.of(STUDY_ID_1));
         IdentifierHolder keys = participantsApi.createParticipant(signUp2).execute().body();
         userIdsToDelete.add(keys.getIdentifier());
     }
@@ -237,30 +192,31 @@ public class StudyTest {
     public void testSponsorship() throws Exception {
         StudiesApi adminStudiesApi = admin.getClient(StudiesApi.class);
         
-        tempStudyId = Tests.randomIdentifier(StudyTest.class);
-        Study tempStudy = new Study().identifier(tempStudyId).name(tempStudyId);
-        adminStudiesApi.createStudy(tempStudy).execute();
+        String studyId = Tests.randomIdentifier(StudyTest.class);
+        Study study = new Study().identifier(studyId).name(studyId);
+        adminStudiesApi.createStudy(study).execute();
+        studyIdsToDelete.add(studyId);
         
-        adminStudiesApi.addStudySponsor(tempStudyId, ORG_ID_1).execute();
+        adminStudiesApi.addStudySponsor(studyId, ORG_ID_1).execute();
         
-        OrganizationList list = adminStudiesApi.getSponsors(tempStudyId, null, null).execute().body();
+        OrganizationList list = adminStudiesApi.getSponsors(studyId, null, null).execute().body();
         assertTrue(list.getItems().stream().anyMatch((org) -> org.getIdentifier().equals(ORG_ID_1)));
 
         // The organization should see this as a sponsored study
         StudyList studyList = admin.getClient(OrganizationsApi.class).getSponsoredStudies(ORG_ID_1, null, null).execute().body();
-        assertTrue(studyList.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(tempStudyId)));
+        assertTrue(studyList.getItems().stream().anyMatch((s) -> s.getIdentifier().equals(studyId)));
 
-        adminStudiesApi.deleteStudy(tempStudyId, false).execute();
+        adminStudiesApi.deleteStudy(studyId, false).execute();
         
         // Now if we ask, we should not see this as a sponsored study
         studyList = admin.getClient(OrganizationsApi.class).getSponsoredStudies(ORG_ID_1, null, null).execute().body();
-        assertFalse(studyList.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+        assertFalse(studyList.getItems().stream().anyMatch((s) -> s.getIdentifier().equals(studyId)));
         
-        adminStudiesApi.removeStudySponsor(tempStudyId, ORG_ID_1).execute();
+        adminStudiesApi.removeStudySponsor(studyId, ORG_ID_1).execute();
 
-        list = adminStudiesApi.getSponsors(tempStudyId, null, null).execute().body();
-        assertFalse(list.getItems().stream().anyMatch((org) -> org.getIdentifier().equals(ORG_ID_1)));
+        list = adminStudiesApi.getSponsors(studyId, null, null).execute().body();
+        assertFalse(list.getItems().stream().anyMatch((org) -> org.getIdentifier().equals(studyId)));
             
-        adminStudiesApi.deleteStudy(tempStudyId, true).execute();
+        adminStudiesApi.deleteStudy(studyId, true).execute();
     }    
 }

@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
 
@@ -20,11 +22,9 @@ import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
-import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.RequestParams;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -59,39 +59,23 @@ public class AccountSummarySearchTest {
 
         TestUser admin = TestUserHelper.getSignedInAdmin();
         OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
-        try {
-            orgsApi.getOrganization(ORG_ID_2).execute();
-        } catch(EntityNotFoundException e) {
-            Organization org = new Organization().identifier(ORG_ID_2).name(ORG_ID_2);
-            orgsApi.createOrganization(org).execute();
-        }
         
-        testUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
-                .withSignUp(new SignUp().email(emailPrefix + "test@sagebase.org")
-                    .languages(Lists.newArrayList("es"))    
-                    .dataGroups(TEST_USER_GROUPS)).createUser();
-        taggedUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
-                .withSignUp(new SignUp().email(emailPrefix + "tagged@sagebase.org")
-                        .languages(Lists.newArrayList("es"))
-                        .roles(ImmutableList.of(Role.DEVELOPER))
-                        .dataGroups(TAGGED_USER_GROUPS)).createUser();
-        frenchUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
-                .withSignUp(new SignUp().email(emailPrefix + "french@sagebase.org")
-                        .languages(Lists.newArrayList("fr"))
-                        .attributes(ImmutableMap.of("can_be_recontacted", "true"))
-                        .dataGroups(FRENCH_USER_GROUPS)).createUser();
+        testUser = new TestUserHelper.Builder(AccountSummarySearchTest.class).withConsentUser(true)
+                .withSignUp(new SignUp().email(emailPrefix + "test@sagebase.org").languages(Lists.newArrayList("es"))
+                .dataGroups(TEST_USER_GROUPS)).createUser();
+        taggedUser = new TestUserHelper.Builder(AccountSummarySearchTest.class).withConsentUser(true)
+                .withSignUp(new SignUp().email(emailPrefix + "tagged@sagebase.org").languages(Lists.newArrayList("es"))
+                .roles(ImmutableList.of(Role.DEVELOPER)).dataGroups(TAGGED_USER_GROUPS)).createUser();
+        frenchUser = new TestUserHelper.Builder(AccountSummarySearchTest.class).withConsentUser(true)
+                .withSignUp(new SignUp().email(emailPrefix + "french@sagebase.org").languages(Lists.newArrayList("fr"))
+                .attributes(ImmutableMap.of("can_be_recontacted", "true")).dataGroups(FRENCH_USER_GROUPS))
+                .createUser();
         
         // Assign frenchUser to org1.
         orgsApi.addMember(ORG_ID_1, frenchUser.getUserId()).execute();
 
-        researcher = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.RESEARCHER);
-        worker = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.WORKER);
+        researcher = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, RESEARCHER);
+        worker = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, WORKER);
     }
     
     @AfterClass

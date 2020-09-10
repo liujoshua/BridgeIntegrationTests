@@ -66,6 +66,8 @@ public class Tests {
     public static final String STUDY_ID_2 = "study2";
     public static final String ORG_ID_1 = "org1";
     public static final String ORG_ID_2 = "org2";
+    public static final String SAGE_ID = "sage-bionetworks";
+    public static final String SAGE_NAME = "Sage Bionetworks";
     public static final Phone PHONE = new Phone().number("9712486796").regionCode("US");
     public static final String NATIONAL_PHONE_FORMAT = "(971) 248-6796";
     public static final String SYNAPSE_USER_ID = "88888";

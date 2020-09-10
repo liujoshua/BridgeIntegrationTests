@@ -5,7 +5,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 
 import com.google.common.collect.ImmutableList;
@@ -18,7 +17,7 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
+import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -95,9 +94,9 @@ public class UserParticipantTest {
     @Test
     public void canAddButNotChangeExternalIdentifier() throws Exception {
         ExternalIdentifier externalId1 = Tests.createExternalId(UserParticipantTest.class, developer, STUDY_ID_1);
-        ExternalIdentifier externalId2 = Tests.createExternalId(UserParticipantTest.class, developer, STUDY_ID_2);
+        ExternalIdentifier externalId2 = Tests.createExternalId(UserParticipantTest.class, developer, STUDY_ID_1);
         
-        TestUser user = TestUserHelper.createAndSignInUser(UserParticipantTest.class, true);
+        TestUser user = TestUserHelper.createAndSignInUser(UserParticipantTest.class, false);
         try {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             StudyParticipant participant = usersApi.getUsersParticipantRecord(false).execute().body();
@@ -112,9 +111,9 @@ public class UserParticipantTest {
             
             try {
                 participant.setExternalId(externalId2.getIdentifier());
-                usersApi.updateUsersParticipantRecord(participant).execute();
+                session = usersApi.updateUsersParticipantRecord(participant).execute().body();
                 fail("Exception should have been thrown");
-            } catch(BadRequestException e) {
+            } catch(ConstraintViolationException e) {
             }
         } finally {
             Tests.deleteExternalId(externalId1);
