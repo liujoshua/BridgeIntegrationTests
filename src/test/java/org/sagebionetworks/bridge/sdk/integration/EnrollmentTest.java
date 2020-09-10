@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
@@ -97,17 +98,13 @@ public class EnrollmentTest {
             list = studiesApi.getEnrollees(STUDY_ID_1, null, null, null).execute().body();
             assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
             
-            enrollment = new Enrollment();
-            enrollment.setWithdrawnOn(timestamp);
-            enrollment.setWithdrawalNote("Testing enrollment and withdrawal.");
-            
             retValue = studiesApi.withdrawParticipant(
-                    STUDY_ID_1, user.getUserId(), enrollment).execute().body();
+                    STUDY_ID_1, user.getUserId(), "Testing enrollment and withdrawal.").execute().body();
             assertEquals(user.getUserId(), retValue.getUserId());
             assertTrue(retValue.isConsentRequired());
             assertEquals(timestamp.getMillis(), retValue.getEnrolledOn().getMillis());
             assertEquals(admin.getUserId(), retValue.getEnrolledBy());
-            assertEquals(timestamp.getMillis(), retValue.getWithdrawnOn().getMillis());
+            assertNotNull(retValue.getWithdrawnOn());
             assertEquals(admin.getUserId(), retValue.getWithdrawnBy());
             assertEquals("Testing enrollment and withdrawal.", retValue.getWithdrawalNote());
             
