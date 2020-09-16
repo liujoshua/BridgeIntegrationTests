@@ -39,17 +39,12 @@ public class AssessmentIdentifierChangeTest {
         id = randomIdentifier(AssessmentTest.class);
         markerTag = "test:" + randomIdentifier(AssessmentTest.class);
 
+        developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER).createAndSignInUser();
+
         admin = TestUserHelper.getSignedInAdmin();
         OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-        
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute();
-        } catch (EntityNotFoundException ex) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
-        developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER).createAndSignInUser();
         orgsApi.addMember(ORG_ID_1, developer.getUserId()).execute();
+        
         assessmentApi = developer.getClient(AssessmentsApi.class);
     }
     

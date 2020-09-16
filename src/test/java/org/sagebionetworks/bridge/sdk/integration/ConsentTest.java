@@ -12,6 +12,7 @@ import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_R
 import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.SPONSORS_AND_PARTNERS;
 import static org.sagebionetworks.bridge.rest.model.SmsType.TRANSACTIONAL;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
@@ -33,7 +34,6 @@ import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityAlreadyExistsException;
@@ -47,7 +47,6 @@ import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.rest.model.UserConsentHistory;
@@ -165,6 +164,7 @@ public class ConsentTest {
             Subpopulation subpop = new Subpopulation();
             subpop.setName("Optional additional consent");
             subpop.setRequired(false);
+            subpop.addStudyIdsAssignedOnConsentItem(STUDY_ID_1);
             keys = subpopsApi.createSubpopulation(subpop).execute().body();
 
             ConsentSignature signature = new ConsentSignature();
@@ -546,19 +546,17 @@ public class ConsentTest {
             
             ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
 
-            // verify the participant contains all the correct information
+            // verify the participant is now not enrolled in any study
             StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
-            assertEquals(studyIds, participant.getStudyIds());
+            assertTrue(participant.getStudyIds().isEmpty());
             assertTrue(participant.getDataGroups().isEmpty());
         });
     }
     
     private void withdrawalTest(WithdrawMethod withdrawMethod) throws Exception {
         TestUser user = null;
-        Study study = null;
         Subpopulation subpop = null;
         TestUser devUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, DEVELOPER);
-        StudiesApi studiesApi = adminUser.getClient(StudiesApi.class);
         SubpopulationsApi subpopApi = devUser.getClient(SubpopulationsApi.class);
         try {
             AppsApi appsApi = devUser.getClient(AppsApi.class);
@@ -566,14 +564,9 @@ public class ConsentTest {
 
             String dataGroup = Iterables.getFirst(app.getDataGroups(), null);
             List<String> dataGroupList = ImmutableList.of(dataGroup);
+            List<String> studyIds = ImmutableList.of(STUDY_ID_1);
 
-            // create a study, if needed
-            String studyId = Tests.randomIdentifier(ConsentTest.class);
-            study = new Study().identifier(studyId).name("Study " + studyId);
-            studiesApi.createStudy(study).execute().body();
-            List<String> studyIds = ImmutableList.of(study.getIdentifier());
-
-            // create an (optional) subpopulation that associates both to a user
+            // create an (optional) subpopulation that associates studies to a user
             subpop = new Subpopulation().name("Test Subpopulation").required(false);
             subpop.setStudyIdsAssignedOnConsent(studyIds);
             subpop.setDataGroupsAssignedWhileConsented(dataGroupList);
@@ -602,9 +595,6 @@ public class ConsentTest {
             // delete the subpopulation
             if (subpop != null && subpop.getGuid() != null) {
                 adminUser.getClient(SubpopulationsApi.class).deleteSubpopulation(subpop.getGuid(), true).execute();
-            }
-            if (study != null) {
-                adminUser.getClient(StudiesApi.class).deleteStudy(study.getIdentifier(), true).execute();
             }
             devUser.signOutAndDeleteUser();
         }

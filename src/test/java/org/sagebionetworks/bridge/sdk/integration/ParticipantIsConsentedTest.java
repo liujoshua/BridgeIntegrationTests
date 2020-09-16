@@ -3,6 +3,9 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import org.junit.After;
@@ -12,6 +15,7 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -42,6 +46,7 @@ public class ParticipantIsConsentedTest {
 
         researcher = TestUserHelper.createAndSignInUser(ParticipantIsConsentedTest.class, false,
                 Role.RESEARCHER);
+        
         participantsApi = researcher.getClient(ParticipantsApi.class);
 
         // Set up subpops:
@@ -53,7 +58,8 @@ public class ParticipantIsConsentedTest {
         subpopApi.updateSubpopulation(TEST_APP_ID, defaultSubpop).execute();
 
         Criteria criteria2 = new Criteria().addAllOfGroupsItem(DATA_GROUP);
-        Subpopulation subpop2 = new Subpopulation().name("subpop2").criteria(criteria2);
+        Subpopulation subpop2 = new Subpopulation().required(false).name("subpop2").criteria(criteria2)
+                .addStudyIdsAssignedOnConsentItem(STUDY_ID_1);
         subpopGuid2 = subpopApi.createSubpopulation(subpop2).execute().body().getGuid();
     }
 
@@ -104,21 +110,46 @@ public class ParticipantIsConsentedTest {
     @Test
     public void defaultRequiredNotSigned() throws Exception {
         user = TestUserHelper.createAndSignInUser(ParticipantIsConsentedTest.class, false);
-        StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), true).execute()
-                .body();
+        
+        // A researcher cannot see this account because it hasn't consented into any study the 
+        // researcher has access to.
+        try {
+            participantsApi.getParticipantById(user.getUserId(), true).execute();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+            assertTrue(e.getMessage().contains("Account not found."));
+        }
+        
+        // However an admin can see the account, which is not consented
+        StudyParticipant participant = admin.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), true).execute().body();
         assertFalse(participant.isConsented());
     }
 
     @Test
     public void optionalSubpopNotSigned() throws Exception {
-        SignUp signUp = new SignUp().appId(TEST_APP_ID)
-                .email(IntegTestUtils.makeEmail(ParticipantIsConsentedTest.class)).password(Tests.PASSWORD);
+        // Create a user with a data group such that only the optional consent matches;
+        // this person is consented. They should be visible to the researcher (but they
+        // are not).
+        String email = IntegTestUtils.makeEmail(ParticipantIsConsentedTest.class);
+        SignUp signUp = new SignUp().appId(TEST_APP_ID).email(email).password(PASSWORD);
         signUp.addDataGroupsItem(DATA_GROUP);
-        user = new TestUserHelper.Builder(ParticipantIsConsentedTest.class).withConsentUser(false).withSignUp(signUp)
-                .createAndSignInUser();
+        user = new TestUserHelper.Builder(ParticipantIsConsentedTest.class).withConsentUser(false)
+                .withSignUp(signUp).createAndSignInUser();
 
-        StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), true).execute()
-                .body();
+        // This still fails...we no longer support "consent by default," ie without some
+        // positive enrollment in a study. During migration, we will fix this by finding
+        // implicitly consented accounts and adding enrollment records for them.
+        try {
+            participantsApi.getParticipantById(user.getUserId(), true).execute();
+            fail("Should have thrown exception");
+        } catch(EntityNotFoundException e) {
+            assertTrue(e.getMessage().contains("Account not found."));
+        }
+        
+        // Consented, although nothing has been signed, because only consent is optional.
+        StudyParticipant participant = admin.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), true).execute().body();
         assertTrue(participant.isConsented());
     }
 }

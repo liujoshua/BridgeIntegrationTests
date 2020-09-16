@@ -5,6 +5,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.List;
@@ -20,6 +25,7 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.App;
@@ -30,7 +36,6 @@ import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -59,9 +64,6 @@ public class ExternalIdsV4Test {
 
     @Test
     public void test() throws Exception {
-        final String idA = Tests.randomIdentifier(ExternalIdsV4Test.class);
-        final String idB = Tests.randomIdentifier(ExternalIdsV4Test.class);
-
         final String extIdA = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
         final String extIdB1 = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
         final String extIdB2 = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
@@ -74,12 +76,6 @@ public class ExternalIdsV4Test {
             App app = superadminClient.getApp(TEST_APP_ID).execute().body();
             superadminClient.updateApp(app.getIdentifier(), app).execute();
 
-            // Create some studies
-            Study studyA = new Study().identifier(idA).name("Study " + idA);
-            Study studyB = new Study().identifier(idB).name("Study " + idB);
-            adminClient.createStudy(studyA).execute();
-            adminClient.createStudy(studyB).execute();
-
             // Creating an external ID without a study now fails
             try {
                 researcherApi.createExternalId(new ExternalIdentifier().identifier(extIdA)).execute();
@@ -88,9 +84,9 @@ public class ExternalIdsV4Test {
             }
 
             // Create a couple of external IDs related to different studies.
-            ExternalIdentifier extId1 = new ExternalIdentifier().identifier(extIdA).studyId(idA);
-            ExternalIdentifier extId2 = new ExternalIdentifier().identifier(extIdB1).studyId(idB);
-            ExternalIdentifier extId3 = new ExternalIdentifier().identifier(extIdB2).studyId(idB);
+            ExternalIdentifier extId1 = new ExternalIdentifier().identifier(extIdA).studyId(STUDY_ID_1);
+            ExternalIdentifier extId2 = new ExternalIdentifier().identifier(extIdB1).studyId(STUDY_ID_2);
+            ExternalIdentifier extId3 = new ExternalIdentifier().identifier(extIdB2).studyId(STUDY_ID_2);
             researcherApi.createExternalId(extId1).execute();
             researcherApi.createExternalId(extId2).execute();
             researcherApi.createExternalId(extId3).execute();
@@ -125,9 +121,9 @@ public class ExternalIdsV4Test {
             StudyParticipant participant = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();
             userId = participant.getId();
             assertEquals(1, participant.getExternalIds().size());
-            assertEquals(extIdA, participant.getExternalIds().get(idA));
+            assertEquals(extIdA, participant.getExternalIds().get(STUDY_ID_1));
             assertEquals(1, participant.getStudyIds().size());
-            assertEquals(idA, participant.getStudyIds().get(0));
+            assertEquals(STUDY_ID_1, participant.getStudyIds().get(0));
             assertTrue(participant.getExternalIds().values().contains(extIdA));
 
             // Cannot create another user with this external ID. This should do nothing and fail quietly.
@@ -181,19 +177,14 @@ public class ExternalIdsV4Test {
             adminClient.deleteExternalId(extIdA).execute();
             adminClient.deleteExternalId(extIdB1).execute();
             adminClient.deleteExternalId(extIdB2).execute();
-            adminClient.deleteStudy(idA, true).execute();
-            adminClient.deleteStudy(idB, true).execute();
         }
     }
 
     @Test
     public void testPaging() throws Exception {
-        final String idA = Tests.randomIdentifier(ExternalIdsV4Test.class);
-        final String idB = Tests.randomIdentifier(ExternalIdsV4Test.class);
-        
         List<ExternalIdentifier> ids = Lists.newArrayListWithCapacity(10);
         for (int i=0; i < 10; i++) {
-            String studyId = (i % 2 == 0) ? idA : idB;
+            String studyId = (i % 2 == 0) ? STUDY_ID_1 : STUDY_ID_2;
             String identifier = (i > 5) ? ((prefix+"-foo-"+i)) : (prefix+"-"+i);
             ExternalIdentifier id = new ExternalIdentifier().identifier(identifier).studyId(studyId);
             ids.add(id);
@@ -203,12 +194,6 @@ public class ExternalIdsV4Test {
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
         TestUser user = null;
         try {
-            // Create study
-            Study studyA = new Study().identifier(idA).name("Study " + idA);
-            Study studyB = new Study().identifier(idB).name("Study " + idB);
-            adminClient.createStudy(studyA).execute();
-            adminClient.createStudy(studyB).execute();
-            
             // Create enough external IDs to page
             for (int i=0; i < 10; i++) {
                 researcherApi.createExternalId(ids.get(i)).execute();    
@@ -252,12 +237,12 @@ public class ExternalIdsV4Test {
                 assertEquals(ids.get(i).getIdentifier(), list.getItems().get(i).getIdentifier());
             }
             
-            // Create a researcher in app B, and run this stuff again, it should be filtered
+            // Create a researcher in org 1 that sponsors only study 1, and retrieving external IDs
+            // should be filtered
             SignUp signUp = new SignUp().appId(TEST_APP_ID);
-            signUp.setExternalId(ids.get(0).getIdentifier());
-            user = new TestUserHelper.Builder(ExternalIdsV4Test.class)
-                    .withRoles(Role.RESEARCHER, Role.DEVELOPER)
+            user = new TestUserHelper.Builder(ExternalIdsV4Test.class).withRoles(RESEARCHER, DEVELOPER)
                     .withConsentUser(true).withSignUp(signUp).createAndSignInUser();
+            admin.getClient(OrganizationsApi.class).addMember(ORG_ID_1, user.getUserId()).execute();
             
             ForResearchersApi scopedResearcherApi = user.getClient(ForResearchersApi.class);
             ExternalIdentifierList scopedList = scopedResearcherApi.getExternalIds(null, null, null, null)
@@ -279,8 +264,6 @@ public class ExternalIdsV4Test {
             for (int i=0; i < 10; i++) {
                 adminClient.deleteExternalId(ids.get(i).getIdentifier()).execute();    
             }
-            adminClient.deleteStudy(idA, true).execute();
-            adminClient.deleteStudy(idB, true).execute();
         }
     }
 

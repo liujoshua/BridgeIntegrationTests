@@ -10,6 +10,7 @@ import static org.sagebionetworks.bridge.rest.model.Role.ADMIN;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SAGE_ID;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 
 import java.util.stream.Collectors;
@@ -51,21 +52,6 @@ public class OrganizationTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();   
-        
-        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        try {
-            studiesApi.getStudy(STUDY_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Study study = new Study().identifier(STUDY_ID_1).name(STUDY_ID_1);
-            studiesApi.createStudy(study).execute();
-        }
     }
 
     @After
@@ -177,8 +163,10 @@ public class OrganizationTest {
         orgAdmin.signInAgain();
         assertEquals(orgId1, orgAdmin.getSession().getOrgMembership());
         
-        // create a user
+        // create a user. TestUserHelper puts admins in the Sage Bionetworks organization, so for this
+        // test, remove the user first.
         user = TestUserHelper.createAndSignInUser(OrganizationTest.class, true, DEVELOPER);
+        admin.getClient(OrganizationsApi.class).removeMember(SAGE_ID, user.getUserId()).execute();
         
         // the user is unassigned and should appear in the unassigned API
         AccountSummarySearch search = new AccountSummarySearch();

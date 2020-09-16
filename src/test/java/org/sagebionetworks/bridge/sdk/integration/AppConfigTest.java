@@ -95,13 +95,6 @@ public class AppConfigTest {
         developer = TestUserHelper.createAndSignInUser(AppConfigTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(AppConfigTest.class, true);
         
-        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute();
-        } catch (EntityNotFoundException ex) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
         admin.getClient(OrganizationsApi.class).addMember(ORG_ID_1, developer.getUserId()).execute();
 
         adminApi = admin.getClient(ForAdminsApi.class);
