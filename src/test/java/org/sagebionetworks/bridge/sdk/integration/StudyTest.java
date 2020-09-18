@@ -10,7 +10,6 @@ import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SAGE_ID;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.io.IOException;
@@ -21,7 +20,6 @@ import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
@@ -30,10 +28,8 @@ import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
-import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
 import org.sagebionetworks.bridge.rest.model.Role;
-import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
@@ -187,8 +183,8 @@ public class StudyTest {
             signUp2.studyIds(ImmutableList.of(id1, id2));
             participantApi.createParticipant(signUp2).execute().body();
             fail("Should have thrown exception");
-        } catch(InvalidEntityException e) {
-            assertTrue(e.getMessage().contains("are not accessible to the caller"));
+        } catch(BadRequestException e) {
+            assertTrue(e.getMessage().contains("is not a study of the caller"));
         }
         
         // User can be created if it has at least one study from the researcher creating it

@@ -46,7 +46,6 @@ import org.sagebionetworks.bridge.rest.model.FileRevision;
 import org.sagebionetworks.bridge.rest.model.FileRevisionList;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
-import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
