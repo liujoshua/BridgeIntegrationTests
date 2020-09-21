@@ -10,6 +10,7 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.AccountStatus.DISABLED;
 import static org.sagebionetworks.bridge.rest.model.AccountStatus.ENABLED;
 import static org.sagebionetworks.bridge.rest.model.AccountStatus.UNVERIFIED;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
@@ -93,10 +94,8 @@ public class ParticipantsTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        developer = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(Role.DEVELOPER).withConsentUser(true)
-                .createAndSignInUser();
-        researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(RESEARCHER).withConsentUser(true)
-                .createAndSignInUser();
+        developer = TestUserHelper.createAndSignInUser(ParticipantsTest.class, false, DEVELOPER);
+        researcher = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, RESEARCHER);
         
         externalId = Tests.createExternalId(ParticipantsTest.class, developer, STUDY_ID_1);
         
