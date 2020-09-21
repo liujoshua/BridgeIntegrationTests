@@ -17,6 +17,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 public class ParticipantFileTest {
 
@@ -94,6 +95,7 @@ public class ParticipantFileTest {
         assertNotNull(results);
         resultList = results.getItems();
         assertEquals(resultList.size(), 1);
+        assertNull(results.getNextPageOffsetKey());
 
         Message deleteMessage = userApi.deleteParticipantFile("file_id").execute().body();
         assertNotNull(deleteMessage);
