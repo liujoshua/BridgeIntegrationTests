@@ -10,8 +10,8 @@ import static org.sagebionetworks.bridge.rest.model.Role.ADMIN;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SAGE_ID;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 
 import java.util.stream.Collectors;
 

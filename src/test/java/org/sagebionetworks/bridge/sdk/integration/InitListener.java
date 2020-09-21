@@ -2,10 +2,10 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SAGE_ID;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SAGE_NAME;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_NAME;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import org.junit.runner.Description;
