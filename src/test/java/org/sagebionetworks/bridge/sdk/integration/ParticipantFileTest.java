@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import okhttp3.ResponseBody;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -10,16 +11,20 @@ import org.sagebionetworks.bridge.rest.model.ParticipantFileList;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
+import java.util.Scanner;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 public class ParticipantFileTest {
+
+    static final String TEST_UPLOAD_STRING = "This text uploaded as an object via presigned URL.";
 
     TestUser participant;
 
@@ -40,7 +45,7 @@ public class ParticipantFileTest {
             for (ParticipantFile file : remainder) {
                 userApi.deleteParticipantFile(file.getFileId()).execute();
             }
-            userApi.getParticipantFiles(null, 10).execute().body().getItems();
+            remainder = userApi.getParticipantFiles(null, 10).execute().body().getItems();
         }
         participant.signOutAndDeleteUser();
     }
@@ -65,7 +70,7 @@ public class ParticipantFileTest {
         connection.setRequestMethod("PUT");
         connection.setRequestProperty("Content-Type", "text/plain");
         OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
-        out.write("This text uploaded as an object via presigned URL.");
+        out.write(TEST_UPLOAD_STRING);
         out.close();
         assertEquals(connection.getResponseCode(), 200);
         connection.disconnect();
@@ -84,6 +89,17 @@ public class ParticipantFileTest {
             file = new ParticipantFile();
             file.setMimeType("text/plain");
             userApi.createParticipantFile(i + "file", file).execute();
+        }
+
+
+        ResponseBody body = userApi.getParticipantFile("file_id").execute().body();
+        assertNotNull(body);
+        assertNotNull(body.contentType());
+        assertEquals(body.contentType().toString(), "text/plain");
+        assertEquals(body.contentLength(), TEST_UPLOAD_STRING.length());
+        try (InputStream content = body.byteStream()) {
+            Scanner sc = new Scanner(content);
+            assertEquals(sc.nextLine(), "This text uploaded as an object via presigned URL.");
         }
 
         results = userApi.getParticipantFiles(null, 5).execute().body();
