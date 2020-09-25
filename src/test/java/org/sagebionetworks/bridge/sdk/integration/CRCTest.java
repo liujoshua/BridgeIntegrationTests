@@ -5,14 +5,12 @@ import static org.hl7.fhir.dstu3.model.Appointment.AppointmentStatus.BOOKED;
 import static org.hl7.fhir.dstu3.model.Appointment.AppointmentStatus.CANCELLED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SAGE_ID;
 
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonElement;
 
 import org.apache.http.HttpResponse;
@@ -40,11 +38,8 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
-import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantReportsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.App;
@@ -54,7 +49,6 @@ import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ReportData;
 import org.sagebionetworks.bridge.rest.model.ReportDataList;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -87,15 +81,6 @@ public class CRCTest {
         adminUser = TestUserHelper.getSignedInAdmin();
         AppsApi appsApi = adminUser.getClient(AppsApi.class);
         
-        StudiesApi studiesApi = adminUser.getClient(StudiesApi.class);
-        try {
-            studiesApi.getStudy("columbia").execute();
-        } catch(EntityNotFoundException e) {
-            Study study = new Study().identifier("columbia").name("columbia");
-            studiesApi.createStudy(study).execute();
-            adminUser.getClient(OrganizationsApi.class).addStudySponsorship(SAGE_ID, "columbia").execute();
-        }
-        
         AccountSummarySearch search = new AccountSummarySearch()
                 .emailFilter(TEST_EMAIL);
         AccountSummaryList list = adminUser.getClient(ParticipantsApi.class).searchAccountSummaries(search).execute().body();
@@ -119,7 +104,6 @@ public class CRCTest {
         user = new TestUserHelper.Builder(CRCTest.class)
                 .withConsentUser(true)
                 .withSetPassword(false)
-                .withStudyIds(ImmutableSet.of("columbia"))
                 .withSignUp(new SignUp().email(TEST_EMAIL).password(password).addDataGroupsItem("test_user"))
                 .createUser();
         
@@ -131,11 +115,6 @@ public class CRCTest {
     public void afterMethod() throws Exception {
         if (user != null) {
             user.signOutAndDeleteUser();
-        }
-        StudiesApi studiesApi = adminUser.getClient(StudiesApi.class);
-        try {
-            studiesApi.deleteStudy("columbia", true).execute();
-        } catch(EntityNotFoundException e) {
         }
     }
 

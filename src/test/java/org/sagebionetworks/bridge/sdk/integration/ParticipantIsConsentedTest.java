@@ -3,10 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
-
-import com.google.common.collect.ImmutableList;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -56,8 +53,7 @@ public class ParticipantIsConsentedTest {
         subpopApi.updateSubpopulation(TEST_APP_ID, defaultSubpop).execute();
 
         Criteria criteria2 = new Criteria().addAllOfGroupsItem(DATA_GROUP);
-        Subpopulation subpop2 = new Subpopulation().name("subpop2").criteria(criteria2)
-                .studyIdsAssignedOnConsent(ImmutableList.of(STUDY_ID_1));
+        Subpopulation subpop2 = new Subpopulation().name("subpop2").criteria(criteria2);
         subpopGuid2 = subpopApi.createSubpopulation(subpop2).execute().body().getGuid();
     }
 

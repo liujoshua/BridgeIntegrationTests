@@ -5,7 +5,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 
 import java.io.IOException;
 import java.util.List;
@@ -133,6 +132,7 @@ public class SubpopulationTest {
         // Update it
         retrieved.setDescription("Adding a description");
         retrieved.getCriteria().getMinAppVersions().put("Android", 8);
+        retrieved.setStudyIdsAssignedOnConsent(null);
         retrieved.setDataGroupsAssignedWhileConsented(ImmutableList.of());
         keys = subpopulationsApi.updateSubpopulation(retrieved.getGuid(), retrieved).execute().body();
         retrieved.setGuid(keys.getGuid());
@@ -142,6 +142,7 @@ public class SubpopulationTest {
         Subpopulation retrievedAgain = subpopulationsApi.getSubpopulation(subpop1.getGuid()).execute().body();
         assertEquals("Adding a description", retrievedAgain.getDescription());
         assertEquals(new Integer(8), retrievedAgain.getCriteria().getMinAppVersions().get("Android"));
+        assertTrue(retrievedAgain.getStudyIdsAssignedOnConsent().isEmpty());
         assertTrue(retrievedAgain.getDataGroupsAssignedWhileConsented().isEmpty());
         
         // Verify it is available in the list
@@ -203,7 +204,6 @@ public class SubpopulationTest {
             subpop1.setName("Consent Group 1");
             subpop1.setCriteria(criteria1);
             subpop1.setRequired(true);
-            subpop1.setStudyIdsAssignedOnConsent(ImmutableList.of(STUDY_ID_1));
             
             Criteria criteria2 = new Criteria();
             criteria2.setMinAppVersions(ImmutableMap.of("Android", 11));
@@ -211,7 +211,6 @@ public class SubpopulationTest {
             subpop2.setName("Consent Group 2");
             subpop2.setCriteria(criteria2);
             subpop2.setRequired(true);
-            subpop2.setStudyIdsAssignedOnConsent(ImmutableList.of(STUDY_ID_1));
             
             updateSubpopulation(subpopulationsApi, subpop1);
             updateSubpopulation(subpopulationsApi, subpop2);

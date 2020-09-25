@@ -2,7 +2,6 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
@@ -17,8 +16,12 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Enrollment;
-import org.sagebionetworks.bridge.rest.model.EnrollmentList;
+import org.sagebionetworks.bridge.rest.model.EnrollmentDetailList;
+import org.sagebionetworks.bridge.rest.model.Organization;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -38,9 +41,28 @@ public class EnrollmentTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        researcher = TestUserHelper.createAndSignInUser(EnrollmentTest.class, false, RESEARCHER);
-        
         OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
+
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        try {
+            studiesApi.getStudy(STUDY_ID_1).execute();
+        } catch(EntityNotFoundException e) {
+            Study study = new Study().identifier(STUDY_ID_1).name(STUDY_ID_1);
+            studiesApi.createStudy(study).execute();
+        }
+        try {
+            orgsApi.getOrganization(ORG_ID_1).execute().body();
+        } catch(EntityNotFoundException e) {
+            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
+            orgsApi.createOrganization(org).execute();
+        }
+        try {
+            orgsApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();    
+        } catch(ConstraintViolationException e) {
+            // If this isn't the message, this isn't the exception we're expecting.
+            assertEquals("Organization is already a sponsor of this study.", e.getMessage());
+        }
+        researcher = TestUserHelper.createAndSignInUser(EnrollmentTest.class, false, RESEARCHER);
         orgsApi.addMember(ORG_ID_1, researcher.getUserId()).execute();
     }
     
@@ -64,16 +86,16 @@ public class EnrollmentTest {
             assertTrue(retValue.isConsentRequired());
             assertEquals(timestamp.getMillis(), retValue.getEnrolledOn().getMillis());
             assertEquals(admin.getUserId(), retValue.getEnrolledBy());
-            assertNull(retValue.getWithdrawnOn());
-            assertNull(retValue.getWithdrawnBy());
-            assertNull(retValue.getWithdrawalNote());
+            assertNull(enrollment.getWithdrawnOn());
+            assertNull(enrollment.getWithdrawnBy());
+            assertNull(enrollment.getWithdrawalNote());
             
             // Now shows up in paged api
-            EnrollmentList list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            EnrollmentDetailList list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             list = studiesApi.getEnrollees(STUDY_ID_1, null, null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             retValue = studiesApi.withdrawParticipant(
                     STUDY_ID_1, user.getUserId(), "Testing enrollment and withdrawal.").execute().body();
@@ -81,12 +103,12 @@ public class EnrollmentTest {
             assertTrue(retValue.isConsentRequired());
             assertEquals(timestamp.getMillis(), retValue.getEnrolledOn().getMillis());
             assertEquals(admin.getUserId(), retValue.getEnrolledBy());
-            assertNotNull(retValue.getWithdrawnOn());
+            assertTrue(timestamp.isBefore(retValue.getWithdrawnOn()));
             assertEquals(admin.getUserId(), retValue.getWithdrawnBy());
             assertEquals("Testing enrollment and withdrawal.", retValue.getWithdrawalNote());
             
             list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
-            assertFalse(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertFalse(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             // This person is accessible via the external ID.
             StudyParticipant participant = admin.getClient(ParticipantsApi.class)
@@ -95,10 +117,10 @@ public class EnrollmentTest {
             
             // It is still in the paged API, despite being withdrawn.
             list = studiesApi.getEnrollees(STUDY_ID_1, "withdrawn", null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             list = studiesApi.getEnrollees(STUDY_ID_1, "all", null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
         } finally {
             user.signOutAndDeleteUser();
         }

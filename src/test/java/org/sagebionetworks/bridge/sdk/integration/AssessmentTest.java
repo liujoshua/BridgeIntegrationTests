@@ -39,6 +39,7 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentList;
+import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.PropertyInfo;
 import org.sagebionetworks.bridge.rest.model.RequestParams;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -74,6 +75,19 @@ public class AssessmentTest {
 
         admin = TestUserHelper.getSignedInAdmin();
         OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
+        
+        try {
+            orgsApi.getOrganization(ORG_ID_1).execute();
+        } catch (EntityNotFoundException ex) {
+            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
+            orgsApi.createOrganization(org).execute();
+        }
+        try {
+            orgsApi.getOrganization(ORG_ID_2).execute().body();
+        } catch (EntityNotFoundException ex) {
+            Organization org = new Organization().identifier(ORG_ID_2).name(ORG_ID_2);
+            orgsApi.createOrganization(org).execute();
+        }
         
         developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER).createAndSignInUser();
         orgsApi.addMember(ORG_ID_1, developer.getUserId()).execute();
