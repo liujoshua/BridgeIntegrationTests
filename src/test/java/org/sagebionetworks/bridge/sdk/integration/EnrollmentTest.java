@@ -151,7 +151,7 @@ public class EnrollmentTest {
             extIdsApi.createExternalId(extId2).execute();
             
             StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
-            List<EnrollmentMigration> migrations = internalApi.getEnrollmentsByHealthCode(participant.getHealthCode()).execute().body();
+            List<EnrollmentMigration> migrations = internalApi.getEnrollmentMigrations(participant.getHealthCode()).execute().body();
             
             assertEquals(migrations.size(), 1);
             assertEquals(migrations.get(0).getStudyId(), STUDY_ID_1);
@@ -166,14 +166,14 @@ public class EnrollmentTest {
             
             migrations.add(migration);
             
-            internalApi.updateEnrollmentsByHealthCode(participant.getHealthCode(), migrations).execute().body();
+            internalApi.updateEnrollmentMigrations(participant.getHealthCode(), migrations).execute().body();
             
             participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
             
             assertEquals(participant.getExternalIds().get(STUDY_ID_2), extId2.getIdentifier());
             assertEquals(participant.getStudyIds(), ImmutableList.of(STUDY_ID_1, STUDY_ID_2));
             
-            migrations = internalApi.getEnrollmentsByHealthCode(participant.getHealthCode()).execute().body();
+            migrations = internalApi.getEnrollmentMigrations(participant.getHealthCode()).execute().body();
             assertEquals(migrations.size(), 2);
             assertEquals(migrations.get(0).getStudyId(), STUDY_ID_1);
             
