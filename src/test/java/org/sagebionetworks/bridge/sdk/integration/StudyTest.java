@@ -254,7 +254,7 @@ public class StudyTest {
         
         // Now if we ask, we should not see this as a sponsored study
         studyList = admin.getClient(OrganizationsApi.class).getSponsoredStudies(ORG_ID_1, null, null).execute().body();
-        assertFalse(studyList.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(tempStudyId)));
+        assertFalse(studyList.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
         
         adminStudiesApi.removeStudySponsor(tempStudyId, ORG_ID_1).execute();
 
