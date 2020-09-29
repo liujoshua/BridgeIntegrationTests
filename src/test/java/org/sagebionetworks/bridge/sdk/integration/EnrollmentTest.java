@@ -27,6 +27,7 @@ import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Enrollment;
+import org.sagebionetworks.bridge.rest.model.EnrollmentDetailList;
 import org.sagebionetworks.bridge.rest.model.EnrollmentList;
 import org.sagebionetworks.bridge.rest.model.EnrollmentMigration;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
@@ -107,11 +108,11 @@ public class EnrollmentTest {
             assertNull(enrollment.getWithdrawalNote());
             
             // Now shows up in paged api
-            EnrollmentList list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            EnrollmentDetailList list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             list = studiesApi.getEnrollees(STUDY_ID_1, null, null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             retValue = studiesApi.withdrawParticipant(STUDY_ID_1, user.getUserId(), 
                     "Testing enrollment and withdrawal.").execute().body();
@@ -124,7 +125,7 @@ public class EnrollmentTest {
             assertEquals("Testing enrollment and withdrawal.", retValue.getWithdrawalNote());
             
             list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
-            assertFalse(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertFalse(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             // This person is accessible via the external ID.
             StudyParticipant participant = admin.getClient(ParticipantsApi.class)
@@ -133,10 +134,10 @@ public class EnrollmentTest {
             
             // It is still in the paged API, despite being withdrawn.
             list = studiesApi.getEnrollees(STUDY_ID_1, "withdrawn", null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             list = studiesApi.getEnrollees(STUDY_ID_1, "all", null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
         } finally {
             user.signOutAndDeleteUser();
         }
