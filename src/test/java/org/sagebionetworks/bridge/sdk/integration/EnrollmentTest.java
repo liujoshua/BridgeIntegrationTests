@@ -61,6 +61,12 @@ public class EnrollmentTest {
             studiesApi.createStudy(study).execute();
         }
         try {
+            studiesApi.getStudy(STUDY_ID_2).execute();
+        } catch(EntityNotFoundException e) {
+            Study study = new Study().identifier(STUDY_ID_2).name(STUDY_ID_2);
+            studiesApi.createStudy(study).execute();
+        }
+        try {
             orgsApi.getOrganization(ORG_ID_1).execute().body();
         } catch(EntityNotFoundException e) {
             Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
@@ -113,7 +119,7 @@ public class EnrollmentTest {
             assertTrue(retValue.isConsentRequired());
             assertEquals(timestamp.getMillis(), retValue.getEnrolledOn().getMillis());
             assertEquals(admin.getUserId(), retValue.getEnrolledBy());
-            assertEquals(timestamp.getMillis(), retValue.getWithdrawnOn().getMillis());
+            assertTrue(retValue.getWithdrawnOn().isAfter(timestamp));
             assertEquals(admin.getUserId(), retValue.getWithdrawnBy());
             assertEquals("Testing enrollment and withdrawal.", retValue.getWithdrawalNote());
             
@@ -151,10 +157,9 @@ public class EnrollmentTest {
             extIdsApi.createExternalId(extId2).execute();
             
             StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
-            List<EnrollmentMigration> migrations = internalApi.getEnrollmentMigrations(participant.getHealthCode()).execute().body();
+            List<EnrollmentMigration> migrations = internalApi.getEnrollmentMigrations(participant.getId()).execute().body();
             
-            assertEquals(migrations.size(), 1);
-            assertEquals(migrations.get(0).getStudyId(), STUDY_ID_1);
+            assertEquals(0, migrations.size());
             
             EnrollmentMigration migration = new EnrollmentMigration();
             migration.setAppId(user.getAppId());
@@ -163,23 +168,18 @@ public class EnrollmentTest {
             migration.setEnrolledOn(timestamp);
             migration.setExternalId(extId2.getIdentifier());
             migration.setUserId(user.getUserId());
-            
             migrations.add(migration);
             
-            internalApi.updateEnrollmentMigrations(participant.getHealthCode(), migrations).execute().body();
+            internalApi.updateEnrollmentMigrations(participant.getId(), migrations).execute().body();
             
             participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
             
-            assertEquals(participant.getExternalIds().get(STUDY_ID_2), extId2.getIdentifier());
-            assertEquals(participant.getStudyIds(), ImmutableList.of(STUDY_ID_1, STUDY_ID_2));
+            assertEquals(extId2.getIdentifier(), participant.getExternalIds().get(STUDY_ID_2));
+            assertEquals(ImmutableList.of(STUDY_ID_2), participant.getStudyIds());
             
-            migrations = internalApi.getEnrollmentMigrations(participant.getHealthCode()).execute().body();
-            assertEquals(migrations.size(), 2);
-            assertEquals(migrations.get(0).getStudyId(), STUDY_ID_1);
-            
-            assertEquals(migrations.get(1).getStudyId(), STUDY_ID_2);
-            assertEquals(migrations.get(1).getExternalId(), extId2.getIdentifier());
-            
+            migrations = internalApi.getEnrollmentMigrations(participant.getId()).execute().body();
+            assertEquals(1, migrations.size());
+            assertEquals(STUDY_ID_2, migrations.get(0).getStudyId());
         } finally {
             extIdsApi.deleteExternalId(extId2.getIdentifier()).execute();
             user.signOutAndDeleteUser();
