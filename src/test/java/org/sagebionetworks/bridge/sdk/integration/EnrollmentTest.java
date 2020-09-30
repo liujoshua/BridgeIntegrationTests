@@ -28,7 +28,6 @@ import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Enrollment;
 import org.sagebionetworks.bridge.rest.model.EnrollmentDetailList;
-import org.sagebionetworks.bridge.rest.model.EnrollmentList;
 import org.sagebionetworks.bridge.rest.model.EnrollmentMigration;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.Organization;

@@ -158,7 +158,7 @@ public class AppConfigTest {
     @After
     public void deleteAssessment() throws Exception {
         if (assessmentGuid != null) {
-            assessmentsApi.deleteAssessment(assessmentGuid, true).execute();
+            adminApi.deleteAssessment(assessmentGuid, true).execute();
         }
     }
     
