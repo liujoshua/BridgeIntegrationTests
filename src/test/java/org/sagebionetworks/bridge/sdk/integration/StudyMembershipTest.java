@@ -25,7 +25,7 @@ import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
 import org.sagebionetworks.bridge.rest.model.App;
-import org.sagebionetworks.bridge.rest.model.EnrollmentList;
+import org.sagebionetworks.bridge.rest.model.EnrollmentDetailList;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -174,7 +174,7 @@ public class StudyMembershipTest {
         // One enrollment was removed through the legacy approach of set studyIds on a participant update. This actually
         // removes the enrollment, and is being phased out. The second approach called withdrawal and this preserves the 
         // second enrollment object to idB.
-        EnrollmentList list = appAdmin.getClient(StudiesApi.class).getEnrollees(idB, "withdrawn", 0, 10).execute().body();
+        EnrollmentDetailList list = appAdmin.getClient(StudiesApi.class).getEnrollees(idB, "withdrawn", 0, 10).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(extIdB, list.getItems().get(0).getExternalId());
     }

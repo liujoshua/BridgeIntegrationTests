@@ -2,23 +2,32 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
+
+import java.util.List;
+
+import com.google.common.collect.ImmutableList;
 
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
+import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.model.Enrollment;
-import org.sagebionetworks.bridge.rest.model.EnrollmentList;
+import org.sagebionetworks.bridge.rest.model.EnrollmentDetailList;
+import org.sagebionetworks.bridge.rest.model.EnrollmentMigration;
+import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -41,6 +50,7 @@ public class EnrollmentTest {
         
         admin = TestUserHelper.getSignedInAdmin();
         OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
+
         orgsApi.addMember(ORG_ID_1, researcher.getUserId()).execute();
     }
     
@@ -69,24 +79,24 @@ public class EnrollmentTest {
             assertNull(enrollment.getWithdrawalNote());
             
             // Now shows up in paged api
-            EnrollmentList list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            EnrollmentDetailList list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             list = studiesApi.getEnrollees(STUDY_ID_1, null, null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
-            retValue = studiesApi.withdrawParticipant(
-                    STUDY_ID_1, user.getUserId(), "Testing enrollment and withdrawal.").execute().body();
+            retValue = studiesApi.withdrawParticipant(STUDY_ID_1, user.getUserId(), 
+                    "Testing enrollment and withdrawal.").execute().body();
             assertEquals(user.getUserId(), retValue.getUserId());
             assertTrue(retValue.isConsentRequired());
             assertEquals(timestamp.getMillis(), retValue.getEnrolledOn().getMillis());
             assertEquals(admin.getUserId(), retValue.getEnrolledBy());
-            assertNotNull(retValue.getWithdrawnOn());
+            assertTrue(retValue.getWithdrawnOn().isAfter(timestamp));
             assertEquals(admin.getUserId(), retValue.getWithdrawnBy());
             assertEquals("Testing enrollment and withdrawal.", retValue.getWithdrawalNote());
             
             list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
-            assertFalse(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertFalse(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             // This person is accessible via the external ID.
             StudyParticipant participant = admin.getClient(ParticipantsApi.class)
@@ -95,11 +105,73 @@ public class EnrollmentTest {
             
             // It is still in the paged API, despite being withdrawn.
             list = studiesApi.getEnrollees(STUDY_ID_1, "withdrawn", null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             list = studiesApi.getEnrollees(STUDY_ID_1, "all", null, null).execute().body();
-            assertTrue(list.getItems().stream().anyMatch(e -> e.getUserId().equals(user.getUserId())));
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
         } finally {
+            user.signOutAndDeleteUser();
+        }
+    }
+    
+    @Test
+    public void adminApisToMigrateEnrollments() throws Exception {
+        InternalApi internalApi = admin.getClient(InternalApi.class);
+        ExternalIdentifiersApi extIdsApi = admin.getClient(ExternalIdentifiersApi.class);
+        ParticipantsApi participantsApi = admin.getClient(ParticipantsApi.class);
+        
+        DateTime timestamp = new DateTime();
+        
+        // Create a user and enroll them in two studies using the default consent and an external ID. 
+        // Then we'll remove them from one.
+        TestUser user = TestUserHelper.createAndSignInUser(EnrollmentTest.class, true);
+        ExternalIdentifier extId2 = new ExternalIdentifier().studyId(STUDY_ID_2)
+                .identifier(randomIdentifier(EnrollmentTest.class));
+        try {
+            extIdsApi.createExternalId(extId2).execute();
+            
+            StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
+            List<EnrollmentMigration> migrations = internalApi.getEnrollmentMigrations(participant.getId()).execute().body();
+            
+            assertEquals(1, migrations.size());
+            assertEquals(STUDY_ID_1, migrations.get(0).getStudyId());
+            assertEquals(ImmutableList.of(STUDY_ID_1), participant.getStudyIds());
+
+            EnrollmentMigration unenrollInStudy1 = migrations.get(0);
+            unenrollInStudy1.setWithdrawnOn(timestamp);
+            unenrollInStudy1.setWithdrawnBy(admin.getUserId());
+            unenrollInStudy1.setWithdrawalNote("withdrawn for test");
+            
+            EnrollmentMigration enrollInStudy2 = new EnrollmentMigration();
+            enrollInStudy2.setAppId(user.getAppId());
+            enrollInStudy2.setStudyId(STUDY_ID_2);
+            enrollInStudy2.setEnrolledBy(admin.getUserId());
+            enrollInStudy2.setEnrolledOn(timestamp);
+            enrollInStudy2.setExternalId(extId2.getIdentifier());
+            enrollInStudy2.setUserId(user.getUserId());
+            migrations.add(enrollInStudy2);
+            
+            internalApi.updateEnrollmentMigrations(participant.getId(), migrations).execute().body();
+            
+            participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
+            
+            assertEquals(extId2.getIdentifier(), participant.getExternalIds().get(STUDY_ID_2));
+            assertEquals(ImmutableList.of(STUDY_ID_2), participant.getStudyIds());
+            
+            migrations = internalApi.getEnrollmentMigrations(participant.getId()).execute().body();
+            assertEquals(2, migrations.size());
+            
+            EnrollmentMigration enrollment1 = migrations.stream()
+                    .filter(en -> en.getStudyId().equals(STUDY_ID_1))
+                    .findFirst().get();
+            EnrollmentMigration enrollment2 = migrations.stream()
+                    .filter(en -> en.getStudyId().equals(STUDY_ID_2))
+                    .findFirst().get();
+            
+            assertEquals(timestamp.getMillis(), enrollment1.getWithdrawnOn().getMillis());
+            assertNull(enrollment2.getWithdrawnOn());
+        } finally {
+            extIdsApi.deleteExternalId(extId2.getIdentifier()).execute();
             user.signOutAndDeleteUser();
         }
     }

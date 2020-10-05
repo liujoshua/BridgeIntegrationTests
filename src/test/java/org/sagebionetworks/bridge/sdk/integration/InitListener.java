@@ -75,7 +75,7 @@ public class InitListener extends RunListener {
             orgsApi.getOrganization(ORG_ID_2).execute();
         } catch(EntityNotFoundException e) {
             Organization org = new Organization().identifier(ORG_ID_2).name(ORG_ID_2)
-                    .description("Org 2 does not sponsor any studies");
+                    .description("Org 2 sponsors study 2 only");
             orgsApi.createOrganization(org).execute();
             LOG.info("  Creating organization “{}”", ORG_ID_2);
         }
