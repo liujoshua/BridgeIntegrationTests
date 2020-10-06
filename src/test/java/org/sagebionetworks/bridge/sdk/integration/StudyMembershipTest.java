@@ -9,7 +9,9 @@ import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -31,6 +33,7 @@ import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.UserConsentHistory;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -169,12 +172,13 @@ public class StudyMembershipTest {
         userApi.withdrawFromApp(new Withdrawal().reason("Testing external IDs")).execute();
         
         StudyParticipant withdrawn = appAdminParticipantsApi.getParticipantById(userId, true).execute().body();
+        
         assertEquals(0, withdrawn.getExternalIds().size());
         
         // One enrollment was removed through the legacy approach of set studyIds on a participant update. This actually
         // removes the enrollment, and is being phased out. The second approach called withdrawal and this preserves the 
         // second enrollment object to idB.
-        EnrollmentDetailList list = appAdmin.getClient(StudiesApi.class).getEnrollees(idB, "withdrawn", 0, 10).execute().body();
+        EnrollmentDetailList list = appAdmin.getClient(StudiesApi.class).getEnrollees(idB, "withdrawn", true, 0, 10).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(extIdB, list.getItems().get(0).getExternalId());
     }

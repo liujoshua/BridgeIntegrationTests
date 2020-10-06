@@ -79,10 +79,10 @@ public class EnrollmentTest {
             assertNull(enrollment.getWithdrawalNote());
             
             // Now shows up in paged api
-            EnrollmentDetailList list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
+            EnrollmentDetailList list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", false, null, null).execute().body();
             assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
-            list = studiesApi.getEnrollees(STUDY_ID_1, null, null, null).execute().body();
+            list = studiesApi.getEnrollees(STUDY_ID_1, null, false, null, null).execute().body();
             assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             retValue = studiesApi.withdrawParticipant(STUDY_ID_1, user.getUserId(), 
@@ -95,7 +95,7 @@ public class EnrollmentTest {
             assertEquals(admin.getUserId(), retValue.getWithdrawnBy());
             assertEquals("Testing enrollment and withdrawal.", retValue.getWithdrawalNote());
             
-            list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", null, null).execute().body();
+            list = studiesApi.getEnrollees(STUDY_ID_1, "enrolled", false, null, null).execute().body();
             assertFalse(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
             // This person is accessible via the external ID.
@@ -104,10 +104,20 @@ public class EnrollmentTest {
             assertEquals(user.getUserId(), participant.getId());
             
             // It is still in the paged API, despite being withdrawn.
-            list = studiesApi.getEnrollees(STUDY_ID_1, "withdrawn", null, null).execute().body();
+            list = studiesApi.getEnrollees(STUDY_ID_1, "withdrawn", false, null, null).execute().body();
             assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
             
-            list = studiesApi.getEnrollees(STUDY_ID_1, "all", null, null).execute().body();
+            list = studiesApi.getEnrollees(STUDY_ID_1, "all", false, null, null).execute().body();
+            assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
+            
+            // test the filter for test accounts
+            participant.addDataGroupsItem("test_user");
+            admin.getClient(ParticipantsApi.class).updateParticipant(participant.getId(), participant).execute();
+            
+            list = studiesApi.getEnrollees(STUDY_ID_1, "all", false, null, null).execute().body();
+            assertFalse(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
+            
+            list = studiesApi.getEnrollees(STUDY_ID_1, "all", true, null, null).execute().body();
             assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
         } finally {
             user.signOutAndDeleteUser();
