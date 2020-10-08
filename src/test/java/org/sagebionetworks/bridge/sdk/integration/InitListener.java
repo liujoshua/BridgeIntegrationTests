@@ -6,6 +6,7 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_NAME;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import org.junit.runner.Description;
@@ -14,16 +15,20 @@ import org.junit.runner.notification.RunListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Organization;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
+import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 /**
  * We have some frequently used model classes that need specific relationships for
@@ -114,6 +119,18 @@ public class InitListener extends RunListener {
             subpop.getStudyIdsAssignedOnConsent().add(STUDY_ID_1);
             subpopApi.updateSubpopulation(subpop.getGuid(), subpop).execute();
             LOG.info("  “{}” consent now enrolls participants in study “{}”", subpop.getGuid(), STUDY_ID_1);
+        }
+        
+        admin.getClient(ForSuperadminsApi.class).adminChangeApp(new SignIn().appId(SHARED_APP_ID)).execute();
+        try {
+            orgsApi.getOrganization(SAGE_ID).execute();
+        } catch(EntityNotFoundException e) {
+            Organization org = new Organization().identifier(SAGE_ID).name(SAGE_NAME)
+                    .description("Sage sponsors study1 and study2");
+            orgsApi.createOrganization(org).execute();
+            LOG.info("  Creating organization “{}” in shared study", ORG_ID_2);
+        } finally {
+            admin.getClient(ForSuperadminsApi.class).adminChangeApp(new SignIn().appId(TEST_APP_ID)).execute();
         }
 
         testRunInitialized = true;
