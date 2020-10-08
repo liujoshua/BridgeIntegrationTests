@@ -24,14 +24,10 @@ import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
-import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Enrollment;
 import org.sagebionetworks.bridge.rest.model.EnrollmentDetailList;
 import org.sagebionetworks.bridge.rest.model.EnrollmentMigration;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
-import org.sagebionetworks.bridge.rest.model.Organization;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -50,35 +46,11 @@ public class EnrollmentTest {
     
     @Before
     public void before() throws Exception {
+        researcher = TestUserHelper.createAndSignInUser(EnrollmentTest.class, false, RESEARCHER);
+        
         admin = TestUserHelper.getSignedInAdmin();
         OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
 
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        try {
-            studiesApi.getStudy(STUDY_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Study study = new Study().identifier(STUDY_ID_1).name(STUDY_ID_1);
-            studiesApi.createStudy(study).execute();
-        }
-        try {
-            studiesApi.getStudy(STUDY_ID_2).execute();
-        } catch(EntityNotFoundException e) {
-            Study study = new Study().identifier(STUDY_ID_2).name(STUDY_ID_2);
-            studiesApi.createStudy(study).execute();
-        }
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute().body();
-        } catch(EntityNotFoundException e) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
-        try {
-            orgsApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();    
-        } catch(ConstraintViolationException e) {
-            // If this isn't the message, this isn't the exception we're expecting.
-            assertEquals("Organization is already a sponsor of this study.", e.getMessage());
-        }
-        researcher = TestUserHelper.createAndSignInUser(EnrollmentTest.class, false, RESEARCHER);
         orgsApi.addMember(ORG_ID_1, researcher.getUserId()).execute();
     }
     
@@ -150,25 +122,34 @@ public class EnrollmentTest {
         
         DateTime timestamp = new DateTime();
         
-        // Create a user and enroll them in two studies using external IDs. Then we'll remove them from one.
+        // Create a user and enroll them in two studies using the default consent and an external ID. 
+        // Then we'll remove them from one.
         TestUser user = TestUserHelper.createAndSignInUser(EnrollmentTest.class, true);
-        ExternalIdentifier extId2 = new ExternalIdentifier().studyId(STUDY_ID_2).identifier(randomIdentifier(EnrollmentTest.class));
+        ExternalIdentifier extId2 = new ExternalIdentifier().studyId(STUDY_ID_2)
+                .identifier(randomIdentifier(EnrollmentTest.class));
         try {
             extIdsApi.createExternalId(extId2).execute();
             
             StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
             List<EnrollmentMigration> migrations = internalApi.getEnrollmentMigrations(participant.getId()).execute().body();
             
-            assertEquals(0, migrations.size());
+            assertEquals(1, migrations.size());
+            assertEquals(STUDY_ID_1, migrations.get(0).getStudyId());
+            assertEquals(ImmutableList.of(STUDY_ID_1), participant.getStudyIds());
+
+            EnrollmentMigration unenrollInStudy1 = migrations.get(0);
+            unenrollInStudy1.setWithdrawnOn(timestamp);
+            unenrollInStudy1.setWithdrawnBy(admin.getUserId());
+            unenrollInStudy1.setWithdrawalNote("withdrawn for test");
             
-            EnrollmentMigration migration = new EnrollmentMigration();
-            migration.setAppId(user.getAppId());
-            migration.setStudyId(STUDY_ID_2);
-            migration.setEnrolledBy(admin.getUserId());
-            migration.setEnrolledOn(timestamp);
-            migration.setExternalId(extId2.getIdentifier());
-            migration.setUserId(user.getUserId());
-            migrations.add(migration);
+            EnrollmentMigration enrollInStudy2 = new EnrollmentMigration();
+            enrollInStudy2.setAppId(user.getAppId());
+            enrollInStudy2.setStudyId(STUDY_ID_2);
+            enrollInStudy2.setEnrolledBy(admin.getUserId());
+            enrollInStudy2.setEnrolledOn(timestamp);
+            enrollInStudy2.setExternalId(extId2.getIdentifier());
+            enrollInStudy2.setUserId(user.getUserId());
+            migrations.add(enrollInStudy2);
             
             internalApi.updateEnrollmentMigrations(participant.getId(), migrations).execute().body();
             
@@ -178,8 +159,17 @@ public class EnrollmentTest {
             assertEquals(ImmutableList.of(STUDY_ID_2), participant.getStudyIds());
             
             migrations = internalApi.getEnrollmentMigrations(participant.getId()).execute().body();
-            assertEquals(1, migrations.size());
-            assertEquals(STUDY_ID_2, migrations.get(0).getStudyId());
+            assertEquals(2, migrations.size());
+            
+            EnrollmentMigration enrollment1 = migrations.stream()
+                    .filter(en -> en.getStudyId().equals(STUDY_ID_1))
+                    .findFirst().get();
+            EnrollmentMigration enrollment2 = migrations.stream()
+                    .filter(en -> en.getStudyId().equals(STUDY_ID_2))
+                    .findFirst().get();
+            
+            assertEquals(timestamp.getMillis(), enrollment1.getWithdrawnOn().getMillis());
+            assertNull(enrollment2.getWithdrawnOn());
         } finally {
             extIdsApi.deleteExternalId(extId2.getIdentifier()).execute();
             user.signOutAndDeleteUser();

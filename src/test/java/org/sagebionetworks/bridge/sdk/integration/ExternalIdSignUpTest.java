@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import org.junit.After;
@@ -20,7 +21,6 @@ import org.sagebionetworks.bridge.rest.model.GeneratedPassword;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -62,15 +62,10 @@ public class ExternalIdSignUpTest {
         String userId1 = null;
         String userId2 = null;
         String userId3 = null;
-        String idA = null;
         try {
-            idA = Tests.randomIdentifier(ExternalIdSignUpTest.class);
-            Study studyA = new Study().identifier(idA).name("Study " + idA);
-            admin.getClient(ForAdminsApi.class).createStudy(studyA).execute();
-            
-            devIdsClient.createExternalId(new ExternalIdentifier().studyId(idA).identifier(externalId1)).execute();
-            devIdsClient.createExternalId(new ExternalIdentifier().studyId(idA).identifier(externalId2)).execute();
-            devIdsClient.createExternalId(new ExternalIdentifier().studyId(idA).identifier(externalId3)).execute();
+            devIdsClient.createExternalId(new ExternalIdentifier().studyId(STUDY_ID_1).identifier(externalId1)).execute();
+            devIdsClient.createExternalId(new ExternalIdentifier().studyId(STUDY_ID_1).identifier(externalId2)).execute();
+            devIdsClient.createExternalId(new ExternalIdentifier().studyId(STUDY_ID_1).identifier(externalId3)).execute();
             
             SignUp signUp = new SignUp().appId(TEST_APP_ID).password(Tests.PASSWORD);
             signUp.externalId(externalId1);
@@ -146,9 +141,6 @@ public class ExternalIdSignUpTest {
             adminClient.deleteExternalId(externalId1).execute();
             adminClient.deleteExternalId(externalId2).execute();
             adminClient.deleteExternalId(externalId3).execute();
-            if (idA != null) {
-                admin.getClient(ForAdminsApi.class).deleteStudy(idA, true).execute();    
-            }
         }
     }
 }

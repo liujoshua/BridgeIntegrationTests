@@ -9,6 +9,8 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.Map;
@@ -32,7 +34,6 @@ import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantReportsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.StudyReportsApi;
 import org.sagebionetworks.bridge.rest.api.UsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
@@ -47,8 +48,6 @@ import org.sagebionetworks.bridge.rest.model.ReportDataList;
 import org.sagebionetworks.bridge.rest.model.ReportIndex;
 import org.sagebionetworks.bridge.rest.model.ReportIndexList;
 import org.sagebionetworks.bridge.rest.model.ReportType;
-import org.sagebionetworks.bridge.rest.model.Study;
-import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
@@ -74,34 +73,19 @@ public class ReportTest {
     private static TestUser appScopedDeveloper;
     private static TestUser worker;
     
-    private static Study study1;
-    private static Study study2;
-
     private String reportId;
     private TestUser user;
     private TestUser studyScopedUser;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        String id1 = Tests.randomIdentifier(StudyTest.class);
-        String id2 = Tests.randomIdentifier(StudyTest.class);
-        
         admin = TestUserHelper.getSignedInAdmin();
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        
-        study1 = new Study().identifier(id1).name("Study " + id1);
-        VersionHolder holder = studiesApi.createStudy(study1).execute().body();
-        study1.setVersion(holder.getVersion());
-        
-        study2 = new Study().identifier(id2).name("Study " + id2);
-        holder = studiesApi.createStudy(study2).execute().body();
-        study2.setVersion(holder.getVersion());
         
         developer = new TestUserHelper.Builder(ReportTest.class).withRoles(DEVELOPER)
                 .createAndSignInUser();
         
         appScopedDeveloper = new TestUserHelper.Builder(ReportTest.class).withRoles(DEVELOPER)
-                .withStudyIds(ImmutableSet.of(study1.getIdentifier())).createAndSignInUser();
+                .createAndSignInUser(); // assigned to study1, like other admin accounts
 
         worker = TestUserHelper.createAndSignInUser(ReportTest.class, false, WORKER, RESEARCHER);
 
@@ -146,13 +130,6 @@ public class ReportTest {
             worker.signOutAndDeleteUser();
         }
 
-        // The study must be deleted after the developer because we put them in the study.
-        if (study1 != null) {
-            admin.getClient(StudiesApi.class).deleteStudy(study1.getIdentifier(), true).execute();
-        }
-        if (study2 != null) {
-            admin.getClient(StudiesApi.class).deleteStudy(study2.getIdentifier(), true).execute();
-        }
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
         App app = superadminApi.getApp(TEST_APP_ID).execute().body();
         app.setHealthCodeExportEnabled(false);
@@ -473,18 +450,18 @@ public class ReportTest {
         StudyReportsApi devReportClient = appScopedDeveloper.getClient(StudyReportsApi.class);
         
         ReportData data1 = makeReportData(DATE1, "asdf", "A");
-        data1.setStudyIds(ImmutableList.of(study1.getIdentifier()));
+        data1.setStudyIds(ImmutableList.of(STUDY_ID_1));
         
         ReportData data2 = makeReportData(DATE2, "asdf", "B");
         devReportClient.addStudyReportRecord(reportId, data1).execute();
         devReportClient.addStudyReportRecord(reportId, data2).execute();
         
         // Not a member of the study used for these report records
-        studyScopedUser = new TestUserHelper.Builder(ReportTest.class).withConsentUser(true)
-                .withStudyIds(ImmutableSet.of(study2.getIdentifier())).createAndSignInUser();
+        studyScopedUser = new TestUserHelper.Builder(ReportTest.class).withConsentUser(false)
+                .withStudyIds(ImmutableSet.of(STUDY_ID_2)).createAndSignInUser();
         StudyReportsApi reportsApi = studyScopedUser.getClient(StudyReportsApi.class);
         ReportIndex index = reportsApi.getStudyReportIndex(reportId).execute().body();
-        assertTrue(index.getStudyIds().contains(study1.getIdentifier()));
+        assertTrue(index.getStudyIds().contains(STUDY_ID_1));
         try {
             reportsApi.getStudyReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();
             fail("Should have thrown an exception");
@@ -512,7 +489,7 @@ public class ReportTest {
         
         // You cannot change the studies of this report after the fact
         ReportData data3 = makeReportData(DATE3, "asdf", "C");
-        data3.setStudyIds(ImmutableList.of(study2.getIdentifier()));
+        data3.setStudyIds(ImmutableList.of(STUDY_ID_2));
         try {
             devReportClient.addStudyReportRecord(reportId, data3).execute();
             fail("Should have thrown an exception");
@@ -526,8 +503,8 @@ public class ReportTest {
     public void participantReportsNotVisibleOutsideOfStudy() throws Exception {
         // It would seem to be dumb to create reports for a participant that are associated to studies such that the
         // user will not be able to see them. Nevertheless, if it happens, we enforce visibility constraints.
-        studyScopedUser = new TestUserHelper.Builder(ReportTest.class).withConsentUser(true)
-                .withStudyIds(ImmutableSet.of(study2.getIdentifier())).createAndSignInUser();
+        studyScopedUser = new TestUserHelper.Builder(ReportTest.class).withConsentUser(false)
+                .withStudyIds(ImmutableSet.of(STUDY_ID_2)).createAndSignInUser();
         
         String healthCode = worker.getClient(ParticipantsApi.class)
                 .getParticipantById(studyScopedUser.getUserId(), false).execute().body().getHealthCode();
@@ -536,7 +513,7 @@ public class ReportTest {
         // that. So the scoped user cannot then retrieve the records because they are not in study1.
         ForWorkersApi workerApi = worker.getClient(ForWorkersApi.class);
         ReportDataForWorker data1 = makeReportDataForWorker(healthCode, DATE1, "asdf", "A");
-        data1.setStudyIds(ImmutableList.of(study1.getIdentifier()));
+        data1.setStudyIds(ImmutableList.of(STUDY_ID_1));
         ReportDataForWorker data2 = makeReportDataForWorker(healthCode, DATE2, "asdf", "B");
         workerApi.addParticipantReportRecord(reportId, data1).execute();
         workerApi.addParticipantReportRecord(reportId, data2).execute();
@@ -544,7 +521,7 @@ public class ReportTest {
         // The index now exists and can be retrieved.
         ParticipantReportsApi reportsApi = studyScopedUser.getClient(ParticipantReportsApi.class);
         ReportIndex index = reportsApi.getParticipantReportIndex(reportId).execute().body();
-        assertTrue(index.getStudyIds().contains(study1.getIdentifier()));
+        assertTrue(index.getStudyIds().contains(STUDY_ID_1));
         
         try {
             reportsApi.getParticipantReportRecords(reportId, SEARCH_START_DATE, SEARCH_END_DATE).execute().body();

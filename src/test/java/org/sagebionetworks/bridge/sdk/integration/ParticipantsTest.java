@@ -10,12 +10,14 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.AccountStatus.DISABLED;
 import static org.sagebionetworks.bridge.rest.model.AccountStatus.ENABLED;
 import static org.sagebionetworks.bridge.rest.model.AccountStatus.UNVERIFIED;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import com.google.common.base.Predicates;
@@ -35,6 +37,7 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
@@ -93,10 +96,8 @@ public class ParticipantsTest {
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        developer = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(Role.DEVELOPER).withConsentUser(true)
-                .createAndSignInUser();
-        researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(RESEARCHER).withConsentUser(true)
-                .createAndSignInUser();
+        developer = TestUserHelper.createAndSignInUser(ParticipantsTest.class, false, DEVELOPER);
+        researcher = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, RESEARCHER);
         
         externalId = Tests.createExternalId(ParticipantsTest.class, developer, STUDY_ID_1);
         
@@ -226,6 +227,12 @@ public class ParticipantsTest {
     @Test
     public void canRetrieveAndPageThroughParticipants() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        
+        // For this test to now work, the researcher cannot be associated to an organization. However, this
+        // will change after migration when all admins are in an organization. This is also the older of
+        // the two APIs and it may need to permanently change to only show participants, which would require
+        // a change in this test as well.
+        admin.getClient(OrganizationsApi.class).removeMember(SAGE_ID, researcher.getUserId()).execute();
 
         AccountSummaryList summaries = participantsApi.getParticipants(0, 10, null, null, null, null).execute().body();
 

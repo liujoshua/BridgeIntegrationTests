@@ -20,11 +20,9 @@ import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
-import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.RequestParams;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -56,38 +54,25 @@ public class AccountSummarySearchTest {
         // this test, to improve test reliability. Note that AccountSummarySearch.emailFilter uses a like
         // '%[emailFilter]%', so an email prefix works.
         emailPrefix = "bridge-testing+AccountSummarySearchTest-" + RandomStringUtils.randomAlphabetic(4) + "-";
-
-        TestUser admin = TestUserHelper.getSignedInAdmin();
-        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
-        try {
-            orgsApi.getOrganization(ORG_ID_2).execute();
-        } catch(EntityNotFoundException e) {
-            Organization org = new Organization().identifier(ORG_ID_2).name(ORG_ID_2);
-            orgsApi.createOrganization(org).execute();
-        }
         
-        testUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
+        testUser = new TestUserHelper.Builder(AccountSummarySearchTest.class).withConsentUser(true)
                 .withSignUp(new SignUp().email(emailPrefix + "test@sagebase.org")
                     .languages(Lists.newArrayList("es"))    
                     .dataGroups(TEST_USER_GROUPS)).createUser();
-        taggedUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
+        taggedUser = new TestUserHelper.Builder(AccountSummarySearchTest.class).withConsentUser(true)
                 .withSignUp(new SignUp().email(emailPrefix + "tagged@sagebase.org")
                         .languages(Lists.newArrayList("es"))
                         .roles(ImmutableList.of(Role.DEVELOPER))
                         .dataGroups(TAGGED_USER_GROUPS)).createUser();
-        frenchUser = new TestUserHelper.Builder(AccountSummarySearchTest.class)
+        frenchUser = new TestUserHelper.Builder(AccountSummarySearchTest.class).withConsentUser(true)
                 .withSignUp(new SignUp().email(emailPrefix + "french@sagebase.org")
                         .languages(Lists.newArrayList("fr"))
                         .attributes(ImmutableMap.of("can_be_recontacted", "true"))
                         .dataGroups(FRENCH_USER_GROUPS)).createUser();
         
         // Assign frenchUser to org1.
+        TestUser admin = TestUserHelper.getSignedInAdmin();
+        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
         orgsApi.addMember(ORG_ID_1, frenchUser.getUserId()).execute();
 
         researcher = TestUserHelper.createAndSignInUser(AccountSummarySearchTest.class, false, Role.RESEARCHER);
