@@ -90,7 +90,7 @@ public class InitListener extends RunListener {
             Organization org = new Organization().identifier(SAGE_ID).name(SAGE_NAME)
                     .description("Sage sponsors study1 and study2");
             orgsApi.createOrganization(org).execute();
-            LOG.info("  Creating organization “{}”", ORG_ID_2);
+            LOG.info("  Creating organization “{}”", SAGE_ID);
         }
         try {
             orgsApi.addStudySponsorship(SAGE_ID, STUDY_ID_1).execute();
@@ -128,7 +128,7 @@ public class InitListener extends RunListener {
             Organization org = new Organization().identifier(SAGE_ID).name(SAGE_NAME)
                     .description("Sage sponsors study1 and study2");
             orgsApi.createOrganization(org).execute();
-            LOG.info("  Creating organization “{}” in shared study", ORG_ID_2);
+            LOG.info("  Creating organization “{}” in shared study", SAGE_ID);
         } finally {
             admin.getClient(ForSuperadminsApi.class).adminChangeApp(new SignIn().appId(TEST_APP_ID)).execute();
         }
