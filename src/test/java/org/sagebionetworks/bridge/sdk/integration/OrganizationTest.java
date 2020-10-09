@@ -218,22 +218,27 @@ public class OrganizationTest {
     @Test
     public void testSponsorship() throws Exception {
         OrganizationsApi adminOrgApi = admin.getClient(OrganizationsApi.class);
-        // In essence, let's clean this up before we test. It throws an exception if
-        // not associated.
         try {
-            adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();    
-        } catch(BadRequestException e) {
-        }
-        
-        adminOrgApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
-        
-        StudyList list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
-        assertTrue(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
-        
-        adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+            // In essence, let's clean this up before we test. It throws an exception if
+            // not associated.
+            try {
+                adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();    
+            } catch(BadRequestException e) {
+            }
+            
+            adminOrgApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+            
+            StudyList list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+            assertTrue(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+            
+            adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
 
-        list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
-        assertFalse(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+            list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+            assertFalse(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+        } finally {
+            // This must be added back after the test.
+            adminOrgApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+        }
     }
     
     private Organization findOrganization(OrganizationList list, String id) {
