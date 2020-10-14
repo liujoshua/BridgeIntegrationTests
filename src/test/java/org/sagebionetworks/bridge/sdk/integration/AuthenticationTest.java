@@ -39,6 +39,8 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import retrofit2.Response;
 
 import java.io.IOException;
@@ -56,6 +58,8 @@ import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 @Category(IntegrationSmokeTest.class)
 @SuppressWarnings({ "ConstantConditions", "unchecked" })
 public class AuthenticationTest {
+    private static final Logger LOG = LoggerFactory.getLogger(AuthenticationTest.class);
+
     private static TestUser adminUser;
     private static TestUser researchUser;
     private static TestUser testUser;
@@ -247,7 +251,11 @@ public class AuthenticationTest {
                 assertEquals(404, e.getStatusCode());
             }
         } finally {
-            superadminApi.deleteApp(appId, true).execute();
+            try {
+                superadminApi.deleteApp(appId, true).execute();
+            } catch (Exception ex) {
+                LOG.error("Error deleting app " + appId + ": " + ex.getMessage(), ex);
+            }
         }
     }
     
