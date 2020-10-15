@@ -82,7 +82,7 @@ public class ConsentTest {
         researchUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, RESEARCHER);
 
         // Make phone user.
-        IntegTestUtils.deletePhoneUser(researchUser);
+        IntegTestUtils.deletePhoneUser(adminUser);
         SignUp phoneOnlyUser = new SignUp().appId(TEST_APP_ID).consent(true).phone(PHONE);
         phoneOnlyTestUser = new TestUserHelper.Builder(ConsentTest.class).withConsentUser(true)
                 .withSignUp(phoneOnlyUser).createAndSignInUser();

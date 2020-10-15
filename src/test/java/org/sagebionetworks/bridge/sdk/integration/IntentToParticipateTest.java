@@ -42,7 +42,7 @@ public class IntentToParticipateTest {
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         researcher = TestUserHelper.createAndSignInUser(IntentToParticipateTest.class, false, Role.RESEARCHER);
-        IntegTestUtils.deletePhoneUser(researcher);
+        IntegTestUtils.deletePhoneUser(admin);
 
         // Add dummy install link to trigger Intent SMS.
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);

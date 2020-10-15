@@ -101,7 +101,7 @@ public class ParticipantsTest {
         
         externalId = Tests.createExternalId(ParticipantsTest.class, developer, STUDY_ID_1);
         
-        IntegTestUtils.deletePhoneUser(researcher);
+        IntegTestUtils.deletePhoneUser(admin);
         
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
         App app = superadminApi.getApp(TEST_APP_ID).execute().body();
