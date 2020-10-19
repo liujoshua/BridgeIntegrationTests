@@ -170,7 +170,7 @@ public class WorkerApiTest {
     @SuppressWarnings("deprecation")
     @Test
     public void retrieveUsersWithPhone() throws Exception {
-        IntegTestUtils.deletePhoneUser(researcher);
+        IntegTestUtils.deletePhoneUser();
 
         SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1");
         phoneUser = TestUserHelper.createAndSignInUser(WorkerApiTest.class, true, signUp);
