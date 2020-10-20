@@ -6,7 +6,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.List;
@@ -27,7 +29,9 @@ import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
+import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.ActivityEventList;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
@@ -37,6 +41,7 @@ import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.SchedulePlanList;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
@@ -332,5 +337,72 @@ public class WorkerApiTest {
         DateTime recordSentOn = DateTime.parse(recordDataMap.get("sentOn"));
         assertEquals(messageSentOn.getMillis(), recordSentOn.getMillis());
         assertEquals(TEST_USER_TIME_ZONE, recordSentOn.getZone());
+    }
+    
+    /**
+     * Verify that a worker, associated to an organization (Sage Bionetworks), can see users across the app
+     * boundary. Uses 'api' and 'shared' app context for testing.
+     */
+    @Test
+    public void retrieveUsersBetweenApps() throws Exception {
+        ForSuperadminsApi adminsApi = admin.getClient(ForSuperadminsApi.class);
+        adminsApi.adminChangeApp(new SignIn().appId(SHARED_APP_ID)).execute();
+        TestUser sharedUser = new TestUserHelper.Builder(WorkerApiTest.class).withAppId(SHARED_APP_ID).createUser();
+        
+        adminsApi.adminChangeApp(new SignIn().appId(TEST_APP_ID)).execute();
+        TestUser testUser = new TestUserHelper.Builder(WorkerApiTest.class).withAppId(TEST_APP_ID).createUser();
+        
+        // This worker is by default in Sage Bionetworks, and thus is associated to studies in the 'api'
+        // context. when the worker calls into another context, those APIs should work.
+        TestUser worker = TestUserHelper.createAndSignInUser(WorkerApiTest.class, false, WORKER);
+        try {
+            ForWorkersApi workerApi = worker.getClient(ForWorkersApi.class);
+            
+            // First verify that list methods work...
+            AccountSummaryList sharedList = workerApi.getParticipantsForApp(SHARED_APP_ID, 0, 50, null, null, null, null).execute().body();
+            assertUserInList(sharedList.getItems(), sharedUser.getUserId());
+            
+            AccountSummaryList apiList = workerApi.getParticipantsForApp(TEST_APP_ID, 0, 50, null, null, null, null).execute().body();
+            assertUserInList(apiList.getItems(), testUser.getUserId());
+            
+            // Getting individual accounts also works
+            StudyParticipant p1 = workerApi.getParticipantByIdForApp(SHARED_APP_ID, sharedUser.getUserId(), false).execute().body();
+            assertEquals(sharedUser.getUserId(), p1.getId());
+            
+            StudyParticipant p2 = workerApi.getParticipantByIdForApp(TEST_APP_ID, testUser.getUserId(), false).execute().body();
+            assertEquals(testUser.getUserId(), p2.getId());
+            
+            AccountSummarySearch search = new AccountSummarySearch();
+            search.startTime(DateTime.now().minusHours(1));
+            search.endTime(DateTime.now().plusHours(1));
+            
+            AccountSummaryList sharedSearchList = workerApi.searchAccountSummariesForApp(
+                    SHARED_APP_ID, search).execute().body();
+            assertUserInList(sharedSearchList.getItems(), sharedUser.getUserId());
+            
+            AccountSummaryList testSearchList = workerApi.searchAccountSummariesForApp(
+                    TEST_APP_ID, search).execute().body();
+            assertUserInList(testSearchList.getItems(), testUser.getUserId());
+            
+        } finally {
+            if (sharedUser != null) {
+                sharedUser.signOutAndDeleteUser();
+            }
+            if (testUser != null) {
+                testUser.signOutAndDeleteUser();
+            }
+            if (worker != null) {
+                worker.signOutAndDeleteUser();
+            }
+        }
+    }
+    
+    private void assertUserInList(List<AccountSummary> list, String userId) {
+        for (AccountSummary summary : list) {
+            if (summary.getId().equals(userId)) {
+                return;
+            }
+        }
+        fail("Could not find user in list");
     }
 }
