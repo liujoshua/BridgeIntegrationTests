@@ -132,6 +132,7 @@ public class AssessmentTest {
                 .normingStatus("Not normed")
                 .osName("Both")
                 .ownerId(ORG_ID_1)
+                .minutesToComplete(15)
                 .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
         
@@ -558,6 +559,7 @@ public class AssessmentTest {
         assertEquals("Not normed", assessment.getNormingStatus());
         assertEquals("Universal", assessment.getOsName());
         assertEquals(ORG_ID_1, assessment.getOwnerId());
+        assertEquals(new Integer(15), assessment.getMinutesToComplete());
         assertTrue(assessment.getTags().contains(markerTag));
         assertTrue(assessment.getTags().contains(TAG1));
         assertTrue(assessment.getTags().contains(TAG2));
