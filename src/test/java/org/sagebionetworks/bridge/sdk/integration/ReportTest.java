@@ -17,7 +17,6 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
@@ -457,8 +456,10 @@ public class ReportTest {
         devReportClient.addStudyReportRecord(reportId, data2).execute();
         
         // Not a member of the study used for these report records
+        // Just assign an external ID in order to enroll the account in a study
         studyScopedUser = new TestUserHelper.Builder(ReportTest.class).withConsentUser(false)
-                .withStudyIds(ImmutableSet.of(STUDY_ID_2)).createAndSignInUser();
+                .withExternalIds(ImmutableMap.of(STUDY_ID_2, Tests.randomIdentifier(ReportTest.class)))
+                .createAndSignInUser();
         StudyReportsApi reportsApi = studyScopedUser.getClient(StudyReportsApi.class);
         ReportIndex index = reportsApi.getStudyReportIndex(reportId).execute().body();
         assertTrue(index.getStudyIds().contains(STUDY_ID_1));
@@ -503,8 +504,10 @@ public class ReportTest {
     public void participantReportsNotVisibleOutsideOfStudy() throws Exception {
         // It would seem to be dumb to create reports for a participant that are associated to studies such that the
         // user will not be able to see them. Nevertheless, if it happens, we enforce visibility constraints.
+        // Just assign an external ID in order to enroll the account in a study
         studyScopedUser = new TestUserHelper.Builder(ReportTest.class).withConsentUser(false)
-                .withStudyIds(ImmutableSet.of(STUDY_ID_2)).createAndSignInUser();
+                .withExternalIds(ImmutableMap.of(STUDY_ID_2, Tests.randomIdentifier(ReportTest.class)))
+                .createAndSignInUser();
         
         String healthCode = worker.getClient(ParticipantsApi.class)
                 .getParticipantById(studyScopedUser.getUserId(), false).execute().body().getHealthCode();

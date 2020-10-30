@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -24,9 +23,6 @@ import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.sagebionetworks.bridge.rest.api.ExternalIdentifiersApi;
-import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.model.ABTestGroup;
 import org.sagebionetworks.bridge.rest.model.ABTestScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.Activity;
@@ -34,7 +30,6 @@ import org.sagebionetworks.bridge.rest.model.AndroidAppLink;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.AppleAppLink;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.MasterSchedulerConfig;
 import org.sagebionetworks.bridge.rest.model.OAuthProvider;
 import org.sagebionetworks.bridge.rest.model.Phone;
@@ -44,11 +39,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduleType;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
-import org.sagebionetworks.bridge.rest.model.Study;
-import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
-import org.sagebionetworks.bridge.user.TestUserHelper;
-import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 public class Tests {
@@ -352,29 +343,6 @@ public class Tests {
         return retValue;
     }
 
-    public static ExternalIdentifier createExternalId(Class<?> clazz, TestUser developer, String studyId) throws Exception {
-        String externalId = Tests.randomIdentifier(clazz);
-        
-        StudiesApi studiesApi = developer.getClient(StudiesApi.class);
-        StudyList studyList = studiesApi.getStudies(null, null, false).execute().body();
-        
-        Set<String> existingStudyIds = studyList.getItems().stream().map(Study::getIdentifier).collect(Collectors.toSet());
-        if (!existingStudyIds.contains(studyId)) {
-            TestUser admin = TestUserHelper.getSignedInAdmin();
-            Study study = new Study().identifier(studyId).name(studyId);
-            admin.getClient(StudiesApi.class).createStudy(study).execute();
-        }
-        ExternalIdentifier externalIdentifier = new ExternalIdentifier().identifier(externalId).studyId(studyId);
-        int code = developer.getClient(ExternalIdentifiersApi.class).createExternalId(externalIdentifier).execute().code();
-        assertEquals(code, 201);
-        return externalIdentifier;
-    }
-    
-    public static void deleteExternalId(ExternalIdentifier externalId) throws Exception {
-        TestUser admin = TestUserHelper.getSignedInAdmin();
-        admin.getClient(ForAdminsApi.class).deleteExternalId(externalId.getIdentifier()).execute();
-    }    
-    
     public static MasterSchedulerConfig getMastSchedulerConfig() {
         MasterSchedulerConfig config = new MasterSchedulerConfig();
         config.setScheduleId("test-schedule-id");

@@ -48,7 +48,6 @@ import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
@@ -91,7 +90,7 @@ public class ParticipantsTest {
     private TestUser researcher;
     private TestUser phoneUser;
     private TestUser emailUser;
-    private ExternalIdentifier externalId;
+    private String externalId;
     
     @Before
     public void before() throws Exception {
@@ -99,7 +98,7 @@ public class ParticipantsTest {
         developer = TestUserHelper.createAndSignInUser(ParticipantsTest.class, false, DEVELOPER);
         researcher = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, RESEARCHER);
         
-        externalId = Tests.createExternalId(ParticipantsTest.class, developer, STUDY_ID_1);
+        externalId = Tests.randomIdentifier(ParticipantsTest.class); // Tests.createExternalId(ParticipantsTest.class, developer, STUDY_ID_1);
         
         IntegTestUtils.deletePhoneUser();
         
@@ -115,7 +114,6 @@ public class ParticipantsTest {
     
     @After
     public void after() throws Exception {
-        Tests.deleteExternalId(externalId);
         if (developer != null) {
             developer.signOutAndDeleteUser();
         }
@@ -184,7 +182,7 @@ public class ParticipantsTest {
     @Test
     public void retrieveParticipant() throws Exception {
         TestUser user = new TestUserHelper.Builder(ParticipantsTest.class)
-                .withExternalId(externalId.getIdentifier()).createAndSignInUser();
+                .withExternalIds(ImmutableMap.of(STUDY_ID_1, externalId)).createAndSignInUser();
         
         ParticipantsApi researcherParticipantsApi = researcher.getClient(ParticipantsApi.class);
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
@@ -313,7 +311,7 @@ public class ParticipantsTest {
         participant.setPassword("P@ssword1!");
         participant.setEmail(email);
         participant.setPhone(PHONE);
-        participant.setExternalId(externalId.getIdentifier());
+        participant.setExternalIds(ImmutableMap.of(STUDY_ID_1, externalId));
         participant.setSharingScope(ALL_QUALIFIED_RESEARCHERS);
         // BRIDGE-1604: leave notifyByEmail to its default value (should be true)
         participant.setDataGroups(dataGroups);
@@ -343,7 +341,7 @@ public class ParticipantsTest {
             assertEquals("FirstName", retrieved.getFirstName());
             assertEquals("LastName", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail());
-            assertTrue(retrieved.getExternalIds().values().contains(externalId.getIdentifier()));
+            assertEquals(externalId, retrieved.getExternalIds().get(STUDY_ID_1));
             assertEquals(ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
             assertTrue(retrieved.isNotifyByEmail());
             assertListsEqualIgnoringOrder(dataGroups, retrieved.getDataGroups());

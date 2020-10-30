@@ -224,7 +224,7 @@ public class AppConfigTest {
         SurveyReference surveyRef1 = new SurveyReference().guid(surveyKeys.getGuid()).createdOn(surveyKeys.getCreatedOn());
 
         StudyParticipant participant = new StudyParticipant();
-        participant.setExternalId("externalId");
+        participant.setFirstName("first name test");
         
         Criteria criteria = new Criteria();
         criteria.setMaxAppVersions(ImmutableMap.of("Android", 10));
@@ -261,7 +261,7 @@ public class AppConfigTest {
         assertEquals(firstOneRetrieved.getCreatedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
         
         StudyParticipant savedUser = RestUtils.toType(firstOneRetrieved.getClientData(), StudyParticipant.class);
-        assertEquals("externalId", savedUser.getExternalId());
+        assertEquals("first name test", savedUser.getFirstName());
         
         FileReference retrievedFileRef = firstOneRetrieved.getFileReferences().get(0);
         assertEquals(retrievedFileRef.getGuid(), revision.getFileGuid());
