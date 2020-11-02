@@ -204,7 +204,7 @@ public class ExternalIdsV4Test {
             admin.getClient(OrganizationsApi.class).addMember(ORG_ID_1, user.getUserId()).execute();
             
             ForResearchersApi scopedResearcherApi = user.getClient(ForResearchersApi.class);
-            ExternalIdentifierList scopedList = scopedResearcherApi.getExternalIdsForStudy(STUDY_ID_1, null, null, null)
+            ExternalIdentifierList scopedList = scopedResearcherApi.getExternalIdsForStudy(STUDY_ID_1, null, null, prefix)
                     .execute().body();
             
             // Only ten of them have the study ID
