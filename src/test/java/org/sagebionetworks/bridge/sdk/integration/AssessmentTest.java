@@ -231,6 +231,16 @@ public class AssessmentTest {
         } catch(UnauthorizedException e) {
         }
         
+        // BUG: shared assessment with a revision lower than the highest revision in another app, with the 
+        // same identifier, was not appearing in the API. Verify that this works before deleting one of the 
+        // revisions.
+        firstRevision = assessmentApi.publishAssessment(firstRevision.getGuid(), null).execute().body();
+        
+        SharedAssessmentsApi sharedApi = developer.getClient(SharedAssessmentsApi.class);
+        AssessmentList sharedList = sharedApi.getSharedAssessments(0, 50, null, null).execute().body();
+        assertTrue(sharedList.getItems().stream().map(Assessment::getGuid)
+                .collect(toSet()).contains(firstRevision.getOriginGuid()));
+        
         // deleteAssessment physical=false works
         assessmentApi.deleteAssessment(secondRevision.getGuid(), false).execute();
         
@@ -282,9 +292,6 @@ public class AssessmentTest {
         
         // SHARED ASSESSMENTS LIFECYCLE
         
-        firstRevision = assessmentApi.publishAssessment(firstRevision.getGuid(), null).execute().body();
-        
-        SharedAssessmentsApi sharedApi = developer.getClient(SharedAssessmentsApi.class);
         Assessment shared = sharedApi.getLatestSharedAssessmentRevision(id).execute().body();
         
         assertEquals(shared.getGuid(), firstRevision.getOriginGuid());
