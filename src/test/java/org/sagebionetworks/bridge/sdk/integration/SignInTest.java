@@ -2,9 +2,12 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.AccountStatus.DISABLED;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
@@ -17,6 +20,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
@@ -157,18 +161,58 @@ public class SignInTest {
         newUserAuthApi.signInV4(signIn).execute();
     }
 
-    @Test(expected = UnauthorizedException.class)
+    @Test
     public void signInAccountUnverified() throws Exception {
-        // Mark account as unverified. In the v4 API, if sign in is first successful, we throw unauthorized exception
+        TestUser admin = TestUserHelper.getSignedInAdmin();
+        SignUp signUp = new SignUp().email(IntegTestUtils.makeEmail(SignInTest.class))
+                .password(PASSWORD).appId(TEST_APP_ID);
+        ParticipantsApi participantsApi = admin.getClient(ParticipantsApi.class);
+        String userId = null;
+        try {
+            userId = participantsApi.createParticipant(signUp).execute().body().getIdentifier();
+            
+            SignIn signIn = new SignIn().email(signUp.getEmail())
+                    .password(PASSWORD).appId(TEST_APP_ID);
+    
+            // Sign in should now fail with a 404 not found.
+            ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
+            AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
+            newUserAuthApi.signInV4(signIn).execute();
+            fail("Should have thrown exception");
+        } catch(UnauthorizedException e) {
+        } finally {
+            if (userId != null) {
+                admin.getClient(ForAdminsApi.class).deleteUser(userId).execute();    
+            }
+        }
+    }
+
+    @Test
+    public void signInAccountDisabled() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ParticipantsApi participantsApi = admin.getClient(ParticipantsApi.class);
-        StudyParticipant participant = participantsApi.getParticipantById(user.getSession().getId(), false).execute().body();
-        participant.setStatus(AccountStatus.UNVERIFIED);
-        participantsApi.updateParticipant(user.getSession().getId(), participant).execute();
-
-        // Sign in should now fail with a 404 not found.
-        ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(user.getSignIn()).build();
-        AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
-        newUserAuthApi.signInV4(user.getSignIn()).execute();
+        
+        TestUser user = TestUserHelper.createAndSignInUser(SignInTest.class, true);
+        try {
+            
+            StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
+            participant.setStatus(DISABLED);
+            
+            participantsApi.updateParticipant(user.getUserId(), participant).execute().body();
+            
+            participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
+            assertEquals(participant.getStatus(), AccountStatus.DISABLED);
+            
+            ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(user.getSignIn()).build();
+            AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
+            newUserAuthApi.signInV4(user.getSignIn()).execute();
+            fail("Should have thrown exception");
+    
+        } catch(BridgeSDKException e) {
+        } finally {
+            if (user != null) {
+                user.signOutAndDeleteUser();
+            }
+        }
     }
 }
