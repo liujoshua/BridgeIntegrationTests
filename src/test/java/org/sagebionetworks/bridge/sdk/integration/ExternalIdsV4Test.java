@@ -83,8 +83,6 @@ public class ExternalIdsV4Test {
             // Create a couple of external IDs related to different studies.
             userId1 = researcherApi.createParticipant(new SignUp().externalIds(ImmutableMap.of(STUDY_ID_1, extIdA))).execute().body().getIdentifier();
             usersToDelete.add(userId1);
-            // researcherApi.createParticipant(new SignUp().externalIds(ImmutableMap.of(STUDY_ID_2, extIdB1))).execute().body().getIdentifier();
-            // researcherApi.createParticipant(new SignUp().externalIds(ImmutableMap.of(STUDY_ID_2, extIdB2))).execute().body().getIdentifier();
 
             // The created account has been associated to the external ID and its related study
             StudyParticipant participant = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();

@@ -98,7 +98,7 @@ public class ParticipantsTest {
         developer = TestUserHelper.createAndSignInUser(ParticipantsTest.class, false, DEVELOPER);
         researcher = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, RESEARCHER);
         
-        externalId = Tests.randomIdentifier(ParticipantsTest.class); // Tests.createExternalId(ParticipantsTest.class, developer, STUDY_ID_1);
+        externalId = Tests.randomIdentifier(ParticipantsTest.class);
         
         IntegTestUtils.deletePhoneUser();
         

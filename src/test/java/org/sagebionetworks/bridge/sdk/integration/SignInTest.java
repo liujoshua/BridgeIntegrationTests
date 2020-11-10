@@ -93,7 +93,7 @@ public class SignInTest {
     public void createComplexUser() throws Exception {
         AuthenticationApi authApi = researcher.getClient(AuthenticationApi.class);
         
-        String externalId = Tests.randomIdentifier(SignInTest.class);//, developer, STUDY_ID_1);
+        String externalId = Tests.randomIdentifier(SignInTest.class);
         
         Map<String,String> map = Maps.newHashMap();
         map.put("can_be_recontacted", "true");
