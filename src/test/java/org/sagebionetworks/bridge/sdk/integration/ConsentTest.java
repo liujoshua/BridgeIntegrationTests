@@ -13,6 +13,7 @@ import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.SPONSORS_AND_PARTNERS;
 import static org.sagebionetworks.bridge.rest.model.SmsType.TRANSACTIONAL;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
@@ -61,6 +62,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
 @Category(IntegrationSmokeTest.class)
@@ -492,7 +494,9 @@ public class ConsentTest {
 
     @Test
     public void canWithdrawParticipantFromApp() throws Exception {
-        TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
+        String externalId = Tests.randomIdentifier(ConsentTest.class);
+        SignUp signUp = new SignUp().externalIds(ImmutableMap.of(STUDY_ID_2, externalId));
+        TestUser testUser = TestUserHelper.createAndSignInUser(ConsentTest.class, true, signUp);
         String userId = testUser.getSession().getId();
         try {
             ParticipantsApi participantsApi = researchUser.getClient(ParticipantsApi.class);
@@ -509,7 +513,7 @@ public class ConsentTest {
             assertFalse(theUser.isEmailVerified());
             assertNull(theUser.getPhone());
             assertFalse(theUser.isPhoneVerified());
-            assertNull(theUser.getExternalId());
+            assertTrue(theUser.getExternalIds().isEmpty());
             for (List<UserConsentHistory> histories : theUser.getConsentHistories().values()) {
                 for (UserConsentHistory oneHistory : histories) {
                     assertNotNull(oneHistory.getWithdrewOn());

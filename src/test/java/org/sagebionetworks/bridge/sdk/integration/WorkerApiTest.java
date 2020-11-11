@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableMap;
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
@@ -34,7 +36,6 @@ import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.ActivityEventList;
 import org.sagebionetworks.bridge.rest.model.App;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
@@ -125,10 +126,10 @@ public class WorkerApiTest {
     @SuppressWarnings("deprecation")
     @Test
     public void retrieveUsers() throws Exception {
-        ExternalIdentifier externalId = Tests.createExternalId(WorkerApiTest.class, developer, STUDY_ID_1);
+        String externalId = Tests.randomIdentifier(WorkerApiTest.class);
         
         user = new TestUserHelper.Builder(WorkerApiTest.class).withConsentUser(true)
-                .withExternalId(externalId.getIdentifier()).withSynapseUserId(SYNAPSE_USER_ID).createAndSignInUser();
+                .withExternalIds(ImmutableMap.of(STUDY_ID_1, externalId)).withSynapseUserId(SYNAPSE_USER_ID).createAndSignInUser();
 
         // Have the user get activities, to bootstrap timezone.
         user.getClient(ActivitiesApi.class).getScheduledActivitiesByDateRange(DateTime.now(TEST_USER_TIME_ZONE),
@@ -160,7 +161,7 @@ public class WorkerApiTest {
         
         // get by external Id, also verify we do not include consent histories.
         StudyParticipant participant3 = workersApi
-                .getParticipantByExternalIdForApp(TEST_APP_ID, externalId.getIdentifier(), false).execute().body();
+                .getParticipantByExternalIdForApp(TEST_APP_ID, externalId, false).execute().body();
         assertEquals(participant.getId(), participant3.getId());
         assertNull(participant3.getConsentHistories().get(TEST_APP_ID));
         
@@ -168,8 +169,6 @@ public class WorkerApiTest {
         StudyParticipant participant4 = workersApi
                 .getParticipantBySynapseUserIdForApp(TEST_APP_ID, SYNAPSE_USER_ID, false).execute().body();
         assertEquals(participant.getId(), participant4.getId());
-        
-        Tests.deleteExternalId(externalId);
     }
     
     @SuppressWarnings("deprecation")

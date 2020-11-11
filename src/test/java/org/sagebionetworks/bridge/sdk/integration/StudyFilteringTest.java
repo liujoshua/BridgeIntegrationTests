@@ -31,6 +31,7 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
@@ -40,6 +41,7 @@ import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.CriteriaScheduleStrategy;
+import org.sagebionetworks.bridge.rest.model.Enrollment;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Schedule;
@@ -300,10 +302,14 @@ public class StudyFilteringTest {
     private static UserInfo createUser(String... studyIds) throws Exception {
         String email = IntegTestUtils.makeEmail(StudyFilteringTest.class);
         SignUp signUp = new SignUp().email(email).password(PASSWORD).appId(TEST_APP_ID)
-                .consent(true).studyIds(ImmutableList.copyOf(studyIds));
+                .consent(true);
 
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         String userId = adminApi.createUser(signUp).execute().body().getId();
+        for (String studyId : studyIds) {
+            studiesApi.enrollParticipant(studyId, new Enrollment().userId(userId)).execute();
+        }
         userIdsToDelete.add(userId);
         return new UserInfo(userId, email);
     }

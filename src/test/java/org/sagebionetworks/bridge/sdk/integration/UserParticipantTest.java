@@ -2,9 +2,10 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 
 import com.google.common.collect.ImmutableList;
@@ -17,8 +18,6 @@ import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -92,32 +91,32 @@ public class UserParticipantTest {
     }
 
     @Test
-    public void canAddButNotChangeExternalIdentifier() throws Exception {
-        ExternalIdentifier externalId1 = Tests.createExternalId(UserParticipantTest.class, developer, STUDY_ID_1);
-        ExternalIdentifier externalId2 = Tests.createExternalId(UserParticipantTest.class, developer, STUDY_ID_1);
+    public void cannotChangeExternalIdentifier() throws Exception {
+        String externalId1 = Tests.randomIdentifier(UserParticipantTest.class);
+        String externalId2 = Tests.randomIdentifier(UserParticipantTest.class);
         
-        TestUser user = TestUserHelper.createAndSignInUser(UserParticipantTest.class, false);
+        TestUser user = new TestUserHelper.Builder(UserParticipantTest.class)
+                .withExternalIds(ImmutableMap.of(STUDY_ID_1, externalId1)).createAndSignInUser();
         try {
             ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
             StudyParticipant participant = usersApi.getUsersParticipantRecord(false).execute().body();
-            participant.setExternalId(externalId1.getIdentifier());
+            assertEquals(participant.getExternalIds().get(STUDY_ID_1), externalId1);
 
             UserSessionInfo session = usersApi.updateUsersParticipantRecord(participant).execute().body();
-            assertEquals(externalId1.getIdentifier(), session.getExternalIds().get(STUDY_ID_1));
+            assertEquals(externalId1, session.getExternalIds().get(STUDY_ID_1));
 
             participant = usersApi.getUsersParticipantRecord(false).execute().body();
             assertEquals(user.getEmail(), participant.getEmail());
-            assertTrue(participant.getExternalIds().values().contains(externalId1.getIdentifier()));
+            assertTrue(participant.getExternalIds().values().contains(externalId1));
             
-            try {
-                participant.setExternalId(externalId2.getIdentifier());
-                usersApi.updateUsersParticipantRecord(participant).execute();
-                fail("Exception should have been thrown");
-            } catch(ConstraintViolationException e) {
-            }
+            // This doesn't do anything
+            participant.setExternalIds(ImmutableMap.of(STUDY_ID_2, externalId2));
+            usersApi.updateUsersParticipantRecord(participant).execute();
+            
+            StudyParticipant retValue = usersApi.getUsersParticipantRecord(false).execute().body();
+            assertEquals(retValue.getExternalIds().get(STUDY_ID_1), externalId1);
+            assertNull(retValue.getExternalIds().get(STUDY_ID_2));
         } finally {
-            Tests.deleteExternalId(externalId1);
-            Tests.deleteExternalId(externalId2);
             user.signOutAndDeleteUser();
         }
     }

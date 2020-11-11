@@ -106,14 +106,6 @@ public class SignUpTest {
             } catch(InvalidEntityException e) {
                 assertEquals("StudyParticipant is invalid: externalId is required", e.getMessage());
             }
-            try {
-                // Wrong ID. We can't add an ID to this app, as we can't add a user.
-                signUp.setExternalId("ABC");
-                authApi.signUp(signUp).execute();
-                fail("Should have thrown exception");
-            } catch(InvalidEntityException e) {
-                assertEquals("externalId is not a valid external ID", e.getErrors().get("externalId").get(0));
-            }
         } finally {
             superadminApi.deleteApp(app.getIdentifier(), true).execute();
         }

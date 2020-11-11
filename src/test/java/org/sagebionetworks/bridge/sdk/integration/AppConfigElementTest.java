@@ -63,7 +63,7 @@ public class AppConfigElementTest {
         AppConfigsApi configsApi = developer.getClient(AppConfigsApi.class);
 
         StudyParticipant participantV1 = new StudyParticipant();
-        participantV1.setExternalId("externalId1");
+        participantV1.setFirstName("first name test");
 
         AppConfigElement elementV1 = new AppConfigElement();
         elementV1.setId(id);
@@ -81,7 +81,7 @@ public class AppConfigElementTest {
         assertEquals(new Long(1), retrievedInListV1.getRevision());
 
         StudyParticipant retrievedParticipantV1 = RestUtils.toType(retrievedInListV1.getData(), StudyParticipant.class);
-        assertEquals("externalId1", retrievedParticipantV1.getExternalId());
+        assertEquals("first name test", retrievedParticipantV1.getFirstName());
 
         AppConfigElement retrievedDirectlyV1 = configsApi.getAppConfigElement(id, retrievedInListV1.getRevision())
                 .execute().body();
@@ -89,7 +89,7 @@ public class AppConfigElementTest {
         assertEquals(new Long(1), retrievedDirectlyV1.getRevision());
 
         StudyParticipant participantV2 = new StudyParticipant();
-        participantV2.setExternalId("externalId2");
+        participantV2.setFirstName("second name test");
 
         AppConfigElement elementV2 = new AppConfigElement();
         elementV2.setId(id);
