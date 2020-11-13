@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
+import static org.sagebionetworks.repo.model.util.ModelConstants.ENTITY_ADMIN_ACCESS_PERMISSIONS;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -38,7 +39,6 @@ import org.sagebionetworks.repo.model.MembershipInvitation;
 import org.sagebionetworks.repo.model.Project;
 import org.sagebionetworks.repo.model.ResourceAccess;
 import org.sagebionetworks.repo.model.Team;
-import org.sagebionetworks.repo.model.util.ModelConstants;
 import retrofit2.Response;
 
 import org.sagebionetworks.bridge.config.PropertiesConfig;
@@ -170,7 +170,7 @@ public class AppTest {
             // verify if project and team exists
             Entity project = synapseClient.getEntityById(projectId);
             assertNotNull(project);
-            assertEquals(project.getEntityType(), "org.sagebionetworks.repo.model.Project");
+            assertEquals(project.getConcreteType(), "org.sagebionetworks.repo.model.Project");
             this.project = (Project) project;
             Team team = synapseClient.getTeam(teamId.toString());
             assertNotNull(team);
@@ -191,7 +191,7 @@ public class AppTest {
             ResourceAccess exporterRa = retListForExporter.get(0);
             assertNotNull(exporterRa);
             assertEquals(exporterRa.getPrincipalId().toString(), EXPORTER_SYNAPSE_USER_ID);
-            assertEquals(exporterRa.getAccessType(), ModelConstants.ENITY_ADMIN_ACCESS_PERMISSIONS);
+            assertEquals(exporterRa.getAccessType(), ENTITY_ADMIN_ACCESS_PERMISSIONS);
             // then verify target user
             List<ResourceAccess> retListForUser = projectRa.stream()
                     .filter(ra -> ra.getPrincipalId().equals(TEST_USER_ID))
@@ -202,7 +202,7 @@ public class AppTest {
             ResourceAccess userRa = retListForUser.get(0);
             assertNotNull(userRa);
             assertEquals(userRa.getPrincipalId(), TEST_USER_ID);
-            assertEquals(userRa.getAccessType(), ModelConstants.ENITY_ADMIN_ACCESS_PERMISSIONS);
+            assertEquals(userRa.getAccessType(), ENTITY_ADMIN_ACCESS_PERMISSIONS);
 
             // membership invitation to target user
             // (teamId, inviteeId, limit, offset)
