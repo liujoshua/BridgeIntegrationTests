@@ -200,7 +200,6 @@ public class UploadTest {
     @AfterClass
     public static void deleteResearcher() throws Exception {
         ForAdminsApi adminsApi = TestUserHelper.getSignedInAdmin().getClient(ForAdminsApi.class);
-        adminsApi.deleteExternalId(EXTERNAL_ID).execute();
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
         }
