@@ -43,7 +43,6 @@ public class StudyMembershipTest {
     private TestUser appAdmin;
     private StudiesApi studiesApi;
     private Set<String> studyIdsToDelete;
-    private Set<String> externalIdsToDelete;
     private Set<TestUser> usersToDelete;
 
     @Before
@@ -54,7 +53,6 @@ public class StudyMembershipTest {
         studiesApi = admin.getClient(StudiesApi.class);
 
         studyIdsToDelete = new HashSet<>();
-        externalIdsToDelete = new HashSet<>();
         usersToDelete = new HashSet<>();
     }
 
@@ -73,17 +71,6 @@ public class StudyMembershipTest {
             } catch(Exception e) {
                 e.printStackTrace();
             }
-        }
-        if (appAdmin != null) {
-            StudiesApi studiesApi = appAdmin.getClient(StudiesApi.class);
-            for (String externalId : externalIdsToDelete) {
-                try {
-                    studiesApi.deleteExternalId(externalId).execute();    
-                } catch(Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            appAdmin.signOutAndDeleteUser();
         }
         for (String studyId : studyIdsToDelete) {
             try {
