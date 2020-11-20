@@ -13,21 +13,28 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 
+import java.io.IOException;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.SharedAssessmentsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
+import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
+import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
@@ -46,7 +53,12 @@ public class OrganizationTest {
     
     private String orgId2;
     private Organization org2;
-    
+
+    private String orgId3;
+    private Organization org3;
+
+    private Assessment assessment;
+
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();   
@@ -74,6 +86,21 @@ public class OrganizationTest {
         }
         if (org2 != null && orgId2 != null) {
             orgApi.deleteOrganization(orgId2).execute();
+        }
+        if (org3 != null && orgId3 != null) {
+            orgApi.deleteOrganization(orgId3).execute();
+        }
+        AssessmentsApi assessmentsApi = admin.getClient(AssessmentsApi.class);
+        SharedAssessmentsApi sharedAssessmentsApi = admin.getClient(SharedAssessmentsApi.class);
+        if (assessment != null) {
+            try {
+                assessmentsApi.deleteAssessment(assessment.getGuid(), true);
+            } catch (Exception ignored) {
+            }
+            try {
+                sharedAssessmentsApi.deleteSharedAssessment(assessment.getGuid(), true);
+            } catch (Exception ignored) {
+            }
         }
     }
     
@@ -240,7 +267,53 @@ public class OrganizationTest {
             adminOrgApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
         }
     }
-    
+
+    @Test
+    public void testDeleteWithAssessment() throws IOException {
+        // Create an organization
+        OrganizationsApi orgApi = admin.getClient(OrganizationsApi.class);
+        orgId3 = Tests.randomIdentifier(OrganizationTest.class);
+        org3 = new Organization();
+        org3.setIdentifier(orgId3);
+        org3.setName("Test Name");
+        org3.setDescription("A description");
+
+        org3 = orgApi.createOrganization(org3).execute().body();
+
+        AssessmentsApi assessmentApi = admin.getClient(AssessmentsApi.class);
+        Assessment unsavedAssessment = new Assessment()
+                .identifier("assessmentId")
+                .title("Title")
+                .summary("Summary")
+                .validationStatus("Not validated")
+                .normingStatus("Not normed")
+                .osName("Both")
+                .ownerId(orgId3);
+
+        assessment = assessmentApi.createAssessment(unsavedAssessment).execute().body();
+        assertNotNull(assessment);
+
+        try {
+            orgApi.deleteOrganization(orgId3);
+            fail("Should have thrown an exception");
+        } catch (ConstraintViolationException ignored) {
+        }
+
+        assessmentApi.publishAssessment(assessment.getIdentifier(), null).execute().body();
+        assessmentApi.deleteAssessment(assessment.getGuid(), true);
+        try {
+            orgApi.deleteOrganization(orgId3);
+            fail("Should have thrown an exception");
+        } catch (ConstraintViolationException ignored) {
+        }
+
+        SharedAssessmentsApi sharedAssessmentsApi = admin.getClient(SharedAssessmentsApi.class);
+        Assessment shared = sharedAssessmentsApi.getLatestSharedAssessmentRevision(assessment.getGuid()).execute().body();
+        sharedAssessmentsApi.deleteSharedAssessment(shared.getGuid(), true);
+
+        orgApi.deleteOrganization(orgId3);
+    }
+
     private Organization findOrganization(OrganizationList list, String id) {
         for (Organization org : list.getItems()) {
             if (org.getIdentifier().equals(id)) {
