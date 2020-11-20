@@ -38,6 +38,7 @@ import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
+import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -61,7 +62,7 @@ public class OrganizationTest {
 
     @Before
     public void before() throws Exception {
-        admin = TestUserHelper.getSignedInAdmin();   
+        admin = TestUserHelper.getSignedInAdmin();
     }
 
     @After
@@ -282,7 +283,7 @@ public class OrganizationTest {
 
         AssessmentsApi assessmentApi = admin.getClient(AssessmentsApi.class);
         Assessment unsavedAssessment = new Assessment()
-                .identifier("assessmentId")
+                .identifier(Tests.randomIdentifier(Assessment.class))
                 .title("Title")
                 .summary("Summary")
                 .validationStatus("Not validated")
@@ -294,24 +295,26 @@ public class OrganizationTest {
         assertNotNull(assessment);
 
         try {
-            orgApi.deleteOrganization(orgId3);
+            orgApi.deleteOrganization(orgId3).execute();
             fail("Should have thrown an exception");
         } catch (ConstraintViolationException ignored) {
         }
 
-        assessmentApi.publishAssessment(assessment.getIdentifier(), null).execute().body();
-        assessmentApi.deleteAssessment(assessment.getGuid(), true);
+        assessmentApi.publishAssessment(assessment.getGuid(), null).execute().body();
+        assessmentApi.deleteAssessment(assessment.getGuid(), true).execute();
         try {
-            orgApi.deleteOrganization(orgId3);
+            orgApi.deleteOrganization(orgId3).execute();
             fail("Should have thrown an exception");
         } catch (ConstraintViolationException ignored) {
         }
 
         SharedAssessmentsApi sharedAssessmentsApi = admin.getClient(SharedAssessmentsApi.class);
-        Assessment shared = sharedAssessmentsApi.getLatestSharedAssessmentRevision(assessment.getGuid()).execute().body();
-        sharedAssessmentsApi.deleteSharedAssessment(shared.getGuid(), true);
+        Assessment shared = sharedAssessmentsApi.getLatestSharedAssessmentRevision(assessment.getIdentifier()).execute().body();
+        sharedAssessmentsApi.deleteSharedAssessment(shared.getGuid(), true).execute();
 
-        orgApi.deleteOrganization(orgId3);
+        orgApi.deleteOrganization(orgId3).execute();
+        orgId3 = null;
+        org3 = null;
     }
 
     private Organization findOrganization(OrganizationList list, String id) {
