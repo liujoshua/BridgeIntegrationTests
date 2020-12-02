@@ -324,8 +324,9 @@ public class ParticipantsTest {
         String id = idHolder.getIdentifier();
         
         // In order for the researcher to see this person, they must be manually enrolled in
-        // a study seen by Sage. This raises the question of how people will be manually enrolled
-        // outside of the use of an external ID. An additional API might be necessary.
+        // a study seen by Sage. A new role (study coordinator) with a new set of APIs will create
+        // accounts in a study, while an org administrator with another set of APIs will create 
+        // accounts in their organization. This is a workaround for the existing APIs.
         researcher.getClient(StudiesApi.class).enrollParticipant(STUDY_ID_1, 
                 new Enrollment().userId(id)).execute();
         try {
