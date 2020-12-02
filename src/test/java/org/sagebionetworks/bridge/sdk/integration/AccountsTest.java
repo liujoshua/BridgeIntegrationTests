@@ -33,6 +33,7 @@ import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
+import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.RequestInfo;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -212,7 +213,8 @@ public class AccountsTest {
         Account retrieved = orgAdminApi.getAccount(emailUserId).execute().body();
         assertEquals(PHONE.getNumber(), retrieved.getPhone().getNumber());
 
-        // But if you do it again, it should not work
+        // But if you do it again (even using a new number), it should not work
+        identifierUpdate.phoneUpdate(new Phone().number("4082588569").regionCode("US"));
         info = accountsApi.updateIdentifiersForSelf(identifierUpdate).execute().body();
         assertEquals(PHONE.getNumber(), info.getPhone().getNumber()); // unchanged
     }
