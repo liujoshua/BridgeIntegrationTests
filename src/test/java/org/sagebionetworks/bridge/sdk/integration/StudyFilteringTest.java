@@ -5,6 +5,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.HashSet;
@@ -22,6 +29,7 @@ import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
@@ -33,6 +41,7 @@ import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Criteria;
 import org.sagebionetworks.bridge.rest.model.CriteriaScheduleStrategy;
+import org.sagebionetworks.bridge.rest.model.Enrollment;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Schedule;
@@ -43,7 +52,6 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.Subpopulation;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
@@ -68,42 +76,31 @@ public class StudyFilteringTest {
 
     private static TestUser admin;
     private static TestUser developer;
-    private static StudiesApi studiesApi;
-    private static Set<String> studyIdsToDelete;
     private static Set<String> userIdsToDelete;
     
-    private static String studyIdA;
-    private static String studyIdB;
+    private static SignIn researcher1;
+    private static SignIn researcher2;
     
-    private static SignIn researcherA;
-    private static SignIn researcherB;
-    
-    private static UserInfo userA;
-    private static UserInfo userB;
-    private static UserInfo userAB;        
+    private static UserInfo user1;
+    private static UserInfo user2;
+    private static UserInfo user1and2;        
     
     @BeforeClass
     public static void before() throws Exception { 
         admin = TestUserHelper.getSignedInAdmin();
-        studiesApi = admin.getClient(StudiesApi.class);
         
-        developer = TestUserHelper.createAndSignInUser(StudyFilteringTest.class, false, Role.DEVELOPER);
+        developer = TestUserHelper.createAndSignInUser(StudyFilteringTest.class, false, DEVELOPER);
         
-        studyIdsToDelete = new HashSet<>();
         userIdsToDelete = new HashSet<>();
         
-        // Create two studies
-        studyIdA = createStudy();
-        studyIdB = createStudy();
+        // Create a researcher in study1 and study2
+        researcher1 = createAdmin(RESEARCHER, ORG_ID_1).getSignIn();
+        researcher2 = createAdmin(RESEARCHER, ORG_ID_2).getSignIn();
         
-        // Create a researcher in study A and study B
-        researcherA = createUser(Role.RESEARCHER, studyIdA).getSignIn();
-        researcherB = createUser(Role.RESEARCHER, studyIdB).getSignIn();
-        
-        // Create three accounts, one A, one B, one AB, one with nothing
-        userA = createUser(null, studyIdA);
-        userB = createUser(null, studyIdB);
-        userAB = createUser(null, studyIdA, studyIdB);        
+        // Create three accounts, one study1, one study2, one studies 1 and 2
+        user1 = createUser(STUDY_ID_1);
+        user2 = createUser(STUDY_ID_2);
+        user1and2 = createUser(STUDY_ID_1, STUDY_ID_2);        
     }
 
     @AfterClass
@@ -111,19 +108,11 @@ public class StudyFilteringTest {
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         for (String userId : userIdsToDelete) {
             try {
-                adminsApi.deleteUser(userId).execute();    
-            } catch(Exception e) {
+                adminsApi.deleteUser(userId).execute();
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        for (String studyId : studyIdsToDelete) {
-            try {
-                adminsApi.deleteStudy(studyId, true).execute();    
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
-        }
-
         try {
             developer.signOutAndDeleteUser();
         } catch (Exception e) {
@@ -134,48 +123,48 @@ public class StudyFilteringTest {
     @SuppressWarnings("deprecation")
     @Test
     public void filterParticipants() throws Exception { 
-        // researcherA
-        ClientManager manager = new ClientManager.Builder().withSignIn(researcherA).build();
-        ForResearchersApi researcherApiForA = manager.getClient(ForResearchersApi.class);
+        // researcher1
+        ClientManager manager = new ClientManager.Builder().withSignIn(researcher1).build();
+        ForResearchersApi researcherApiFor1 = manager.getClient(ForResearchersApi.class);
         
-        // This researcher sees A study users only
-        AccountSummaryList list = researcherApiForA.getParticipants(null, null, null, null, null, null).execute().body();
-        assertListContainsAccount(list.getItems(), studyIdA, userA.getId());
-        assertListContainsAccount(list.getItems(), studyIdA, userAB.getId());
+        // This researcher sees 1 study users only
+        AccountSummaryList list = researcherApiFor1.getParticipants(null, null, null, null, null, null).execute().body();
+        assertListContainsAccount(list.getItems(), STUDY_ID_1, user1.getId());
+        assertListContainsAccount(list.getItems(), STUDY_ID_1, user1and2.getId());
         
-        // researcherB
-        manager = new ClientManager.Builder().withSignIn(researcherB).build();
-        ForResearchersApi researcherApiForB = manager.getClient(ForResearchersApi.class);
+        // researcher2
+        manager = new ClientManager.Builder().withSignIn(researcher2).build();
+        ForResearchersApi researcherApiFor2 = manager.getClient(ForResearchersApi.class);
         
-        // This researcher sees B study users only
-        list = researcherApiForB.getParticipants(null, null, null, null, null, null).execute().body();
-        assertListContainsAccount(list.getItems(), studyIdB, userB.getId());
-        assertListContainsAccount(list.getItems(), studyIdB, userAB.getId());
+        // This researcher sees study 2 users only
+        list = researcherApiFor2.getParticipants(null, null, null, null, null, null).execute().body();
+        assertListContainsAccount(list.getItems(), STUDY_ID_2, user2.getId());
+        assertListContainsAccount(list.getItems(), STUDY_ID_2, user1and2.getId());
         
-        // Researcher B should not be able to get a study A account
+        // Researcher 2 should not be able to get a study 1 account
         try {
-            researcherApiForB.getParticipantById(userA.getId(), false).execute().body();
+            researcherApiFor2.getParticipantById(user1.getId(), false).execute().body();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
         }
         // Researcher B should be able to get only study B accounts (even if mixed)
-        researcherApiForB.getParticipantById(userB.getId(), false).execute().body();
-        researcherApiForB.getParticipantById(userAB.getId(), false).execute().body();
+        researcherApiFor2.getParticipantById(user2.getId(), false).execute().body();
+        researcherApiFor2.getParticipantById(user1and2.getId(), false).execute().body();
         
         // This should apply to any call involving user in another study, try one (fully tested in 
         // the unit tests)
         try {
-            researcherApiForB.getActivityEventsForParticipant(userA.getId()).execute();
+            researcherApiFor2.getActivityEventsForParticipant(user1.getId()).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
         }
         
-        // Researcher A should not be able to save and destroy the mapping to study B
-        StudyParticipant participant = researcherApiForA.getParticipantById(userAB.getId(), false).execute().body();
-        researcherApiForA.updateParticipant(userAB.getId(), participant);
+        // Researcher 1 should not be able to save and destroy the mapping to study 2
+        StudyParticipant participant = researcherApiFor1.getParticipantById(user1and2.getId(), false).execute().body();
+        researcherApiFor1.updateParticipant(user1and2.getId(), participant);
         
-        participant = researcherApiForB.getParticipantById(userAB.getId(), false).execute().body();
-        assertTrue(participant.getStudyIds().contains(studyIdB)); // this wasn't wiped out by the update.
+        participant = researcherApiFor2.getParticipantById(user1and2.getId(), false).execute().body();
+        assertTrue(participant.getStudyIds().contains(STUDY_ID_2)); // this wasn't wiped out by the update.
     }
     
     // AppConfigs: while these have criteria, they can only be filtered by data that does 
@@ -185,27 +174,28 @@ public class StudyFilteringTest {
     @Test
     public void filterSubpopulations() throws Exception {
         Criteria criteria = new Criteria();
-        criteria.setAllOfStudyIds(ImmutableList.of(studyIdA));
+        criteria.setAllOfStudyIds(ImmutableList.of(STUDY_ID_2));
         
-        Subpopulation subpopA = new Subpopulation();
-        subpopA.criteria(criteria);
-        subpopA.setName("Optional consent for study A");
+        Subpopulation subpop2A = new Subpopulation();
+        subpop2A.criteria(criteria);
+        subpop2A.setName("Optional consent for study 2");
+        subpop2A.setStudyIdsAssignedOnConsent(ImmutableList.of(STUDY_ID_2));
         
         SubpopulationsApi subpopApi = developer.getClient(SubpopulationsApi.class);
         GuidVersionHolder keys = null;
         try {
-            keys = subpopApi.createSubpopulation(subpopA).execute().body();
+            keys = subpopApi.createSubpopulation(subpop2A).execute().body();
             
-            // If the rules are being applied, user A can see this optional subpop on sign in, but user B cannot.
-            ClientManager aClient = new ClientManager.Builder().withSignIn(userA.getSignIn()).build();
-            aClient.getClient(ForConsentedUsersApi.class).getActivityEvents().execute();
-            Map<String, ConsentStatus> statusesA = aClient.getSessionOfClients().getConsentStatuses();
-            assertNotNull(statusesA.get(keys.getGuid()));
+            // If the rules are being applied, user 1 can see this optional subpop on sign in, but user 2 cannot.
+            ClientManager client1 = new ClientManager.Builder().withSignIn(user1.getSignIn()).build();
+            client1.getClient(ForConsentedUsersApi.class).getActivityEvents().execute();
+            Map<String, ConsentStatus> statuses1 = client1.getSessionOfClients().getConsentStatuses();
+            assertNull(statuses1.get(keys.getGuid()));
             
-            ClientManager bClient = new ClientManager.Builder().withSignIn(userB.getSignIn()).build();
-            bClient.getClient(ForConsentedUsersApi.class).getActivityEvents().execute();
-            Map<String, ConsentStatus> statusesB = bClient.getSessionOfClients().getConsentStatuses();
-            assertNull(statusesB.get(keys.getGuid()));
+            ClientManager client2 = new ClientManager.Builder().withSignIn(user2.getSignIn()).build();
+            client2.getClient(ForConsentedUsersApi.class).getActivityEvents().execute();
+            Map<String, ConsentStatus> statuses2 = client2.getSessionOfClients().getConsentStatuses();
+            assertNotNull(statuses2.get(keys.getGuid()));
         } finally {
             if (keys != null) {
                 admin.getClient(ForAdminsApi.class).deleteSubpopulation(keys.getGuid(), true).execute();
@@ -225,7 +215,7 @@ public class StudyFilteringTest {
         String taskId = app.getTaskIdentifiers().get(0);
         
         Criteria criteria = new Criteria();
-        criteria.setAllOfStudyIds(ImmutableList.of(studyIdA, studyIdB));
+        criteria.setAllOfStudyIds(ImmutableList.of(STUDY_ID_2));
         
         TaskReference ref = new TaskReference();
         ref.setIdentifier(taskId);
@@ -259,20 +249,20 @@ public class StudyFilteringTest {
             DateTime endOn = startOn.plusDays(4);
             
             // If the rules are being applied, user AB can see this activity, but neither A nor B can see it
-            ClientManager abClient = new ClientManager.Builder().withSignIn(userAB.getSignIn()).build();
-            ScheduledActivityListV4 abList = abClient.getClient(ForConsentedUsersApi.class)
+            ClientManager client1and2 = new ClientManager.Builder().withSignIn(user1and2.getSignIn()).build();
+            ScheduledActivityListV4 list1and2 = client1and2.getClient(ForConsentedUsersApi.class)
                     .getScheduledActivitiesByDateRange(startOn, endOn).execute().body();
-            assertFalse(someMatchActivityLabel(abList.getItems(), activityLabel));
+            assertFalse(noneMatchActivityLabel(list1and2.getItems(), activityLabel));
             
-            ClientManager aClient = new ClientManager.Builder().withSignIn(userA.getSignIn()).build();
-            ScheduledActivityListV4 aList = aClient.getClient(ForConsentedUsersApi.class)
+            ClientManager client1 = new ClientManager.Builder().withSignIn(user1.getSignIn()).build();
+            ScheduledActivityListV4 list1 = client1.getClient(ForConsentedUsersApi.class)
                     .getScheduledActivitiesByDateRange(startOn, endOn).execute().body();
-            assertTrue(someMatchActivityLabel(aList.getItems(), activityLabel));
+            assertTrue(noneMatchActivityLabel(list1.getItems(), activityLabel));
             
-            ClientManager bClient = new ClientManager.Builder().withSignIn(userB.getSignIn()).build();
-            ScheduledActivityListV4 bList = bClient.getClient(ForConsentedUsersApi.class)
+            ClientManager client2 = new ClientManager.Builder().withSignIn(user2.getSignIn()).build();
+            ScheduledActivityListV4 list2 = client2.getClient(ForConsentedUsersApi.class)
                     .getScheduledActivitiesByDateRange(startOn, endOn).execute().body();
-            assertTrue(someMatchActivityLabel(bList.getItems(), activityLabel));
+            assertFalse(noneMatchActivityLabel(list2.getItems(), activityLabel));
         } finally {
             if (keys != null) {
                 admin.getClient(ForAdminsApi.class).deleteSchedulePlan(keys.getGuid(), true).execute();
@@ -280,7 +270,7 @@ public class StudyFilteringTest {
         }
     }
     
-    private boolean someMatchActivityLabel(List<ScheduledActivity> activities, String activityLabel) {
+    private boolean noneMatchActivityLabel(List<ScheduledActivity> activities, String activityLabel) {
         return activities.stream().filter((act) -> act.getActivity()
                 .getLabel().equals(activityLabel)).count() == 0;
     }
@@ -288,7 +278,6 @@ public class StudyFilteringTest {
     private void assertListContainsAccount(List<AccountSummary> summaries, String callerStudyId, String userId) {
         for (AccountSummary summary : summaries) {
             if (summary.getId().equals(userId) &&
-                summary.getStudyIds().size() == 1 &&
                 summary.getStudyIds().contains(callerStudyId)) {
                 return;
             }
@@ -296,24 +285,31 @@ public class StudyFilteringTest {
         fail("Did not find account with ID or the account contains an invalid study: " + userId);
     }
     
-    private static String createStudy() throws Exception {
-        String id = Tests.randomIdentifier(StudyFilteringTest.class);
-        Study studyA = new Study().identifier(id).name("Study " + id);
-        studiesApi.createStudy(studyA).execute();
-        studyIdsToDelete.add(id);
-        return id;
-    }
-    
-    private static UserInfo createUser(Role role, String... studyIds) throws Exception {
+    private static UserInfo createAdmin(Role role, String orgId) throws Exception {
         String email = IntegTestUtils.makeEmail(StudyFilteringTest.class);
-        SignUp signUp = new SignUp().email(email).password(Tests.PASSWORD).appId(TEST_APP_ID).consent(true);
-        signUp.studyIds(ImmutableList.copyOf(studyIds));
-        if (role != null) {
-            signUp.setRoles(ImmutableList.of(role));
-        }
+        SignUp signUp = new SignUp().email(email).password(PASSWORD).appId(TEST_APP_ID)
+                .consent(false).roles(ImmutableList.of(role));
                 
         ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
         String userId = adminApi.createUser(signUp).execute().body().getId();
+        userIdsToDelete.add(userId);
+        
+        admin.getClient(OrganizationsApi.class).addMember(orgId, userId).execute();
+        
+        return new UserInfo(userId, email);
+    }
+    
+    private static UserInfo createUser(String... studyIds) throws Exception {
+        String email = IntegTestUtils.makeEmail(StudyFilteringTest.class);
+        SignUp signUp = new SignUp().email(email).password(PASSWORD).appId(TEST_APP_ID)
+                .consent(true);
+
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        String userId = adminApi.createUser(signUp).execute().body().getId();
+        for (String studyId : studyIds) {
+            studiesApi.enrollParticipant(studyId, new Enrollment().userId(userId)).execute();
+        }
         userIdsToDelete.add(userId);
         return new UserInfo(userId, email);
     }

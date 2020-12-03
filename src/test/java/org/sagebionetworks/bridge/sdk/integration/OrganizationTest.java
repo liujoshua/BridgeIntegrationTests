@@ -11,7 +11,9 @@ import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 
+import java.io.IOException;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableSet;
@@ -20,18 +22,20 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.StudiesApi;
+import org.sagebionetworks.bridge.rest.api.SharedAssessmentsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
+import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
+import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
-import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -47,25 +51,15 @@ public class OrganizationTest {
     
     private String orgId2;
     private Organization org2;
-    
+
+    private String orgId3;
+    private Organization org3;
+
+    private Assessment assessment;
+
     @Before
     public void before() throws Exception {
-        admin = TestUserHelper.getSignedInAdmin();   
-        
-        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
-        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
-        try {
-            studiesApi.getStudy(STUDY_ID_1).execute();
-        } catch(EntityNotFoundException e) {
-            Study study = new Study().identifier(STUDY_ID_1).name(STUDY_ID_1);
-            studiesApi.createStudy(study).execute();
-        }
+        admin = TestUserHelper.getSignedInAdmin();
     }
 
     @After
@@ -90,6 +84,21 @@ public class OrganizationTest {
         }
         if (org2 != null && orgId2 != null) {
             orgApi.deleteOrganization(orgId2).execute();
+        }
+        if (org3 != null && orgId3 != null) {
+            orgApi.deleteOrganization(orgId3).execute();
+        }
+        AssessmentsApi assessmentsApi = admin.getClient(AssessmentsApi.class);
+        SharedAssessmentsApi sharedAssessmentsApi = admin.getClient(SharedAssessmentsApi.class);
+        if (assessment != null) {
+            try {
+                assessmentsApi.deleteAssessment(assessment.getGuid(), true);
+            } catch (Exception ignored) {
+            }
+            try {
+                sharedAssessmentsApi.deleteSharedAssessment(assessment.getGuid(), true);
+            } catch (Exception ignored) {
+            }
         }
     }
     
@@ -177,8 +186,10 @@ public class OrganizationTest {
         orgAdmin.signInAgain();
         assertEquals(orgId1, orgAdmin.getSession().getOrgMembership());
         
-        // create a user
+        // create a user. TestUserHelper puts admins in the Sage Bionetworks organization, so for this
+        // test, remove the user first.
         user = TestUserHelper.createAndSignInUser(OrganizationTest.class, true, DEVELOPER);
+        admin.getClient(OrganizationsApi.class).removeMember(SAGE_ID, user.getUserId()).execute();
         
         // the user is unassigned and should appear in the unassigned API
         AccountSummarySearch search = new AccountSummarySearch();
@@ -232,24 +243,77 @@ public class OrganizationTest {
     @Test
     public void testSponsorship() throws Exception {
         OrganizationsApi adminOrgApi = admin.getClient(OrganizationsApi.class);
-        // In essence, let's clean this up before we test. It throws an exception if
-        // not associated.
         try {
-            adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();    
-        } catch(BadRequestException e) {
-        }
-        
-        adminOrgApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
-        
-        StudyList list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
-        assertTrue(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
-        
-        adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+            // In essence, let's clean this up before we test. It throws an exception if
+            // not associated.
+            try {
+                adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();    
+            } catch(BadRequestException e) {
+            }
+            
+            adminOrgApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+            
+            StudyList list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+            assertTrue(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+            
+            adminOrgApi.removeStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
 
-        list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
-        assertFalse(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+            list = adminOrgApi.getSponsoredStudies(ORG_ID_1, null, null).execute().body();
+            assertFalse(list.getItems().stream().anyMatch((study) -> study.getIdentifier().equals(STUDY_ID_1)));
+        } finally {
+            // This must be added back after the test.
+            adminOrgApi.addStudySponsorship(ORG_ID_1, STUDY_ID_1).execute();
+        }
     }
-    
+
+    @Test
+    public void testDeleteWithAssessment() throws IOException {
+        // Create an organization
+        OrganizationsApi orgApi = admin.getClient(OrganizationsApi.class);
+        orgId3 = Tests.randomIdentifier(OrganizationTest.class);
+        org3 = new Organization();
+        org3.setIdentifier(orgId3);
+        org3.setName("Test Name");
+        org3.setDescription("A description");
+
+        org3 = orgApi.createOrganization(org3).execute().body();
+
+        AssessmentsApi assessmentApi = admin.getClient(AssessmentsApi.class);
+        Assessment unsavedAssessment = new Assessment()
+                .identifier(Tests.randomIdentifier(Assessment.class))
+                .title("Title")
+                .summary("Summary")
+                .validationStatus("Not validated")
+                .normingStatus("Not normed")
+                .osName("Both")
+                .ownerId(orgId3);
+
+        assessment = assessmentApi.createAssessment(unsavedAssessment).execute().body();
+        assertNotNull(assessment);
+
+        try {
+            orgApi.deleteOrganization(orgId3).execute();
+            fail("Should have thrown an exception");
+        } catch (ConstraintViolationException ignored) {
+        }
+
+        assessmentApi.publishAssessment(assessment.getGuid(), null).execute().body();
+        assessmentApi.deleteAssessment(assessment.getGuid(), true).execute();
+        try {
+            orgApi.deleteOrganization(orgId3).execute();
+            fail("Should have thrown an exception");
+        } catch (ConstraintViolationException ignored) {
+        }
+
+        SharedAssessmentsApi sharedAssessmentsApi = admin.getClient(SharedAssessmentsApi.class);
+        Assessment shared = sharedAssessmentsApi.getLatestSharedAssessmentRevision(assessment.getIdentifier()).execute().body();
+        sharedAssessmentsApi.deleteSharedAssessment(shared.getGuid(), true).execute();
+
+        orgApi.deleteOrganization(orgId3).execute();
+        orgId3 = null;
+        org3 = null;
+    }
+
     private Organization findOrganization(OrganizationList list, String id) {
         for (Organization org : list.getItems()) {
             if (org.getIdentifier().equals(id)) {

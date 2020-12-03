@@ -2,12 +2,15 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.AccountStatus.DISABLED;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -17,6 +20,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.AccountStatus;
@@ -25,9 +29,11 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
+import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
+import org.sagebionetworks.bridge.rest.model.Enrollment;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -90,7 +96,7 @@ public class SignInTest {
     public void createComplexUser() throws Exception {
         AuthenticationApi authApi = researcher.getClient(AuthenticationApi.class);
         
-        ExternalIdentifier externalId = Tests.createExternalId(SignInTest.class, developer, STUDY_ID_1);
+        String externalId = Tests.randomIdentifier(SignInTest.class);
         
         Map<String,String> map = Maps.newHashMap();
         map.put("can_be_recontacted", "true");
@@ -103,26 +109,35 @@ public class SignInTest {
         signUp.setLastName("Last Name");
         signUp.setEmail(email);
         signUp.setPassword(PASSWORD);
-        signUp.setExternalId(externalId.getIdentifier());
+        signUp.setExternalIds(ImmutableMap.of(STUDY_ID_1, externalId));
         signUp.setSharingScope(ALL_QUALIFIED_RESEARCHERS);
         signUp.setNotifyByEmail(true);
         signUp.setDataGroups(Lists.newArrayList("group1"));
         signUp.setLanguages(Lists.newArrayList("en"));
         signUp.setAttributes(map);
-                
-        authApi.signUp(signUp).execute();
 
+        authApi.signUp(signUp).execute();
+        
+        TestUser admin = TestUserHelper.getSignedInAdmin();
+        
+        // User can no longer enroll themself in a study, but until the user is enrolled, the researcher
+        // cannot see the account. Enrollment the participant.
+        String userId = admin.getClient(ParticipantsApi.class).searchAccountSummaries(
+                new AccountSummarySearch().emailFilter(email)).execute().body().getItems().get(0).getId();
+        admin.getClient(StudiesApi.class).enrollParticipant(STUDY_ID_1, 
+                new Enrollment().userId(userId).externalId(externalId)).execute();
+        
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         
-        AccountSummaryList summaries = participantsApi.getParticipants(0, 10, signUp.getEmail(), null, null, null).execute()
-                .body();
+        AccountSummaryList summaries = participantsApi.getParticipants(0, 10, signUp.getEmail(), null, null, null)
+                .execute().body();
         assertEquals(1, summaries.getItems().size());
         
         AccountSummary summary = summaries.getItems().get(0);
         StudyParticipant retrieved = participantsApi.getParticipantById(summary.getId(), false).execute().body();
         assertEquals("First Name", retrieved.getFirstName());
         assertEquals("Last Name", retrieved.getLastName());
-        assertTrue(retrieved.getExternalIds().values().contains(externalId.getIdentifier()));
+        assertTrue(retrieved.getExternalIds().values().contains(externalId));
         assertEquals(signUp.getEmail(), retrieved.getEmail());
         assertEquals(SharingScope.ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
         assertTrue(retrieved.isNotifyByEmail());
@@ -130,10 +145,7 @@ public class SignInTest {
         assertEquals(Lists.newArrayList("en"), retrieved.getLanguages());
         assertEquals("true", retrieved.getAttributes().get("can_be_recontacted"));
         
-        Tests.deleteExternalId(externalId);
-        
-        TestUser admin = TestUserHelper.getSignedInAdmin();
-        admin.getClient(ForAdminsApi.class).deleteUser(retrieved.getId()).execute();
+        admin.getClient(ForAdminsApi.class).deleteUser(userId).execute();
     }
 
     @Test(expected = EntityNotFoundException.class)
@@ -157,18 +169,58 @@ public class SignInTest {
         newUserAuthApi.signInV4(signIn).execute();
     }
 
-    @Test(expected = UnauthorizedException.class)
+    @Test
     public void signInAccountUnverified() throws Exception {
-        // Mark account as unverified. In the v4 API, if sign in is first successful, we throw unauthorized exception
+        TestUser admin = TestUserHelper.getSignedInAdmin();
+        SignUp signUp = new SignUp().email(IntegTestUtils.makeEmail(SignInTest.class))
+                .password(PASSWORD).appId(TEST_APP_ID);
+        ParticipantsApi participantsApi = admin.getClient(ParticipantsApi.class);
+        String userId = null;
+        try {
+            userId = participantsApi.createParticipant(signUp).execute().body().getIdentifier();
+            
+            SignIn signIn = new SignIn().email(signUp.getEmail())
+                    .password(PASSWORD).appId(TEST_APP_ID);
+    
+            // Sign in should now fail with a 404 not found.
+            ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(signIn).build();
+            AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
+            newUserAuthApi.signInV4(signIn).execute();
+            fail("Should have thrown exception");
+        } catch(UnauthorizedException e) {
+        } finally {
+            if (userId != null) {
+                admin.getClient(ForAdminsApi.class).deleteUser(userId).execute();    
+            }
+        }
+    }
+
+    @Test
+    public void signInAccountDisabled() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ParticipantsApi participantsApi = admin.getClient(ParticipantsApi.class);
-        StudyParticipant participant = participantsApi.getParticipantById(user.getSession().getId(), false).execute().body();
-        participant.setStatus(AccountStatus.UNVERIFIED);
-        participantsApi.updateParticipant(user.getSession().getId(), participant).execute();
-
-        // Sign in should now fail with a 404 not found.
-        ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(user.getSignIn()).build();
-        AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
-        newUserAuthApi.signInV4(user.getSignIn()).execute();
+        
+        TestUser user = TestUserHelper.createAndSignInUser(SignInTest.class, true);
+        try {
+            
+            StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
+            participant.setStatus(DISABLED);
+            
+            participantsApi.updateParticipant(user.getUserId(), participant).execute().body();
+            
+            participant = participantsApi.getParticipantById(user.getUserId(), false).execute().body();
+            assertEquals(participant.getStatus(), AccountStatus.DISABLED);
+            
+            ClientManager newUserClientManager = new ClientManager.Builder().withSignIn(user.getSignIn()).build();
+            AuthenticationApi newUserAuthApi = newUserClientManager.getClient(AuthenticationApi.class);
+            newUserAuthApi.signInV4(user.getSignIn()).execute();
+            fail("Should have thrown exception");
+    
+        } catch(BridgeSDKException e) {
+        } finally {
+            if (user != null) {
+                user.signOutAndDeleteUser();
+            }
+        }
     }
 }

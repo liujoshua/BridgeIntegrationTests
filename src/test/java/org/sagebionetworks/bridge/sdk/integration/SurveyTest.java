@@ -503,6 +503,11 @@ public class SurveyTest {
         Survey survey = new Survey().name(SURVEY_NAME).identifier(surveyId);
         GuidCreatedOnVersionHolder retSurvey = sharedSurveysApi.createSurvey(survey).execute().body();
 
+        // Verify the index is up-to-date.
+        Tests.retryHelper(() -> sharedSurveysApi.getSurvey(IDENTIFIER_PREFIX+survey.getIdentifier(),
+                retSurvey.getCreatedOn()).execute().body(),
+                Predicates.alwaysTrue());
+
         SharedModuleMetadata metadataToCreate = new SharedModuleMetadata().id(moduleId).version(0)
                 .name("Integ Test Schema").surveyCreatedOn(retSurvey.getCreatedOn().toString()).surveyGuid(retSurvey.getGuid());
         sharedDeveloperModulesApi.createMetadata(metadataToCreate).execute()

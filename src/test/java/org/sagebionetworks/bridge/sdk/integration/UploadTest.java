@@ -15,6 +15,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -30,12 +31,10 @@ import org.sagebionetworks.bridge.json.DefaultObjectMapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.RecordExportStatusRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -100,13 +99,9 @@ public class UploadTest {
         researcher = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.RESEARCHER);
         studyAdmin = TestUserHelper.createAndSignInUser(UploadTest.class, false, Role.ADMIN);
 
-        ExternalIdentifier extId = new ExternalIdentifier().identifier(EXTERNAL_ID).studyId(STUDY_ID_1);
-        ForResearchersApi researchersApi = researcher.getClient(ForResearchersApi.class);
-        researchersApi.createExternalId(extId).execute();
-        
         String emailAddress = IntegTestUtils.makeEmail(UploadTest.class);
         SignUp signUp = new SignUp().email(emailAddress).password(Tests.PASSWORD);
-        signUp.setExternalId(EXTERNAL_ID); // which should, in turn, associate account to STUDY_ID.
+        signUp.setExternalIds(ImmutableMap.of(STUDY_ID_1, EXTERNAL_ID));
         user = TestUserHelper.createAndSignInUser(UploadTest.class, true, signUp);
 
         // ensure schemas exist, so we have something to upload against
@@ -204,8 +199,6 @@ public class UploadTest {
 
     @AfterClass
     public static void deleteResearcher() throws Exception {
-        ForAdminsApi adminsApi = TestUserHelper.getSignedInAdmin().getClient(ForAdminsApi.class);
-        adminsApi.deleteExternalId(EXTERNAL_ID).execute();
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
         }

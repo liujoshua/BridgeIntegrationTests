@@ -46,7 +46,6 @@ import org.sagebionetworks.bridge.rest.model.FileRevision;
 import org.sagebionetworks.bridge.rest.model.FileRevisionList;
 import org.sagebionetworks.bridge.rest.model.GuidCreatedOnVersionHolder;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
-import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
@@ -95,13 +94,6 @@ public class AppConfigTest {
         developer = TestUserHelper.createAndSignInUser(AppConfigTest.class, false, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(AppConfigTest.class, true);
         
-        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute();
-        } catch (EntityNotFoundException ex) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
         admin.getClient(OrganizationsApi.class).addMember(ORG_ID_1, developer.getUserId()).execute();
 
         adminApi = admin.getClient(ForAdminsApi.class);
@@ -158,7 +150,7 @@ public class AppConfigTest {
     @After
     public void deleteAssessment() throws Exception {
         if (assessmentGuid != null) {
-            assessmentsApi.deleteAssessment(assessmentGuid, true).execute();
+            adminApi.deleteAssessment(assessmentGuid, true).execute();
         }
     }
     
@@ -232,7 +224,7 @@ public class AppConfigTest {
         SurveyReference surveyRef1 = new SurveyReference().guid(surveyKeys.getGuid()).createdOn(surveyKeys.getCreatedOn());
 
         StudyParticipant participant = new StudyParticipant();
-        participant.setExternalId("externalId");
+        participant.setFirstName("first name test");
         
         Criteria criteria = new Criteria();
         criteria.setMaxAppVersions(ImmutableMap.of("Android", 10));
@@ -269,7 +261,7 @@ public class AppConfigTest {
         assertEquals(firstOneRetrieved.getCreatedOn().toString(), firstOneRetrieved.getModifiedOn().toString());
         
         StudyParticipant savedUser = RestUtils.toType(firstOneRetrieved.getClientData(), StudyParticipant.class);
-        assertEquals("externalId", savedUser.getExternalId());
+        assertEquals("first name test", savedUser.getFirstName());
         
         FileReference retrievedFileRef = firstOneRetrieved.getFileReferences().get(0);
         assertEquals(retrievedFileRef.getGuid(), revision.getFileGuid());

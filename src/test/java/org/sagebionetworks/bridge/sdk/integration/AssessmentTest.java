@@ -39,7 +39,6 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentList;
-import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.PropertyInfo;
 import org.sagebionetworks.bridge.rest.model.RequestParams;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -75,19 +74,6 @@ public class AssessmentTest {
 
         admin = TestUserHelper.getSignedInAdmin();
         OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-        
-        try {
-            orgsApi.getOrganization(ORG_ID_1).execute();
-        } catch (EntityNotFoundException ex) {
-            Organization org = new Organization().identifier(ORG_ID_1).name(ORG_ID_1);
-            orgsApi.createOrganization(org).execute();
-        }
-        try {
-            orgsApi.getOrganization(ORG_ID_2).execute().body();
-        } catch (EntityNotFoundException ex) {
-            Organization org = new Organization().identifier(ORG_ID_2).name(ORG_ID_2);
-            orgsApi.createOrganization(org).execute();
-        }
         
         developer = new TestUserHelper.Builder(AssessmentTest.class).withRoles(DEVELOPER).createAndSignInUser();
         orgsApi.addMember(ORG_ID_1, developer.getUserId()).execute();
@@ -146,6 +132,7 @@ public class AssessmentTest {
                 .normingStatus("Not normed")
                 .osName("Both")
                 .ownerId(ORG_ID_1)
+                .minutesToComplete(15)
                 .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
         
@@ -244,6 +231,16 @@ public class AssessmentTest {
         } catch(UnauthorizedException e) {
         }
         
+        // BUG: shared assessment with a revision lower than the highest revision in another app, with the 
+        // same identifier, was not appearing in the API. Verify that this works before deleting one of the 
+        // revisions.
+        firstRevision = assessmentApi.publishAssessment(firstRevision.getGuid(), null).execute().body();
+        
+        SharedAssessmentsApi sharedApi = developer.getClient(SharedAssessmentsApi.class);
+        AssessmentList sharedList = sharedApi.getSharedAssessments(0, 50, null, null).execute().body();
+        assertTrue(sharedList.getItems().stream().map(Assessment::getGuid)
+                .collect(toSet()).contains(firstRevision.getOriginGuid()));
+        
         // deleteAssessment physical=false works
         assessmentApi.deleteAssessment(secondRevision.getGuid(), false).execute();
         
@@ -295,9 +292,6 @@ public class AssessmentTest {
         
         // SHARED ASSESSMENTS LIFECYCLE
         
-        firstRevision = assessmentApi.publishAssessment(firstRevision.getGuid(), null).execute().body();
-        
-        SharedAssessmentsApi sharedApi = developer.getClient(SharedAssessmentsApi.class);
         Assessment shared = sharedApi.getLatestSharedAssessmentRevision(id).execute().body();
         
         assertEquals(shared.getGuid(), firstRevision.getOriginGuid());
@@ -572,6 +566,7 @@ public class AssessmentTest {
         assertEquals("Not normed", assessment.getNormingStatus());
         assertEquals("Universal", assessment.getOsName());
         assertEquals(ORG_ID_1, assessment.getOwnerId());
+        assertEquals(new Integer(15), assessment.getMinutesToComplete());
         assertTrue(assessment.getTags().contains(markerTag));
         assertTrue(assessment.getTags().contains(TAG1));
         assertTrue(assessment.getTags().contains(TAG2));

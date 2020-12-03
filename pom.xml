@@ -23,7 +23,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <version>4.13.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -49,7 +49,7 @@
         <dependency>
             <groupId>org.sagebionetworks</groupId>
             <artifactId>BridgeIntegTestUtils</artifactId>
-            <version>1.2.0</version>
+            <version>1.2.3</version>
         </dependency>
         <dependency>
             <groupId>ca.uhn.hapi.fhir</groupId>
@@ -59,13 +59,13 @@
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
             <artifactId>rest-client</artifactId>
-            <version>0.21.7</version>
+            <version>0.21.11</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.sagebionetworks</groupId>
             <artifactId>synapseJavaClient</artifactId>
-            <version>242.0-10-gd48760b</version>
+            <version>333.0</version>
         </dependency>
     </dependencies>
 
@@ -78,9 +78,27 @@
         <repository>
             <id>sagebionetworks-libs-releases-local</id>
             <name>sagebionetworks-libs-releases-local</name>
-            <url>https://sagebionetworks.artifactoryonline.com/sagebionetworks/libs-releases-local/</url>
+            <url>https://sagebionetworks.jfrog.io/sagebionetworks/libs-releases-local/</url>
         </repository>
     </repositories>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M5</version>
+                <configuration>
+                    <properties>
+                        <property>
+                            <name>listener</name>
+                            <value>org.sagebionetworks.bridge.sdk.integration.InitListener</value>
+                        </property>
+                    </properties>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <profiles>
         <profile>

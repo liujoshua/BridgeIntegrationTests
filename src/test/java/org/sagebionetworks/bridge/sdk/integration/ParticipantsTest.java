@@ -10,12 +10,14 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.AccountStatus.DISABLED;
 import static org.sagebionetworks.bridge.rest.model.AccountStatus.ENABLED;
 import static org.sagebionetworks.bridge.rest.model.AccountStatus.UNVERIFIED;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.ALL_QUALIFIED_RESEARCHERS;
 import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.assertListsEqualIgnoringOrder;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.PHONE;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import com.google.common.base.Predicates;
@@ -35,8 +37,10 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
@@ -45,7 +49,7 @@ import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
-import org.sagebionetworks.bridge.rest.model.ExternalIdentifier;
+import org.sagebionetworks.bridge.rest.model.Enrollment;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
@@ -82,25 +86,22 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings({ "ConstantConditions", "Guava" })
 public class ParticipantsTest {
-    private static final String DUMMY_SYNAPSE_USER_ID = "00000";
     private TestUser admin;
     private TestUser developer;
     private TestUser researcher;
     private TestUser phoneUser;
     private TestUser emailUser;
-    private ExternalIdentifier externalId;
+    private String externalId;
     
     @Before
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
-        developer = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(Role.DEVELOPER).withConsentUser(true)
-                .createAndSignInUser();
-        researcher = new TestUserHelper.Builder(ParticipantsTest.class).withRoles(RESEARCHER).withConsentUser(true)
-                .createAndSignInUser();
+        developer = TestUserHelper.createAndSignInUser(ParticipantsTest.class, false, DEVELOPER);
+        researcher = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, RESEARCHER);
         
-        externalId = Tests.createExternalId(ParticipantsTest.class, developer, STUDY_ID_1);
+        externalId = Tests.randomIdentifier(ParticipantsTest.class);
         
-        IntegTestUtils.deletePhoneUser(researcher);
+        IntegTestUtils.deletePhoneUser();
         
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
         App app = superadminApi.getApp(TEST_APP_ID).execute().body();
@@ -114,7 +115,6 @@ public class ParticipantsTest {
     
     @After
     public void after() throws Exception {
-        Tests.deleteExternalId(externalId);
         if (developer != null) {
             developer.signOutAndDeleteUser();
         }
@@ -183,7 +183,7 @@ public class ParticipantsTest {
     @Test
     public void retrieveParticipant() throws Exception {
         TestUser user = new TestUserHelper.Builder(ParticipantsTest.class)
-                .withExternalId(externalId.getIdentifier()).createAndSignInUser();
+                .withExternalIds(ImmutableMap.of(STUDY_ID_1, externalId)).createAndSignInUser();
         
         ParticipantsApi researcherParticipantsApi = researcher.getClient(ParticipantsApi.class);
         ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
@@ -226,6 +226,12 @@ public class ParticipantsTest {
     @Test
     public void canRetrieveAndPageThroughParticipants() throws Exception {
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        
+        // For this test to now work, the researcher cannot be associated to an organization. However, this
+        // will change after migration when all admins are in an organization. This is also the older of
+        // the two APIs and it may need to permanently change to only show participants, which would require
+        // a change in this test as well.
+        admin.getClient(OrganizationsApi.class).removeMember(SAGE_ID, researcher.getUserId()).execute();
 
         AccountSummaryList summaries = participantsApi.getParticipants(0, 10, null, null, null, null).execute().body();
 
@@ -303,25 +309,27 @@ public class ParticipantsTest {
         SignUp participant = new SignUp();
         participant.setFirstName("FirstName");
         participant.setLastName("LastName");
-        participant.setPassword("P@ssword1!");
         participant.setEmail(email);
         participant.setPhone(PHONE);
-        participant.setExternalId(externalId.getIdentifier());
+        participant.setExternalIds(ImmutableMap.of(STUDY_ID_1, externalId));
         participant.setSharingScope(ALL_QUALIFIED_RESEARCHERS);
         // BRIDGE-1604: leave notifyByEmail to its default value (should be true)
         participant.setDataGroups(dataGroups);
         participant.setLanguages(languages);
         participant.setStatus(DISABLED); // should be ignored
         participant.setAttributes(attributes);
-        participant.setSynapseUserId(DUMMY_SYNAPSE_USER_ID);
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         IdentifierHolder idHolder = participantsApi.createParticipant(participant).execute().body();
-        
         String id = idHolder.getIdentifier();
+        
+        // In order for the researcher to see this person, they must be manually enrolled in
+        // a study seen by Sage. A new role (study coordinator) with a new set of APIs will create
+        // accounts in a study, while an org administrator with another set of APIs will create 
+        // accounts in their organization. This is a workaround for the existing APIs.
+        researcher.getClient(StudiesApi.class).enrollParticipant(STUDY_ID_1, 
+                new Enrollment().userId(id)).execute();
         try {
-            // It has been persisted. Right now we don't get the ID back so we have to conduct a 
-            // search by email to get this user.
             // Can be found through paged results
             AccountSummaryList search = participantsApi.getParticipants(0, 10, email, null, null, null).execute().body();
             assertEquals((Integer)1, search.getTotal());
@@ -329,14 +337,13 @@ public class ParticipantsTest {
             assertEquals("FirstName", summary.getFirstName());
             assertEquals("LastName", summary.getLastName());
             assertEquals(email, summary.getEmail());
-            assertEquals(DUMMY_SYNAPSE_USER_ID, summary.getSynapseUserId());
             
             // Can also get by the ID
             StudyParticipant retrieved = participantsApi.getParticipantById(id, true).execute().body();
             assertEquals("FirstName", retrieved.getFirstName());
             assertEquals("LastName", retrieved.getLastName());
             assertEquals(email, retrieved.getEmail());
-            assertTrue(retrieved.getExternalIds().values().contains(externalId.getIdentifier()));
+            assertEquals(externalId, retrieved.getExternalIds().get(STUDY_ID_1));
             assertEquals(ALL_QUALIFIED_RESEARCHERS, retrieved.getSharingScope());
             assertTrue(retrieved.isNotifyByEmail());
             assertListsEqualIgnoringOrder(dataGroups, retrieved.getDataGroups());
@@ -352,13 +359,11 @@ public class ParticipantsTest {
             assertEquals("US", retrievedPhone.getRegionCode());
             assertFalse(retrieved.isEmailVerified());
             assertFalse(retrieved.isPhoneVerified());
-            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
             createdOn = retrieved.getCreatedOn();
             
             // Can also get by the Synapse ID
-            retrieved = participantsApi.getParticipantBySynapseUserId(DUMMY_SYNAPSE_USER_ID, true).execute().body();
+            retrieved = participantsApi.getParticipantById(retrieved.getId(), true).execute().body();
             assertEquals(email, retrieved.getEmail());
-            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
             
             // Update the user. Identified by the email address
             Map<String,String> newAttributes = new ImmutableMap.Builder<String,String>().put("can_be_recontacted","206-555-1212").build();
@@ -374,13 +379,13 @@ public class ParticipantsTest {
             newParticipant.setDataGroups(newDataGroups);
             newParticipant.setLanguages(newLanguages);
             newParticipant.setAttributes(newAttributes);
+            // These next three should not work.
             newParticipant.setStatus(ENABLED);
-            // This should not work.
             newParticipant.setEmailVerified(TRUE);
             newParticipant.setPhoneVerified(TRUE);
             Phone newPhone = new Phone().number("4152588569").regionCode("CA");
             newParticipant.setPhone(newPhone);
-            newParticipant.setSynapseUserId("11111");
+            // cannot set Synapse User ID or the account will be enabled.
             
             participantsApi.updateParticipant(id, newParticipant).execute();
             
@@ -407,7 +412,6 @@ public class ParticipantsTest {
             assertEquals(newAttributes.get("can_be_recontacted"), retrieved.getAttributes().get("can_be_recontacted"));
             assertEquals(UNVERIFIED, retrieved.getStatus()); // researchers cannot enable users
             assertEquals(createdOn, retrieved.getCreatedOn()); // hasn't been changed, still exists
-            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
         } finally {
             if (id != null) {
                 admin.getClient(ForAdminsApi.class).deleteUser(id).execute();
