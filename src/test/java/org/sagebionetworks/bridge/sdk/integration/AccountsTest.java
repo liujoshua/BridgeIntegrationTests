@@ -28,7 +28,6 @@ import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Account;
-import org.sagebionetworks.bridge.rest.model.AccountStatus;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.App;
@@ -99,7 +98,6 @@ public class AccountsTest {
                 .email(email)
                 .phone(PHONE)
                 .attributes(ImmutableMap.of("can_be_recontacted", "true"))
-                .status(ENABLED)
                 .roles(ImmutableList.of(DEVELOPER))
                 .dataGroups(ImmutableList.of("test_user", "sdk-int-1"))
                 .clientData("Test")
@@ -116,7 +114,7 @@ public class AccountsTest {
         assertEquals(PHONE.getNumber(), retrieved.getPhone().getNumber());
         assertEquals(PHONE.getRegionCode(), retrieved.getPhone().getRegionCode());
         assertEquals("true", retrieved.getAttributes().get("can_be_recontacted"));
-        assertEquals(AccountStatus.UNVERIFIED, retrieved.getStatus());
+        assertEquals(ENABLED, retrieved.getStatus());
         assertEquals(ImmutableList.of(DEVELOPER), retrieved.getRoles());
         assertEquals(USER_DATA_GROUPS, retrieved.getDataGroups());
         assertEquals("Test", RestUtils.toType(retrieved.getClientData(), String.class));
