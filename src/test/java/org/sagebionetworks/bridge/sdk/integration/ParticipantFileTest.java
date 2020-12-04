@@ -60,7 +60,6 @@ public class ParticipantFileTest {
         final ParticipantFile keys = userApi.createParticipantFile("file_id", file).execute().body();
 
         assertNotNull(keys);
-        assertEquals(keys.getAppId(), "api");
         assertEquals(keys.getMimeType(), file.getMimeType());
         String uploadUrl = keys.getUploadUrl();
 
@@ -81,9 +80,7 @@ public class ParticipantFileTest {
         assertEquals(resultList.size(), 1);
         ParticipantFile onlyFile = resultList.get(0);
         assertEquals(onlyFile.getMimeType(), "text/plain");
-        assertEquals(onlyFile.getUserId(), participant.getUserId());
         assertEquals(onlyFile.getFileId(), "file_id");
-        assertEquals(onlyFile.getAppId(), "api");
 
         for (int i = 0; i < 5; i++) {
             file = new ParticipantFile();
