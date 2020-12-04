@@ -51,12 +51,14 @@ import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
+import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SchedulePlan;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SimpleScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -687,6 +689,58 @@ public class ParticipantsTest {
         assertEquals(userId, participant.getId());
     }
     
+    @Test
+    public void addEmailToPhoneUser() throws Exception {
+        SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1").appId(TEST_APP_ID);
+        phoneUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
+
+        SignIn signIn = new SignIn().phone(signUp.getPhone()).password(signUp.getPassword()).appId(TEST_APP_ID);
+
+        String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
+        IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(email);
+
+        ForConsentedUsersApi usersApi = phoneUser.getClient(ForConsentedUsersApi.class);
+        UserSessionInfo info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
+        assertEquals(email, info.getEmail());
+
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        StudyParticipant retrieved = participantsApi.getParticipantById(phoneUser.getSession().getId(), true).execute().body();
+        assertEquals(email, retrieved.getEmail());
+
+        // But if you do it again, it should not work
+        String newEmail = IntegTestUtils.makeEmail(ParticipantsTest.class);
+        identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(newEmail);
+
+        info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
+        assertEquals(email, info.getEmail()); // unchanged
+    }
+
+    @Test
+    public void addPhoneToEmailUser() throws Exception {
+        String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
+        SignUp signUp = new SignUp().email(email).password("P@ssword`1").appId(TEST_APP_ID);
+        emailUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
+
+        SignIn signIn = new SignIn().email(signUp.getEmail()).password(signUp.getPassword()).appId(TEST_APP_ID);
+
+        IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(PHONE);
+
+        ForConsentedUsersApi usersApi = emailUser.getClient(ForConsentedUsersApi.class);
+        UserSessionInfo info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
+        assertEquals(PHONE.getNumber(), info.getPhone().getNumber());
+
+        ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
+        StudyParticipant retrieved = participantsApi.getParticipantById(emailUser.getSession().getId(), true).execute().body();
+        assertEquals(PHONE.getNumber(), retrieved.getPhone().getNumber());
+
+        // But if you do it again, it should not work
+        Phone otherPhone = new Phone().number("4082588569").regionCode("US");
+        identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(otherPhone);
+
+        info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
+        assertEquals(IntegTestUtils.PHONE.getNumber(), info.getPhone().getNumber()); // unchanged
+    }
+
     private static List<ScheduledActivity> findActivitiesByLabel(List<ScheduledActivity> scheduledActivityList,
             String label) {
         return scheduledActivityList.stream()
