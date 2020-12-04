@@ -11,6 +11,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.api.AccountsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -40,8 +41,10 @@ public class UpdateIdentifiersTest {
         
         IdentifierUpdate update = new IdentifierUpdate().signIn(user.getSignIn()).phoneUpdate(PHONE);
         
+        AccountsApi accountsApi = user.getClient(AccountsApi.class);
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
-        UserSessionInfo info = userApi.updateUsersIdentifiers(update).execute().body();
+        
+        UserSessionInfo info = accountsApi.updateIdentifiersForSelf(update).execute().body();
         assertEquals(info.getPhone().getNationalFormat(), NATIONAL_PHONE_FORMAT);
         
         StudyParticipant participant = userApi.getUsersParticipantRecord(false).execute().body();
@@ -56,9 +59,10 @@ public class UpdateIdentifiersTest {
         
         IdentifierUpdate update = new IdentifierUpdate().signIn(user.getSignIn()).synapseUserIdUpdate(synapseUserId);
         
+        AccountsApi accountsApi = user.getClient(AccountsApi.class);
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         
-        UserSessionInfo info = userApi.updateUsersIdentifiers(update).execute().body();
+        UserSessionInfo info = accountsApi.updateIdentifiersForSelf(update).execute().body();
         assertEquals(info.getSynapseUserId(), synapseUserId);
         
         StudyParticipant participant = userApi.getUsersParticipantRecord(false).execute().body();
