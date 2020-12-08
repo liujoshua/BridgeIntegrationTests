@@ -14,7 +14,9 @@ import java.util.stream.Collectors;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -40,8 +42,8 @@ public class ActivityEventTest {
     private static ForConsentedUsersApi usersApi;
     private static ForResearchersApi researchersApi;
 
-    @BeforeClass
-    public static void beforeAll() throws Exception {
+    @Before
+    public void beforeAll() throws Exception {
         researcher = TestUserHelper.createAndSignInUser(ActivityEventTest.class, true, Role.RESEARCHER);
         researchersApi = researcher.getClient(ForResearchersApi.class);
 
@@ -72,22 +74,22 @@ public class ActivityEventTest {
         usersApi = user.getClient(ForConsentedUsersApi.class);
     }
 
-    @AfterClass
-    public static void deleteDeveloper() throws Exception {
+    @After
+    public void deleteDeveloper() throws Exception {
         if (developer != null) {
             developer.signOutAndDeleteUser();
         }
     }
 
-    @AfterClass
-    public static void deleteResearcher() throws Exception {
+    @After
+    public void deleteResearcher() throws Exception {
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
         }
     }
 
-    @AfterClass
-    public static void deleteUser() throws Exception {
+    @After
+    public void deleteUser() throws Exception {
         if (user != null) {
             user.signOutAndDeleteUser();
         }
@@ -177,5 +179,35 @@ public class ActivityEventTest {
         // and compensate for the time zone change.
         Period twoWeeksAfterPeriod = new Period(enrollmentTime, twoWeeksAfterTime.plusHours(1));
         assertEquals(2, twoWeeksAfterPeriod.getWeeks());
+    }
+    
+    @Test
+    public void researcherCanSubmitCustomEvents() throws Exception {
+        ForResearchersApi researchersApi = researcher.getClient(ForResearchersApi.class);
+        
+        // it's stored as a long since epoch, so timezone must be UTC to match
+        DateTime timestamp1 = DateTime.now(DateTimeZone.UTC).minusHours(4);
+        DateTime timestamp2 = DateTime.now(DateTimeZone.UTC);
+        
+        CustomActivityEventRequest request = new CustomActivityEventRequest();
+        request.setEventKey(EVENT_KEY);
+        request.setTimestamp(timestamp1);
+        
+        researchersApi.createActivityEventForParticipant(user.getUserId(), request).execute();
+        
+        ActivityEventList list = researchersApi.getActivityEventsForParticipant(user.getUserId()).execute().body();
+        Optional<ActivityEvent> optional = list.getItems().stream()
+                .filter((evt) -> evt.getEventId().equals("custom:"+EVENT_KEY)).findAny();
+        assertTrue(optional.isPresent());
+        assertEquals(timestamp1.toString(), optional.get().getTimestamp().toString());
+        
+        request.setTimestamp(timestamp2);
+        researchersApi.createActivityEventForParticipant(user.getUserId(), request).execute();
+        
+        list = researchersApi.getActivityEventsForParticipant(user.getUserId()).execute().body();
+        optional = list.getItems().stream()
+                .filter((evt) -> evt.getEventId().equals("custom:"+EVENT_KEY)).findAny();
+        assertTrue(optional.isPresent());
+        assertEquals(timestamp2.toString(), optional.get().getTimestamp().toString());
     }
 }
