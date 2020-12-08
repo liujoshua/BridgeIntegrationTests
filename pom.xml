@@ -59,7 +59,7 @@
         <dependency>
             <groupId>org.sagebionetworks.bridge</groupId>
             <artifactId>rest-client</artifactId>
-            <version>0.21.13</version>
+            <version>0.21.12</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -95,7 +95,7 @@
                             <value>org.sagebionetworks.bridge.sdk.integration.InitListener</value>
                         </property>
                     </properties>
-                </configuration>
+                </configuration>                
             </plugin>
         </plugins>
     </build>
