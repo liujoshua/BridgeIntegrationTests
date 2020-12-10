@@ -3,9 +3,8 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.ORG_ADMIN;
-import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.rest.model.Role.STUDY_COORDINATOR;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -67,7 +66,7 @@ public class OrgMembershipTest {
         ForOrgAdminsApi orgAdminApi = orgAdmin.getClient(ForOrgAdminsApi.class);
         
         // Create a test user. OrgId is automatically set correctly through this API
-        Account account = new Account().email(email).roles(ImmutableList.of(DEVELOPER));        
+        Account account = new Account().email(email).roles(ImmutableList.of(STUDY_COORDINATOR));        
         userId = orgAdminApi.createAccount(account).execute().body().getIdentifier();
         
         // User can be retrieved singularly
@@ -79,14 +78,14 @@ public class OrgMembershipTest {
         AccountSummaryList list = orgAdminApi.getMembers(orgId, search).execute().body();
         assertEquals(userId, list.getItems().get(0).getId());
         
-        // User can be udpated
+        // User can be updated
         retrieved.setFirstName("Olaf");
-        retrieved.setRoles(ImmutableList.of(DEVELOPER, RESEARCHER));
+        retrieved.setRoles(ImmutableList.of(STUDY_COORDINATOR, ORG_ADMIN));
         orgAdminApi.updateAccount(userId, retrieved).execute();
         
         retrieved = orgAdminApi.getAccount(userId).execute().body();
         assertEquals("Olaf", retrieved.getFirstName());
-        assertEquals(ImmutableSet.of(DEVELOPER, RESEARCHER), ImmutableSet.copyOf(retrieved.getRoles()));
+        assertEquals(ImmutableSet.of(STUDY_COORDINATOR, ORG_ADMIN), ImmutableSet.copyOf(retrieved.getRoles()));
         
         // User can be removed from the organization
         orgAdminApi.removeMember(orgId, userId).execute().body();

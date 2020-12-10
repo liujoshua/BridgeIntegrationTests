@@ -127,7 +127,7 @@ public class StudyMembershipTest {
         assertEquals(0, withdrawn.getExternalIds().size());
         
         // Verify the enrollment records reflect these changes
-        EnrollmentDetailList list = appAdmin.getClient(StudiesApi.class).getEnrollees(idB, "withdrawn", true, 0, 10).execute().body();
+        EnrollmentDetailList list = appAdmin.getClient(StudiesApi.class).getEnrollments(idB, "withdrawn", true, 0, 10).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(extIdB, list.getItems().get(0).getExternalId());
     }

@@ -7,6 +7,7 @@ import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.AccountStatus.ENABLED;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.ORG_ADMIN;
+import static org.sagebionetworks.bridge.rest.model.Role.STUDY_COORDINATOR;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.PHONE;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SYNAPSE_USER_ID;
@@ -34,8 +35,10 @@ import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.IdentifierUpdate;
 import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.RequestInfo;
+import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -98,7 +101,7 @@ public class AccountsTest {
                 .email(email)
                 .phone(PHONE)
                 .attributes(ImmutableMap.of("can_be_recontacted", "true"))
-                .roles(ImmutableList.of(DEVELOPER))
+                .roles(ImmutableList.of(STUDY_COORDINATOR))
                 .dataGroups(ImmutableList.of("test_user", "sdk-int-1"))
                 .clientData("Test")
                 .languages(ImmutableList.of("en", "fr"))
@@ -115,14 +118,13 @@ public class AccountsTest {
         assertEquals(PHONE.getRegionCode(), retrieved.getPhone().getRegionCode());
         assertEquals("true", retrieved.getAttributes().get("can_be_recontacted"));
         assertEquals(ENABLED, retrieved.getStatus());
-        assertEquals(ImmutableList.of(DEVELOPER), retrieved.getRoles());
+        assertEquals(ImmutableList.of(STUDY_COORDINATOR), retrieved.getRoles());
         assertEquals(USER_DATA_GROUPS, retrieved.getDataGroups());
         assertEquals("Test", RestUtils.toType(retrieved.getClientData(), String.class));
         assertEquals(ImmutableList.of("en", "fr"), retrieved.getLanguages());
         assertEquals(orgId, retrieved.getOrgMembership());
         assertNull(retrieved.getPassword());
         
-        // The created account is in the admin’s account (sage-bionetworks).
         AccountSummarySearch search = new AccountSummarySearch().emailFilter(email);
         AccountSummaryList list = orgAdmin.getClient(OrganizationsApi.class).getMembers(orgId, search).execute().body();
         assertEquals(emailUserId, list.getItems().get(0).getId());
