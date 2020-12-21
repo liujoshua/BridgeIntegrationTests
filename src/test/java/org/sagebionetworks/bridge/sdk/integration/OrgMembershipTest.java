@@ -15,10 +15,9 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForOrgAdminsApi;
-import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
-import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Account;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
@@ -56,7 +55,7 @@ public class OrgMembershipTest {
         }
         orgAdmin.signOutAndDeleteUser();
         if (orgId != null) {
-            admin.getClient(ForSuperadminsApi.class).deleteOrganization(orgId).execute();
+            admin.getClient(OrganizationsApi.class).deleteOrganization(orgId).execute();
         }
     }
 
@@ -97,17 +96,17 @@ public class OrgMembershipTest {
         try {
             orgAdminApi.deleteAccount(userId).execute();
             fail("Should have thrown an exception");
-        } catch(EntityNotFoundException e) {
+        } catch(UnauthorizedException e) {
         }
         try {
             orgAdminApi.updateAccount(userId, account).execute();
             fail("Should have thrown an exception");
-        } catch(EntityNotFoundException e) {
+        } catch(UnauthorizedException e) {
         }
         try {
             orgAdminApi.getAccount(userId).execute().body();
             fail("Should have thrown exception");
-        } catch(EntityNotFoundException e) {
+        } catch(UnauthorizedException e) {
         }
         
         // Put the account back
@@ -118,7 +117,7 @@ public class OrgMembershipTest {
         // Test deletion of the ORGANIZATION when there is an account still associated to the
         // organization. It should fail.
         try {
-            admin.getClient(ForSuperadminsApi.class).deleteOrganization(orgId).execute();
+            admin.getClient(OrganizationsApi.class).deleteOrganization(orgId).execute();
             fail("Should have thrown exception");
         } catch(ConstraintViolationException e) {
             assertEquals("Cannot delete organization (it currently contains one or more accounts).", e.getMessage());
