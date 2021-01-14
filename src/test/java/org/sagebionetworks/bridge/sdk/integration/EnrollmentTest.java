@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
+import static org.joda.time.DateTimeZone.UTC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -16,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,7 +60,7 @@ public class EnrollmentTest {
         String externalId = Tests.randomIdentifier(EnrollmentTest.class);
         TestUser user = TestUserHelper.createAndSignInUser(EnrollmentTest.class, true);
         try {
-            DateTime timestamp = DateTime.now();
+            DateTime timestamp = DateTime.now(UTC);
             StudiesApi studiesApi = admin.getClient(StudiesApi.class);
             
             Enrollment enrollment = new Enrollment();
@@ -90,6 +92,8 @@ public class EnrollmentTest {
             assertTrue(retValue.isConsentRequired());
             assertEquals(timestamp.getMillis(), retValue.getEnrolledOn().getMillis());
             assertEquals(admin.getUserId(), retValue.getEnrolledBy());
+            System.out.println("retValue.getWithdrawnOn(): " + retValue.getWithdrawnOn());
+            System.out.println("timestamp: " + timestamp);
             assertTrue(retValue.getWithdrawnOn().isAfter(timestamp));
             assertEquals(admin.getUserId(), retValue.getWithdrawnBy());
             assertEquals("Testing enrollment and withdrawal.", retValue.getWithdrawalNote());
