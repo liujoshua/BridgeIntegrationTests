@@ -90,6 +90,8 @@ public class EnrollmentTest {
             assertTrue(retValue.isConsentRequired());
             assertEquals(timestamp.getMillis(), retValue.getEnrolledOn().getMillis());
             assertEquals(admin.getUserId(), retValue.getEnrolledBy());
+            System.out.println("retValue.getWithdrawnOn(): " + retValue.getWithdrawnOn());
+            System.out.println("timestamp: " + timestamp);
             assertTrue(retValue.getWithdrawnOn().isAfter(timestamp));
             assertEquals(admin.getUserId(), retValue.getWithdrawnBy());
             assertEquals("Testing enrollment and withdrawal.", retValue.getWithdrawalNote());
