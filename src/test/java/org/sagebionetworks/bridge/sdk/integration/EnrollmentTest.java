@@ -90,7 +90,13 @@ public class EnrollmentTest {
             assertTrue(retValue.isConsentRequired());
             assertEquals(timestamp.getMillis(), retValue.getEnrolledOn().getMillis());
             assertEquals(admin.getUserId(), retValue.getEnrolledBy());
-            assertTrue(retValue.getWithdrawnOn().isAfter(timestamp));
+            
+            // Enrollment comes from the client in this test, but withdrawal timestamp comes from the 
+            // server. Clock skew can throw this off by as much as an hour, so just verify the 
+            // withdrawnOn value is there and within the hour either way.
+            assertTrue(retValue.getWithdrawnOn().isAfter(DateTime.now().minusHours(1)));
+            assertTrue(retValue.getWithdrawnOn().isBefore(DateTime.now().plusHours(1)));
+            
             assertEquals(admin.getUserId(), retValue.getWithdrawnBy());
             assertEquals("Testing enrollment and withdrawal.", retValue.getWithdrawalNote());
             

@@ -59,26 +59,19 @@ public class StudyMembershipTest {
     @After
     public void after() throws Exception {
         ForSuperadminsApi superadminsApi = admin.getClient(ForSuperadminsApi.class);
-        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         App app = superadminsApi.getApp(TEST_APP_ID).execute().body();
         app.setExternalIdRequiredOnSignup(false);
         superadminsApi.updateApp(app.getIdentifier(), app).execute();
 
         // This can only happen after external ID management is disabled.
         for (TestUser user : usersToDelete) {
-            try {
-                user.signOutAndDeleteUser();
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
+            user.signOutAndDeleteUser();
         }
+        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         for (String studyId : studyIdsToDelete) {
-            try {
-                adminsApi.deleteStudy(studyId, true).execute();    
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
+            adminsApi.deleteStudy(studyId, true).execute();
         }
+        appAdmin.signOutAndDeleteUser();
     }
 
     @Test

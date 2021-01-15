@@ -40,6 +40,7 @@ import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
@@ -48,6 +49,7 @@ import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
+import org.sagebionetworks.bridge.rest.model.Enrollment;
 import org.sagebionetworks.bridge.rest.model.ForwardCursorScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
@@ -84,7 +86,6 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings({ "ConstantConditions", "Guava" })
 public class ParticipantsTest {
-    private static final String DUMMY_SYNAPSE_USER_ID = "00000";
     private TestUser admin;
     private TestUser developer;
     private TestUser researcher;
@@ -308,7 +309,6 @@ public class ParticipantsTest {
         SignUp participant = new SignUp();
         participant.setFirstName("FirstName");
         participant.setLastName("LastName");
-        participant.setPassword("P@ssword1!");
         participant.setEmail(email);
         participant.setPhone(PHONE);
         participant.setExternalIds(ImmutableMap.of(STUDY_ID_1, externalId));
@@ -318,15 +318,18 @@ public class ParticipantsTest {
         participant.setLanguages(languages);
         participant.setStatus(DISABLED); // should be ignored
         participant.setAttributes(attributes);
-        participant.setSynapseUserId(DUMMY_SYNAPSE_USER_ID);
         
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         IdentifierHolder idHolder = participantsApi.createParticipant(participant).execute().body();
-        
         String id = idHolder.getIdentifier();
+        
+        // In order for the researcher to see this person, they must be manually enrolled in
+        // a study seen by Sage. A new role (study coordinator) with a new set of APIs will create
+        // accounts in a study, while an org administrator with another set of APIs will create 
+        // accounts in their organization. This is a workaround for the existing APIs.
+        researcher.getClient(StudiesApi.class).enrollParticipant(STUDY_ID_1, 
+                new Enrollment().userId(id)).execute();
         try {
-            // It has been persisted. Right now we don't get the ID back so we have to conduct a 
-            // search by email to get this user.
             // Can be found through paged results
             AccountSummaryList search = participantsApi.getParticipants(0, 10, email, null, null, null).execute().body();
             assertEquals((Integer)1, search.getTotal());
@@ -334,7 +337,6 @@ public class ParticipantsTest {
             assertEquals("FirstName", summary.getFirstName());
             assertEquals("LastName", summary.getLastName());
             assertEquals(email, summary.getEmail());
-            assertEquals(DUMMY_SYNAPSE_USER_ID, summary.getSynapseUserId());
             
             // Can also get by the ID
             StudyParticipant retrieved = participantsApi.getParticipantById(id, true).execute().body();
@@ -357,13 +359,11 @@ public class ParticipantsTest {
             assertEquals("US", retrievedPhone.getRegionCode());
             assertFalse(retrieved.isEmailVerified());
             assertFalse(retrieved.isPhoneVerified());
-            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
             createdOn = retrieved.getCreatedOn();
             
             // Can also get by the Synapse ID
-            retrieved = participantsApi.getParticipantBySynapseUserId(DUMMY_SYNAPSE_USER_ID, true).execute().body();
+            retrieved = participantsApi.getParticipantById(retrieved.getId(), true).execute().body();
             assertEquals(email, retrieved.getEmail());
-            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
             
             // Update the user. Identified by the email address
             Map<String,String> newAttributes = new ImmutableMap.Builder<String,String>().put("can_be_recontacted","206-555-1212").build();
@@ -379,13 +379,13 @@ public class ParticipantsTest {
             newParticipant.setDataGroups(newDataGroups);
             newParticipant.setLanguages(newLanguages);
             newParticipant.setAttributes(newAttributes);
+            // These next three should not work.
             newParticipant.setStatus(ENABLED);
-            // This should not work.
             newParticipant.setEmailVerified(TRUE);
             newParticipant.setPhoneVerified(TRUE);
             Phone newPhone = new Phone().number("4152588569").regionCode("CA");
             newParticipant.setPhone(newPhone);
-            newParticipant.setSynapseUserId("11111");
+            // cannot set Synapse User ID or the account will be enabled.
             
             participantsApi.updateParticipant(id, newParticipant).execute();
             
@@ -412,7 +412,6 @@ public class ParticipantsTest {
             assertEquals(newAttributes.get("can_be_recontacted"), retrieved.getAttributes().get("can_be_recontacted"));
             assertEquals(UNVERIFIED, retrieved.getStatus()); // researchers cannot enable users
             assertEquals(createdOn, retrieved.getCreatedOn()); // hasn't been changed, still exists
-            assertEquals(DUMMY_SYNAPSE_USER_ID, retrieved.getSynapseUserId());
         } finally {
             if (id != null) {
                 admin.getClient(ForAdminsApi.class).deleteUser(id).execute();
@@ -693,24 +692,24 @@ public class ParticipantsTest {
     public void addEmailToPhoneUser() throws Exception {
         SignUp signUp = new SignUp().phone(IntegTestUtils.PHONE).password("P@ssword`1").appId(TEST_APP_ID);
         phoneUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
-        
+
         SignIn signIn = new SignIn().phone(signUp.getPhone()).password(signUp.getPassword()).appId(TEST_APP_ID);
 
         String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
         IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(email);
-        
+
         ForConsentedUsersApi usersApi = phoneUser.getClient(ForConsentedUsersApi.class);
         UserSessionInfo info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
         assertEquals(email, info.getEmail());
-        
+
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         StudyParticipant retrieved = participantsApi.getParticipantById(phoneUser.getSession().getId(), true).execute().body();
         assertEquals(email, retrieved.getEmail());
-        
+
         // But if you do it again, it should not work
         String newEmail = IntegTestUtils.makeEmail(ParticipantsTest.class);
         identifierUpdate = new IdentifierUpdate().signIn(signIn).emailUpdate(newEmail);
-        
+
         info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
         assertEquals(email, info.getEmail()); // unchanged
     }
@@ -720,27 +719,27 @@ public class ParticipantsTest {
         String email = IntegTestUtils.makeEmail(ParticipantsTest.class);
         SignUp signUp = new SignUp().email(email).password("P@ssword`1").appId(TEST_APP_ID);
         emailUser = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, signUp);
-        
+
         SignIn signIn = new SignIn().email(signUp.getEmail()).password(signUp.getPassword()).appId(TEST_APP_ID);
 
         IdentifierUpdate identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(PHONE);
-        
+
         ForConsentedUsersApi usersApi = emailUser.getClient(ForConsentedUsersApi.class);
         UserSessionInfo info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
         assertEquals(PHONE.getNumber(), info.getPhone().getNumber());
-        
+
         ParticipantsApi participantsApi = researcher.getClient(ParticipantsApi.class);
         StudyParticipant retrieved = participantsApi.getParticipantById(emailUser.getSession().getId(), true).execute().body();
         assertEquals(PHONE.getNumber(), retrieved.getPhone().getNumber());
-        
+
         // But if you do it again, it should not work
         Phone otherPhone = new Phone().number("4082588569").regionCode("US");
         identifierUpdate = new IdentifierUpdate().signIn(signIn).phoneUpdate(otherPhone);
-        
+
         info = usersApi.updateUsersIdentifiers(identifierUpdate).execute().body();
         assertEquals(IntegTestUtils.PHONE.getNumber(), info.getPhone().getNumber()); // unchanged
     }
-    
+
     private static List<ScheduledActivity> findActivitiesByLabel(List<ScheduledActivity> scheduledActivityList,
             String label) {
         return scheduledActivityList.stream()
