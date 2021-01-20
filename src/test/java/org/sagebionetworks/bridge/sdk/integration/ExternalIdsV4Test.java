@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
@@ -20,10 +21,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
-import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
@@ -34,6 +35,7 @@ import org.sagebionetworks.bridge.rest.model.ExternalIdentifierList;
 import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -45,8 +47,8 @@ import com.google.common.collect.Lists;
 
 import retrofit2.Response;
 
+@SuppressWarnings("ConstantConditions")
 public class ExternalIdsV4Test {
-
     private String prefix;
     private TestUser admin;
     private TestUser researcher;
@@ -73,64 +75,56 @@ public class ExternalIdsV4Test {
         final String extIdB1 = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
         final String extIdB2 = prefix+Tests.randomIdentifier(ExternalIdsV4Test.class);
 
-        ForSuperadminsApi superadminClient = admin.getClient(ForSuperadminsApi.class);
         ForResearchersApi researcherApi = researcher.getClient(ForResearchersApi.class);
         String userId1 = null;
-        try {
-            App app = superadminClient.getApp(TEST_APP_ID).execute().body();
-            superadminClient.updateApp(app.getIdentifier(), app).execute();
 
-            // Create a couple of external IDs related to different studies.
-            userId1 = researcherApi.createParticipant(new SignUp().externalIds(ImmutableMap.of(STUDY_ID_1, extIdA))).execute().body().getIdentifier();
-            usersToDelete.add(userId1);
+        // Create a couple of external IDs related to different studies.
+        userId1 = researcherApi.createParticipant(new SignUp().externalIds(ImmutableMap.of(STUDY_ID_1, extIdA))).execute().body().getIdentifier();
+        usersToDelete.add(userId1);
 
-            // The created account has been associated to the external ID and its related study
-            StudyParticipant participant = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();
-            assertEquals(1, participant.getExternalIds().size());
-            assertEquals(extIdA, participant.getExternalIds().get(STUDY_ID_1));
-            assertEquals(1, participant.getStudyIds().size());
-            assertEquals(STUDY_ID_1, participant.getStudyIds().get(0));
-            assertTrue(participant.getExternalIds().values().contains(extIdA));
+        // The created account has been associated to the external ID and its related study
+        StudyParticipant participant = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();
+        assertEquals(1, participant.getExternalIds().size());
+        assertEquals(extIdA, participant.getExternalIds().get(STUDY_ID_1));
+        assertEquals(1, participant.getStudyIds().size());
+        assertEquals(STUDY_ID_1, participant.getStudyIds().get(0));
+        assertTrue(participant.getExternalIds().values().contains(extIdA));
 
-            // Cannot create another user with this external ID. This should do nothing and fail quietly.
-            SignUp signUp = new SignUp().appId(TEST_APP_ID).externalIds(ImmutableMap.of(STUDY_ID_1, extIdA));
-            researcher.getClient(AuthenticationApi.class).signUp(signUp).execute();
-            
-            Response<Message> response = researcher.getClient(AuthenticationApi.class).signUp(signUp).execute();
-            assertEquals(201, response.code());
+        // Cannot create another user with this external ID. This should do nothing and fail quietly.
+        SignUp signUp = new SignUp().appId(TEST_APP_ID).externalIds(ImmutableMap.of(STUDY_ID_1, extIdA));
+        researcher.getClient(AuthenticationApi.class).signUp(signUp).execute();
 
-            // ID wasn't changed
-            StudyParticipant participant2 = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();
-            assertEquals(userId1, participant2.getId());
-            
-            // Assign a second external ID to an existing account. This should work, and then both IDs should 
-            // be usable to retrieve the account (demonstrating that this is not simply because in the interim 
-            // while migrating, we're writing the external ID to the singular externalId field).
-            admin.getClient(StudiesApi.class).enrollParticipant(STUDY_ID_2, 
-                    new Enrollment().externalId(extIdB1).userId(userId1)).execute();
+        Response<Message> response = researcher.getClient(AuthenticationApi.class).signUp(signUp).execute();
+        assertEquals(201, response.code());
 
-            StudyParticipant found1 = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();
-            StudyParticipant found2 = researcherApi.getParticipantByExternalId(extIdB1, false).execute().body();
-            assertEquals(userId1, found1.getId());
-            assertEquals(userId1, found2.getId());
-            
-            // Add one more
-            String userId2 = researcherApi.createParticipant(new SignUp()
-                    .externalIds(ImmutableMap.of(STUDY_ID_2, extIdB2))).execute().body().getIdentifier();
-            usersToDelete.add(userId2);
-            
-            // Verify all are accessible through the study-specific external IDs API
-            ExternalIdentifierList list1 = researcherApi.getExternalIdsForStudy(STUDY_ID_1, null, null, prefix).execute().body();
-            assertEquals(ImmutableSet.of(extIdA), list1.getItems().stream()
-                    .map(ExternalIdentifier::getIdentifier).collect(toSet()));
-            
-            ExternalIdentifierList list2 = researcherApi.getExternalIdsForStudy(STUDY_ID_2, null, null, prefix).execute().body();
-            assertEquals(ImmutableSet.of(extIdB1, extIdB2), list2.getItems().stream()
-                    .map(ExternalIdentifier::getIdentifier).collect(toSet()));
-        } finally {
-            App app = superadminClient.getApp(TEST_APP_ID).execute().body();
-            superadminClient.updateApp(app.getIdentifier(), app).execute();
-        }
+        // ID wasn't changed
+        StudyParticipant participant2 = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();
+        assertEquals(userId1, participant2.getId());
+
+        // Assign a second external ID to an existing account. This should work, and then both IDs should
+        // be usable to retrieve the account (demonstrating that this is not simply because in the interim
+        // while migrating, we're writing the external ID to the singular externalId field).
+        admin.getClient(StudiesApi.class).enrollParticipant(STUDY_ID_2,
+                new Enrollment().externalId(extIdB1).userId(userId1)).execute();
+
+        StudyParticipant found1 = researcherApi.getParticipantByExternalId(extIdA, false).execute().body();
+        StudyParticipant found2 = researcherApi.getParticipantByExternalId(extIdB1, false).execute().body();
+        assertEquals(userId1, found1.getId());
+        assertEquals(userId1, found2.getId());
+
+        // Add one more
+        String userId2 = researcherApi.createParticipant(new SignUp()
+                .externalIds(ImmutableMap.of(STUDY_ID_2, extIdB2))).execute().body().getIdentifier();
+        usersToDelete.add(userId2);
+
+        // Verify all are accessible through the study-specific external IDs API
+        ExternalIdentifierList list1 = researcherApi.getExternalIdsForStudy(STUDY_ID_1, null, null, prefix).execute().body();
+        assertEquals(ImmutableSet.of(extIdA), list1.getItems().stream()
+                .map(ExternalIdentifier::getIdentifier).collect(toSet()));
+
+        ExternalIdentifierList list2 = researcherApi.getExternalIdsForStudy(STUDY_ID_2, null, null, prefix).execute().body();
+        assertEquals(ImmutableSet.of(extIdB1, extIdB2), list2.getItems().stream()
+                .map(ExternalIdentifier::getIdentifier).collect(toSet()));
     }
 
     @Test
@@ -223,4 +217,37 @@ public class ExternalIdsV4Test {
         }
     }
 
+    @Test
+    public void canReauthExternalIdOnly() throws Exception {
+        // Turn on reauth.
+        ForAdminsApi adminApi = admin.getClient(ForAdminsApi.class);
+        App app = adminApi.getUsersApp().execute().body();
+        app.setReauthenticationEnabled(true);
+        adminApi.updateUsersApp(app).execute();
+
+        try {
+            // Manually create an account with external ID only. Can't use TestUserHelper because it expects either an
+            // email or phone.
+            String extId = Tests.randomIdentifier(ExternalIdsV4Test.class);
+            SignUp signUp = new SignUp().appId(TEST_APP_ID).putExternalIdsItem(STUDY_ID_1, extId).password(PASSWORD)
+                    .consent(true);
+            String userId = adminApi.createUser(signUp).execute().body().getId();
+            usersToDelete.add(userId);
+
+            // Sign in.
+            SignIn signIn = new SignIn().appId(TEST_APP_ID).externalId(extId).password(PASSWORD);
+            ClientManager clientManager = new ClientManager.Builder().withSignIn(signIn).build();
+            AuthenticationApi authApi = clientManager.getClient(AuthenticationApi.class);
+            String reauthToken = authApi.signIn(signIn).execute().body().getReauthToken();
+
+            // Reauth.
+            SignIn reauth = new SignIn().appId(TEST_APP_ID).externalId(extId).reauthToken(reauthToken);
+            authApi.reauthenticate(reauth).execute();
+        } finally {
+            // Turn off reauth.
+            app = adminApi.getUsersApp().execute().body();
+            app.setReauthenticationEnabled(false);
+            adminApi.updateUsersApp(app).execute();
+        }
+    }
 }
