@@ -3,9 +3,8 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.ORG_ADMIN;
-import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.rest.model.Role.STUDY_COORDINATOR;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -16,10 +15,9 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForOrgAdminsApi;
-import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
-import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Account;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
@@ -57,7 +55,7 @@ public class OrgMembershipTest {
         }
         orgAdmin.signOutAndDeleteUser();
         if (orgId != null) {
-            admin.getClient(ForSuperadminsApi.class).deleteOrganization(orgId).execute();
+            admin.getClient(OrganizationsApi.class).deleteOrganization(orgId).execute();
         }
     }
 
@@ -67,7 +65,7 @@ public class OrgMembershipTest {
         ForOrgAdminsApi orgAdminApi = orgAdmin.getClient(ForOrgAdminsApi.class);
         
         // Create a test user. OrgId is automatically set correctly through this API
-        Account account = new Account().email(email).roles(ImmutableList.of(DEVELOPER));        
+        Account account = new Account().email(email).roles(ImmutableList.of(STUDY_COORDINATOR));        
         userId = orgAdminApi.createAccount(account).execute().body().getIdentifier();
         
         // User can be retrieved singularly
@@ -79,14 +77,14 @@ public class OrgMembershipTest {
         AccountSummaryList list = orgAdminApi.getMembers(orgId, search).execute().body();
         assertEquals(userId, list.getItems().get(0).getId());
         
-        // User can be udpated
+        // User can be updated
         retrieved.setFirstName("Olaf");
-        retrieved.setRoles(ImmutableList.of(DEVELOPER, RESEARCHER));
+        retrieved.setRoles(ImmutableList.of(STUDY_COORDINATOR, ORG_ADMIN));
         orgAdminApi.updateAccount(userId, retrieved).execute();
         
         retrieved = orgAdminApi.getAccount(userId).execute().body();
         assertEquals("Olaf", retrieved.getFirstName());
-        assertEquals(ImmutableSet.of(DEVELOPER, RESEARCHER), ImmutableSet.copyOf(retrieved.getRoles()));
+        assertEquals(ImmutableSet.of(STUDY_COORDINATOR, ORG_ADMIN), ImmutableSet.copyOf(retrieved.getRoles()));
         
         // User can be removed from the organization
         orgAdminApi.removeMember(orgId, userId).execute().body();
@@ -98,17 +96,17 @@ public class OrgMembershipTest {
         try {
             orgAdminApi.deleteAccount(userId).execute();
             fail("Should have thrown an exception");
-        } catch(EntityNotFoundException e) {
+        } catch(UnauthorizedException e) {
         }
         try {
             orgAdminApi.updateAccount(userId, account).execute();
             fail("Should have thrown an exception");
-        } catch(EntityNotFoundException e) {
+        } catch(UnauthorizedException e) {
         }
         try {
             orgAdminApi.getAccount(userId).execute().body();
             fail("Should have thrown exception");
-        } catch(EntityNotFoundException e) {
+        } catch(UnauthorizedException e) {
         }
         
         // Put the account back
@@ -119,7 +117,7 @@ public class OrgMembershipTest {
         // Test deletion of the ORGANIZATION when there is an account still associated to the
         // organization. It should fail.
         try {
-            admin.getClient(ForSuperadminsApi.class).deleteOrganization(orgId).execute();
+            admin.getClient(OrganizationsApi.class).deleteOrganization(orgId).execute();
             fail("Should have thrown exception");
         } catch(ConstraintViolationException e) {
             assertEquals("Cannot delete organization (it currently contains one or more accounts).", e.getMessage());

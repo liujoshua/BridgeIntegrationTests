@@ -4,8 +4,11 @@ import static org.joda.time.DateTimeZone.UTC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 
 import java.io.IOException;
 import java.util.List;
@@ -23,6 +26,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForDevelopersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ActivityEvent;
 import org.sagebionetworks.bridge.rest.model.ActivityEventList;
 import org.sagebionetworks.bridge.rest.model.App;
@@ -217,87 +221,89 @@ public class ActivityEventTest {
     }
     
     @Test
-    public void getActivityEventsScopedForStudy() {
-    }
-
-    @Test
     public void createActivityEventScopedForStudy() throws Exception {
-        DateTime timestamp1 = DateTime.now(UTC);
-        DateTime timestamp2 = DateTime.now(UTC).minusDays(2);
-        
-        CustomActivityEventRequest studyScopedRequest = new CustomActivityEventRequest()
-            .eventKey(EVENT_KEY1).timestamp(timestamp1);
-        
+        // Because this is set first, it is immutable and will not be changed by the study-scoped value.
+        // Both with exist side-by-side (TODO: also test replacement scenario).
+        DateTime globalTimestamp = DateTime.now(UTC).minusDays(2);
         CustomActivityEventRequest globalRequest = new CustomActivityEventRequest()
-                .eventKey(EVENT_KEY1).timestamp(timestamp2);
-        
-        researchersApi.createActivityEventForStudyParticipant(STUDY_ID_1, user.getUserId(), studyScopedRequest).execute();
+                .eventKey(EVENT_KEY1).timestamp(globalTimestamp);
         researchersApi.createActivityEventForParticipant(user.getUserId(), globalRequest).execute();
         
-        ActivityEventList scopedList = researchersApi.getActivityEventsForStudyParticipant(STUDY_ID_1, user.getUserId()).execute().body();
-        ActivityEvent scopedEvent = findEventByKey(scopedList, "custom:"+EVENT_KEY1);
-        assertEquals(scopedEvent.getTimestamp(), timestamp1);
-
+        DateTime studyScopedTimestamp = DateTime.now(UTC);  
+        CustomActivityEventRequest studyScopedRequest = new CustomActivityEventRequest()
+            .eventKey(EVENT_KEY1).timestamp(studyScopedTimestamp);
+        researchersApi.createStudyParticipantActivityEvent(STUDY_ID_1, user.getUserId(), studyScopedRequest).execute();
+        
         ActivityEventList globalList = researchersApi.getActivityEventsForParticipant(user.getUserId()).execute().body();
         ActivityEvent globalEvent = findEventByKey(globalList, "custom:"+EVENT_KEY1);
-        assertEquals(globalEvent.getTimestamp(), timestamp2);
+        assertEquals(globalTimestamp, globalEvent.getTimestamp());
         
-        // For backwards compatability, certain common global events are always overwritten by study-scoped
-        // events (immutable events will still only be written once, including enrollment and created_on...this will 
-        // continue to work correctly for older studies that only had global keys and one study, but they should not 
-        // be used for apps with multiple studies anymore. The new scheduling system will account for this).
-        assertEquals(
-                findEventByKey(scopedList, "created_on").getTimestamp(), 
-                findEventByKey(globalList, "created_on").getTimestamp());
-        assertEquals(
-                findEventByKey(scopedList, "study_start_date").getTimestamp(), 
-                findEventByKey(globalList, "study_start_date").getTimestamp());
-        
+        ActivityEventList scopedList = researchersApi.getStudyParticipantActivityEvents(STUDY_ID_1, user.getUserId()).execute().body();
+        ActivityEvent scopedEvent = findEventByKey(scopedList, "custom:"+EVENT_KEY1);
+        assertEquals(studyScopedTimestamp, scopedEvent.getTimestamp());
+
         // User can also retrieve these two different events.
-        
         scopedList = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
         scopedEvent = findEventByKey(scopedList, "custom:"+EVENT_KEY1);
-        assertEquals(scopedEvent.getTimestamp(), timestamp1);
+        assertEquals(studyScopedTimestamp, scopedEvent.getTimestamp());
         
         globalList= usersApi.getActivityEvents().execute().body();
         globalEvent = findEventByKey(globalList, "custom:"+EVENT_KEY1);
-        assertEquals(globalEvent.getTimestamp(), timestamp2);
+        assertEquals(globalTimestamp, globalEvent.getTimestamp());
         
-        // Now reverse this...have the user create a custom event and verify that it exists for researchers
-        studyScopedRequest = new CustomActivityEventRequest().eventKey(EVENT_KEY2).timestamp(timestamp1);
-        globalRequest = new CustomActivityEventRequest().eventKey(EVENT_KEY2).timestamp(timestamp2);
-        
+        // Verify that a user can create a custom event, and that it is visible to researchers
+        globalTimestamp = globalTimestamp.minusWeeks(2);
+        globalRequest = new CustomActivityEventRequest().eventKey(EVENT_KEY2).timestamp(globalTimestamp);
         usersApi.createCustomActivityEvent(globalRequest).execute();
-        usersApi.createActivityEventForSelf(STUDY_ID_1, studyScopedRequest).execute();
         
-        scopedList = researchersApi.getActivityEventsForStudyParticipant(STUDY_ID_1, user.getUserId()).execute().body();
-        scopedEvent = findEventByKey(scopedList, "custom:"+EVENT_KEY2);
-        assertEquals(scopedEvent.getTimestamp(), timestamp1);
+        studyScopedTimestamp = studyScopedTimestamp.minusWeeks(2);
+        studyScopedRequest = new CustomActivityEventRequest().eventKey(EVENT_KEY2).timestamp(studyScopedTimestamp);
+        usersApi.createActivityEventForSelf(STUDY_ID_1, studyScopedRequest).execute();
 
+        // user can see these events
+        scopedList = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        scopedEvent = findEventByKey(scopedList, "custom:"+EVENT_KEY2);
+        assertEquals(studyScopedTimestamp, scopedEvent.getTimestamp());
+        
+        globalList= usersApi.getActivityEvents().execute().body();
+        globalEvent = findEventByKey(globalList, "custom:"+EVENT_KEY2);
+        assertEquals(globalTimestamp, globalEvent.getTimestamp());
+
+        // the researcher can see these events
         globalList = researchersApi.getActivityEventsForParticipant(user.getUserId()).execute().body();
         globalEvent = findEventByKey(globalList, "custom:"+EVENT_KEY2);
-        assertEquals(globalEvent.getTimestamp(), timestamp2);
+        assertEquals(globalTimestamp, globalEvent.getTimestamp());
         
-        scopedList = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
-        scopedEvent = findEventByKey(scopedList, "custom:"+EVENT_KEY1);
-        assertEquals(scopedEvent.getTimestamp(), timestamp1);
-        
-        globalList= usersApi.getActivityEvents().execute().body();
-        globalEvent = findEventByKey(globalList, "custom:"+EVENT_KEY1);
-        assertEquals(globalEvent.getTimestamp(), timestamp2);
+        scopedList = researchersApi.getStudyParticipantActivityEvents(STUDY_ID_1, user.getUserId()).execute().body();
+        scopedEvent = findEventByKey(scopedList, "custom:"+EVENT_KEY2);
+        assertEquals(studyScopedTimestamp, scopedEvent.getTimestamp());
+    }
+    
+    @Test
+    public void globalEventsDoNotCreateStudyVersions() throws Exception {
+        DateTime globalTimestamp = DateTime.now(UTC).minusDays(2);
+        CustomActivityEventRequest globalRequest = new CustomActivityEventRequest()
+                .eventKey(EVENT_KEY1).timestamp(globalTimestamp);
+        researchersApi.createActivityEventForParticipant(user.getUserId(), globalRequest).execute();
+
+        ActivityEventList scopedList = researchersApi.getStudyParticipantActivityEvents(STUDY_ID_1, user.getUserId()).execute().body();
+        assertNull(findEventByKey(scopedList, "custom:"+EVENT_KEY1));
+
+        // The user has not been enrolled in this study so there should be no events.
+        try {
+            researchersApi.getStudyParticipantActivityEvents(STUDY_ID_2, user.getUserId()).execute().body();
+            fail("Should have thrown an exception.");
+        } catch(EntityNotFoundException e) {
+            
+        }
     }
     
     private ActivityEvent findEventByKey(ActivityEventList list, String key) {
-        return list.getItems().stream()
-                .filter(e -> e.getEventId().equals(key))
-                .findAny().get();
-    }
-    
-    @Test
-    public void getSelfActivityEventsScopedForStudy() {
-    }
-
-    @Test
-    public void createSelfActivityEventScopedForStudy() {
+        for (ActivityEvent event : list.getItems()) {
+            if (event.getEventId().equals(key)) {
+                return event;
+            }
+        }
+        return null;
     }
 }
