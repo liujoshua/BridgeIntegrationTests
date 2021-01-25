@@ -6,7 +6,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.rest.model.Role.STUDY_COORDINATOR;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
@@ -27,8 +27,8 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
-import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -160,22 +160,22 @@ public class StudyTest {
         admin.getClient(OrganizationsApi.class).addStudySponsorship(ORG_ID_1, id1).execute();
         admin.getClient(OrganizationsApi.class).addStudySponsorship(ORG_ID_2, id2).execute();
         
-        TestUser researcherUser = TestUserHelper.createAndSignInUser(StudyTest.class, true, RESEARCHER);
-        userIdsToDelete.add(researcherUser.getUserId());
+        TestUser studyCoordinator = TestUserHelper.createAndSignInUser(StudyTest.class, true, STUDY_COORDINATOR);
+        userIdsToDelete.add(studyCoordinator.getUserId());
         
-        admin.getClient(OrganizationsApi.class).addMember(ORG_ID_1, researcherUser.getUserId()).execute();
-        ParticipantsApi participantApi = researcherUser.getClient(ParticipantsApi.class);
+        admin.getClient(OrganizationsApi.class).addMember(ORG_ID_1, studyCoordinator.getUserId()).execute();
+        ParticipantsApi participantApi = studyCoordinator.getClient(ParticipantsApi.class);
         
         // Cannot associate this user to a non-existent study
         try {
             OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
-            orgsApi.addMember("bad-id", researcherUser.getUserId()).execute();
+            orgsApi.addMember("bad-id", studyCoordinator.getUserId()).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
             assertEquals("Organization not found.", e.getMessage());
         }
         
-        // Cannot sign this user up because the enrollment includes one the researcher does not possess.
+        // Cannot sign this user up because the enrollment includes one the study coordinator does not possess.
         String email2 = IntegTestUtils.makeEmail(StudyTest.class);
         SignUp signUp2 = new SignUp().email(email2).password(PASSWORD).appId(TEST_APP_ID)
                 .externalIds(ImmutableMap.of(STUDY_ID_1, Tests.randomIdentifier(StudyTest.class), 
@@ -183,8 +183,8 @@ public class StudyTest {
         try {
             participantApi.createParticipant(signUp2).execute().body();
             fail("Should have thrown exception");
-        } catch(BadRequestException e) {
-            assertTrue(e.getMessage().contains("is not a study of the caller"));
+        } catch(UnauthorizedException e) {
+            assertEquals("Caller does not have permission to access this service.", e.getMessage());
         }
     }
     
