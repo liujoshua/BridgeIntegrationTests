@@ -5,19 +5,30 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
+import static org.sagebionetworks.bridge.rest.model.Role.STUDY_COORDINATOR;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.APP_ID;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
+import org.sagebionetworks.bridge.rest.api.ForStudyCoordinatorsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.model.Enrollment;
 import org.sagebionetworks.bridge.rest.model.EnrollmentDetailList;
+import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
+import org.sagebionetworks.bridge.rest.model.Role;
+import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -26,11 +37,15 @@ public class EnrollmentTest {
     
     TestUser admin;
     TestUser researcher;
+    TestUser studyCoordinator;
     
     @After
     public void after() throws Exception {
         if (researcher != null) {
             researcher.signOutAndDeleteUser();
+        }
+        if (studyCoordinator != null) {
+            studyCoordinator.signOutAndDeleteUser();
         }
     }
     
@@ -117,6 +132,40 @@ public class EnrollmentTest {
             assertTrue(list.getItems().stream().anyMatch(e -> e.getParticipant().getIdentifier().equals(user.getUserId())));
         } finally {
             user.signOutAndDeleteUser();
+        }
+    }
+    
+    @Test
+    public void studyCoordinatorEnrollsWithExternalId() throws Exception {
+        // Enroll through the study coordinator API *and* add an external ID. This doesn't
+        // look interesting from the client side, but it verifies correct behavior on the
+        // server where we call enrollment code twice.
+        String externalId = Tests.randomIdentifier(EnrollmentTest.class);
+        IdentifierHolder keys = null;
+        
+        studyCoordinator = TestUserHelper.createAndSignInUser(EnrollmentTest.class, false, STUDY_COORDINATOR);
+        try {
+            // study coordinator can enroll the user in study1. Include an external ID as well.
+            ForStudyCoordinatorsApi coordApi = studyCoordinator.getClient(ForStudyCoordinatorsApi.class);
+            
+            SignUp signUp = new SignUp()
+                    .externalIds(ImmutableMap.of(STUDY_ID_1, externalId));
+            
+            keys = coordApi.createStudyParticipant(STUDY_ID_1, signUp).execute().body();;
+            
+            StudyParticipant participant = coordApi.getStudyParticipantById(
+                    STUDY_ID_1, "externalid:"+externalId, true).execute().body();
+            
+            assertEquals(ImmutableList.of(STUDY_ID_1), participant.getStudyIds());
+            assertEquals(1, participant.getExternalIds().size());
+            assertEquals(externalId, participant.getExternalIds().get(STUDY_ID_1));
+            // there is no consent history (which is keyed by subpopulation; the API app has a 
+            // subpopulation also named "api"
+            assertNull(participant.getConsentHistories().get(APP_ID));
+        } finally {
+            if (keys != null) {
+                admin.getClient(ForAdminsApi.class).deleteUser(keys.getIdentifier()).execute();
+            }
         }
     }
 }
