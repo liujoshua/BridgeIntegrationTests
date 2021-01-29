@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.joda.time.DateTimeZone.UTC;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -133,7 +134,7 @@ public class ActivityEventTest {
     }
 
     @Test
-    public void canCreateAndGetCustomEvent() throws IOException {
+    public void canCrudCustomEvent() throws IOException {
         // Setup
         ActivityEventList activityEventList = usersApi.getActivityEvents().execute().body();
         List<ActivityEvent> activityEvents = activityEventList.getItems();
@@ -143,10 +144,7 @@ public class ActivityEventTest {
         // Create custom event
         DateTime timestamp = DateTime.now(DateTimeZone.UTC);
         usersApi.createCustomActivityEvent(
-                new CustomActivityEventRequest()
-                        .eventId(EVENT_KEY1)
-                        .timestamp(timestamp))
-                .execute();
+                new CustomActivityEventRequest().eventId(EVENT_KEY1).timestamp(timestamp)).execute();
 
         // Verify created event
         activityEventList = usersApi.getActivityEvents().execute().body();
@@ -165,6 +163,14 @@ public class ActivityEventTest {
         // Verify researcher's view of created event
         activityEventList = researchersApi.getActivityEventsForParticipant(participant.getId()).execute().body();
         assertEquals(updatedActivityEvents, activityEventList.getItems());
+        
+        // delete the event
+        usersApi.deleteCustomActivityEvent(EVENT_KEY1).execute();
+        activityEventList = usersApi.getActivityEvents().execute().body();
+        assertFalse(activityEventList.getItems().stream().map(ActivityEvent::getEventId)
+                .collect(Collectors.toSet()).contains(expectedEventKey));
+        assertFalse(activityEventList.getItems().stream().map(ActivityEvent::getEventId)
+                .collect(Collectors.toSet()).contains(EVENT_KEY1));
     }
 
     @Test
@@ -223,7 +229,7 @@ public class ActivityEventTest {
     @Test
     public void createActivityEventScopedForStudy() throws Exception {
         // Because this is set first, it is immutable and will not be changed by the study-scoped value.
-        // Both with exist side-by-side (TODO: also test replacement scenario).
+        // Both with exist side-by-side
         DateTime globalTimestamp = DateTime.now(UTC).minusDays(2);
         CustomActivityEventRequest globalRequest = new CustomActivityEventRequest()
                 .eventId(EVENT_KEY1).timestamp(globalTimestamp);
