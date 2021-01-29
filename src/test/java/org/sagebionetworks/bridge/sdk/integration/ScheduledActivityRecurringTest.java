@@ -121,7 +121,7 @@ public class ScheduledActivityRecurringTest {
         
         // Create an event two days in the past to schedule against
         usersApi.createCustomActivityEvent(
-                new CustomActivityEventRequest().eventKey(CUSTOM_EVENT).timestamp(now.minusDays(2))).execute();
+                new CustomActivityEventRequest().eventId(CUSTOM_EVENT).timestamp(now.minusDays(2))).execute();
 
         // Gilbert Islands, +12:00 hours.
         String mtz1 = now.withZone(MTZ).toLocalDate().toString()+M_TIME_OF_DAY;

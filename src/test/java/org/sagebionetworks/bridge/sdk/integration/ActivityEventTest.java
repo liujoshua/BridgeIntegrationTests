@@ -144,7 +144,7 @@ public class ActivityEventTest {
         DateTime timestamp = DateTime.now(DateTimeZone.UTC);
         usersApi.createCustomActivityEvent(
                 new CustomActivityEventRequest()
-                        .eventKey(EVENT_KEY1)
+                        .eventId(EVENT_KEY1)
                         .timestamp(timestamp))
                 .execute();
 
@@ -199,7 +199,7 @@ public class ActivityEventTest {
         DateTime timestamp2 = DateTime.now(DateTimeZone.UTC);
         
         CustomActivityEventRequest request = new CustomActivityEventRequest();
-        request.setEventKey(EVENT_KEY1);
+        request.setEventId(EVENT_KEY1);
         request.setTimestamp(timestamp1);
         
         researchersApi.createActivityEventForParticipant(user.getUserId(), request).execute();
@@ -226,12 +226,12 @@ public class ActivityEventTest {
         // Both with exist side-by-side (TODO: also test replacement scenario).
         DateTime globalTimestamp = DateTime.now(UTC).minusDays(2);
         CustomActivityEventRequest globalRequest = new CustomActivityEventRequest()
-                .eventKey(EVENT_KEY1).timestamp(globalTimestamp);
+                .eventId(EVENT_KEY1).timestamp(globalTimestamp);
         researchersApi.createActivityEventForParticipant(user.getUserId(), globalRequest).execute();
         
         DateTime studyScopedTimestamp = DateTime.now(UTC);  
         CustomActivityEventRequest studyScopedRequest = new CustomActivityEventRequest()
-            .eventKey(EVENT_KEY1).timestamp(studyScopedTimestamp);
+            .eventId(EVENT_KEY1).timestamp(studyScopedTimestamp);
         researchersApi.createStudyParticipantActivityEvent(STUDY_ID_1, user.getUserId(), studyScopedRequest).execute();
         
         ActivityEventList globalList = researchersApi.getActivityEventsForParticipant(user.getUserId()).execute().body();
@@ -253,11 +253,11 @@ public class ActivityEventTest {
         
         // Verify that a user can create a custom event, and that it is visible to researchers
         globalTimestamp = globalTimestamp.minusWeeks(2);
-        globalRequest = new CustomActivityEventRequest().eventKey(EVENT_KEY2).timestamp(globalTimestamp);
+        globalRequest = new CustomActivityEventRequest().eventId(EVENT_KEY2).timestamp(globalTimestamp);
         usersApi.createCustomActivityEvent(globalRequest).execute();
         
         studyScopedTimestamp = studyScopedTimestamp.minusWeeks(2);
-        studyScopedRequest = new CustomActivityEventRequest().eventKey(EVENT_KEY2).timestamp(studyScopedTimestamp);
+        studyScopedRequest = new CustomActivityEventRequest().eventId(EVENT_KEY2).timestamp(studyScopedTimestamp);
         usersApi.createActivityEventForSelf(STUDY_ID_1, studyScopedRequest).execute();
 
         // user can see these events
@@ -283,7 +283,7 @@ public class ActivityEventTest {
     public void globalEventsDoNotCreateStudyVersions() throws Exception {
         DateTime globalTimestamp = DateTime.now(UTC).minusDays(2);
         CustomActivityEventRequest globalRequest = new CustomActivityEventRequest()
-                .eventKey(EVENT_KEY1).timestamp(globalTimestamp);
+                .eventId(EVENT_KEY1).timestamp(globalTimestamp);
         researchersApi.createActivityEventForParticipant(user.getUserId(), globalRequest).execute();
 
         ActivityEventList scopedList = researchersApi.getStudyParticipantActivityEvents(STUDY_ID_1, user.getUserId()).execute().body();
