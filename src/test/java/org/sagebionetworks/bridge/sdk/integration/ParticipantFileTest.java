@@ -73,7 +73,7 @@ public class ParticipantFileTest {
         out.close();
         assertEquals(200, connection.getResponseCode());;
         connection.disconnect();
-
+        
         ParticipantFileList results = userApi.getParticipantFiles(null, 5).execute().body();
         assertNotNull(results);
         List<ParticipantFile> resultList = results.getItems();
@@ -88,8 +88,9 @@ public class ParticipantFileTest {
             userApi.createParticipantFile(i + "file", file).execute();
         }
         
-        // Note: this is randomly failing right now with a 403: Forbidden response. It is not 
-        // a DDB eventual consistency.
+        // Note: After starting a local Bridge server, this test fails with a 403 Forbidden. 
+        // Thereafter is seems to consistently succeed. It is not a DDB eventual consistency
+        // issue.
         ResponseBody body = userApi.getParticipantFile("file_id").execute().body();
         assertNotNull(body);
         assertNotNull(body.contentType());
