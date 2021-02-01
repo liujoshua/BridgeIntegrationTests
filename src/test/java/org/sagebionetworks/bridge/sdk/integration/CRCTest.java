@@ -9,20 +9,22 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
-
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.util.EntityUtils;
 import org.hl7.fhir.dstu3.model.Appointment;
+import org.hl7.fhir.dstu3.model.Appointment.AppointmentParticipantComponent;
+import org.hl7.fhir.dstu3.model.Appointment.AppointmentStatus;
 import org.hl7.fhir.dstu3.model.CodeableConcept;
 import org.hl7.fhir.dstu3.model.Coding;
 import org.hl7.fhir.dstu3.model.Extension;
 import org.hl7.fhir.dstu3.model.Identifier;
-import org.hl7.fhir.dstu3.model.Appointment.AppointmentParticipantComponent;
-import org.hl7.fhir.dstu3.model.Appointment.AppointmentStatus;
 import org.hl7.fhir.dstu3.model.Observation;
 import org.hl7.fhir.dstu3.model.ProcedureRequest;
 import org.hl7.fhir.dstu3.model.Range;
@@ -32,6 +34,7 @@ import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.RestUtils;
@@ -66,8 +69,11 @@ public class CRCTest {
     static final LocalDate JAN2 = LocalDate.parse("1970-01-02");
     static final FhirContext CONTEXT = FhirContext.forDstu3();
     static final String TEST_EMAIL = "bridge-testing+crc@sagebase.org";
-    static final List<String> WORKFLOW_TAGS = ImmutableList.of("enrolled", "selected", 
-            "declined", "tests_requested", "tests_scheduled", "tests_collected", "tests_available");
+    static final List<String> WORKFLOW_TAGS = ImmutableList.of("enrolled", "selected",
+            "declined", "tests_requested", "tests_scheduled", "tests_collected", "tests_available",
+            "ship_test_requested");
+    static final List<String> USER_PROFILE_ATTRIBUTES = ImmutableList.of("state_change_timestamp", "address1",
+            "address2", "city", "state", "zip_code", "dob", "gender", "home_phone");
     static final String USER_ID_VALUE_NS = "https://ws.sagebridge.org/#userId";
 
     static TestUser user;
@@ -91,12 +97,12 @@ public class CRCTest {
         
         App app = appsApi.getUsersApp().execute().body();
         if (!app.getDataGroups().containsAll(WORKFLOW_TAGS) ||
-            !app.getUserProfileAttributes().contains("state_change_timestamp") ||
+            !app.getUserProfileAttributes().containsAll(USER_PROFILE_ATTRIBUTES) ||
             !app.isHealthCodeExportEnabled()) {
             
             app.setHealthCodeExportEnabled(true);
             app.getDataGroups().addAll(WORKFLOW_TAGS);
-            app.getUserProfileAttributes().add("state_change_timestamp");
+            app.getUserProfileAttributes().addAll(USER_PROFILE_ATTRIBUTES);
             appsApi.updateUsersApp(app).execute();
         }
         // Create an account that is a system account and the target user account
@@ -116,6 +122,101 @@ public class CRCTest {
         if (user != null) {
             user.signOutAndDeleteUser();
         }
+    }
+
+    @Test
+    public void requestShipmentAsParticipant() throws IOException {
+        user.signInAgain();
+
+        setupShippingInfo();
+
+        HttpResponse response = Request.Post(host + "/v1/cuicm/participants/self/labshipments/request")
+                .addHeader("Bridge-Session", user.getSession().getSessionToken())
+                .execute()
+                .returnResponse();
+
+        assertEquals(HttpStatus.SC_ACCEPTED, response.getStatusLine().getStatusCode());
+
+        ParticipantReportsApi reportsApi = adminUser.getClient(ParticipantReportsApi.class);
+
+        ReportDataList list = reportsApi.getUsersParticipantReportRecords(
+                user.getUserId(), "shipmentrequest", JAN1, JAN2).execute().body();
+        ReportData report = list.getItems().get(0);
+
+        JsonElement jsonElement = RestUtils.GSON.toJsonTree(report.getData());
+        assertTrue(jsonElement.getAsJsonObject().get("orderNumber").getAsString().startsWith(user.getUserId()));
+    }
+
+    @Test
+    public void requestShipmentForHealthCode() throws IOException {
+        setupShippingInfo();
+
+        StudyParticipant participant = adminUser.getClient(ParticipantsApi.class)
+                .getParticipantById(user.getUserId(), false).execute().body();
+        String healthCode = participant.getHealthCode();
+
+        HttpResponse response = Request.Post(
+                host + "/v1/cuicm/participants/healthcode:" + healthCode + "/labshipments/request")
+                .addHeader("Authorization", "Basic " + credentials)
+                .execute()
+                .returnResponse();
+
+        assertEquals(HttpStatus.SC_ACCEPTED, response.getStatusLine().getStatusCode());
+
+        ParticipantReportsApi reportsApi = adminUser.getClient(ParticipantReportsApi.class);
+
+        ReportDataList list = reportsApi.getUsersParticipantReportRecords(
+                user.getUserId(), "shipmentrequest", JAN1, JAN2).execute().body();
+        ReportData report = list.getItems().get(0);
+
+        JsonElement jsonElement = RestUtils.GSON.toJsonTree(report.getData());
+        assertTrue(jsonElement.getAsJsonObject().get("orderNumber").getAsString().startsWith(user.getUserId()));
+    }
+
+    private void setupShippingInfo() throws IOException {
+        StudyParticipant participant = user.getClient(ParticipantsApi.class).getUsersParticipantRecord(false)
+                .execute().body();
+        Map<String, String> homeTestInfo = new ImmutableMap.Builder<String, String>()
+                .put("address1", "123 Sesame Street")
+                .put("address2", "Apt. 6")
+                .put("city", "Seattle")
+                .put("dob", "1980-08-10")
+                .put("gender", "female")
+                .put("state", "WA")
+                .put("zip_code", "10001")
+                .put("home_phone", "206.547.2600")
+                .build();
+
+        Map<String, String> attributes = participant.getAttributes();
+        attributes.putAll(homeTestInfo);
+
+        StudyParticipant updateParticipant = new StudyParticipant();
+        updateParticipant.setFirstName("Test");
+        updateParticipant.setLastName("User");
+        updateParticipant.setAttributes(attributes);
+
+        user.getClient(ParticipantsApi.class).updateUsersParticipantRecord(updateParticipant).execute();
+    }
+    
+    @Ignore("Waiting for integration workflow to be finalized")
+    @Test
+    public void checkShipmentStatus() throws IOException {
+        HttpResponse response = Request.Get(host + "/v1/cuicm/labshipments/fzOJmVi8-h-IGRmnGM2RAZQz2021-01-19/status")
+                .addHeader("Authorization", "Basic " + credentials)
+                .execute().returnResponse();
+    }
+    
+    @Ignore("Waiting for integration workflow to be finalized")
+    @Test
+    public void shippingConfirmations() throws IOException {
+        HttpResponse response = Request.Get(host +
+        "/v1/cuicm/participants/labshipments/confirmations?startDate=2021-01-01&endDate=2021-01-20")
+                .addHeader("Authorization", "Basic " + credentials)
+                .execute().returnResponse();
+
+        RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
+        
+        assertEquals(200, response.getStatusLine().getStatusCode());
     }
 
     @Test
@@ -416,7 +517,7 @@ public class CRCTest {
                 .getParticipantById(user.getUserId(), false).execute().body();
         assertTrue(participant.getDataGroups().contains("tests_available_type_unknown"));
         
-        verifyHealthDataRecords("observation");        
+        verifyHealthDataRecords("observation");
     }
 
 }
