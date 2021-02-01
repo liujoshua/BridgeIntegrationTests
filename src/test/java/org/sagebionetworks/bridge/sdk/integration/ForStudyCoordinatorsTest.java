@@ -12,7 +12,6 @@ import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
-import static org.sagebionetworks.bridge.sdk.integration.Tests.SYNAPSE_USER_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.List;
@@ -46,8 +45,6 @@ import org.sagebionetworks.bridge.rest.model.IdentifierHolder;
 import org.sagebionetworks.bridge.rest.model.NotificationMessage;
 import org.sagebionetworks.bridge.rest.model.NotificationRegistrationList;
 import org.sagebionetworks.bridge.rest.model.RequestInfo;
-import org.sagebionetworks.bridge.rest.model.SharingScope;
-import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -145,8 +142,8 @@ public class ForStudyCoordinatorsTest {
         
         // Just verify these all work, though there's no data
         ActivityEventList aeList = coordApi.getStudyParticipantActivityEvents(STUDY_ID_1, userId).execute().body();
-        assertEquals(ImmutableSet.of("study_start_date", "created_on"), 
-                aeList.getItems().stream().map(ActivityEvent::getEventId).collect(toSet()));
+        assertTrue(aeList.getItems().stream().map(ActivityEvent::getEventId)
+                .collect(toSet()).containsAll(ImmutableSet.of("study_start_date", "created_on")));
         
         NotificationRegistrationList nrList = coordApi.getStudyParticipantNotificationRegistrations(STUDY_ID_1, userId).execute().body();
         assertTrue(nrList.getItems().isEmpty());

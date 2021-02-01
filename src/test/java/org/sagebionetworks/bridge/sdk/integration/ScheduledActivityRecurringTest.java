@@ -121,7 +121,7 @@ public class ScheduledActivityRecurringTest {
         
         // Create an event two days in the past to schedule against
         usersApi.createCustomActivityEvent(
-                new CustomActivityEventRequest().eventKey(CUSTOM_EVENT).timestamp(now.minusDays(2))).execute();
+                new CustomActivityEventRequest().eventId(CUSTOM_EVENT).timestamp(now.minusDays(2))).execute();
 
         // Gilbert Islands, +12:00 hours.
         String mtz1 = now.withZone(MTZ).toLocalDate().toString()+M_TIME_OF_DAY;
@@ -155,7 +155,6 @@ public class ScheduledActivityRecurringTest {
         assertEquals(ytz4, activities.getItems().get(3).getScheduledOn().toString());
         
         // Return to +12:00 land and ask for activites for three days, but one day in the future
-        // TODO
         ScheduledActivityListV4 activitiesV4 = filterList(usersApi
                 .getScheduledActivitiesByDateRange(now.plusDays(1).withZone(MTZ), now.plusDays(3).plusMinutes(1).withZone(MTZ))
                 .execute().body(), schedulePlan.getGuid());
