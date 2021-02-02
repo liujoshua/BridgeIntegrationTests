@@ -130,7 +130,7 @@ public class CRCTest {
 
         setupShippingInfo();
 
-        HttpResponse response = Request.Post(host + "/v1/cuicm/participants/self/labshipments/request")
+        HttpResponse response = Request.Post(host + "/v1/cuimc/participants/self/labshipments/request")
                 .addHeader("Bridge-Session", user.getSession().getSessionToken())
                 .execute()
                 .returnResponse();
@@ -156,7 +156,7 @@ public class CRCTest {
         String healthCode = participant.getHealthCode();
 
         HttpResponse response = Request.Post(
-                host + "/v1/cuicm/participants/healthcode:" + healthCode + "/labshipments/request")
+                host + "/v1/cuimc/participants/healthcode:" + healthCode + "/labshipments/request")
                 .addHeader("Authorization", "Basic " + credentials)
                 .execute()
                 .returnResponse();
@@ -201,7 +201,7 @@ public class CRCTest {
     @Ignore("Waiting for integration workflow to be finalized")
     @Test
     public void checkShipmentStatus() throws IOException {
-        HttpResponse response = Request.Get(host + "/v1/cuicm/labshipments/fzOJmVi8-h-IGRmnGM2RAZQz2021-01-19/status")
+        HttpResponse response = Request.Get(host + "/v1/cuimc/labshipments/fzOJmVi8-h-IGRmnGM2RAZQz2021-01-19/status")
                 .addHeader("Authorization", "Basic " + credentials)
                 .execute().returnResponse();
     }
@@ -210,7 +210,7 @@ public class CRCTest {
     @Test
     public void shippingConfirmations() throws IOException {
         HttpResponse response = Request.Get(host +
-        "/v1/cuicm/participants/labshipments/confirmations?startDate=2021-01-01&endDate=2021-01-20")
+        "/v1/cuimc/participants/labshipments/confirmations?startDate=2021-01-01&endDate=2021-01-20")
                 .addHeader("Authorization", "Basic " + credentials)
                 .execute().returnResponse();
 
