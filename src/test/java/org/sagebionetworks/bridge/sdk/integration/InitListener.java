@@ -9,6 +9,7 @@ import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_NAME;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
@@ -113,8 +114,9 @@ public class InitListener extends RunListener {
 
         SubpopulationsApi subpopApi = admin.getClient(SubpopulationsApi.class);
         Subpopulation subpop = subpopApi.getSubpopulation(TEST_APP_ID).execute().body();
-        if (subpop.getStudyIdsAssignedOnConsent().isEmpty()) {
-            subpop.getStudyIdsAssignedOnConsent().add(STUDY_ID_1);
+        if (!subpop.getStudyIdsAssignedOnConsent().contains(STUDY_ID_1)) {
+            // Note: Required subpopulations can only have 1 study ID.
+            subpop.setStudyIdsAssignedOnConsent(ImmutableList.of(STUDY_ID_1));
             subpopApi.updateSubpopulation(subpop.getGuid(), subpop).execute();
             LOG.info("  “{}” consent now enrolls participants in study “{}”", subpop.getGuid(), STUDY_ID_1);
         }
