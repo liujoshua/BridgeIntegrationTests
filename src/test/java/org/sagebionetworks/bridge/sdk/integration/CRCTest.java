@@ -73,7 +73,8 @@ public class CRCTest {
             "declined", "tests_requested", "tests_scheduled", "tests_collected", "tests_available",
             "ship_test_requested");
     static final List<String> USER_PROFILE_ATTRIBUTES = ImmutableList.of("state_change_timestamp", "address1",
-            "address2", "city", "state", "zip_code", "dob", "gender", "home_phone");
+            "address2", "city", "state", "zip_code", "dob", "gender", "home_phone", "occupation", "emp_name",
+            "emp_address1", "emp_address2", "emp_city", "emp_state", "emp_zip_code", "emp_phone");
     static final String USER_ID_VALUE_NS = "https://ws.sagebridge.org/#userId";
 
     static TestUser user;
@@ -184,7 +185,15 @@ public class CRCTest {
                 .put("gender", "female")
                 .put("state", "WA")
                 .put("zip_code", "10001")
-                .put("home_phone", "206.547.2600")
+                .put("occupation", "Self-Employed")
+                .put("emp_name", "Test User")
+                .put("emp_address1", "123 Abc St")
+                .put("emp_address2", "Unit 456")
+                .put("emp_city", "Seattle")
+                .put("emp_state", "Washington")
+                .put("emp_zip_code", "98119")
+                .put("emp_phone", "206.547.2600")
+                //.put("home_phone", "206.547.2600")
                 .build();
 
         Map<String, String> attributes = participant.getAttributes();
