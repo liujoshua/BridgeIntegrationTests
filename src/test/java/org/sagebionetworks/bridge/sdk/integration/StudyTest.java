@@ -12,6 +12,7 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.io.IOException;
@@ -95,6 +96,10 @@ public class StudyTest {
         assertEquals("Study " + id, retrieved.getName());
         assertTrue(retrieved.getCreatedOn().isAfter(DateTime.now().minusHours(1)));
         assertTrue(retrieved.getModifiedOn().isAfter(DateTime.now().minusHours(1)));
+        
+        OrganizationList orgList = studiesApi.getSponsors(id, 0, 100).execute().body();
+        assertTrue(orgList.getItems().stream().anyMatch(org -> org.getIdentifier().equals(SAGE_ID)));
+        
         DateTime lastModified1 = retrieved.getModifiedOn();
         
         study.name("New test name " + id);
@@ -105,19 +110,19 @@ public class StudyTest {
         assertEquals("New test name " + id, retrieved2.getName());
         assertNotEquals(lastModified1, retrieved2.getModifiedOn());
         
-        StudyList list = studiesApi.getStudies(null, null, false).execute().body();
-        assertEquals(initialCount+1, list.getItems().size());
-        assertFalse(list.getRequestParams().isIncludeDeleted());
+        StudyList studyList = studiesApi.getStudies(null, null, false).execute().body();
+        assertEquals(initialCount+1, studyList.getItems().size());
+        assertFalse(studyList.getRequestParams().isIncludeDeleted());
         
         // logically delete it
         studiesApi.deleteStudy(id, false).execute();
         
-        list = studiesApi.getStudies(null, null, false).execute().body();
-        assertEquals(initialCount, list.getItems().size());
+        studyList = studiesApi.getStudies(null, null, false).execute().body();
+        assertEquals(initialCount, studyList.getItems().size());
         
-        list = studiesApi.getStudies(null, null, true).execute().body();
-        assertTrue(list.getItems().size() > initialCount);
-        assertTrue(list.getRequestParams().isIncludeDeleted());
+        studyList = studiesApi.getStudies(null, null, true).execute().body();
+        assertTrue(studyList.getItems().size() > initialCount);
+        assertTrue(studyList.getRequestParams().isIncludeDeleted());
         
         // you can still retrieve it
         Study retrieved3 = studiesApi.getStudy(id).execute().body();
@@ -127,8 +132,8 @@ public class StudyTest {
         studiesApi.deleteStudy(id, true).execute();
         
         // Now it's really gone
-        list = studiesApi.getStudies(null, null, true).execute().body();
-        assertEquals(initialCount, list.getItems().size());
+        studyList = studiesApi.getStudies(null, null, true).execute().body();
+        assertEquals(initialCount, studyList.getItems().size());
         
         try {
             studiesApi.getStudy(id).execute();

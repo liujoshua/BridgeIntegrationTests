@@ -5,7 +5,6 @@ import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.rest.model.Role.ADMIN;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
-import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.util.HashSet;
@@ -18,7 +17,6 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
-import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.model.App;
@@ -127,7 +125,7 @@ public class StudyMembershipTest {
         assertEquals(0, withdrawn.getExternalIds().size());
         
         // Verify the enrollment records reflect these changes
-        EnrollmentDetailList list = appAdmin.getClient(StudiesApi.class).getEnrollees(idB, "withdrawn", true, 0, 10).execute().body();
+        EnrollmentDetailList list = appAdmin.getClient(StudiesApi.class).getEnrollments(idB, "withdrawn", true, 0, 10).execute().body();
         assertEquals(1, list.getItems().size());
         assertEquals(extIdB, list.getItems().get(0).getExternalId());
     }
@@ -139,7 +137,6 @@ public class StudyMembershipTest {
         String id = Tests.randomIdentifier(StudyTest.class);
         Study study = new Study().identifier(id).name("Study " + id);
         studiesApi.createStudy(study).execute();
-        admin.getClient(OrganizationsApi.class).addStudySponsorship(SAGE_ID, id).execute();
         studyIdsToDelete.add(id);
         return id;
     }
