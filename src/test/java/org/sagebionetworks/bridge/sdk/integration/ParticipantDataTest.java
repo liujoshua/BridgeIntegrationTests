@@ -5,8 +5,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
+import org.sagebionetworks.bridge.rest.api.ParticipantDataApi;
+import org.sagebionetworks.bridge.rest.api.UsersApi;
 import org.sagebionetworks.bridge.rest.model.ParticipantData;
 import org.sagebionetworks.bridge.rest.model.StringList;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -15,9 +18,13 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
 
 public class ParticipantDataTest {
@@ -32,6 +39,8 @@ public class ParticipantDataTest {
     private String identifier1;
     private String identifier2;
     private String identifier3;
+    private String offsetKey;
+    private Integer pageSize;
 
     @Before
     public void before() throws Exception {
@@ -40,6 +49,8 @@ public class ParticipantDataTest {
         identifier1 = Tests.randomIdentifier(ParticipantDataTest.class);
         identifier2 = Tests.randomIdentifier(ParticipantDataTest.class);
         identifier3 = Tests.randomIdentifier(ParticipantDataTest.class);
+        offsetKey = null;
+        pageSize = 10;
     }
 
     @After
@@ -53,13 +64,45 @@ public class ParticipantDataTest {
     }
 
     @Test
+    public void userCanCrudSelfData() throws IOException {
+        user = TestUserHelper.createAndSignInUser(ParticipantDataTest.class, true);
+        UsersApi userApi = user.getClient(UsersApi.class);
+
+        ParticipantData participantData1 = createParticipantData("foo", "A");
+        ParticipantData participantData2 = createParticipantData("bar", "B");
+        ParticipantData participantData3 = createParticipantData("baz", "C");
+
+        userApi.saveDataForSelf(identifier1, participantData1).execute();
+        userApi.saveDataForSelf(identifier2, participantData2).execute();
+        userApi.saveDataForSelf(identifier3, participantData3).execute();
+
+        StringList results = userApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
+
+        assertEquals(3, results.getItems().size());
+        HashSet<String> expectedIdentifiers = new HashSet<>(Arrays.asList(identifier1, identifier2, identifier3));
+        HashSet<String> actualIdentifiers = new HashSet<>(results.getItems());
+        assertFalse(actualIdentifiers.retainAll(expectedIdentifiers));
+
+        ParticipantData actualData1 = userApi.getDataByIdentifierForSelf(identifier1).execute().body();
+        ParticipantData actualData2 = userApi.getDataByIdentifierForSelf(identifier2).execute().body();
+        ParticipantData actualData3 = userApi.getDataByIdentifierForSelf(identifier3).execute().body();
+        assertEquals(participantData1.getData(), actualData1.getData());
+        assertEquals(participantData2.getData(), actualData2.getData());
+        assertEquals(participantData3.getData(), actualData3.getData());
+
+        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+        adminsApi.deleteAllParticipantDataForAdmin(user.getAppId(), user.getUserId()).execute();
+        results = userApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
+        assertTrue(results.getItems().isEmpty());
+    }
+
+    @Test
     public void workerCanCrudParticipantData() throws IOException {
         user = TestUserHelper.createAndSignInUser(ParticipantDataTest.class, true);
 
         String userId= user.getUserId();
         String appId = user.getAppId();
-        String offsetKey = null;
-        Integer pageSize = 10;
+
         ForWorkersApi workersApi = worker.getClient(ForWorkersApi.class);
 
         // worker can create participant data
@@ -85,11 +128,6 @@ public class ParticipantDataTest {
 
     @Test
     public void correctExceptionsOnBadRequest() {
-
-    }
-
-    @Test
-    public void userCanCrudSelfData() {
 
     }
 
