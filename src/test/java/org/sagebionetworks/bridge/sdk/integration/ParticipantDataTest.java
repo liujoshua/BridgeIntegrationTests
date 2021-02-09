@@ -8,8 +8,8 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
-import org.sagebionetworks.bridge.rest.api.ParticipantDataApi;
 import org.sagebionetworks.bridge.rest.api.UsersApi;
+import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.model.ParticipantData;
 import org.sagebionetworks.bridge.rest.model.StringList;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -18,13 +18,11 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
 
 public class ParticipantDataTest {
@@ -46,9 +44,11 @@ public class ParticipantDataTest {
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         worker = TestUserHelper.createAndSignInUser(ParticipantDataTest.class, false, WORKER);
+
         identifier1 = Tests.randomIdentifier(ParticipantDataTest.class);
         identifier2 = Tests.randomIdentifier(ParticipantDataTest.class);
         identifier3 = Tests.randomIdentifier(ParticipantDataTest.class);
+
         offsetKey = null;
         pageSize = 10;
     }
@@ -90,6 +90,10 @@ public class ParticipantDataTest {
         assertEquals(participantData2.getData(), actualData2.getData());
         assertEquals(participantData3.getData(), actualData3.getData());
 
+        userApi.deleteDataByIdentifier(identifier1);
+        userApi.deleteDataByIdentifier(identifier2);
+        userApi.deleteDataByIdentifier(identifier3);
+
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         adminsApi.deleteAllParticipantDataForAdmin(user.getAppId(), user.getUserId()).execute();
         results = userApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
@@ -127,13 +131,21 @@ public class ParticipantDataTest {
     }
 
     @Test
-    public void correctExceptionsOnBadRequest() {
-
-    }
-
-    @Test
-    public void participantDataNotVisibleOutsideOfStudy() {
-
+    public void correctExceptionsOnBadRequest() throws Exception {
+        user = TestUserHelper.createAndSignInUser(ParticipantDataTest.class, true);
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+        try {
+            usersApi.getAllDataForSelf(offsetKey, 4).execute();
+            fail("Should have thrown exception");
+        } catch (BadRequestException e) {
+            assertEquals("pageSize must be from 5-100 records", e.getMessage());
+        }
+        try {
+            usersApi.getAllDataForSelf(offsetKey, 101).execute();
+            fail("Should have thrown exception");
+        } catch (BadRequestException e) {
+            assertEquals("pageSize must be from 5-100 records", e.getMessage());
+        }
     }
 
     private static ParticipantData createParticipantData(String fieldValue1, String fieldValue2) {
