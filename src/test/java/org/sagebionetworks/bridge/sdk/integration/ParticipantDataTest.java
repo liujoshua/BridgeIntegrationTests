@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.ImmutableSet;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -11,6 +12,7 @@ import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.model.ParticipantData;
+import org.sagebionetworks.bridge.rest.model.ParticipantDataList;
 import org.sagebionetworks.bridge.rest.model.StringList;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -44,6 +46,7 @@ public class ParticipantDataTest {
     public void before() throws Exception {
         admin = TestUserHelper.getSignedInAdmin();
         worker = TestUserHelper.createAndSignInUser(ParticipantDataTest.class, false, WORKER);
+        user = TestUserHelper.createAndSignInUser(ParticipantDataTest.class, true);
 
         identifier1 = Tests.randomIdentifier(ParticipantDataTest.class);
         identifier2 = Tests.randomIdentifier(ParticipantDataTest.class);
@@ -55,6 +58,9 @@ public class ParticipantDataTest {
 
     @After
     public void after() throws Exception {
+        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+        adminsApi.deleteAllParticipantDataForAdmin(user.getAppId(), user.getUserId());
+
         if (user != null) {
             user.signOutAndDeleteUser();
         }
@@ -65,24 +71,26 @@ public class ParticipantDataTest {
 
     @Test
     public void userCanCrudSelfData() throws IOException {
-        user = TestUserHelper.createAndSignInUser(ParticipantDataTest.class, true);
         UsersApi userApi = user.getClient(UsersApi.class);
 
-        ParticipantData participantData1 = createParticipantData("foo", "A");
-        ParticipantData participantData2 = createParticipantData("bar", "B");
-        ParticipantData participantData3 = createParticipantData("baz", "C");
+        ParticipantData participantData1 = createParticipantData(user.getUserId(), "foo", "A");
+        ParticipantData participantData2 = createParticipantData(user.getUserId(), "bar", "B");
+        ParticipantData participantData3 = createParticipantData(user.getUserId(), "baz", "C");
 
+        // user can save participant data
         userApi.saveDataForSelf(identifier1, participantData1).execute();
         userApi.saveDataForSelf(identifier2, participantData2).execute();
         userApi.saveDataForSelf(identifier3, participantData3).execute();
 
+        // user can get all the participant data identifiers
         StringList results = userApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
 
         assertEquals(3, results.getItems().size());
-        HashSet<String> expectedIdentifiers = new HashSet<>(Arrays.asList(identifier1, identifier2, identifier3));
+        ImmutableSet<String> expectedIdentifiers = ImmutableSet.of(identifier1, identifier2, identifier3);
         HashSet<String> actualIdentifiers = new HashSet<>(results.getItems());
-        assertFalse(actualIdentifiers.retainAll(expectedIdentifiers));
+        assertEquals(expectedIdentifiers, actualIdentifiers);
 
+        // user can get participant data by identifier
         ParticipantData actualData1 = userApi.getDataByIdentifierForSelf(identifier1).execute().body();
         ParticipantData actualData2 = userApi.getDataByIdentifierForSelf(identifier2).execute().body();
         ParticipantData actualData3 = userApi.getDataByIdentifierForSelf(identifier3).execute().body();
@@ -90,36 +98,41 @@ public class ParticipantDataTest {
         assertEquals(participantData2.getData(), actualData2.getData());
         assertEquals(participantData3.getData(), actualData3.getData());
 
+        // user can delete data by identifier
         userApi.deleteDataByIdentifier(identifier1);
-        userApi.deleteDataByIdentifier(identifier2);
-        userApi.deleteDataByIdentifier(identifier3);
-
+//        userApi.deleteDataByIdentifier(identifier2);
+//        userApi.deleteDataByIdentifier(identifier3);
+//
+//        // admin can delete data
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
-        adminsApi.deleteAllParticipantDataForAdmin(user.getAppId(), user.getUserId()).execute();
+//        adminsApi.deleteDataForAdmin(user.getAppId(), user.getUserId(), identifier1);
+//        results = userApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
+//        assertEquals(results.getItems().size(), 2);
+
+        // admin can delete all data
+        //adminsApi.deleteAllParticipantDataForAdmin(user.getAppId(), user.getUserId()).execute();
         results = userApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
         assertTrue(results.getItems().isEmpty());
     }
 
     @Test
     public void workerCanCrudParticipantData() throws IOException {
-        user = TestUserHelper.createAndSignInUser(ParticipantDataTest.class, true);
-
         String userId= user.getUserId();
         String appId = user.getAppId();
 
         ForWorkersApi workersApi = worker.getClient(ForWorkersApi.class);
 
         // worker can create participant data
-        workersApi.saveDataForAdminWorker(appId, userId, identifier1, createParticipantData("foo", "A")).execute();
-        workersApi.saveDataForAdminWorker(appId, userId, identifier2, createParticipantData("bar", "B")).execute();
-        workersApi.saveDataForAdminWorker(appId, userId, identifier3, createParticipantData("baz", "C")).execute();
+        workersApi.saveDataForAdminWorker(appId, userId, identifier1, createParticipantData(user.getUserId(), "foo", "A")).execute();
+        workersApi.saveDataForAdminWorker(appId, userId, identifier2, createParticipantData(user.getUserId(), "bar", "B")).execute();
+        workersApi.saveDataForAdminWorker(appId, userId, identifier3, createParticipantData(user.getUserId(), "baz", "C")).execute();
 
         // user can get those participant data
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
 
         StringList results = usersApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
         assertEquals(3, results.getItems().size());
-        HashSet<String> expectedIdentifiers = new HashSet<>(Arrays.asList(identifier1, identifier2, identifier3));
+        ImmutableSet<String> expectedIdentifiers = ImmutableSet.of(identifier1, identifier2, identifier3);
         HashSet<String> actualIdentifiers = new HashSet<>(results.getItems());
         assertFalse(actualIdentifiers.retainAll(expectedIdentifiers));
 
@@ -127,7 +140,21 @@ public class ParticipantDataTest {
         results = workersApi.getAllDataForAdminWorker(appId, userId, offsetKey, pageSize).execute().body();
         assertEquals(3, results.getItems().size());
         actualIdentifiers = new HashSet<>(results.getItems());
-        assertFalse(actualIdentifiers.retainAll(expectedIdentifiers));
+        assertEquals(expectedIdentifiers, actualIdentifiers);
+
+        // worker can get the participant data by identifier
+        ParticipantData actualData1 = workersApi.getDataByIdentifierForAdminWorker(appId, userId, identifier1).execute().body();
+        ParticipantData actualData2 = workersApi.getDataByIdentifierForAdminWorker(appId, userId, identifier1).execute().body();
+        ParticipantData actualData3 = workersApi.getDataByIdentifierForAdminWorker(appId, userId, identifier1).execute().body();
+
+        // user can get the participant data by identifier (also tested in userCanCrudSelfData)
+        ParticipantData userParticipantData1 = usersApi.getDataByIdentifierForSelf(identifier1).execute().body();
+        ParticipantData userParticipantData2 = usersApi.getDataByIdentifierForSelf(identifier1).execute().body();
+        ParticipantData userParticipantData3 = usersApi.getDataByIdentifierForSelf(identifier1).execute().body();
+
+        assertEquals(actualData1, userParticipantData1);
+        assertEquals(actualData2, userParticipantData2);
+        assertEquals(actualData3, userParticipantData3);
     }
 
     @Test
@@ -148,14 +175,12 @@ public class ParticipantDataTest {
         }
     }
 
-    private static ParticipantData createParticipantData(String fieldValue1, String fieldValue2) {
+    private static ParticipantData createParticipantData(String userId, String fieldValue1, String fieldValue2) {
         ObjectNode node = JsonNodeFactory.instance.objectNode();
         node.put("field1", fieldValue1);
         node.put("field2", fieldValue2);
         ParticipantData participantData = new ParticipantData();
-        participantData.setUserId(USER_ID);
-        participantData.setIdentifier(IDENTIFIER);
-        participantData.setData(String.valueOf(node));
+        participantData.setData(node);
         return participantData;
     }
 }
