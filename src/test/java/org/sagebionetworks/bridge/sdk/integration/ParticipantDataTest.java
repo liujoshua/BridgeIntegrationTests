@@ -10,26 +10,25 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.UsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
+import org.sagebionetworks.bridge.rest.model.ForwardCursorStringList;
 import org.sagebionetworks.bridge.rest.model.ParticipantData;
-import org.sagebionetworks.bridge.rest.model.StringList;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.WORKER;
 
 public class ParticipantDataTest {
-
-    private static final String USER_ID = "aUserId";
-    private static final String IDENTIFIER = "anIdentifier";
 
     private static TestUser admin;
     private static TestUser worker;
@@ -38,8 +37,9 @@ public class ParticipantDataTest {
     private String identifier1;
     private String identifier2;
     private String identifier3;
-    private String offsetKey;
-    private Integer pageSize;
+    private String OFFSET_KEY = null;
+    private Integer PAGE_SIZE = 10;
+
 
     @Before
     public void before() throws Exception {
@@ -51,8 +51,6 @@ public class ParticipantDataTest {
         identifier2 = Tests.randomIdentifier(ParticipantDataTest.class);
         identifier3 = Tests.randomIdentifier(ParticipantDataTest.class);
 
-        offsetKey = null;
-        pageSize = 10;
     }
 
     @After
@@ -82,7 +80,7 @@ public class ParticipantDataTest {
         userApi.saveDataForSelf(identifier3, participantData3).execute();
 
         // user can get all the participant data identifiers
-        StringList results = userApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
+        ForwardCursorStringList results = userApi.getAllDataForSelf(OFFSET_KEY, PAGE_SIZE).execute().body();
 
         assertEquals(3, results.getItems().size());
         ImmutableSet<String> expectedIdentifiers = ImmutableSet.of(identifier1, identifier2, identifier3);
@@ -99,18 +97,18 @@ public class ParticipantDataTest {
 
         // user can delete data by identifier
         userApi.deleteDataByIdentifier(identifier1).execute();
-        results = userApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
+        results = userApi.getAllDataForSelf(OFFSET_KEY, PAGE_SIZE).execute().body();
         assertEquals(results.getItems().size(), 2);
 
         // admin can delete data by identifier
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
         adminsApi.deleteDataForAdmin(user.getAppId(), user.getUserId(), identifier2).execute();
-        results = userApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
+        results = userApi.getAllDataForSelf(OFFSET_KEY, PAGE_SIZE).execute().body();
         assertEquals(results.getItems().size(), 1);
 
         // admin can delete all data
         adminsApi.deleteAllParticipantDataForAdmin(user.getAppId(), user.getUserId()).execute();
-        results = userApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
+        results = userApi.getAllDataForSelf(OFFSET_KEY, PAGE_SIZE).execute().body();
         assertTrue(results.getItems().isEmpty());
     }
 
@@ -129,14 +127,14 @@ public class ParticipantDataTest {
         // user can get those participant data
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
 
-        StringList results = usersApi.getAllDataForSelf(offsetKey, pageSize).execute().body();
+        ForwardCursorStringList results = usersApi.getAllDataForSelf(OFFSET_KEY, PAGE_SIZE).execute().body();
         assertEquals(3, results.getItems().size());
         ImmutableSet<String> expectedIdentifiers = ImmutableSet.of(identifier1, identifier2, identifier3);
         HashSet<String> actualIdentifiers = new HashSet<>(results.getItems());
         assertFalse(actualIdentifiers.retainAll(expectedIdentifiers));
 
         // worker can get those participant data
-        results = workersApi.getAllDataForAdminWorker(appId, userId, offsetKey, pageSize).execute().body();
+        results = workersApi.getAllDataForAdminWorker(appId, userId, OFFSET_KEY, PAGE_SIZE).execute().body();
         assertEquals(3, results.getItems().size());
         actualIdentifiers = new HashSet<>(results.getItems());
         assertEquals(expectedIdentifiers, actualIdentifiers);
@@ -161,18 +159,56 @@ public class ParticipantDataTest {
         user = TestUserHelper.createAndSignInUser(ParticipantDataTest.class, true);
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         try {
-            usersApi.getAllDataForSelf(offsetKey, 4).execute();
+            usersApi.getAllDataForSelf(OFFSET_KEY, 4).execute();
             fail("Should have thrown exception");
         } catch (BadRequestException e) {
             assertEquals("pageSize must be from 5-100 records", e.getMessage());
         }
         try {
-            usersApi.getAllDataForSelf(offsetKey, 101).execute();
+            usersApi.getAllDataForSelf(OFFSET_KEY, 101).execute();
             fail("Should have thrown exception");
         } catch (BadRequestException e) {
             assertEquals("pageSize must be from 5-100 records", e.getMessage());
         }
     }
+
+    @Test
+    public void testPaginationGetAllDataForSelf() throws Exception {
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+
+        // create 10 participant datas and save data for self
+        ParticipantData[] dataArray = new ParticipantData[PAGE_SIZE];
+        for (int i = 0; i < PAGE_SIZE; i++) {
+            dataArray[i] = createParticipantData("foo" + i, String.valueOf('a' + i));
+            usersApi.saveDataForSelf(identifier1 + i, dataArray[i]).execute();
+        }
+
+        // get first 5 participant data
+        ForwardCursorStringList pagedResults = usersApi.getAllDataForSelf(null, 5).execute().body();
+
+        // check the first 5
+        assertPages(pagedResults, identifier1, 0);
+        String nextKey = pagedResults.getNextPageOffsetKey();
+        assertNotNull(nextKey);
+
+        // check the remaining 5
+        pagedResults = usersApi.getAllDataForSelf(nextKey, 5).execute().body();
+        assertPages(pagedResults, identifier1, 5);
+        assertNull(pagedResults.getNextPageOffsetKey());
+    }
+
+    @Test
+    public void testPaginationGetAllDataForAdminWorker() {
+
+    }
+
+    private static void assertPages(ForwardCursorStringList pagedResults, String expectedIdentifier, int i) {
+        assertEquals(5, pagedResults.getItems().size());
+        for (; i < 5; i++) {
+            assertEquals(expectedIdentifier + i, pagedResults.getItems().get(i));
+        }
+    }
+
 
     private static void assertParticipantData(String expectedKey, String expectedValue, ParticipantData participantData) {
         assertNotNull(participantData);
