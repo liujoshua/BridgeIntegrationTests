@@ -16,7 +16,6 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 
@@ -198,8 +197,29 @@ public class ParticipantDataTest {
     }
 
     @Test
-    public void testPaginationGetAllDataForAdminWorker() {
+    public void testPaginationGetAllDataForAdminWorker() throws IOException {
+        ForWorkersApi workersApi = worker.getClient(ForWorkersApi.class);
 
+        // create 10 participant datas and save data for self
+        ParticipantData[] dataArray = new ParticipantData[PAGE_SIZE];
+        for (int i = 0; i < PAGE_SIZE; i++) {
+            dataArray[i] = createParticipantData("foo" + i, String.valueOf('a' + i));
+            workersApi.saveDataForAdminWorker(user.getAppId(), user.getUserId(), identifier1 + i, dataArray[i]).execute();
+        }
+
+        // get first 5 participant data
+        ForwardCursorStringList pagedResults = workersApi.getAllDataForAdminWorker(
+                user.getAppId(), user.getUserId(), null, 5).execute().body();
+
+        // check the first 5
+        assertPages(pagedResults, identifier1, 0);
+        String nextKey = pagedResults.getNextPageOffsetKey();
+        assertNotNull(nextKey);
+
+        // check the remaining 5
+        pagedResults = workersApi.getAllDataForAdminWorker(user.getAppId(), user.getUserId(), nextKey, 5).execute().body();
+        assertPages(pagedResults, identifier1, 5);
+        assertNull(pagedResults.getNextPageOffsetKey());
     }
 
     private static void assertPages(ForwardCursorStringList pagedResults, String expectedIdentifier, int i) {
@@ -208,7 +228,6 @@ public class ParticipantDataTest {
             assertEquals(expectedIdentifier + i, pagedResults.getItems().get(i));
         }
     }
-
 
     private static void assertParticipantData(String expectedKey, String expectedValue, ParticipantData participantData) {
         assertNotNull(participantData);
