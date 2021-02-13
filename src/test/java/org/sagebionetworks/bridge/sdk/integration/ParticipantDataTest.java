@@ -20,7 +20,6 @@ import java.util.HashSet;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -130,7 +129,7 @@ public class ParticipantDataTest {
         assertEquals(3, results.getItems().size());
         ImmutableSet<String> expectedIdentifiers = ImmutableSet.of(identifier1, identifier2, identifier3);
         HashSet<String> actualIdentifiers = new HashSet<>(results.getItems());
-        assertFalse(actualIdentifiers.retainAll(expectedIdentifiers));
+        assertEquals(expectedIdentifiers, actualIdentifiers);
 
         // worker can get those participant data
         results = workersApi.getAllDataForAdminWorker(appId, userId, OFFSET_KEY, PAGE_SIZE).execute().body();
@@ -222,10 +221,10 @@ public class ParticipantDataTest {
         assertNull(pagedResults.getNextPageOffsetKey());
     }
 
-    private static void assertPages(ForwardCursorStringList pagedResults, String expectedIdentifier, int i) {
+    private static void assertPages(ForwardCursorStringList pagedResults, String expectedIdentifier, int start) {
         assertEquals(5, pagedResults.getItems().size());
-        for (; i < 5; i++) {
-            assertEquals(expectedIdentifier + i, pagedResults.getItems().get(i));
+        for (int i = start; i < 5 + start; i++) {
+            assertEquals(expectedIdentifier + i, pagedResults.getItems().get(i - start));
         }
     }
 
