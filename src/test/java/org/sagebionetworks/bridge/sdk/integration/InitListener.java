@@ -16,6 +16,7 @@ import org.junit.runner.notification.RunListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.sagebionetworks.bridge.rest.api.ForOrgAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
@@ -121,7 +122,13 @@ public class InitListener extends RunListener {
             LOG.info("  “{}” consent now enrolls participants in study “{}”", subpop.getGuid(), STUDY_ID_1);
         }
         
+        // The admin should be in Sage Bionetworks if it is not already.
+        if (!SAGE_ID.equals(admin.getSession().getOrgMembership())) {
+            admin.getClient(ForOrgAdminsApi.class).addMember(SAGE_ID, admin.getUserId()).execute();
+        }
+        
         admin.getClient(ForSuperadminsApi.class).adminChangeApp(new SignIn().appId(SHARED_APP_ID)).execute();
+        
         try {
             orgsApi.getOrganization(SAGE_ID).execute();
         } catch(EntityNotFoundException e) {
@@ -132,6 +139,7 @@ public class InitListener extends RunListener {
         } finally {
             admin.getClient(ForSuperadminsApi.class).adminChangeApp(new SignIn().appId(TEST_APP_ID)).execute();
         }
+        
 
         testRunInitialized = true;
     }
