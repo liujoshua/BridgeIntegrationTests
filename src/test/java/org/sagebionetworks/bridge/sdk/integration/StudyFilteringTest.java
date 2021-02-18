@@ -7,7 +7,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
-import static org.sagebionetworks.bridge.rest.model.Role.STUDY_COORDINATOR;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
@@ -30,7 +29,6 @@ import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
-import org.sagebionetworks.bridge.rest.api.ForStudyCoordinatorsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
@@ -38,7 +36,6 @@ import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
-import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
@@ -81,8 +78,6 @@ public class StudyFilteringTest {
     private static TestUser developer;
     private static Set<String> userIdsToDelete;
     
-    private static SignIn studyCoordinator1;
-    private static SignIn studyCoordinator2;
     private static SignIn researcher1;
     private static SignIn researcher2;
     
@@ -99,8 +94,6 @@ public class StudyFilteringTest {
         userIdsToDelete = new HashSet<>();
         
         // Create a researcher in study1 and study2
-        studyCoordinator1 = createAdmin(STUDY_COORDINATOR, ORG_ID_1).getSignIn();
-        studyCoordinator2 = createAdmin(STUDY_COORDINATOR, ORG_ID_2).getSignIn();
         researcher1 = createAdmin(RESEARCHER, ORG_ID_1).getSignIn();
         researcher2 = createAdmin(RESEARCHER, ORG_ID_2).getSignIn();
         
@@ -127,84 +120,51 @@ public class StudyFilteringTest {
         }
     }
     
+    @SuppressWarnings("deprecation")
     @Test
-    public void filterParticipantsForStudyCoordinators() throws Exception { 
+    public void filterParticipants() throws Exception { 
         // researcher1
-        ClientManager manager = new ClientManager.Builder().withSignIn(studyCoordinator1).build();
-        ForStudyCoordinatorsApi coordinatorsApiFor1 = manager.getClient(ForStudyCoordinatorsApi.class);
+        ClientManager manager = new ClientManager.Builder().withSignIn(researcher1).build();
+        ForResearchersApi researcherApiFor1 = manager.getClient(ForResearchersApi.class);
         
-        // Coordinator 1 sees 1 study users only
-        AccountSummaryList list = coordinatorsApiFor1
-                .getStudyParticipants(STUDY_ID_1, new AccountSummarySearch()).execute().body();
+        // This researcher sees 1 study users only
+        AccountSummaryList list = researcherApiFor1.getParticipants(null, null, null, null, null, null).execute().body();
         assertListContainsAccount(list.getItems(), STUDY_ID_1, user1.getId());
         assertListContainsAccount(list.getItems(), STUDY_ID_1, user1and2.getId());
         
-        // Coordinator 2
-        manager = new ClientManager.Builder().withSignIn(studyCoordinator2).build();
-        ForStudyCoordinatorsApi coordinatorsApiFor2 = manager.getClient(ForStudyCoordinatorsApi.class);
+        // researcher2
+        manager = new ClientManager.Builder().withSignIn(researcher2).build();
+        ForResearchersApi researcherApiFor2 = manager.getClient(ForResearchersApi.class);
         
-        // This coordinator sees study 2 users only
-        list = coordinatorsApiFor2.getStudyParticipants(STUDY_ID_2, new AccountSummarySearch()).execute().body();
+        // This researcher sees study 2 users only
+        list = researcherApiFor2.getParticipants(null, null, null, null, null, null).execute().body();
         assertListContainsAccount(list.getItems(), STUDY_ID_2, user2.getId());
         assertListContainsAccount(list.getItems(), STUDY_ID_2, user1and2.getId());
         
-        // Coordinator 2 should not be able to get a study 1 account
+        // Researcher 2 should not be able to get a study 1 account
         try {
-            coordinatorsApiFor2.getStudyParticipantById(STUDY_ID_1, user1.getId(), false).execute().body();
+            researcherApiFor2.getParticipantById(user1.getId(), false).execute().body();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
         }
-        // Coordinator 2 should be able to get only study 2 accounts (even if mixed)
-        coordinatorsApiFor2.getStudyParticipantById(STUDY_ID_2, user2.getId(), false).execute().body();
-        coordinatorsApiFor2.getStudyParticipantById(STUDY_ID_2, user1and2.getId(), false).execute().body();
+        // Researcher B should be able to get only study B accounts (even if mixed)
+        researcherApiFor2.getParticipantById(user2.getId(), false).execute().body();
+        researcherApiFor2.getParticipantById(user1and2.getId(), false).execute().body();
         
         // This should apply to any call involving user in another study, try one (fully tested in 
         // the unit tests)
         try {
-            coordinatorsApiFor2.getStudyParticipantActivityEvents(STUDY_ID_1, user1.getId()).execute();
+            researcherApiFor2.getActivityEventsForParticipant(user1.getId()).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
         }
         
         // Researcher 1 should not be able to save and destroy the mapping to study 2
-        StudyParticipant participant = coordinatorsApiFor1
-                .getStudyParticipantById(STUDY_ID_1, user1and2.getId(), false).execute().body();
-        participant.externalIds(null);
-        coordinatorsApiFor1.updateStudyParticipant(STUDY_ID_1, user1and2.getId(), participant);
+        StudyParticipant participant = researcherApiFor1.getParticipantById(user1and2.getId(), false).execute().body();
+        researcherApiFor1.updateParticipant(user1and2.getId(), participant);
         
-        participant = coordinatorsApiFor2.getStudyParticipantById(STUDY_ID_2, user1and2.getId(), false).execute().body();
+        participant = researcherApiFor2.getParticipantById(user1and2.getId(), false).execute().body();
         assertTrue(participant.getStudyIds().contains(STUDY_ID_2)); // this wasn't wiped out by the update.
-    }
-    
-    // in short, researchers do not have restrictions anymore, and we can verify
-    @Test
-    public void filterParticipantsForResearchers() throws Exception { 
-        // researcher1
-        ClientManager manager = new ClientManager.Builder().withSignIn(researcher1).build();
-        ForResearchersApi researchersApiFor1 = manager.getClient(ForResearchersApi.class);
-        
-        // Researcher 1 sees all users
-        AccountSummaryList list = researchersApiFor1.searchAccountSummaries(
-                new AccountSummarySearch()).execute().body();
-        assertListContainsAccount(list.getItems(), STUDY_ID_1, user1.getId());
-        assertListContainsAccount(list.getItems(), STUDY_ID_1, user1and2.getId());
-        assertListContainsAccount(list.getItems(), STUDY_ID_2, user1and2.getId());
-        assertListContainsAccount(list.getItems(), STUDY_ID_1, user2.getId());
-        
-        // Researcher 2
-        manager = new ClientManager.Builder().withSignIn(researcher2).build();
-        ForResearchersApi researchersApiFor2 = manager.getClient(ForResearchersApi.class);
-        
-        // Researcher 2 sees all users
-        list = researchersApiFor2.searchAccountSummaries(new AccountSummarySearch()).execute().body();
-        assertListContainsAccount(list.getItems(), STUDY_ID_1, user1.getId());
-        assertListContainsAccount(list.getItems(), STUDY_ID_1, user1and2.getId());
-        assertListContainsAccount(list.getItems(), STUDY_ID_2, user1and2.getId());
-        assertListContainsAccount(list.getItems(), STUDY_ID_2, user2.getId());
-        
-        // Researcher 2 can get a study 1 account (we don't need to test the reverse)
-        researchersApiFor2.getParticipantById(user1.getId(), false).execute().body();
-        researchersApiFor2.getActivityEventsForParticipant(user1.getId()).execute();
     }
     
     // AppConfigs: while these have criteria, they can only be filtered by data that does 

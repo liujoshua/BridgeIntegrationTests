@@ -14,7 +14,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.StudyParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.Criteria;
@@ -30,8 +29,8 @@ public class ParticipantIsConsentedTest {
 
     private static TestUserHelper.TestUser admin;
     private static TestUserHelper.TestUser developer;
-    private static TestUserHelper.TestUser studyCoordinator;
-    private static StudyParticipantsApi participantsApi;
+    private static ParticipantsApi participantsApi;
+    private static TestUserHelper.TestUser researcher;
     private static SubpopulationsApi subpopApi;
     private static String subpopGuid2;
 
@@ -45,10 +44,10 @@ public class ParticipantIsConsentedTest {
                 Role.DEVELOPER);
         subpopApi = developer.getClient(SubpopulationsApi.class);
 
-        studyCoordinator = TestUserHelper.createAndSignInUser(ParticipantIsConsentedTest.class, false,
-                Role.STUDY_COORDINATOR); // accesses study 1 through Sage Bionetworks
+        researcher = TestUserHelper.createAndSignInUser(ParticipantIsConsentedTest.class, false,
+                Role.RESEARCHER);
         
-        participantsApi = studyCoordinator.getClient(StudyParticipantsApi.class);
+        participantsApi = researcher.getClient(ParticipantsApi.class);
 
         // Set up subpops:
         // 1. Default subpop prohibits data group sdk-int-2 and is required.
@@ -81,9 +80,9 @@ public class ParticipantIsConsentedTest {
             developer.signOutAndDeleteUser();
         }
 
-        // Delete study coordinator.
-        if (studyCoordinator != null) {
-            studyCoordinator.signOutAndDeleteUser();
+        // Delete researcher.
+        if (researcher != null) {
+            researcher.signOutAndDeleteUser();
         }
     }
 
@@ -98,13 +97,13 @@ public class ParticipantIsConsentedTest {
     public void neverSignedIn() throws Exception {
         // Never signed in, which means no request info, which means null doesConsent.
         user = new TestUserHelper.Builder(ParticipantIsConsentedTest.class).withConsentUser(true).createUser();
-        StudyParticipant participant = participantsApi.getStudyParticipantById(STUDY_ID_1, user.getUserId(), true)
-                .execute().body();
+        StudyParticipant participant = participantsApi.getParticipantById(user.getUserId(), true).execute()
+                .body();
         assertNull(participant.isConsented());
 
         // Sign in and get the participant again. Now that there's a request info, doesConsent=true.
         user.signInAgain();
-        participant = participantsApi.getStudyParticipantById(STUDY_ID_1, user.getUserId(), true).execute().body();
+        participant = participantsApi.getParticipantById(user.getUserId(), true).execute().body();
         assertTrue(participant.isConsented());
     }
 
@@ -112,10 +111,10 @@ public class ParticipantIsConsentedTest {
     public void defaultRequiredNotSigned() throws Exception {
         user = TestUserHelper.createAndSignInUser(ParticipantIsConsentedTest.class, false);
         
-        // A study coordinator cannot see this account because it hasn't consented into any study the 
+        // A researcher cannot see this account because it hasn't consented into any study the 
         // researcher has access to.
         try {
-            participantsApi.getStudyParticipantById(STUDY_ID_1, user.getUserId(), true).execute();
+            participantsApi.getParticipantById(user.getUserId(), true).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
             assertTrue(e.getMessage().contains("Account not found."));
@@ -142,7 +141,7 @@ public class ParticipantIsConsentedTest {
         // positive enrollment in a study. During migration, we will fix this by finding
         // implicitly consented accounts and adding enrollment records for them.
         try {
-            participantsApi.getStudyParticipantById(STUDY_ID_1, user.getUserId(), true).execute();
+            participantsApi.getParticipantById(user.getUserId(), true).execute();
             fail("Should have thrown exception");
         } catch(EntityNotFoundException e) {
             assertTrue(e.getMessage().contains("Account not found."));
