@@ -5,6 +5,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ParticipantFile;
 import org.sagebionetworks.bridge.rest.model.ParticipantFileList;
@@ -21,6 +22,7 @@ import java.util.Scanner;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 public class ParticipantFileTest {
 
@@ -50,6 +52,18 @@ public class ParticipantFileTest {
         participant.signOutAndDeleteUser();
     }
 
+    @Test
+    public void invalidParticipantFileRejected() throws Exception {
+        file = new ParticipantFile();
+
+        try {
+            userApi.createParticipantFile("file_id", file).execute().body();
+            fail("Should have thrown an exception");
+        } catch(InvalidEntityException e) {
+            assertEquals("mimeType is required", e.getErrors().get("mimeType").get(0));
+        }
+    }
+    
     @Test
     public void crudParticipantFile() throws Exception {
         file = new ParticipantFile();
