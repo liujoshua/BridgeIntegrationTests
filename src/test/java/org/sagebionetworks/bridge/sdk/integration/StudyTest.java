@@ -17,12 +17,16 @@ import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
@@ -78,14 +82,18 @@ public class StudyTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void test() throws IOException {
         StudiesApi studiesApi = admin.getClient(StudiesApi.class);
         
         int initialCount = studiesApi.getStudies(null, null, false).execute().body().getItems().size();
         
+        Map<String,String> map = new HashMap<>();
+        map.put("enrollmentType", "byExternalId");
+        
         String id = Tests.randomIdentifier(StudyTest.class);
-        Study study = new Study().identifier(id).name("Study " + id);
+        Study study = new Study().identifier(id).clientData(map).name("Study " + id);
         
         VersionHolder holder = studiesApi.createStudy(study).execute().body();
         study.setVersion(holder.getVersion());
@@ -96,6 +104,9 @@ public class StudyTest {
         assertEquals("Study " + id, retrieved.getName());
         assertTrue(retrieved.getCreatedOn().isAfter(DateTime.now().minusHours(1)));
         assertTrue(retrieved.getModifiedOn().isAfter(DateTime.now().minusHours(1)));
+        
+        Map<String,String> theMap = RestUtils.toType(study.getClientData(), Map.class);
+        assertEquals("byExternalId", theMap.get("enrollmentType"));
         
         OrganizationList orgList = studiesApi.getSponsors(id, 0, 100).execute().body();
         assertTrue(orgList.getItems().stream().anyMatch(org -> org.getIdentifier().equals(SAGE_ID)));
