@@ -13,9 +13,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
-import org.sagebionetworks.bridge.rest.ClientManager;
-import org.sagebionetworks.bridge.rest.Config;
-import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.IntentToParticipateApi;
@@ -73,13 +70,8 @@ public class IntentToParticipateTest {
                     .subpopGuid(TEST_APP_ID)
                     .osName("iPhone")
                     .consentSignature(sig);
-            
-            Config config = new Config();
-            String baseUrl = ClientManager.getUrl(config.getEnvironment());
-            String clientInfo = RestUtils.getUserAgent(admin.getClientManager().getClientInfo());
-            String lang = RestUtils.getAcceptLanguage(admin.getClientManager().getAcceptedLanguages());
-            
-            ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang, TEST_APP_ID);
+
+            ApiClientProvider provider = Tests.getUnauthenticatedClientProvider(admin.getClientManager(), TEST_APP_ID);
             
             IntentToParticipateApi intentApi = provider.getClient(IntentToParticipateApi.class);
             intentApi.submitIntentToParticipate(intent).execute();
@@ -144,13 +136,8 @@ public class IntentToParticipateTest {
                     .subpopGuid(TEST_APP_ID)
                     .osName("iPhone")
                     .consentSignature(sig);
-            
-            Config config = new Config();
-            String baseUrl = ClientManager.getUrl(config.getEnvironment());
-            String clientInfo = RestUtils.getUserAgent(admin.getClientManager().getClientInfo());
-            String lang = RestUtils.getAcceptLanguage(admin.getClientManager().getAcceptedLanguages());
-            
-            ApiClientProvider provider = new ApiClientProvider(baseUrl, clientInfo, lang, TEST_APP_ID);
+
+            ApiClientProvider provider = Tests.getUnauthenticatedClientProvider(admin.getClientManager(), TEST_APP_ID);
             
             IntentToParticipateApi intentApi = provider.getClient(IntentToParticipateApi.class);
             intentApi.submitIntentToParticipate(intent).execute();

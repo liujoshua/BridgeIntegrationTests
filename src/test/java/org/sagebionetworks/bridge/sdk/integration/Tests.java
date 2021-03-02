@@ -23,6 +23,9 @@ import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.sagebionetworks.bridge.rest.ApiClientProvider;
+import org.sagebionetworks.bridge.rest.ClientManager;
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.ABTestGroup;
 import org.sagebionetworks.bridge.rest.model.ABTestScheduleStrategy;
 import org.sagebionetworks.bridge.rest.model.Activity;
@@ -67,6 +70,15 @@ public class Tests {
     public static ClientInfo getClientInfoWithVersion(String osName, int version) {
         return new ClientInfo().appName(APP_NAME).appVersion(version).deviceName(APP_NAME).osName(osName)
                 .osVersion("2.0.0").sdkName("BridgeJavaSDK").sdkVersion(Integer.parseInt(IntegTestUtils.CONFIG.getSdkVersion()));
+    }
+
+    // This API exists because there's a bug in TestUserHelper.getNonAuthClient() which uses ClientManager.getUrl()
+    // instead of ClientManager.getHostUrl().
+    public static ApiClientProvider getUnauthenticatedClientProvider(ClientManager clientManager, String appId) {
+        String baseUrl = clientManager.getHostUrl();
+        String clientInfo = RestUtils.getUserAgent(clientManager.getClientInfo());
+        String lang = RestUtils.getAcceptLanguage(clientManager.getAcceptedLanguages());
+        return new ApiClientProvider(baseUrl, clientInfo, lang, appId);
     }
 
     public static String randomIdentifier(Class<?> cls) {
