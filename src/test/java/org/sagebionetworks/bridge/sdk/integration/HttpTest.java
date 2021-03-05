@@ -11,6 +11,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.model.Environment;
@@ -65,6 +66,8 @@ public class HttpTest {
         assertEquals(200, response.getStatusLine().getStatusCode());
     }
 
+    // HTTPS Redirect is temporarily disabled for dev and staging for the AWS Migration.
+    @Ignore
     @Test
     public void testHttpRedirect() throws Exception {
         // This test only makes sense on servers supporting https redirection, and that's not
