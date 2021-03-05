@@ -189,7 +189,7 @@ public class StudyFilteringTest {
         assertListContainsAccount(list.getItems(), STUDY_ID_1, user1.getId());
         assertListContainsAccount(list.getItems(), STUDY_ID_1, user1and2.getId());
         assertListContainsAccount(list.getItems(), STUDY_ID_2, user1and2.getId());
-        assertListContainsAccount(list.getItems(), STUDY_ID_1, user2.getId());
+        assertListContainsAccount(list.getItems(), STUDY_ID_2, user2.getId());
         
         // Researcher 2
         manager = new ClientManager.Builder().withSignIn(researcher2).build();
