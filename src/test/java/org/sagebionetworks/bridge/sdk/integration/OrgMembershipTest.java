@@ -17,6 +17,7 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForOrgAdminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConstraintViolationException;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Account;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
@@ -96,17 +97,17 @@ public class OrgMembershipTest {
         try {
             orgAdminApi.deleteAccount(userId).execute();
             fail("Should have thrown an exception");
-        } catch(UnauthorizedException e) {
+        } catch(EntityNotFoundException e) {
         }
         try {
             orgAdminApi.updateAccount(userId, account).execute();
             fail("Should have thrown an exception");
-        } catch(UnauthorizedException e) {
+        } catch(EntityNotFoundException e) {
         }
         try {
             orgAdminApi.getAccount(userId).execute().body();
             fail("Should have thrown exception");
-        } catch(UnauthorizedException e) {
+        } catch(EntityNotFoundException e) {
         }
         
         // Put the account back
