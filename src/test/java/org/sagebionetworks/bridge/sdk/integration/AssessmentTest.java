@@ -11,6 +11,7 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.randomIdentifier;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.setVariableValueInObject;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 import java.io.IOException;
@@ -39,12 +40,21 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentList;
+import org.sagebionetworks.bridge.rest.model.ColorScheme;
+import org.sagebionetworks.bridge.rest.model.Label;
 import org.sagebionetworks.bridge.rest.model.PropertyInfo;
 import org.sagebionetworks.bridge.rest.model.RequestParams;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
 public class AssessmentTest {
+    private static final ImmutableList<Label> LABELS = ImmutableList.of(new Label().lang("en").value("English"),
+            new Label().lang("fr").value("French"));
+    private static final ColorScheme COLOR_SCHEME = new ColorScheme()
+            .background("#111111")
+            .foreground("#222222")
+            .activated("#333333")
+            .inactivated("#444444");
     private static final String TITLE = "Title";
     private static final String TAG1 = "category:cat1";
     private static final String TAG2 = "category:cat2";
@@ -133,6 +143,8 @@ public class AssessmentTest {
                 .osName("Both")
                 .ownerId(ORG_ID_1)
                 .minutesToComplete(15)
+                .colorScheme(COLOR_SCHEME)
+                .labels(LABELS)
                 .tags(ImmutableList.of(markerTag, TAG1, TAG2))
                 .customizationFields(CUSTOMIZATION_FIELDS);
         
@@ -558,7 +570,12 @@ public class AssessmentTest {
         assertEquals(actualSize, guids.size());
     }
     
-    private void assertFields(Assessment assessment) {
+    private void assertFields(Assessment assessment) throws Exception {
+        // null all these out so equality works
+        setVariableValueInObject(assessment.getColorScheme(), "type", null);
+        setVariableValueInObject(assessment.getLabels().get(0), "type", null);
+        setVariableValueInObject(assessment.getLabels().get(1), "type", null);
+        
         assertEquals(id, assessment.getIdentifier());
         assertEquals(TITLE, assessment.getTitle());
         assertEquals("Summary", assessment.getSummary());
@@ -567,6 +584,8 @@ public class AssessmentTest {
         assertEquals("Universal", assessment.getOsName());
         assertEquals(ORG_ID_1, assessment.getOwnerId());
         assertEquals(new Integer(15), assessment.getMinutesToComplete());
+        assertEquals(COLOR_SCHEME, assessment.getColorScheme());
+        assertEquals(LABELS, assessment.getLabels());
         assertTrue(assessment.getTags().contains(markerTag));
         assertTrue(assessment.getTags().contains(TAG1));
         assertTrue(assessment.getTags().contains(TAG2));
