@@ -51,10 +51,10 @@ public class AssessmentTest {
     private static final ImmutableList<Label> LABELS = ImmutableList.of(new Label().lang("en").value("English"),
             new Label().lang("fr").value("French"));
     private static final ColorScheme COLOR_SCHEME = new ColorScheme()
-            .background("#111")
-            .foreground("#222")
-            .activated("#333")
-            .inactivated("#444");
+            .background("#111111")
+            .foreground("#222222")
+            .activated("#333333")
+            .inactivated("#444444");
     private static final String TITLE = "Title";
     private static final String TAG1 = "category:cat1";
     private static final String TAG2 = "category:cat2";
