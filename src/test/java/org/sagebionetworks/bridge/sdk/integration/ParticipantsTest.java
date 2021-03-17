@@ -39,7 +39,7 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -533,7 +533,7 @@ public class ParticipantsTest {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.DEVELOPER);
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         
-        SchedulesApi schedulePlanApi = user.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulePlanApi = user.getClient(SchedulesV1Api.class);
         SchedulePlan plan = Tests.getDailyRepeatingSchedulePlan();
 
         // Set an identifiable label on the activity so we can find the generated activities later.
@@ -582,7 +582,7 @@ public class ParticipantsTest {
                     .getParticipantActivityHistory(userId, activityGuid, null, null, null, 50).execute().body();
             assertEquals(0, resActivities.getItems().size());
         } finally {
-            admin.getClient(SchedulesApi.class).deleteSchedulePlan(planKeys.getGuid(), true).execute();
+            admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(planKeys.getGuid(), true).execute();
             user.signOutAndDeleteUser();
         }
     }
@@ -592,7 +592,7 @@ public class ParticipantsTest {
         TestUser user = TestUserHelper.createAndSignInUser(ParticipantsTest.class, true, Role.DEVELOPER);
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
         
-        SchedulesApi schedulePlanApi = user.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulePlanApi = user.getClient(SchedulesV1Api.class);
         SchedulePlan plan = Tests.getDailyRepeatingSchedulePlan();
 
         // Set an identifiable label on the activity so we can find the generated activities later.
@@ -627,7 +627,7 @@ public class ParticipantsTest {
                     endsOn, null, 100).execute().body().getItems(),
                     List::isEmpty);
         } finally {
-            admin.getClient(SchedulesApi.class).deleteSchedulePlan(planKeys.getGuid(), true).execute();
+            admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(planKeys.getGuid(), true).execute();
             user.signOutAndDeleteUser();
         }
     }

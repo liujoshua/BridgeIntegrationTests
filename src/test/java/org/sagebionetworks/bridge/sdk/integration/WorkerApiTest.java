@@ -30,7 +30,7 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
 import org.sagebionetworks.bridge.rest.api.InternalApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.model.AccountSummary;
 import org.sagebionetworks.bridge.rest.model.AccountSummaryList;
 import org.sagebionetworks.bridge.rest.model.AccountSummarySearch;
@@ -193,7 +193,7 @@ public class WorkerApiTest {
     @Test
     public void retrieveStudiesSchedulePlans() throws Exception {
         SchedulePlan plan = Tests.getABTestSchedulePlan();
-        SchedulesApi planApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api planApi = developer.getClient(SchedulesV1Api.class);
         GuidVersionHolder guid = null;
         try {
             guid = planApi.createSchedulePlan(plan).execute().body();
@@ -206,7 +206,7 @@ public class WorkerApiTest {
             }
         } finally {
             if (guid != null) {
-                admin.getClient(SchedulesApi.class).deleteSchedulePlan(guid.getGuid(), true).execute();
+                admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(guid.getGuid(), true).execute();
             }
         }
     }
@@ -222,7 +222,7 @@ public class WorkerApiTest {
     @Test
     public void retrieveUsersActivities() throws Exception {
         SchedulePlan plan = Tests.getDailyRepeatingSchedulePlan();
-        SchedulesApi planApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api planApi = developer.getClient(SchedulesV1Api.class);
         
         user = new TestUserHelper.Builder(WorkerApiTest.class).withConsentUser(true).createAndSignInUser();
         
@@ -243,7 +243,7 @@ public class WorkerApiTest {
             assertFalse(list.getItems().isEmpty());
         } finally {
             if (guid != null) {
-                admin.getClient(SchedulesApi.class).deleteSchedulePlan(guid.getGuid(), true).execute();    
+                admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(guid.getGuid(), true).execute();    
             }
         }
     }
@@ -251,7 +251,7 @@ public class WorkerApiTest {
     @Test
     public void retrieveUsersActivitiesByType() throws Exception {
         SchedulePlan plan = Tests.getDailyRepeatingSchedulePlan();
-        SchedulesApi planApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api planApi = developer.getClient(SchedulesV1Api.class);
         
         user = new TestUserHelper.Builder(WorkerApiTest.class).withConsentUser(true).createAndSignInUser();
         
@@ -269,7 +269,7 @@ public class WorkerApiTest {
                     Predicates.not(List::isEmpty));
         } finally {
             if (guid != null) {
-                admin.getClient(SchedulesApi.class).deleteSchedulePlan(guid.getGuid(), true).execute();    
+                admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(guid.getGuid(), true).execute();    
             }
         }
     }

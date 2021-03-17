@@ -14,7 +14,7 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.ClientManager;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
@@ -49,7 +49,7 @@ public class SchedulePlanTest {
     private TestUser admin;
     private TestUser user;
     private TestUser developer;
-    private SchedulesApi schedulesApi;
+    private SchedulesV1Api schedulesApi;
     private SurveysApi surveysApi;
     private ForConsentedUsersApi usersApi;
 
@@ -59,7 +59,7 @@ public class SchedulePlanTest {
         developer = TestUserHelper.createAndSignInUser(SchedulePlanTest.class, true, Role.DEVELOPER);
         user = TestUserHelper.createAndSignInUser(SchedulePlanTest.class, true);
 
-        schedulesApi = developer.getClient(SchedulesApi.class);
+        schedulesApi = developer.getClient(SchedulesV1Api.class);
         surveysApi = developer.getClient(SurveysApi.class);
         usersApi = user.getClient(ForConsentedUsersApi.class);
     }
@@ -85,7 +85,7 @@ public class SchedulePlanTest {
         SchedulePlan retrieved = schedulesApi.getSchedulePlan(keys.getGuid()).execute().body();
         assertTrue(retrieved.isDeleted());
         
-        admin.getClient(SchedulesApi.class).deleteSchedulePlan(keys.getGuid(), true).execute();
+        admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(keys.getGuid(), true).execute();
         
         try {
             schedulesApi.getSchedulePlan(keys.getGuid()).execute().body();
@@ -102,7 +102,7 @@ public class SchedulePlanTest {
             normalUser = TestUserHelper.createAndSignInUser(SchedulePlanTest.class, true);
             SchedulePlan plan = Tests.getABTestSchedulePlan();
             
-            normalUser.getClient(SchedulesApi.class).createSchedulePlan(plan).execute();
+            normalUser.getClient(SchedulesV1Api.class).createSchedulePlan(plan).execute();
             fail("Should have returned Forbidden status");
         } catch (UnauthorizedException e) {
             assertEquals("Non-researcher gets 403 forbidden", 403, e.getStatusCode());
@@ -126,7 +126,7 @@ public class SchedulePlanTest {
 
         SchedulePlan plan = Tests.getABTestSchedulePlan();
 
-        SchedulesApi newSchedulesApi = manager.getClient(SchedulesApi.class);
+        SchedulesV1Api newSchedulesApi = manager.getClient(SchedulesV1Api.class);
         
         // Create
         assertNull(plan.getVersion());
@@ -154,7 +154,7 @@ public class SchedulePlanTest {
         assertEquals("Strategy type has been changed", "SimpleScheduleStrategy",
                 plan.getStrategy().getClass().getSimpleName());
 
-        ScheduleList schedules = usersApi.getSchedules().execute().body();
+        ScheduleList schedules = usersApi.getSchedulesV1().execute().body();
         assertTrue("Schedules exist", !schedules.getItems().isEmpty());
 
         // Logical delete
@@ -172,7 +172,7 @@ public class SchedulePlanTest {
         assertTrue(withDeleted.getItems().stream().anyMatch(onePlan -> onePlan.getGuid().equals(retrieved.getGuid())));
         
         // Physical delete
-        admin.getClient(SchedulesApi.class).deleteSchedulePlan(keys.getGuid(), true).execute();
+        admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(keys.getGuid(), true).execute();
         
         // It is now not in the list.
         withDeleted = newSchedulesApi.getSchedulePlans(true).execute().body();
@@ -261,7 +261,7 @@ public class SchedulePlanTest {
             assertEquals(scheduleCriteria2, retrievedStrategy.getScheduleCriteria().get(1));
         } finally {
             if (retrievedPlan != null) {
-                admin.getClient(SchedulesApi.class).deleteSchedulePlan(retrievedPlan.getGuid(), true).execute();
+                admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(retrievedPlan.getGuid(), true).execute();
             }
         }
     }
@@ -321,7 +321,7 @@ public class SchedulePlanTest {
             assertEquals(plan, newPlan);
         } finally {
             if (keys != null) {
-                admin.getClient(SchedulesApi.class).deleteSchedulePlan(keys.getGuid(), true).execute();
+                admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(keys.getGuid(), true).execute();
             }
             if (surveyKeys != null) {
                 SurveysApi surveysApi = admin.getClient(SurveysApi.class);
