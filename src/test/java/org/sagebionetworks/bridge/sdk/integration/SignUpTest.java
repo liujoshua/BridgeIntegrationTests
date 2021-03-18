@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
@@ -18,10 +19,23 @@ import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
 import java.io.IOException;
+import java.util.Map;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.SharingScope.NO_SHARING;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.API_SIGNIN;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
 public class SignUpTest {
 
@@ -108,6 +122,55 @@ public class SignUpTest {
             }
         } finally {
             superadminApi.deleteApp(app.getIdentifier(), true).execute();
+        }
+    }
+    
+    @Test
+    public void publishSignUpWithExternalIdSucceedsWhenThereIsOneStudy() throws Exception {
+        TestUser admin = TestUserHelper.getSignedInAdmin();
+        ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
+        
+        String extId = Tests.randomIdentifier(SignUpTest.class);
+
+        // In this sign up, it should throw an exception if there are multiple studies, and
+        // no exception if there's one study and it can infer the study the person is being
+        // enrolled into. API has multiple studies, but shared does not.
+        
+        SignUp signUp = new SignUp().appId(TEST_APP_ID).dataGroups(ImmutableList.of("test_user"))
+                .password(PASSWORD).externalId(extId).sharingScope(NO_SHARING);
+        StudyParticipant participant = null;
+        
+        AuthenticationApi authApi = admin.getClient(AuthenticationApi.class);
+        
+        try {
+            authApi.signUp(signUp).execute();
+            participant = admin.getClient(ParticipantsApi.class)
+                    .getParticipantByExternalId(extId, false).execute().body();
+            assertEquals(participant.getExternalIds().size(), 1);
+            Map.Entry<String, String> reg = Iterables.getFirst(participant.getExternalIds().entrySet(), null);
+            assertEquals(reg.getValue(), extId);
+            assertTrue(ImmutableSet.of(STUDY_ID_1, STUDY_ID_2).contains(reg.getKey()));
+        } finally {
+            if (participant != null) {
+                adminsApi.deleteUser(participant.getId()).execute();  
+            }
+        }
+
+        signUp = new SignUp().appId(SHARED_APP_ID).dataGroups(ImmutableList.of("test_user"))
+                .password(PASSWORD).externalId(extId).sharingScope(NO_SHARING);
+        try {
+            authApi.signUp(signUp).execute();
+            
+            authApi.changeApp(SHARED_SIGNIN).execute();
+            participant = admin.getClient(ParticipantsApi.class)
+                    .getParticipantByExternalId(extId, false).execute().body();
+            assertEquals(participant.getExternalIds().size(), 1);
+            assertEquals(participant.getExternalIds().get("shared"), extId);
+            adminsApi.deleteUser(participant.getId()).execute();
+        } finally {
+            if (participant != null) {
+                authApi.changeApp(API_SIGNIN).execute();    
+            }
         }
     }
 }
