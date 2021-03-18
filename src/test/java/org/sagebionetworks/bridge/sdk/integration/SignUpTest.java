@@ -217,8 +217,8 @@ public class SignUpTest {
         try {
             authApi.signUp(signUp).execute();
             participant = participantsApi.getParticipantByExternalId(extId, false).execute().body();
-            assertEquals(participant.getExternalIds().size(), 1);
-            assertEquals(participant.getExternalIds().get(study2Id), extId);
+            assertEquals(1, participant.getExternalIds().size());
+            assertEquals(extId, participant.getExternalIds().get(study2Id));
         } finally {
             adminsApi.deleteUser(participant.getId()).execute();
             studiesApi.deleteStudy(study2Id, true).execute();
