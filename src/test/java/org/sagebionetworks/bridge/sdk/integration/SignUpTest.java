@@ -4,14 +4,18 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
+import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.model.App;
+import org.sagebionetworks.bridge.rest.model.Organization;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.user.TestUserHelper;
@@ -34,6 +38,7 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.SHARED_SIGNIN;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
+import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
@@ -126,51 +131,100 @@ public class SignUpTest {
     }
     
     @Test
-    public void publishSignUpWithExternalIdSucceedsWhenThereIsOneStudy() throws Exception {
+    public void signUpWithExternalIdAndNoAccountSucceeds() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         ForAdminsApi adminsApi = admin.getClient(ForAdminsApi.class);
-        
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        OrganizationsApi orgsApi = admin.getClient(OrganizationsApi.class);
+        ParticipantsApi participantsApi = admin.getClient(ParticipantsApi.class);
+        ForSuperadminsApi superadminApi = admin.getClient(ForSuperadminsApi.class);
+        AuthenticationApi authApi = admin.getClient(AuthenticationApi.class);
+
         String extId = Tests.randomIdentifier(SignUpTest.class);
 
-        // In this sign up, it should throw an exception if there are multiple studies, and
-        // no exception if there's one study and it can infer the study the person is being
-        // enrolled into. API has multiple studies, but shared does not.
+        // In the API app we have two studies created by the initializer for integration tests,
+        // and neither is "test", so one will be chosen at random.
         
         SignUp signUp = new SignUp().appId(TEST_APP_ID).dataGroups(ImmutableList.of("test_user"))
                 .password(PASSWORD).externalId(extId).sharingScope(NO_SHARING);
         StudyParticipant participant = null;
         
-        AuthenticationApi authApi = admin.getClient(AuthenticationApi.class);
-        
         try {
             authApi.signUp(signUp).execute();
-            participant = admin.getClient(ParticipantsApi.class)
-                    .getParticipantByExternalId(extId, false).execute().body();
+            participant = participantsApi.getParticipantByExternalId(extId, false).execute().body();
             assertEquals(participant.getExternalIds().size(), 1);
             Map.Entry<String, String> reg = Iterables.getFirst(participant.getExternalIds().entrySet(), null);
-            assertEquals(reg.getValue(), extId);
+            assertEquals(extId, reg.getValue());
             assertTrue(ImmutableSet.of(STUDY_ID_1, STUDY_ID_2).contains(reg.getKey()));
         } finally {
             if (participant != null) {
                 adminsApi.deleteUser(participant.getId()).execute();  
             }
         }
-
+        
+        // In shared there is only one study, "shared", and so that is the one that is used.
         signUp = new SignUp().appId(SHARED_APP_ID).dataGroups(ImmutableList.of("test_user"))
                 .password(PASSWORD).externalId(extId).sharingScope(NO_SHARING);
         try {
             authApi.signUp(signUp).execute();
             
             authApi.changeApp(SHARED_SIGNIN).execute();
-            participant = admin.getClient(ParticipantsApi.class)
-                    .getParticipantByExternalId(extId, false).execute().body();
-            assertEquals(participant.getExternalIds().size(), 1);
-            assertEquals(participant.getExternalIds().get("shared"), extId);
+            participant = participantsApi.getParticipantByExternalId(extId, false).execute().body();
+            assertEquals(1, participant.getExternalIds().size());
+            assertEquals(extId, participant.getExternalIds().get("shared"));
             adminsApi.deleteUser(participant.getId()).execute();
         } finally {
             if (participant != null) {
                 authApi.changeApp(API_SIGNIN).execute();    
             }
+        }
+        
+        // Create an app with a test study only, and it will select that.
+        App app = Tests.getApp(Tests.randomIdentifier(SignUpTest.class), null);
+        superadminApi.createApp(app).execute();
+        
+        authApi.changeApp(new SignIn().appId(app.getIdentifier())).execute();
+        
+        // The superadmin is in the organization Sage Bionetworks, so that needs to exist in
+        // this new app when we create a study.
+        Organization org = new Organization().identifier(SAGE_ID).name("Sage Bionetworks");
+        orgsApi.createOrganization(org).execute();
+        
+        Study study1 = new Study().identifier("test").name("Test");
+        studiesApi.createStudy(study1).execute();
+        
+        // we need to remove the default study that is created with the app.
+        studiesApi.deleteStudy(app.getIdentifier() + "-study", true).execute();
+
+        signUp = new SignUp().appId(app.getIdentifier()).dataGroups(ImmutableList.of("test_user"))
+                .password(PASSWORD).externalId(extId).sharingScope(NO_SHARING);
+        try {
+            authApi.signUp(signUp).execute();
+            participant = participantsApi.getParticipantByExternalId(extId, false).execute().body();
+            assertEquals(1, participant.getExternalIds().size());
+            assertEquals(extId, participant.getExternalIds().get("test"));
+        } finally {
+            adminsApi.deleteUser(participant.getId()).execute();
+        }
+        
+        // One last scenario: add in another study, and now test should not be chosen
+        String study2Id = Tests.randomIdentifier(SignUpTest.class);
+        Study study2 = new Study().identifier(study2Id).name("Second Study");
+        studiesApi.createStudy(study2).execute();
+        
+        signUp = new SignUp().appId(app.getIdentifier()).dataGroups(ImmutableList.of("test_user"))
+                .password(PASSWORD).externalId(extId).sharingScope(NO_SHARING);
+        try {
+            authApi.signUp(signUp).execute();
+            participant = participantsApi.getParticipantByExternalId(extId, false).execute().body();
+            assertEquals(participant.getExternalIds().size(), 1);
+            assertEquals(participant.getExternalIds().get(study2Id), extId);
+        } finally {
+            adminsApi.deleteUser(participant.getId()).execute();
+            studiesApi.deleteStudy(study2Id, true).execute();
+            studiesApi.deleteStudy("test", true).execute();
+            authApi.changeApp(API_SIGNIN).execute();
+            superadminApi.deleteApp(app.getIdentifier(), true).execute();
         }
     }
 }
