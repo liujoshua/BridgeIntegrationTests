@@ -173,7 +173,7 @@ public class SignUpTest {
             assertEquals(1, participant.getExternalIds().size());
             // ... however that study is named differently in different environments.
             String extIdValue = participant.getExternalIds().get("shared-study");
-            if (extIdValue != null) {
+            if (extIdValue == null) {
                 extIdValue = participant.getExternalIds().get("shared");
             }
             assertEquals(extId, extIdValue);
