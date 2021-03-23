@@ -8,6 +8,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType.MUTABLE;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 
@@ -16,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import com.google.common.collect.ImmutableMap;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -30,6 +33,7 @@ import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ActivityEvent;
 import org.sagebionetworks.bridge.rest.model.ActivityEventList;
+import org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.CustomActivityEventRequest;
 import org.sagebionetworks.bridge.rest.model.Role;
@@ -60,12 +64,14 @@ public class ActivityEventTest {
         boolean updateApp = false;
 
         // Add custom event key, if not already present.
-        if (!app.getActivityEventKeys().contains(EVENT_KEY1)) {
-            app.addActivityEventKeysItem(EVENT_KEY1);
+        if (!app.getCustomEvents().keySet().contains(EVENT_KEY1) || 
+                app.getCustomEvents().get(EVENT_KEY1) != MUTABLE) {
+            app.setCustomEvents(ImmutableMap.of(EVENT_KEY1, MUTABLE));
             updateApp = true;
         }
-        if (!app.getActivityEventKeys().contains(EVENT_KEY2)) {
-            app.addActivityEventKeysItem(EVENT_KEY2);
+        if (!app.getCustomEvents().keySet().contains(EVENT_KEY2) ||
+                app.getCustomEvents().get(EVENT_KEY2) != MUTABLE) {
+            app.setCustomEvents(ImmutableMap.of(EVENT_KEY2, MUTABLE));
             updateApp = true;
         }
 
