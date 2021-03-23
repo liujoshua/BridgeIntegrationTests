@@ -171,7 +171,12 @@ public class SignUpTest {
             authApi.changeApp(SHARED_SIGNIN).execute();
             participant = participantsApi.getParticipantByExternalId(extId, false).execute().body();
             assertEquals(1, participant.getExternalIds().size());
-            assertEquals(extId, participant.getExternalIds().get("shared"));
+            // ... however that study is named differently in different environments.
+            String extIdValue = participant.getExternalIds().get("shared-study");
+            if (extIdValue != null) {
+                extIdValue = participant.getExternalIds().get("shared");
+            }
+            assertEquals(extId, extIdValue);
             adminsApi.deleteUser(participant.getId()).execute();
         } finally {
             if (participant != null) {
