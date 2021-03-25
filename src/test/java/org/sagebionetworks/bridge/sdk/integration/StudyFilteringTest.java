@@ -32,7 +32,7 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForStudyCoordinatorsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.api.SubpopulationsApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -278,7 +278,7 @@ public class StudyFilteringTest {
         plan.setLabel(StudyFilteringTest.class.getSimpleName() + " Schedule Plan");
         plan.setStrategy(strategy);
         
-        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulesApi = developer.getClient(SchedulesV1Api.class);
         GuidVersionHolder keys = null;
         try {
             keys = schedulesApi.createSchedulePlan(plan).execute().body();

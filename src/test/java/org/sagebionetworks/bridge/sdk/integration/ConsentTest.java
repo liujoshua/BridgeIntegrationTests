@@ -226,7 +226,7 @@ public class ConsentTest {
             ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
             assertFalse("User has not consented", user.getSession().isConsented());
             try {
-                userApi.getSchedules().execute();
+                userApi.getSchedulesV1().execute();
                 fail("Should have required consent.");
             } catch (ConsentRequiredException e) {
                 assertEquals("Exception is a 412 Precondition Failed", 412, e.getStatusCode());
@@ -241,7 +241,7 @@ public class ConsentTest {
 
             assertTrue("User has consented", session.isConsented());
             // This should succeed
-            userApi.getSchedules().execute();
+            userApi.getSchedulesV1().execute();
         } finally {
             user.signOutAndDeleteUser();
         }
@@ -258,7 +258,7 @@ public class ConsentTest {
         try {
             ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
             try {
-                userApi.getSchedules();
+                userApi.getSchedulesV1();
             } catch (ConsentRequiredException e) {
                 // this is what we're expecting now
             }
@@ -398,7 +398,7 @@ public class ConsentTest {
             
             // This method should now (immediately) throw a ConsentRequiredException
             try {
-                userApi.getSchedules().execute();
+                userApi.getSchedulesV1().execute();
                 fail("Should have thrown exception");
             } catch (ConsentRequiredException e) {
                 // what we want
