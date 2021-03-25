@@ -17,7 +17,7 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ActivitiesApi;
 import org.sagebionetworks.bridge.rest.api.CompoundActivityDefinitionsApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -58,7 +58,7 @@ public class ScheduledActivityAutoResolutionTest {
     private static final String TASK_ID = "task:AAA";
 
     private static CompoundActivityDefinitionsApi compoundActivityDefinitionsApi;
-    private static SchedulesApi schedulePlanApi;
+    private static SchedulesV1Api schedulePlanApi;
     private static SurveysApi adminSurveyApi;
     private static SurveysApi surveyApi;
     private static TestUserHelper.TestUser developer;
@@ -79,7 +79,7 @@ public class ScheduledActivityAutoResolutionTest {
         developer = TestUserHelper.createAndSignInUser(ScheduledActivityAutoResolutionTest.class, false,
                 Role.DEVELOPER);
         compoundActivityDefinitionsApi = developer.getClient(CompoundActivityDefinitionsApi.class);
-        schedulePlanApi = developer.getClient(SchedulesApi.class);
+        schedulePlanApi = developer.getClient(SchedulesV1Api.class);
         adminSurveyApi = TestUserHelper.getSignedInAdmin().getClient(SurveysApi.class);
         surveyApi = developer.getClient(SurveysApi.class);
 
@@ -142,7 +142,7 @@ public class ScheduledActivityAutoResolutionTest {
 
         // Delete schedules first, or we get constraint violation exceptions.
         if (schedulePlanGuidToDelete != null) {
-            admin.getClient(SchedulesApi.class).deleteSchedulePlan(schedulePlanGuidToDelete, true).execute();
+            admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(schedulePlanGuidToDelete, true).execute();
         }
 
         // Delete compound activity, if any

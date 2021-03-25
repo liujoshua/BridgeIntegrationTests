@@ -85,7 +85,7 @@ import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.api.SharedModulesApi;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
@@ -1184,7 +1184,7 @@ public class SurveyTest {
     @Test
     public void cannotPhysicallyDeleteSurveyInSchedule() throws Exception {
         SurveysApi surveysApi = developer.getClient(SurveysApi.class);
-        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulesApi = developer.getClient(SchedulesV1Api.class);
 
         GuidCreatedOnVersionHolder keys = createSurvey(surveysApi, TestSurvey.getSurvey(SurveyTest.class));
         

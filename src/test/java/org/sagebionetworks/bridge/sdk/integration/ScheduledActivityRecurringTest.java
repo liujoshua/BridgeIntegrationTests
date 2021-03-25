@@ -18,7 +18,7 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.Criteria;
@@ -93,7 +93,7 @@ public class ScheduledActivityRecurringTest {
         schedulePlan.setLabel(FILTERED_LABEL);
         schedulePlan.setStrategy(strategy);
         
-        GuidVersionHolder keys = developer.getClient(SchedulesApi.class).createSchedulePlan(schedulePlan).execute().body();
+        GuidVersionHolder keys = developer.getClient(SchedulesV1Api.class).createSchedulePlan(schedulePlan).execute().body();
         schedulePlan.setGuid(keys.getGuid());
         schedulePlan.setVersion(keys.getVersion());
     }
@@ -107,7 +107,7 @@ public class ScheduledActivityRecurringTest {
             user.signOutAndDeleteUser();
         }
         if (schedulePlan != null) {
-            admin.getClient(SchedulesApi.class).deleteSchedulePlan(schedulePlan.getGuid(), true).execute();
+            admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(schedulePlan.getGuid(), true).execute();
         }
     }
     

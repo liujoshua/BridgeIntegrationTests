@@ -28,7 +28,7 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.api.SurveysApi;
 import org.sagebionetworks.bridge.rest.api.UploadSchemasApi;
 import org.sagebionetworks.bridge.rest.exceptions.BadRequestException;
@@ -96,7 +96,7 @@ public class ScheduledActivityTest {
     private TestUser researcher;
     private TestUser user;
     private TestUser developer;
-    private SchedulesApi schedulePlansApi;
+    private SchedulesV1Api schedulePlansApi;
     private List<String> schedulePlanGuidList;
     private ForConsentedUsersApi usersApi;
     private UploadSchema schemaKeys;
@@ -119,7 +119,7 @@ public class ScheduledActivityTest {
         
         user = TestUserHelper.createAndSignInUser(ScheduledActivityTest.class, true);
 
-        schedulePlansApi = developer.getClient(SchedulesApi.class);
+        schedulePlansApi = developer.getClient(SchedulesV1Api.class);
         usersApi = user.getClient(ForConsentedUsersApi.class);
 
         // Run ID is a random string, used to uniquely identify schedules for this test.
@@ -334,7 +334,7 @@ public class ScheduledActivityTest {
                     .deleteUploadSchema(schemaKeys.getSchemaId(), schemaKeys.getRevision(), true).execute();
         }
         try {
-            SchedulesApi schedulesApi = admin.getClient(SchedulesApi.class);
+            SchedulesV1Api schedulesApi = admin.getClient(SchedulesV1Api.class);
             for (String oneSchedulePlanGuid : schedulePlanGuidList) {
                 schedulesApi.deleteSchedulePlan(oneSchedulePlanGuid, true).execute();
             }

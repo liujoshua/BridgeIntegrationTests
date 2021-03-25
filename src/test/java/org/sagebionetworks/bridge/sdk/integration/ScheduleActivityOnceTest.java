@@ -16,7 +16,7 @@ import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ActivityType;
 import org.sagebionetworks.bridge.rest.model.App;
@@ -51,7 +51,7 @@ public class ScheduleActivityOnceTest {
         user = new TestUserHelper.Builder(ScheduleActivityOnceTest.class).withConsentUser(true).withSignUp(signUp)
                 .createAndSignInUser();
         
-        SchedulePlanList list = developer.getClient(SchedulesApi.class).getSchedulePlans(true).execute().body();
+        SchedulePlanList list = developer.getClient(SchedulesV1Api.class).getSchedulePlans(true).execute().body();
         for (SchedulePlan plan : list.getItems()) {
             if (plan.getLabel().contains(FILTERED_LABEL)) {
                 admin.getClient(ForAdminsApi.class).deleteSchedulePlan(plan.getGuid(), true).execute();    
@@ -68,7 +68,7 @@ public class ScheduleActivityOnceTest {
             user.signOutAndDeleteUser();
         }
         if (schedulePlan != null) {
-            admin.getClient(SchedulesApi.class).deleteSchedulePlan(schedulePlan.getGuid(), true).execute();
+            admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(schedulePlan.getGuid(), true).execute();
         }
     }
     
@@ -98,7 +98,7 @@ public class ScheduleActivityOnceTest {
         schedulePlan.setLabel(FILTERED_LABEL);
         schedulePlan.setStrategy(strategy);
         
-        GuidVersionHolder keys = developer.getClient(SchedulesApi.class).createSchedulePlan(schedulePlan).execute().body();
+        GuidVersionHolder keys = developer.getClient(SchedulesV1Api.class).createSchedulePlan(schedulePlan).execute().body();
         schedulePlan.setGuid(keys.getGuid());
         schedulePlan.setVersion(keys.getVersion());
         

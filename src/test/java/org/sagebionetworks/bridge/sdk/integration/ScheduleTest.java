@@ -13,7 +13,7 @@ import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.sagebionetworks.bridge.rest.model.Criteria;
@@ -60,7 +60,7 @@ public class ScheduleTest {
         if (developer != null) {
             try {
                 if (planGuid != null) {
-                    SchedulesApi schedulesApi = admin.getClient(SchedulesApi.class);
+                    SchedulesV1Api schedulesApi = admin.getClient(SchedulesV1Api.class);
                     schedulesApi.deleteSchedulePlan(planGuid, true).execute();
                 }
             } finally {
@@ -71,7 +71,7 @@ public class ScheduleTest {
     
     @Test
     public void canScheduleASequence() throws Exception {
-        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulesApi = developer.getClient(SchedulesV1Api.class);
         
         SchedulePlan plan = Tests.getSimpleSchedulePlan();
         plan.setLabel("This is a sequenced recurring schedule");
@@ -111,7 +111,7 @@ public class ScheduleTest {
 
     @Test
     public void schedulePlanIsCorrect() throws Exception {
-        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulesApi = developer.getClient(SchedulesV1Api.class);
         planGuid = schedulesApi.createSchedulePlan(Tests.getSimpleSchedulePlan()).execute().body().getGuid();
         
         SchedulePlan originalPlan = Tests.getSimpleSchedulePlan();
@@ -144,7 +144,7 @@ public class ScheduleTest {
         SchedulePlan schedulePlan = Tests.getSimpleSchedulePlan();
         Tests.getSimpleSchedule(schedulePlan).setLabel(label);
 
-        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulesApi = developer.getClient(SchedulesV1Api.class);
         planGuid = schedulesApi.createSchedulePlan(schedulePlan).execute().body().getGuid();
 
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
@@ -152,7 +152,7 @@ public class ScheduleTest {
         // There may be multiple schedules from other tests. Loop through all schedules until we find the one we're
         // looking for.
         boolean foundSchedule = false;
-        List<Schedule> schedules = usersApi.getSchedules().execute().body().getItems();
+        List<Schedule> schedules = usersApi.getSchedulesV1().execute().body().getItems();
         for (Schedule oneSchedule : schedules) {
             if (label.equals(oneSchedule.getLabel())) {
                 foundSchedule = true;
@@ -164,7 +164,7 @@ public class ScheduleTest {
     @Test
     public void persistentSchedulePlanMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getPersistentSchedulePlan();
-        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulesApi = developer.getClient(SchedulesV1Api.class);
         
         planGuid = schedulesApi.createSchedulePlan(plan).execute().body().getGuid();
 
@@ -177,7 +177,7 @@ public class ScheduleTest {
     @Test
     public void simpleSchedulePlanNotMarkedPersistent() throws Exception {
         SchedulePlan plan = Tests.getSimpleSchedulePlan();
-        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulesApi = developer.getClient(SchedulesV1Api.class);
 
         planGuid = schedulesApi.createSchedulePlan(plan).execute().body().getGuid();
 
@@ -224,7 +224,7 @@ public class ScheduleTest {
         plan.setStrategy(strategy);
         
         user.signOut();        
-        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulesApi = developer.getClient(SchedulesV1Api.class);
         planGuid = schedulesApi.createSchedulePlan(plan).execute().body().getGuid();
         
         // Manipulate the User-Agent string and see scheduled activity change accordingly

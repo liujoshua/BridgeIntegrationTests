@@ -11,7 +11,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.api.SchedulesApi;
+import org.sagebionetworks.bridge.rest.api.SchedulesV1Api;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.Schedule;
@@ -52,7 +52,7 @@ public class PersistentActivityTest {
         if (developer != null) {
             try {
                 if (planGuid != null) {
-                    admin.getClient(SchedulesApi.class).deleteSchedulePlan(planGuid, true).execute();
+                    admin.getClient(SchedulesV1Api.class).deleteSchedulePlan(planGuid, true).execute();
                 }
             } finally {
                 developer.signOutAndDeleteUser();    
@@ -75,7 +75,7 @@ public class PersistentActivityTest {
         plan.setLabel("Criteria plan");
         plan.setStrategy(strategy);
         
-        SchedulesApi schedulesApi = developer.getClient(SchedulesApi.class);
+        SchedulesV1Api schedulesApi = developer.getClient(SchedulesV1Api.class);
         planGuid = schedulesApi.createSchedulePlan(plan).execute().body().getGuid();
         
         ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
