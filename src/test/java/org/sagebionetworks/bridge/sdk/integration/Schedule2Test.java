@@ -15,6 +15,9 @@ import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,6 +39,7 @@ import org.sagebionetworks.bridge.rest.model.PerformanceOrder;
 import org.sagebionetworks.bridge.rest.model.ReminderType;
 import org.sagebionetworks.bridge.rest.model.Schedule2;
 import org.sagebionetworks.bridge.rest.model.Schedule2List;
+import org.sagebionetworks.bridge.rest.model.ScheduledAssessment;
 import org.sagebionetworks.bridge.rest.model.ScheduledSession;
 import org.sagebionetworks.bridge.rest.model.Session;
 import org.sagebionetworks.bridge.rest.model.SessionInfo;
@@ -210,11 +214,35 @@ public class Schedule2Test {
         assertEquals("Time to take the assessment", sessionInfo.getMessage().getMessage());
         
         // the references in the timeline work...
+        Set<String> sessionInstanceGuids = new HashSet<>();
+        int scheduledSessionCount = 0;
+        
+        Set<String> asmtInstanceGuids = new HashSet<>();
+        int scheduledAssessmentCount = 0;
+        
         for (ScheduledSession scheduledSession : timeline.getSchedule()) {
-            assertEquals(sessionInfo.getGuid(), scheduledSession.getRefGuid());
-            assertEquals(assessmentInfo.getKey(), 
-                    scheduledSession.getAssessments().get(0).getRefKey());
+            scheduledSessionCount++;
+            sessionInstanceGuids.add(scheduledSession.getInstanceGuid());
+            for (ScheduledAssessment schAssessment : scheduledSession.getAssessments()) {
+                scheduledAssessmentCount++;
+                asmtInstanceGuids.add(schAssessment.getInstanceGuid());
+            }
         }
+        assertEquals(scheduledSessionCount, sessionInstanceGuids.size());
+        assertEquals(scheduledAssessmentCount, asmtInstanceGuids.size());
+        
+        // And, these values are identical between runs
+        Timeline timeline2 = schedulesApi.getTimelineForSchedule(schedule.getGuid()).execute().body();
+        Set<String> sessionInstanceGuids2 = new HashSet<>();
+        Set<String> asmtInstanceGuids2 = new HashSet<>();
+        for (ScheduledSession scheduledSession : timeline2.getSchedule()) {
+            sessionInstanceGuids2.add(scheduledSession.getInstanceGuid());
+            for (ScheduledAssessment schAssessment : scheduledSession.getAssessments()) {
+                asmtInstanceGuids2.add(schAssessment.getInstanceGuid());
+            }
+        }
+        assertEquals(sessionInstanceGuids, sessionInstanceGuids2);
+        assertEquals(asmtInstanceGuids, asmtInstanceGuids2);
         
         // get schedules works (try the parameters)
         Schedule2List page = schedulesApi.getSchedules(null, null, null).execute().body();
