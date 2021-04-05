@@ -149,6 +149,7 @@ public class CRCTest {
     }
 
     @Test
+    @Ignore // See BRIDGE-
     public void requestShipmentForHealthCode() throws IOException {
         setupShippingInfo();
 
