@@ -6,7 +6,10 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.ContactRole.PRINCIPAL_INVESTIGATOR;
 import static org.sagebionetworks.bridge.rest.model.Role.STUDY_COORDINATOR;
+import static org.sagebionetworks.bridge.rest.model.StudyPhase.DESIGN;
+import static org.sagebionetworks.bridge.rest.model.StudyPhase.IN_FLIGHT;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.PASSWORD;
@@ -33,11 +36,14 @@ import org.sagebionetworks.bridge.rest.api.ParticipantsApi;
 import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
+import org.sagebionetworks.bridge.rest.model.Contact;
+import org.sagebionetworks.bridge.rest.model.ContactRole;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.StudyList;
+import org.sagebionetworks.bridge.rest.model.StudyPhase;
 import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
@@ -95,6 +101,14 @@ public class StudyTest {
         String id = Tests.randomIdentifier(StudyTest.class);
         Study study = new Study().identifier(id).clientData(map).name("Study " + id);
         
+        String contactEmail = IntegTestUtils.makeEmail(StudyTest.class);
+        Contact contact = new Contact()
+                .role(PRINCIPAL_INVESTIGATOR)
+                .name("Tim Powers")
+                .affiliation("Miskatonic University")
+                .email(contactEmail);
+        study.addContactsItem(contact);
+        
         VersionHolder holder = studiesApi.createStudy(study).execute().body();
         study.setVersion(holder.getVersion());
         studyIdsToDelete.add(id);
@@ -102,8 +116,15 @@ public class StudyTest {
         Study retrieved = studiesApi.getStudy(id).execute().body();
         assertEquals(id, retrieved.getIdentifier());
         assertEquals("Study " + id, retrieved.getName());
+        assertEquals(DESIGN, retrieved.getPhase());
         assertTrue(retrieved.getCreatedOn().isAfter(DateTime.now().minusHours(1)));
         assertTrue(retrieved.getModifiedOn().isAfter(DateTime.now().minusHours(1)));
+        
+        Contact retrievedContact = retrieved.getContacts().get(0);
+        assertEquals(PRINCIPAL_INVESTIGATOR, retrievedContact.getRole());
+        assertEquals("Tim Powers", retrievedContact.getName());
+        assertEquals("Miskatonic University", retrievedContact.getAffiliation());
+        assertEquals(contactEmail, retrievedContact.getEmail());
         
         Map<String,String> theMap = RestUtils.toType(study.getClientData(), Map.class);
         assertEquals("byExternalId", theMap.get("enrollmentType"));
@@ -114,11 +135,13 @@ public class StudyTest {
         DateTime lastModified1 = retrieved.getModifiedOn();
         
         study.name("New test name " + id);
+        study.phase(IN_FLIGHT); // this cannot be changed
         VersionHolder holder2 = studiesApi.updateStudy(id, study).execute().body();
         assertNotEquals(holder.getVersion(), holder2.getVersion());
         
         Study retrieved2 = studiesApi.getStudy(id).execute().body();
         assertEquals("New test name " + id, retrieved2.getName());
+        assertEquals(DESIGN, retrieved2.getPhase());
         assertNotEquals(lastModified1, retrieved2.getModifiedOn());
         
         StudyList studyList = studiesApi.getStudies(null, null, false).execute().body();
