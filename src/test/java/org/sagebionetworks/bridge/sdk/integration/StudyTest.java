@@ -37,7 +37,6 @@ import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Contact;
-import org.sagebionetworks.bridge.rest.model.ContactRole;
 import org.sagebionetworks.bridge.rest.model.OrganizationList;
 import org.sagebionetworks.bridge.rest.model.Role;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -88,6 +87,14 @@ public class StudyTest {
         }
     }
 
+    @Test
+    public void existingStudiesAreLegacy() throws Exception {
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+
+        Study study = studiesApi.getStudy(STUDY_ID_1).execute().body();
+        assertEquals(StudyPhase.LEGACY, study.getPhase());
+    }
+    
     @SuppressWarnings("unchecked")
     @Test
     public void test() throws IOException {
