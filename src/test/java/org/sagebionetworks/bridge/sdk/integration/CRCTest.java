@@ -126,7 +126,7 @@ public class CRCTest {
     }
 
     @Test
-    @Ignore // See BRIDGE-2956
+    @Ignore("See BRIDGE-2956") 
     public void requestShipmentAsParticipant() throws IOException {
         user.signInAgain();
 
@@ -150,7 +150,7 @@ public class CRCTest {
     }
 
     @Test
-    @Ignore // See BRIDGE-2956
+    @Ignore("See BRIDGE-2956")
     public void requestShipmentForHealthCode() throws IOException {
         setupShippingInfo();
 
