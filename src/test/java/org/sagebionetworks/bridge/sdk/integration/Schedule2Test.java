@@ -3,15 +3,20 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.NotificationType.START_OF_WINDOW;
 import static org.sagebionetworks.bridge.rest.model.PerformanceOrder.SEQUENTIAL;
 import static org.sagebionetworks.bridge.rest.model.ReminderType.BEFORE_WINDOW_END;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.Role.STUDY_COORDINATOR;
 import static org.sagebionetworks.bridge.rest.model.Role.STUDY_DESIGNER;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.ORG_ID_2;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
+import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SAGE_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
@@ -23,11 +28,15 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.ForStudyCoordinatorsApi;
 import org.sagebionetworks.bridge.rest.api.OrganizationsApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesV2Api;
+import org.sagebionetworks.bridge.rest.api.StudiesApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.exceptions.InvalidEntityException;
 import org.sagebionetworks.bridge.rest.exceptions.PublishedEntityException;
+import org.sagebionetworks.bridge.rest.exceptions.UnauthorizedException;
 import org.sagebionetworks.bridge.rest.model.Assessment;
 import org.sagebionetworks.bridge.rest.model.AssessmentInfo;
 import org.sagebionetworks.bridge.rest.model.AssessmentReference2;
@@ -43,15 +52,21 @@ import org.sagebionetworks.bridge.rest.model.ScheduledAssessment;
 import org.sagebionetworks.bridge.rest.model.ScheduledSession;
 import org.sagebionetworks.bridge.rest.model.Session;
 import org.sagebionetworks.bridge.rest.model.SessionInfo;
+import org.sagebionetworks.bridge.rest.model.Study;
 import org.sagebionetworks.bridge.rest.model.TimeWindow;
 import org.sagebionetworks.bridge.rest.model.Timeline;
+import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
+import retrofit2.Response;
+
 public class Schedule2Test {
-     
+    
     TestUser developer;
     TestUser studyDesigner;
+    TestUser studyCoordinator;
+    TestUser user;
     Assessment assessment;
     Schedule2 schedule;
     
@@ -85,8 +100,14 @@ public class Schedule2Test {
         if (assessment != null && assessment.getGuid() != null) {
             admin.getClient(AssessmentsApi.class).deleteAssessment(assessment.getGuid(), true).execute();
         }
+        if (user != null) {
+            user.signOutAndDeleteUser();
+        }
         if (studyDesigner != null) {
             studyDesigner.signOutAndDeleteUser();
+        }
+        if (studyCoordinator != null) {
+            studyCoordinator.signOutAndDeleteUser();
         }
         if (developer != null) {
             developer.signOutAndDeleteUser();
@@ -358,6 +379,81 @@ public class Schedule2Test {
         assertTrue(list.getItems().stream().anyMatch(sch -> sch.getName().contains("ORG2")));
     }
     
+    @Test
+    public void getTimelineForStudyParticipant() throws Exception {
+        studyCoordinator = TestUserHelper.createAndSignInUser(Schedule2Test.class, false, STUDY_COORDINATOR);
+        
+        SchedulesV2Api schedulesApi = studyDesigner.getClient(SchedulesV2Api.class);
+        StudiesApi studiesApi = studyDesigner.getClient(StudiesApi.class);
+        
+        AssessmentReference2 ref = new AssessmentReference2()
+                .appId(TEST_APP_ID)
+                .guid(assessment.getGuid())
+                .identifier(assessment.getIdentifier());
+
+        schedule = new Schedule2();
+        schedule.setName("Test Schedule [Schedule2Test]");
+        schedule.setDuration("P1W");
+        Session session = new Session();
+        session.setName("Simple repeating assessment");
+        session.setInterval("P1D");
+        session.setAssessments(null);
+        session.setStartEventId("enrollment");
+        session.setPerformanceOrder(SEQUENTIAL);
+        session.addAssessmentsItem(ref);
+        session.addTimeWindowsItem(new TimeWindow().startTime("08:00").expiration("PT1H"));
+        schedule.addSessionsItem(session);
+        
+        // create schedule.
+        schedule = schedulesApi.createSchedule(schedule).execute().body();
+        
+        // Add it to study 1
+        Study study = studiesApi.getStudy(STUDY_ID_1).execute().body();
+        study.setScheduleGuid(schedule.getGuid());
+        VersionHolder versionHolder = studiesApi.updateStudy(STUDY_ID_1, study).execute().body();
+        study.setVersion(versionHolder.getVersion());
+        
+        user = TestUserHelper.createAndSignInUser(Schedule2Test.class, true);
+
+        // This user should now have a timeline via study1:
+        ForStudyCoordinatorsApi coordsApi = studyCoordinator.getClient(ForStudyCoordinatorsApi.class);
+        Timeline timeline = coordsApi.getStudyParticipantTimeline(STUDY_ID_1, user.getUserId()).execute().body();
+        
+        // it's there
+        assertEquals(timeline.getSchedule().size(), 7);
+        
+        ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
+        timeline = userApi.getTimelineForSelf(STUDY_ID_1, null).execute().body();
+
+        // it's there
+        assertEquals(timeline.getSchedule().size(), 7);
+        
+        // Let's add the cache header and see what happens.
+        Response<Timeline> res = userApi.getTimelineForSelf(STUDY_ID_1, schedule.getModifiedOn().plusHours(1)).execute();
+        assertEquals(304, res.code());
+        assertNull(res.body());
+
+        res = userApi.getTimelineForSelf(STUDY_ID_1, schedule.getModifiedOn().minusHours(1)).execute();
+        assertEquals(200, res.code());
+        assertNotNull(res.body());
+        
+        study.setScheduleGuid(null);
+        studiesApi.updateStudy(STUDY_ID_1, study).execute().body();
+        
+        // and this is just a flat-out error
+        try {
+            userApi.getTimelineForSelf(STUDY_ID_2, null).execute();
+        } catch(UnauthorizedException e) {
+            assertEquals("Caller is not enrolled in study 'study2'", e.getMessage());
+        }
+        try {
+            coordsApi.getStudyParticipantTimeline(STUDY_ID_2, user.getUserId()).execute();
+        } catch(EntityNotFoundException e) {
+            assertEquals("Account not found.", e.getMessage());
+        }
+    }
+    
+    
     private void assertSchedule(Schedule2 schedule) {
         assertEquals("Test Schedule [Schedule2Test]", schedule.getName());
         assertEquals("P10W", schedule.getDuration());
@@ -410,5 +506,4 @@ public class Schedule2Test {
         assertEquals("Sujet", msgFr.getSubject());
         assertEquals("Il est temps de passer l'évaluation", msgFr.getMessage());
     }
-    
 }
