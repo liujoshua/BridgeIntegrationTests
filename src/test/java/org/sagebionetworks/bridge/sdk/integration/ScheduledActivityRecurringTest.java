@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.sdk.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType.FUTURE_ONLY;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.ScheduleType.RECURRING;
 
@@ -62,9 +63,9 @@ public class ScheduledActivityRecurringTest {
                 .createAndSignInUser();
         
         App app = admin.getClient(AppsApi.class).getUsersApp().execute().body();
-        if (app.isExternalIdRequiredOnSignup() || !app.getActivityEventKeys().contains(CUSTOM_EVENT)) {
+        if (app.isExternalIdRequiredOnSignup() || !app.getCustomEvents().keySet().contains(CUSTOM_EVENT)) {
             app.setExternalIdRequiredOnSignup(false);
-            app.getActivityEventKeys().add(CUSTOM_EVENT);
+            app.getCustomEvents().put(CUSTOM_EVENT, FUTURE_ONLY);
             
             VersionHolder version = admin.getClient(ForSuperadminsApi.class).updateApp(app.getIdentifier(), app).execute().body();
             app.setVersion(version.getVersion());

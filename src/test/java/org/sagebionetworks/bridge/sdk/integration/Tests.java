@@ -3,6 +3,8 @@ package org.sagebionetworks.bridge.sdk.integration;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType.FUTURE_ONLY;
+import static org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType.MUTABLE;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.SHARED_APP_ID;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
@@ -279,6 +281,7 @@ public class Tests {
         app.setUserProfileAttributes(Lists.newArrayList("new_profile_attribute"));
         app.setTaskIdentifiers(Lists.newArrayList("taskA")); // setting it differently just for the heck of it 
         app.setDataGroups(Lists.newArrayList("beta_users", "production_users"));
+        app.setCustomEvents(ImmutableMap.of("event1", MUTABLE, "event2", FUTURE_ONLY));
         app.setEmailVerificationEnabled(true);
         app.setEmailSignInEnabled(true);
         app.setHealthCodeExportEnabled(true);

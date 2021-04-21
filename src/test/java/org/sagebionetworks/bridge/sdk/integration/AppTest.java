@@ -6,6 +6,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType.FUTURE_ONLY;
+import static org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType.MUTABLE;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
 import static org.sagebionetworks.bridge.rest.model.Role.RESEARCHER;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
@@ -22,6 +24,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -257,6 +260,10 @@ public class AppTest {
         assertEquals("userProfileAttributes should be equal", app.getUserProfileAttributes(), newApp.getUserProfileAttributes());
         assertEquals("taskIdentifiers should be equal", app.getTaskIdentifiers(), newApp.getTaskIdentifiers());
         assertTrue("dataGroups should be equal", Tests.assertListsEqualIgnoringOrder(app.getDataGroups(), newApp.getDataGroups()));
+        assertEquals("customEvents should be equal", app.getCustomEvents(), newApp.getCustomEvents());
+        assertEquals("customEvents should be equal to 2", app.getCustomEvents().size(), 2);
+        assertEquals(app.getCustomEvents().get("event1"), MUTABLE);
+        assertEquals(app.getCustomEvents().get("event2"), FUTURE_ONLY);
         assertEquals("android minSupportedAppVersions should be equal", app.getMinSupportedAppVersions().get("Android"),
                 newApp.getMinSupportedAppVersions().get("Android"));
         assertEquals("iOS minSupportedAppVersions should be equal", app.getMinSupportedAppVersions().get("iPhone OS"),

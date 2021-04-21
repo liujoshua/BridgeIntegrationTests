@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
 import org.sagebionetworks.bridge.rest.api.ForAdminsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForWorkersApi;
@@ -228,6 +229,7 @@ public class ParticipantDataTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private static void assertParticipantData(String expectedKey, String expectedValue, ParticipantData participantData) {
         assertNotNull(participantData);
         Map<String, String> data = (Map<String, String>) participantData.getData();
