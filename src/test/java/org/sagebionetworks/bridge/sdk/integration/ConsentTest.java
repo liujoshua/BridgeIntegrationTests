@@ -30,6 +30,7 @@ import retrofit2.Response;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AppsApi;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ConsentsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForResearchersApi;
 import org.sagebionetworks.bridge.rest.api.ForSuperadminsApi;
@@ -46,6 +47,7 @@ import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.GuidVersionHolder;
 import org.sagebionetworks.bridge.rest.model.HealthDataRecord;
 import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.SmsMessage;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -555,6 +557,41 @@ public class ConsentTest {
             assertTrue(participant.getStudyIds().isEmpty());
             assertTrue(participant.getDataGroups().isEmpty());
         });
+    }
+    
+    @Test
+    public void canConsentToSupplementalConsent() throws Exception {
+        SubpopulationsApi subpopsApi = adminUser.getClient(SubpopulationsApi.class);
+        
+        Subpopulation subpop = new Subpopulation();
+        subpop.setName("Supplemental Consent");
+        subpop.setAutoSendConsentSuppressed(true);
+
+        GuidVersionHolder keys = subpopsApi.createSubpopulation(subpop).execute().body();
+        subpop.setGuid(keys.getGuid());
+        subpop.setVersion(keys.getVersion());
+        
+        TestUser user = null;
+        try {
+            user = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
+            
+            ConsentSignature sig = new ConsentSignature()
+                    .name(user.getSession().getFirstName() + " " + user.getSession().getLastName())
+                    .birthdate(LocalDate.parse("2000-01-01"))
+                    .scope(ALL_QUALIFIED_RESEARCHERS);
+            
+            ConsentsApi consentsApi = user.getClient(ConsentsApi.class);
+            UserSessionInfo session = consentsApi.createConsentSignature(keys.getGuid(), sig).execute().body();
+            
+            ConsentStatus status = session.getConsentStatuses().get(keys.getGuid());
+            assertTrue(status.isConsented());
+            
+        } finally {
+            if (user != null) {
+                user.signOutAndDeleteUser();
+            }
+            subpopsApi.deleteSubpopulation(subpop.getGuid(), true).execute();
+        }
     }
     
     private void withdrawalTest(WithdrawMethod withdrawMethod) throws Exception {
