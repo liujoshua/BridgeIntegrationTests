@@ -562,17 +562,16 @@ public class ConsentTest {
     @Test
     public void canConsentToSupplementalConsent() throws Exception {
         SubpopulationsApi subpopsApi = adminUser.getClient(SubpopulationsApi.class);
-        
-        Subpopulation subpop = new Subpopulation();
-        subpop.setName("Supplemental Consent");
-        subpop.setAutoSendConsentSuppressed(true);
-
-        GuidVersionHolder keys = subpopsApi.createSubpopulation(subpop).execute().body();
-        subpop.setGuid(keys.getGuid());
-        subpop.setVersion(keys.getVersion());
-        
         TestUser user = null;
+        Subpopulation subpop = new Subpopulation();
         try {
+            subpop.setName("Supplemental Consent");
+            subpop.setAutoSendConsentSuppressed(true);
+
+            GuidVersionHolder keys = subpopsApi.createSubpopulation(subpop).execute().body();
+            subpop.setGuid(keys.getGuid());
+            subpop.setVersion(keys.getVersion());
+            
             user = TestUserHelper.createAndSignInUser(ConsentTest.class, true);
             
             ConsentSignature sig = new ConsentSignature()
@@ -581,16 +580,18 @@ public class ConsentTest {
                     .scope(ALL_QUALIFIED_RESEARCHERS);
             
             ConsentsApi consentsApi = user.getClient(ConsentsApi.class);
-            UserSessionInfo session = consentsApi.createConsentSignature(keys.getGuid(), sig).execute().body();
+            UserSessionInfo session = consentsApi.createConsentSignature(subpop.getGuid(), sig).execute().body();
             
-            ConsentStatus status = session.getConsentStatuses().get(keys.getGuid());
+            ConsentStatus status = session.getConsentStatuses().get(subpop.getGuid());
             assertTrue(status.isConsented());
             
         } finally {
             if (user != null) {
                 user.signOutAndDeleteUser();
             }
-            subpopsApi.deleteSubpopulation(subpop.getGuid(), true).execute();
+            if (subpop.getGuid() != null) {
+                subpopsApi.deleteSubpopulation(subpop.getGuid(), true).execute();    
+            }
         }
     }
     
