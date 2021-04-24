@@ -433,6 +433,32 @@ public class UploadTest {
     }
 
     @Test
+    public void metadataInUploadRequest() throws Exception {
+        // Create upload request with metadata.
+        File file = resolveFilePath("schemaless-encrypted");
+        UploadRequest request = RestUtils.makeUploadRequestForFile(file);
+        request.setMetadata(ImmutableMap.of("added-metadata", "added-value"));
+
+        ForConsentedUsersApi usersApi = user.getClient(ForConsentedUsersApi.class);
+        UploadSession session = usersApi.requestUploadSession(request).execute().body();
+        RestUtils.uploadToS3(file, session.getUrl());
+        String uploadId = session.getId();
+
+        // Complete upload in synchronous mode, for ease of testing.
+        UploadValidationStatus status = usersApi.completeUploadSession(uploadId, true, false)
+                .execute().body();
+        assertEquals(UploadStatus.SUCCEEDED, status.getStatus());
+
+        // Just verify that the metadata was successfully merged.
+        HealthDataRecord record = status.getRecord();
+        Map<String, Object> userMetadata = RestUtils.toType(record.getUserMetadata(), Map.class);
+        assertEquals(3, userMetadata.size());
+        assertEquals("added-value", userMetadata.get("added-metadata"));
+        assertEquals("test-task-guid", userMetadata.get("taskRunId"));
+        assertEquals(3.0, (double) userMetadata.get("lastMedicationHoursAgo"), 0.001);
+    }
+
+    @Test
     public void notEncryptedNotZipped() throws Exception {
         // Manually make the upload request for this test. We need to write a file, since RestUtils expects a file.
         byte[] uploadContent = "dummy content".getBytes();
