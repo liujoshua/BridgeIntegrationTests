@@ -8,6 +8,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType.FUTURE_ONLY;
+import static org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType.IMMUTABLE;
+import static org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType.MUTABLE;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_2;
 
@@ -39,6 +42,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 public class ActivityEventTest {
     private static final String EVENT_KEY1 = "event1";
     private static final String EVENT_KEY2 = "event2";
+    private static final String EVENT_KEY3 = "event3";
     private static final String TWO_WEEKS_AFTER_KEY = "2-weeks-after";
     private static final String TWO_WEEKS_AFTER_VALUE = "enrollment:P2W";
 
@@ -59,13 +63,20 @@ public class ActivityEventTest {
         App app = developersApi.getUsersApp().execute().body();
         boolean updateApp = false;
 
-        // Add custom event key, if not already present.
-        if (!app.getActivityEventKeys().contains(EVENT_KEY1)) {
-            app.addActivityEventKeysItem(EVENT_KEY1);
+        // Add custom event keys, if not already present, with three different update behaviors.
+        if (!app.getCustomEvents().keySet().contains(EVENT_KEY1) || 
+                app.getCustomEvents().get(EVENT_KEY1) != MUTABLE) {
+            app.getCustomEvents().put(EVENT_KEY1, MUTABLE);
             updateApp = true;
         }
-        if (!app.getActivityEventKeys().contains(EVENT_KEY2)) {
-            app.addActivityEventKeysItem(EVENT_KEY2);
+        if (!app.getCustomEvents().keySet().contains(EVENT_KEY2) ||
+                app.getCustomEvents().get(EVENT_KEY2) != IMMUTABLE) {
+            app.getCustomEvents().put(EVENT_KEY2, IMMUTABLE);
+            updateApp = true;
+        }
+        if (!app.getCustomEvents().keySet().contains(EVENT_KEY3) ||
+                app.getCustomEvents().get(EVENT_KEY3) != FUTURE_ONLY) {
+            app.getCustomEvents().put(EVENT_KEY3, FUTURE_ONLY);
             updateApp = true;
         }
 
@@ -302,6 +313,204 @@ public class ActivityEventTest {
         } catch(EntityNotFoundException e) {
             
         }
+    }
+    
+    @Test
+    public void testMutableGlobalEvent() throws Exception {
+        DateTime now = DateTime.now(DateTimeZone.UTC);
+        DateTime pastTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
+        DateTime futureTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
+
+        // Create event #1 which is mutable
+        CustomActivityEventRequest req = new CustomActivityEventRequest().eventId(EVENT_KEY1).timestamp(now);
+        usersApi.createCustomActivityEvent(req).execute();
+        
+        ActivityEventList list = usersApi.getActivityEvents().execute().body();
+        assertEquals(now, getTimestamp(list, EVENT_KEY1));
+        
+        // future update works
+        req = new CustomActivityEventRequest().eventId(EVENT_KEY1).timestamp(futureTime);
+        usersApi.createCustomActivityEvent(req).execute();
+        list = usersApi.getActivityEvents().execute().body();
+        assertEquals(futureTime, getTimestamp(list, EVENT_KEY1));
+        
+        // past update works
+        req = new CustomActivityEventRequest().eventId(EVENT_KEY1).timestamp(pastTime);
+        usersApi.createCustomActivityEvent(req).execute();
+        list = usersApi.getActivityEvents().execute().body();
+        assertEquals(pastTime, getTimestamp(list, EVENT_KEY1));
+        
+        // delete works
+        usersApi.deleteCustomActivityEvent(EVENT_KEY1).execute();
+        
+        list = usersApi.getActivityEvents().execute().body();
+        assertNull(getTimestamp(list, EVENT_KEY1));
+    }
+    
+    @Test
+    public void testImmutableGlobalEvent() throws Exception {
+        DateTime now = DateTime.now(DateTimeZone.UTC);
+        DateTime pastTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
+        DateTime futureTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
+
+        // Create event #2 which is immutable.
+        CustomActivityEventRequest req = new CustomActivityEventRequest().eventId(EVENT_KEY2).timestamp(now);
+        usersApi.createCustomActivityEvent(req).execute();
+        
+        ActivityEventList list = usersApi.getActivityEvents().execute().body();
+        assertEquals(now, getTimestamp(list, EVENT_KEY2));
+
+        // future will not update
+        req = new CustomActivityEventRequest().eventId(EVENT_KEY2).timestamp(futureTime);
+        usersApi.createCustomActivityEvent(req).execute();
+        list = usersApi.getActivityEvents().execute().body();
+        assertEquals(getTimestamp(list, EVENT_KEY2), now);
+
+        // past will not update
+        req = new CustomActivityEventRequest().eventId(EVENT_KEY2).timestamp(pastTime);
+        usersApi.createCustomActivityEvent(req).execute();
+        list = usersApi.getActivityEvents().execute().body();
+        assertEquals(getTimestamp(list, EVENT_KEY2), now);
+
+        // delete will not delete
+        usersApi.deleteCustomActivityEvent(EVENT_KEY2).execute();
+
+        list = usersApi.getActivityEvents().execute().body();
+        assertEquals(getTimestamp(list, EVENT_KEY2), now);
+    }
+    
+    @Test
+    public void testFutureOnlyGlobalEvent() throws Exception {
+        DateTime now = DateTime.now(DateTimeZone.UTC);
+        DateTime pastTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
+        DateTime futureTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
+
+        CustomActivityEventRequest req3 = new CustomActivityEventRequest().eventId(EVENT_KEY3).timestamp(now);
+        usersApi.createCustomActivityEvent(req3).execute();
+        
+        ActivityEventList list3 = usersApi.getActivityEvents().execute().body();
+        assertEquals(now, getTimestamp(list3, EVENT_KEY3));
+        
+        // future update will work
+        req3 = new CustomActivityEventRequest().eventId(EVENT_KEY3).timestamp(futureTime);
+        usersApi.createCustomActivityEvent(req3).execute();
+        list3 = usersApi.getActivityEvents().execute().body();
+        assertEquals(getTimestamp(list3, EVENT_KEY3), futureTime);
+        
+        // past update will not work
+        req3 = new CustomActivityEventRequest().eventId(EVENT_KEY3).timestamp(pastTime);
+        usersApi.createCustomActivityEvent(req3).execute();
+        list3 = usersApi.getActivityEvents().execute().body();
+        assertEquals(getTimestamp(list3, EVENT_KEY3), futureTime);
+
+        // This doesn't delete the timestamp
+        usersApi.deleteCustomActivityEvent(EVENT_KEY3).execute();
+        
+        list3 = usersApi.getActivityEvents().execute().body();
+        assertEquals(getTimestamp(list3, EVENT_KEY3), futureTime);
+    }
+    
+    @Test
+    public void testMutableStudyEvent() throws Exception {
+        DateTime now = DateTime.now(DateTimeZone.UTC);
+        DateTime pastTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
+        DateTime futureTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
+
+        // Create event #1 which is mutable
+        CustomActivityEventRequest req = new CustomActivityEventRequest().eventId(EVENT_KEY1).timestamp(now);
+        usersApi.createActivityEventForSelf(STUDY_ID_1, req).execute();
+        
+        ActivityEventList list = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(now, getTimestamp(list, EVENT_KEY1));
+        
+        // future time updates
+        req = new CustomActivityEventRequest().eventId(EVENT_KEY1).timestamp(futureTime);
+        usersApi.createActivityEventForSelf(STUDY_ID_1, req).execute();
+        list = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(futureTime, getTimestamp(list, EVENT_KEY1));
+
+        // past time updates
+        req = new CustomActivityEventRequest().eventId(EVENT_KEY1).timestamp(pastTime);
+        usersApi.createActivityEventForSelf(STUDY_ID_1, req).execute();
+        list = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(pastTime, getTimestamp(list, EVENT_KEY1));
+
+        // can delete
+        usersApi.deleteActivityEventForSelf(STUDY_ID_1, EVENT_KEY1).execute();
+        
+        list = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertNull(getTimestamp(list, EVENT_KEY1));
+    }
+
+    @Test
+    public void testImmutableStudyEvent() throws Exception {
+        DateTime now = DateTime.now(DateTimeZone.UTC);
+        DateTime pastTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
+        DateTime futureTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
+
+        // Create event #2 which is immutable.
+        CustomActivityEventRequest req = new CustomActivityEventRequest().eventId(EVENT_KEY2).timestamp(now);
+        usersApi.createActivityEventForSelf(STUDY_ID_1, req).execute();
+        ActivityEventList list = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(now, getTimestamp(list, EVENT_KEY2));
+
+        // past time won't update
+        req = new CustomActivityEventRequest().eventId(EVENT_KEY2).timestamp(pastTime);
+        usersApi.createActivityEventForSelf(STUDY_ID_1, req).execute();
+        list = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(getTimestamp(list, EVENT_KEY2), now);
+
+        // future time won't update
+        req = new CustomActivityEventRequest().eventId(EVENT_KEY2).timestamp(futureTime);
+        usersApi.createActivityEventForSelf(STUDY_ID_1, req).execute();
+        list = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(getTimestamp(list, EVENT_KEY2), now);
+
+        // nor will it delete
+        usersApi.deleteActivityEventForSelf(STUDY_ID_1, EVENT_KEY2).execute();
+
+        list = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(getTimestamp(list, EVENT_KEY2), now);
+    }
+    
+    @Test
+    public void testFutureOnlyStudyEvent() throws Exception {
+        DateTime now = DateTime.now(DateTimeZone.UTC);
+        DateTime pastTime = DateTime.now(DateTimeZone.UTC).minusHours(2);
+        DateTime futureTime = DateTime.now(DateTimeZone.UTC).plusHours(2);
+
+        CustomActivityEventRequest req3 = new CustomActivityEventRequest().eventId(EVENT_KEY3).timestamp(now);
+        usersApi.createActivityEventForSelf(STUDY_ID_1, req3).execute();
+        
+        ActivityEventList list3 = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(now, getTimestamp(list3, EVENT_KEY3));
+        
+        // future will update
+        req3 = new CustomActivityEventRequest().eventId(EVENT_KEY3).timestamp(futureTime);
+        usersApi.createActivityEventForSelf(STUDY_ID_1, req3).execute();
+        list3 = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(getTimestamp(list3, EVENT_KEY3), futureTime);
+        
+        // past will not update
+        req3 = new CustomActivityEventRequest().eventId(EVENT_KEY3).timestamp(pastTime);
+        usersApi.createActivityEventForSelf(STUDY_ID_1, req3).execute();
+        list3 = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(getTimestamp(list3, EVENT_KEY3), futureTime);
+
+        // This doesn't delete the timestamp
+        usersApi.deleteActivityEventForSelf(STUDY_ID_1, EVENT_KEY3).execute();
+        
+        list3 = usersApi.getActivityEventsForSelf(STUDY_ID_1).execute().body();
+        assertEquals(getTimestamp(list3, EVENT_KEY3), futureTime);
+    }
+    
+    private DateTime getTimestamp(ActivityEventList list, String eventId) {
+        for (ActivityEvent event : list.getItems()) {
+            if (event.getEventId().equals("custom:"+eventId)) {
+                return event.getTimestamp();
+            }
+        }
+        return null;
     }
     
     private ActivityEvent findEventByKey(ActivityEventList list, String key) {
