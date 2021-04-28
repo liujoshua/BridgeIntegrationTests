@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.sagebionetworks.bridge.rest.model.ContactRole.PRINCIPAL_INVESTIGATOR;
+import static org.sagebionetworks.bridge.rest.model.ContactRole.TECHNICAL_SUPPORT;
 import static org.sagebionetworks.bridge.rest.model.Role.STUDY_COORDINATOR;
 import static org.sagebionetworks.bridge.rest.model.StudyPhase.DESIGN;
 import static org.sagebionetworks.bridge.rest.model.StudyPhase.IN_FLIGHT;
@@ -48,6 +49,7 @@ import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 import org.sagebionetworks.bridge.util.IntegTestUtils;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 public class StudyTest {
@@ -108,13 +110,20 @@ public class StudyTest {
         String id = Tests.randomIdentifier(StudyTest.class);
         Study study = new Study().identifier(id).clientData(map).name("Study " + id);
         
+        // We had an issue where you could not store two contacts with the same
+        // name; verify this restriction has been fixed.
         String contactEmail = IntegTestUtils.makeEmail(StudyTest.class);
-        Contact contact = new Contact()
+        Contact contact1 = new Contact()
                 .role(PRINCIPAL_INVESTIGATOR)
                 .name("Tim Powers")
                 .affiliation("Miskatonic University")
                 .email(contactEmail);
-        study.addContactsItem(contact);
+        Contact contact2 = new Contact()
+                .role(TECHNICAL_SUPPORT)
+                .name("Tim Powers")
+                .affiliation("Miskatonic University")
+                .email(contactEmail);
+        study.contacts(ImmutableList.of(contact1, contact2));
         
         VersionHolder holder = studiesApi.createStudy(study).execute().body();
         study.setVersion(holder.getVersion());
@@ -127,11 +136,17 @@ public class StudyTest {
         assertTrue(retrieved.getCreatedOn().isAfter(DateTime.now().minusHours(1)));
         assertTrue(retrieved.getModifiedOn().isAfter(DateTime.now().minusHours(1)));
         
-        Contact retrievedContact = retrieved.getContacts().get(0);
-        assertEquals(PRINCIPAL_INVESTIGATOR, retrievedContact.getRole());
-        assertEquals("Tim Powers", retrievedContact.getName());
-        assertEquals("Miskatonic University", retrievedContact.getAffiliation());
-        assertEquals(contactEmail, retrievedContact.getEmail());
+        Contact retrievedContact1 = retrieved.getContacts().get(0);
+        assertEquals(PRINCIPAL_INVESTIGATOR, retrievedContact1.getRole());
+        assertEquals("Tim Powers", retrievedContact1.getName());
+        assertEquals("Miskatonic University", retrievedContact1.getAffiliation());
+        assertEquals(contactEmail, retrievedContact1.getEmail());
+        
+        Contact retrievedContact2 = retrieved.getContacts().get(1);
+        assertEquals(TECHNICAL_SUPPORT, retrievedContact2.getRole());
+        assertEquals("Tim Powers", retrievedContact2.getName());
+        assertEquals("Miskatonic University", retrievedContact2.getAffiliation());
+        assertEquals(contactEmail, retrievedContact2.getEmail());
         
         Map<String,String> theMap = RestUtils.toType(study.getClientData(), Map.class);
         assertEquals("byExternalId", theMap.get("enrollmentType"));
