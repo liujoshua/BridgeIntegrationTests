@@ -2,11 +2,13 @@ package org.sagebionetworks.bridge.sdk.integration;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.sagebionetworks.bridge.rest.model.ActivityEventUpdateType.MUTABLE;
 import static org.sagebionetworks.bridge.rest.model.AdherenceRecordType.ASSESSMENT;
 import static org.sagebionetworks.bridge.rest.model.AdherenceRecordType.SESSION;
 import static org.sagebionetworks.bridge.rest.model.PerformanceOrder.SEQUENTIAL;
 import static org.sagebionetworks.bridge.rest.model.Role.DEVELOPER;
+import static org.sagebionetworks.bridge.rest.model.SortOrder.DESC;
 import static org.sagebionetworks.bridge.sdk.integration.Tests.STUDY_ID_1;
 import static org.sagebionetworks.bridge.util.IntegTestUtils.TEST_APP_ID;
 
@@ -20,6 +22,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,14 +31,19 @@ import org.sagebionetworks.bridge.rest.api.AssessmentsApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.api.ForDevelopersApi;
 import org.sagebionetworks.bridge.rest.api.SchedulesV2Api;
+import org.sagebionetworks.bridge.rest.model.ActivityEvent;
+import org.sagebionetworks.bridge.rest.model.ActivityEventList;
 import org.sagebionetworks.bridge.rest.model.AdherenceRecord;
 import org.sagebionetworks.bridge.rest.model.AdherenceRecordList;
+import org.sagebionetworks.bridge.rest.model.AdherenceRecordUpdates;
 import org.sagebionetworks.bridge.rest.model.AdherenceRecordsSearch;
 import org.sagebionetworks.bridge.rest.model.App;
 import org.sagebionetworks.bridge.rest.model.Assessment;
+import org.sagebionetworks.bridge.rest.model.AssessmentInfo;
 import org.sagebionetworks.bridge.rest.model.AssessmentReference2;
 import org.sagebionetworks.bridge.rest.model.CustomActivityEventRequest;
 import org.sagebionetworks.bridge.rest.model.Schedule2;
+import org.sagebionetworks.bridge.rest.model.ScheduledAssessment;
 import org.sagebionetworks.bridge.rest.model.ScheduledSession;
 import org.sagebionetworks.bridge.rest.model.Session;
 import org.sagebionetworks.bridge.rest.model.SortOrder;
@@ -134,7 +142,7 @@ public class AdherenceRecordsTest {
         // in this class. 
         schedule = new Schedule2()
                 .name("AdheredRecordsTest Schedule")
-                .duration("P21D")
+                .duration("P22D")
                 .addSessionsItem(s1)
                 .addSessionsItem(s2)
                 .addSessionsItem(s3);
@@ -230,7 +238,8 @@ public class AdherenceRecordsTest {
         sessions = getScheduledSessions(timeline, session3.getGuid());
         
         // one session record...
-        usersApi.updateAdherenceRecords(STUDY_ID_1, ImmutableList.of(new AdherenceRecord()
+        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
+                .addRecordsItem(new AdherenceRecord()
                 .instanceGuid(sessions.get(0).getInstanceGuid())
                 .clientData("S3D00W1")
                 .eventTimestamp(ENROLLMENT)
@@ -251,14 +260,15 @@ public class AdherenceRecordsTest {
     private void session1Data(ForConsentedUsersApi usersApi, ScheduledSession session, 
             String day, String window, String monthAndDay, String...hoursOfDay) throws IOException {
         
-        usersApi.updateAdherenceRecords(STUDY_ID_1, ImmutableList.of(
-            new AdherenceRecord()
+        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
+                .addRecordsItem(new AdherenceRecord()
                 .instanceGuid(session.getInstanceGuid())
                 .eventTimestamp(ENROLLMENT)
                 .clientData("S1" + day + window)
                 .startedOn(getTimestamp(monthAndDay, hoursOfDay[0])))).execute();
         for (String hod : hoursOfDay) {
-            usersApi.updateAdherenceRecords(STUDY_ID_1, ImmutableList.of(new AdherenceRecord()
+            usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
+                    .addRecordsItem(new AdherenceRecord()
                     .instanceGuid(session.getAssessments().get(0).getInstanceGuid())
                     .eventTimestamp(ENROLLMENT)
                     .clientData("S1" + day + window + "A")
@@ -269,18 +279,18 @@ public class AdherenceRecordsTest {
     private void session2Data(ForConsentedUsersApi usersApi, ScheduledSession session, 
             DateTime eventTimestamp, String eventTimestampTag, String day, String monthAndDay) throws IOException {
         
-        usersApi.updateAdherenceRecords(STUDY_ID_1, ImmutableList.of(
-            new AdherenceRecord()
+        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
+            .addRecordsItem(new AdherenceRecord()
                 .instanceGuid(session.getInstanceGuid())
                 .eventTimestamp(eventTimestamp)
                 .clientData("S2"+day+"W1 " + eventTimestampTag)
-                .startedOn(getTimestamp(monthAndDay)),
-            new AdherenceRecord()
+                .startedOn(getTimestamp(monthAndDay)))
+            .addRecordsItem(new AdherenceRecord()
                 .instanceGuid(session.getAssessments().get(0).getInstanceGuid())
                 .eventTimestamp(eventTimestamp)
                 .clientData("S2"+day+"W1A " + eventTimestampTag)
-                .startedOn(getTimestamp(monthAndDay)),
-            new AdherenceRecord()
+                .startedOn(getTimestamp(monthAndDay)))
+            .addRecordsItem(new AdherenceRecord()
                 .instanceGuid(session.getAssessments().get(1).getInstanceGuid())
                 .eventTimestamp(eventTimestamp)
                 .clientData("S2"+day+"W1B " + eventTimestampTag)
@@ -289,8 +299,8 @@ public class AdherenceRecordsTest {
     
     private void session3Data(ForConsentedUsersApi usersApi, 
             ScheduledSession session, String day, String monthAndDay) throws IOException {
-        usersApi.updateAdherenceRecords(STUDY_ID_1, ImmutableList.of(
-            new AdherenceRecord()
+        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
+            .addRecordsItem(new AdherenceRecord()
                 .instanceGuid(session.getAssessments().get(0).getInstanceGuid())
                 .clientData("S3" + day + "W1B")
                 .eventTimestamp(ENROLLMENT)
@@ -319,6 +329,20 @@ public class AdherenceRecordsTest {
         assertEquals(expectedTagList, tags);   
     }
     
+    private void assertRecordsAndTimestamps(AdherenceRecordsSearch search, String... expectedTags) throws Exception {
+        ForConsentedUsersApi usersApi = participant.getClient(ForConsentedUsersApi.class);
+        AdherenceRecordList list = usersApi.searchForAdherenceRecords(
+                STUDY_ID_1, search).execute().body();
+        // There will be duplicates so this has to be a list.
+        List<String> tags = list.getItems().stream()
+                .map(ar -> (String)ar.getClientData() + "@" + ar.getStartedOn())
+                .collect(toList());
+        List<String> expectedTagList = Lists.newArrayList(expectedTags);
+        Collections.sort(expectedTagList);
+        Collections.sort(tags);
+        assertEquals(expectedTagList, tags);   
+    }
+    
     public List<String> getInstanceGuidsByTag(boolean includeStartedOn, String... tags) throws Exception {
         ImmutableSet<String> tagSet = ImmutableSet.copyOf(tags);
         
@@ -331,7 +355,7 @@ public class AdherenceRecordsTest {
         for (AdherenceRecord record : list.getItems()) {
             if (tagSet.contains(record.getClientData().toString())) {
                 if (includeStartedOn) {
-                    array.add(record.getInstanceGuid() + ":" + record.getStartedOn().toString());
+                    array.add(record.getInstanceGuid() + "@" + record.getStartedOn().toString());
                 } else {
                     array.add(record.getInstanceGuid());    
                 }
@@ -410,12 +434,23 @@ public class AdherenceRecordsTest {
                 "S1D02W2A", "S1D05W2A", "S1D08W2A", "S1D11W2A", "S1D11W2A", 
                 "S1D11W2A", "S1D14W2A", "S1D17W2A", "S1D17W2A", "S1D20W2A");
 
-        // query by time window, removing repeated assessments
-        assertRecords(new AdherenceRecordsSearch().recordType(ASSESSMENT)
+        // query by time window, includeRepeats = false, sort ASC by default
+        assertRecordsAndTimestamps(new AdherenceRecordsSearch().recordType(ASSESSMENT)
                 .addTimeWindowGuidsItem(session1.getTimeWindows().get(1).getGuid())
                 .includeRepeats(false),
-                "S1D02W2A", "S1D05W2A", "S1D08W2A", "S1D11W2A", "S1D14W2A", 
-                "S1D17W2A", "S1D20W2A");
+                "S1D02W2A@2020-05-12T16:00:00.000Z", "S1D05W2A@2020-05-15T16:00:00.000Z", 
+                "S1D08W2A@2020-05-18T16:00:00.000Z", "S1D11W2A@2020-05-21T16:00:00.000Z", 
+                "S1D14W2A@2020-05-24T16:00:00.000Z", "S1D17W2A@2020-05-27T17:00:00.000Z", 
+                "S1D20W2A@2020-05-30T16:00:00.000Z");
+        
+        // query by time window, includeRepeats = false, sort DESC
+        assertRecordsAndTimestamps(new AdherenceRecordsSearch().recordType(ASSESSMENT)
+                .addTimeWindowGuidsItem(session1.getTimeWindows().get(1).getGuid())
+                .includeRepeats(false).sortOrder(DESC),
+                "S1D02W2A@2020-05-12T16:00:00.000Z", "S1D05W2A@2020-05-15T16:00:00.000Z", 
+                "S1D08W2A@2020-05-18T16:00:00.000Z", "S1D11W2A@2020-05-21T21:00:00.000Z", 
+                "S1D14W2A@2020-05-24T16:00:00.000Z", "S1D17W2A@2020-05-27T21:00:00.000Z", 
+                "S1D20W2A@2020-05-30T16:00:00.000Z");
         
         // query by time window, get the sessions
         assertRecords(new AdherenceRecordsSearch().recordType(SESSION)
@@ -444,6 +479,14 @@ public class AdherenceRecordsTest {
         assertRecords(new AdherenceRecordsSearch()
                 .addSessionGuidsItem(session2.getGuid())
                 .putEventTimestampsItem("custom:" + CLINIC_VISIT, T2), 
+                "S2D00W1 T2", "S2D00W1A T2", "S2D00W1B T2", "S2D07W1B T2", "S2D07W1A T2", 
+                "S2D07W1 T2", "S2D14W1 T2", "S2D14W1B T2", "S2D14W1A T2", "S2D21W1B T2", 
+                "S2D21W1A T2", "S2D21W1 T2");
+        
+        // This can also be done with a flag to the server to just use current timestamps
+        assertRecords(new AdherenceRecordsSearch()
+                .addSessionGuidsItem(session2.getGuid())
+                .currentTimestampsOnly(true), 
                 "S2D00W1 T2", "S2D00W1A T2", "S2D00W1B T2", "S2D07W1B T2", "S2D07W1A T2", 
                 "S2D07W1 T2", "S2D14W1 T2", "S2D14W1B T2", "S2D14W1A T2", "S2D21W1B T2", 
                 "S2D21W1A T2", "S2D21W1 T2");
@@ -496,5 +539,59 @@ public class AdherenceRecordsTest {
                 .sortOrder(SortOrder.DESC)).execute().body();
         assertEquals("2020-05-31T00:00:00.000Z", 
                 list.getItems().get(0).getStartedOn().toString());
+        
+        // Test finishing and that they create events.
+        instanceGuids = getInstanceGuidsByTag(false, "S1D02W1", "S1D08W1A");
+        list = usersApi.searchForAdherenceRecords(STUDY_ID_1, new AdherenceRecordsSearch()
+                .instanceGuids(instanceGuids)).execute().body();
+        
+        DateTime finishedOn = DateTime.now(DateTimeZone.UTC);
+        
+        List<String> tuple = findKeys(instanceGuids.get(0), instanceGuids.get(1));
+        String sessKey = tuple.get(0);
+        String asmtKey = tuple.get(1);
+        
+        list.getItems().get(0).setFinishedOn(finishedOn);
+        list.getItems().get(1).setFinishedOn(finishedOn);
+        usersApi.updateAdherenceRecords(STUDY_ID_1, 
+                new AdherenceRecordUpdates().records(list.getItems())).execute();
+        
+        ActivityEventList activityList = usersApi.getActivityEventsForSelf(STUDY_ID_1)
+                .execute().body();
+
+        boolean foundSessionEvent = false;
+        boolean foundAssessmentEvent = false;
+        for (ActivityEvent event : activityList.getItems()) {
+            if (event.getEventId().equals(sessKey)) {
+                foundSessionEvent = true;
+                assertEquals(event.getTimestamp(), finishedOn);
+            }
+            if (event.getEventId().equals(asmtKey)) {
+                foundAssessmentEvent = true;
+                assertEquals(event.getTimestamp(), finishedOn);
+            }
+        }
+        assertTrue(foundSessionEvent && foundAssessmentEvent);
+    }
+    
+    private List<String> findKeys(String sessInstGuid, String asmtInstGuid) {
+        String sessKey = null;
+        String asmtKey = null;
+        for (ScheduledSession schSession : timeline.getSchedule()) {
+            if (schSession.getInstanceGuid().equals(sessInstGuid)) {
+                sessKey = "session:" + schSession.getRefGuid() + ":finished";
+            }
+            for (ScheduledAssessment schAssessment : schSession.getAssessments()) {
+                if (schAssessment.getInstanceGuid().equals(asmtInstGuid)) {
+                    
+                    for (AssessmentInfo assessment : timeline.getAssessments()) {
+                        if (assessment.getKey().equals(schAssessment.getRefKey())) {
+                            asmtKey = "assessment:" + assessment.getIdentifier() + ":finished";
+                        }
+                    }
+                }
+            }
+        }
+        return ImmutableList.of(sessKey, asmtKey);
     }
 }
