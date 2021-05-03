@@ -54,18 +54,31 @@ import org.sagebionetworks.bridge.rest.model.VersionHolder;
 import org.sagebionetworks.bridge.user.TestUserHelper;
 import org.sagebionetworks.bridge.user.TestUserHelper.TestUser;
 
+/**
+ * This test is based on the example schedule and timeline that are provided in our 
+ * developer documentation. That document provides a visual representation of which
+ * records should be returned by these searches. Each record is created with a  tag 
+ * that also provides a string description of the record, as follows:
+ * 
+ *  S[1-3]   - S1 (session 1), S2 (session 2), S3 (session3)
+ *  D[01-21] - D07 = day 7, D21 = day 21, etc.
+ *  W[1-2]   - W1 (time window 1), W2 (time window 2)
+ *  A        - record for assessment A
+ *  B        - record for assessment B
+ *  
+ *  If there's no A or B at the end of the tag, the record is for the session.
+ *
+ * @see https://developer.sagebridge.org/articles/v2/scheduling.html
+ */
 public class AdherenceRecordsTest {
 
     private static final String FAKE_ENROLLMENT = "fake_enrollment";
     private static final String CLINIC_VISIT = "clinic_visit";
-    
     private static final DateTime ENROLLMENT = DateTime.parse("2020-05-10T00:00:00.000Z");
     private static final DateTime T1 = DateTime.parse("2020-05-18T00:00:00.000Z");
     private static final DateTime T2 = DateTime.parse("2020-09-03T00:00:00.000Z");
-    
     private TestUser developer;
     private TestUser participant;
-
     private Schedule2 schedule;
     private Assessment assessmentA;
     private Assessment assessmentB;
@@ -76,7 +89,6 @@ public class AdherenceRecordsTest {
     private String asmtATag;
     private String asmtBTag;
     private Timeline timeline;
-
     private ForDevelopersApi developersApi;
     
     @Before
@@ -181,207 +193,9 @@ public class AdherenceRecordsTest {
             developer.signOutAndDeleteUser();
         }
     }
-    
-    private AssessmentReference2 asmtToReference(Assessment asmt) {
-        return new AssessmentReference2()
-                .appId(TEST_APP_ID)
-                .identifier(asmt.getIdentifier())
-                .guid(asmt.getGuid());
-    }
-    
-    private void createAdherenceRecords() throws Exception {
-        ForConsentedUsersApi usersApi = participant.getClient(ForConsentedUsersApi.class);
-        
-        // Create the fake enrollment timestamp
-        usersApi.createActivityEventForSelf(STUDY_ID_1, new CustomActivityEventRequest()
-                .eventId(FAKE_ENROLLMENT).timestamp(ENROLLMENT)).execute();
-        
-        timeline = usersApi.getTimelineForSelf(STUDY_ID_1, null).execute().body(); 
 
-        // SESSION 1
-        List<ScheduledSession> sessions = getScheduledSessions(timeline, session1.getGuid());
-        session1Data(usersApi, sessions.get(0), "D02", "W1", "05-12", "00");
-        session1Data(usersApi, sessions.get(1), "D02", "W2", "05-12", "16");
-        session1Data(usersApi, sessions.get(2), "D05", "W1", "05-15", "00");
-        session1Data(usersApi, sessions.get(3), "D05", "W2", "05-15", "16");
-        session1Data(usersApi, sessions.get(4), "D08", "W1", "05-18", "00");
-        session1Data(usersApi, sessions.get(5), "D08", "W2", "05-18", "16");
-        session1Data(usersApi, sessions.get(6), "D11", "W1", "05-21", "00");
-        session1Data(usersApi, sessions.get(7), "D11", "W2", "05-21", "16", "18", "21");
-        session1Data(usersApi, sessions.get(8), "D14", "W1", "05-24", "00");
-        session1Data(usersApi, sessions.get(9), "D14", "W2", "05-24", "16");
-        session1Data(usersApi, sessions.get(10), "D17", "W1", "05-27", "00");
-        session1Data(usersApi, sessions.get(11), "D17", "W2", "05-27", "17", "21");
-        session1Data(usersApi, sessions.get(12), "D20", "W1", "05-30", "00");
-        session1Data(usersApi, sessions.get(13), "D20", "W2", "05-30", "16");
-        
-        // SESSION 2
-        sessions = getScheduledSessions(timeline, session2.getGuid());
-        
-        // FIRST SERIES
-        usersApi.createActivityEventForSelf(STUDY_ID_1, new CustomActivityEventRequest()
-                .eventId(CLINIC_VISIT).timestamp(T1)).execute();
-        session2Data(usersApi, sessions.get(0), T1, "T1", "D00", "05-18");
-        session2Data(usersApi, sessions.get(1), T1, "T1", "D07", "05-25");
-        session2Data(usersApi, sessions.get(2), T1, "T1", "D14", "06-01");
-        session2Data(usersApi, sessions.get(3), T1, "T1", "D21", "06-08");
-
-        // SECOND SERIES
-        usersApi.createActivityEventForSelf(STUDY_ID_1, new CustomActivityEventRequest()
-                .eventId(CLINIC_VISIT).timestamp(T2)).execute();
-        session2Data(usersApi, sessions.get(0), T2, "T2", "D00", "09-03");
-        session2Data(usersApi, sessions.get(1), T2, "T2", "D07", "09-10");
-        session2Data(usersApi, sessions.get(2), T2, "T2", "D14", "09-17");
-        session2Data(usersApi, sessions.get(3), T2, "T2", "D21", "09-24");
-        
-        // SESSION 3 (also using fake enrollment timestamp) 
-        sessions = getScheduledSessions(timeline, session3.getGuid());
-        
-        // one session record...
-        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
-                .addRecordsItem(new AdherenceRecord()
-                .instanceGuid(sessions.get(0).getInstanceGuid())
-                .clientData("S3D00W1")
-                .eventTimestamp(ENROLLMENT)
-                .startedOn(getTimestamp("05-10")))).execute();
-        session3Data(usersApi, sessions.get(0), "D00", "05-10");
-        session3Data(usersApi, sessions.get(0), "D03", "05-13");
-        session3Data(usersApi, sessions.get(0), "D10", "05-17");
-        session3Data(usersApi, sessions.get(0), "D13", "05-20");
-        session3Data(usersApi, sessions.get(0), "D21", "05-31");
-    }
-    
-    private List<ScheduledSession> getScheduledSessions(Timeline timeline, String sessionGuid) {
-        return timeline.getSchedule().stream()
-                .filter(sess -> sess.getRefGuid().equals(sessionGuid))
-                .collect(toList());
-    }
-    
-    private void session1Data(ForConsentedUsersApi usersApi, ScheduledSession session, 
-            String day, String window, String monthAndDay, String...hoursOfDay) throws IOException {
-        
-        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
-                .addRecordsItem(new AdherenceRecord()
-                .instanceGuid(session.getInstanceGuid())
-                .eventTimestamp(ENROLLMENT)
-                .clientData("S1" + day + window)
-                .startedOn(getTimestamp(monthAndDay, hoursOfDay[0])))).execute();
-        for (String hod : hoursOfDay) {
-            usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
-                    .addRecordsItem(new AdherenceRecord()
-                    .instanceGuid(session.getAssessments().get(0).getInstanceGuid())
-                    .eventTimestamp(ENROLLMENT)
-                    .clientData("S1" + day + window + "A")
-                    .startedOn(getTimestamp(monthAndDay, hod)))).execute();
-        }
-    }
-    
-    private void session2Data(ForConsentedUsersApi usersApi, ScheduledSession session, 
-            DateTime eventTimestamp, String eventTimestampTag, String day, String monthAndDay) throws IOException {
-        
-        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
-            .addRecordsItem(new AdherenceRecord()
-                .instanceGuid(session.getInstanceGuid())
-                .eventTimestamp(eventTimestamp)
-                .clientData("S2"+day+"W1 " + eventTimestampTag)
-                .startedOn(getTimestamp(monthAndDay)))
-            .addRecordsItem(new AdherenceRecord()
-                .instanceGuid(session.getAssessments().get(0).getInstanceGuid())
-                .eventTimestamp(eventTimestamp)
-                .clientData("S2"+day+"W1A " + eventTimestampTag)
-                .startedOn(getTimestamp(monthAndDay)))
-            .addRecordsItem(new AdherenceRecord()
-                .instanceGuid(session.getAssessments().get(1).getInstanceGuid())
-                .eventTimestamp(eventTimestamp)
-                .clientData("S2"+day+"W1B " + eventTimestampTag)
-                .startedOn(getTimestamp(monthAndDay)))).execute();
-    }
-    
-    private void session3Data(ForConsentedUsersApi usersApi, 
-            ScheduledSession session, String day, String monthAndDay) throws IOException {
-        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
-            .addRecordsItem(new AdherenceRecord()
-                .instanceGuid(session.getAssessments().get(0).getInstanceGuid())
-                .clientData("S3" + day + "W1B")
-                .eventTimestamp(ENROLLMENT)
-                .startedOn(getTimestamp(monthAndDay)))).execute();
-    }
-    
-    private DateTime getTimestamp(String monthAndDay) {
-        return DateTime.parse("2020-" + monthAndDay + "T00:00:00.000Z");
-    }
-    
-    private DateTime getTimestamp(String monthAndDay, String hourOfDay) {
-        return DateTime.parse("2020-" + monthAndDay + "T" + hourOfDay + ":00:00.000Z");
-    }
-    
-    private void assertRecords(AdherenceRecordsSearch search, String... expectedTags) throws Exception {
-        ForConsentedUsersApi usersApi = participant.getClient(ForConsentedUsersApi.class);
-        AdherenceRecordList list = usersApi.searchForAdherenceRecords(
-                STUDY_ID_1, search).execute().body();
-        // There will be duplicates so this has to be a list.
-        List<String> tags = list.getItems().stream()
-                .map(ar -> (String)ar.getClientData())
-                .collect(toList());
-        List<String> expectedTagList = Lists.newArrayList(expectedTags);
-        Collections.sort(expectedTagList);
-        Collections.sort(tags);
-        assertEquals(expectedTagList, tags);   
-    }
-    
-    private void assertRecordsAndTimestamps(AdherenceRecordsSearch search, String... expectedTags) throws Exception {
-        ForConsentedUsersApi usersApi = participant.getClient(ForConsentedUsersApi.class);
-        AdherenceRecordList list = usersApi.searchForAdherenceRecords(
-                STUDY_ID_1, search).execute().body();
-        // There will be duplicates so this has to be a list.
-        List<String> tags = list.getItems().stream()
-                .map(ar -> (String)ar.getClientData() + "@" + ar.getStartedOn())
-                .collect(toList());
-        List<String> expectedTagList = Lists.newArrayList(expectedTags);
-        Collections.sort(expectedTagList);
-        Collections.sort(tags);
-        assertEquals(expectedTagList, tags);   
-    }
-    
-    public List<String> getInstanceGuidsByTag(boolean includeStartedOn, String... tags) throws Exception {
-        ImmutableSet<String> tagSet = ImmutableSet.copyOf(tags);
-        
-        AdherenceRecordsSearch search = new AdherenceRecordsSearch().pageSize(500);
-        ForConsentedUsersApi usersApi = participant.getClient(ForConsentedUsersApi.class);
-        AdherenceRecordList list = usersApi.searchForAdherenceRecords(
-                STUDY_ID_1, search).execute().body();
-        
-        List<String> array = new ArrayList<>();
-        for (AdherenceRecord record : list.getItems()) {
-            if (tagSet.contains(record.getClientData().toString())) {
-                if (includeStartedOn) {
-                    array.add(record.getInstanceGuid() + "@" + record.getStartedOn().toString());
-                } else {
-                    array.add(record.getInstanceGuid());    
-                }
-            }
-        }
-        return array;
-    }
-
-    /**
-     * These tests are based on the sample timeline and adherence data in our documentation
-     * for the adherence API. That document provides a visual representation of which
-     * records should be returned by these searches. Each record is created with a 
-     * tag that also provides a string description of the record, as follows:
-     * 
-     *  S[1-3]   - S1 (session 1), S2 (session 2), S3 (session3)
-     *  D[01-21] - D07 = day 7, D21 = day 21, etc.
-     *  W[1-2]   - W1 (time window 1), W2 (time window 2)
-     *  A        - record for assessment A
-     *  B        - record for assessment B
-     *  
-     *  If there's no A or B at the end of the tag, the record is for the session.
-     *
-     * @see https://developer.sagebridge.org/articles/v2/scheduling.html)
-     */
     @Test
-    public void verifyAdherenceRecordsSearchAndPaging() throws Exception {
+    public void test() throws Exception {
         participant = TestUserHelper.createAndSignInUser(AdherenceRecordsTest.class, true);
         createAdherenceRecords();
         
@@ -574,6 +388,177 @@ public class AdherenceRecordsTest {
         assertTrue(foundSessionEvent && foundAssessmentEvent);
     }
     
+    private AssessmentReference2 asmtToReference(Assessment asmt) {
+        return new AssessmentReference2()
+                .appId(TEST_APP_ID)
+                .identifier(asmt.getIdentifier())
+                .guid(asmt.getGuid());
+    }
+    private void createAdherenceRecords() throws Exception {
+        ForConsentedUsersApi usersApi = participant.getClient(ForConsentedUsersApi.class);
+        
+        // Create the fake enrollment timestamp
+        usersApi.createActivityEventForSelf(STUDY_ID_1, new CustomActivityEventRequest()
+                .eventId(FAKE_ENROLLMENT).timestamp(ENROLLMENT)).execute();
+        
+        timeline = usersApi.getTimelineForSelf(STUDY_ID_1, null).execute().body(); 
+
+        // SESSION 1
+        List<ScheduledSession> sessions = getScheduledSessions(timeline, session1.getGuid());
+        session1Data(usersApi, sessions.get(0), "D02", "W1", "05-12", "00");
+        session1Data(usersApi, sessions.get(1), "D02", "W2", "05-12", "16");
+        session1Data(usersApi, sessions.get(2), "D05", "W1", "05-15", "00");
+        session1Data(usersApi, sessions.get(3), "D05", "W2", "05-15", "16");
+        session1Data(usersApi, sessions.get(4), "D08", "W1", "05-18", "00");
+        session1Data(usersApi, sessions.get(5), "D08", "W2", "05-18", "16");
+        session1Data(usersApi, sessions.get(6), "D11", "W1", "05-21", "00");
+        session1Data(usersApi, sessions.get(7), "D11", "W2", "05-21", "16", "18", "21");
+        session1Data(usersApi, sessions.get(8), "D14", "W1", "05-24", "00");
+        session1Data(usersApi, sessions.get(9), "D14", "W2", "05-24", "16");
+        session1Data(usersApi, sessions.get(10), "D17", "W1", "05-27", "00");
+        session1Data(usersApi, sessions.get(11), "D17", "W2", "05-27", "17", "21");
+        session1Data(usersApi, sessions.get(12), "D20", "W1", "05-30", "00");
+        session1Data(usersApi, sessions.get(13), "D20", "W2", "05-30", "16");
+        
+        // SESSION 2
+        sessions = getScheduledSessions(timeline, session2.getGuid());
+        
+        // FIRST SERIES
+        usersApi.createActivityEventForSelf(STUDY_ID_1, new CustomActivityEventRequest()
+                .eventId(CLINIC_VISIT).timestamp(T1)).execute();
+        session2Data(usersApi, sessions.get(0), T1, "T1", "D00", "05-18");
+        session2Data(usersApi, sessions.get(1), T1, "T1", "D07", "05-25");
+        session2Data(usersApi, sessions.get(2), T1, "T1", "D14", "06-01");
+        session2Data(usersApi, sessions.get(3), T1, "T1", "D21", "06-08");
+
+        // SECOND SERIES
+        usersApi.createActivityEventForSelf(STUDY_ID_1, new CustomActivityEventRequest()
+                .eventId(CLINIC_VISIT).timestamp(T2)).execute();
+        session2Data(usersApi, sessions.get(0), T2, "T2", "D00", "09-03");
+        session2Data(usersApi, sessions.get(1), T2, "T2", "D07", "09-10");
+        session2Data(usersApi, sessions.get(2), T2, "T2", "D14", "09-17");
+        session2Data(usersApi, sessions.get(3), T2, "T2", "D21", "09-24");
+        
+        // SESSION 3 (also using fake enrollment timestamp) 
+        sessions = getScheduledSessions(timeline, session3.getGuid());
+        
+        // one session record...
+        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
+                .addRecordsItem(new AdherenceRecord()
+                .instanceGuid(sessions.get(0).getInstanceGuid())
+                .clientData("S3D00W1")
+                .eventTimestamp(ENROLLMENT)
+                .startedOn(getTimestamp("05-10")))).execute();
+        session3Data(usersApi, sessions.get(0), "D00", "05-10");
+        session3Data(usersApi, sessions.get(0), "D03", "05-13");
+        session3Data(usersApi, sessions.get(0), "D10", "05-17");
+        session3Data(usersApi, sessions.get(0), "D13", "05-20");
+        session3Data(usersApi, sessions.get(0), "D21", "05-31");
+    }
+    private List<ScheduledSession> getScheduledSessions(Timeline timeline, String sessionGuid) {
+        return timeline.getSchedule().stream()
+                .filter(sess -> sess.getRefGuid().equals(sessionGuid))
+                .collect(toList());
+    }
+    private void session1Data(ForConsentedUsersApi usersApi, ScheduledSession session, 
+            String day, String window, String monthAndDay, String...hoursOfDay) throws IOException {
+        
+        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
+                .addRecordsItem(new AdherenceRecord()
+                .instanceGuid(session.getInstanceGuid())
+                .eventTimestamp(ENROLLMENT)
+                .clientData("S1" + day + window)
+                .startedOn(getTimestamp(monthAndDay, hoursOfDay[0])))).execute();
+        for (String hod : hoursOfDay) {
+            usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
+                    .addRecordsItem(new AdherenceRecord()
+                    .instanceGuid(session.getAssessments().get(0).getInstanceGuid())
+                    .eventTimestamp(ENROLLMENT)
+                    .clientData("S1" + day + window + "A")
+                    .startedOn(getTimestamp(monthAndDay, hod)))).execute();
+        }
+    }
+    private void session2Data(ForConsentedUsersApi usersApi, ScheduledSession session, 
+            DateTime eventTimestamp, String eventTimestampTag, String day, String monthAndDay) throws IOException {
+        
+        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
+            .addRecordsItem(new AdherenceRecord()
+                .instanceGuid(session.getInstanceGuid())
+                .eventTimestamp(eventTimestamp)
+                .clientData("S2"+day+"W1 " + eventTimestampTag)
+                .startedOn(getTimestamp(monthAndDay)))
+            .addRecordsItem(new AdherenceRecord()
+                .instanceGuid(session.getAssessments().get(0).getInstanceGuid())
+                .eventTimestamp(eventTimestamp)
+                .clientData("S2"+day+"W1A " + eventTimestampTag)
+                .startedOn(getTimestamp(monthAndDay)))
+            .addRecordsItem(new AdherenceRecord()
+                .instanceGuid(session.getAssessments().get(1).getInstanceGuid())
+                .eventTimestamp(eventTimestamp)
+                .clientData("S2"+day+"W1B " + eventTimestampTag)
+                .startedOn(getTimestamp(monthAndDay)))).execute();
+    }
+    private void session3Data(ForConsentedUsersApi usersApi, 
+            ScheduledSession session, String day, String monthAndDay) throws IOException {
+        usersApi.updateAdherenceRecords(STUDY_ID_1, new AdherenceRecordUpdates()
+            .addRecordsItem(new AdherenceRecord()
+                .instanceGuid(session.getAssessments().get(0).getInstanceGuid())
+                .clientData("S3" + day + "W1B")
+                .eventTimestamp(ENROLLMENT)
+                .startedOn(getTimestamp(monthAndDay)))).execute();
+    }
+    private DateTime getTimestamp(String monthAndDay) {
+        return DateTime.parse("2020-" + monthAndDay + "T00:00:00.000Z");
+    }
+    private DateTime getTimestamp(String monthAndDay, String hourOfDay) {
+        return DateTime.parse("2020-" + monthAndDay + "T" + hourOfDay + ":00:00.000Z");
+    }
+    private void assertRecords(AdherenceRecordsSearch search, String... expectedTags) throws Exception {
+        ForConsentedUsersApi usersApi = participant.getClient(ForConsentedUsersApi.class);
+        AdherenceRecordList list = usersApi.searchForAdherenceRecords(
+                STUDY_ID_1, search).execute().body();
+        // There will be duplicates so this has to be a list.
+        List<String> tags = list.getItems().stream()
+                .map(ar -> (String)ar.getClientData())
+                .collect(toList());
+        List<String> expectedTagList = Lists.newArrayList(expectedTags);
+        Collections.sort(expectedTagList);
+        Collections.sort(tags);
+        assertEquals(expectedTagList, tags);   
+    }
+    private void assertRecordsAndTimestamps(AdherenceRecordsSearch search, String... expectedTags) throws Exception {
+        ForConsentedUsersApi usersApi = participant.getClient(ForConsentedUsersApi.class);
+        AdherenceRecordList list = usersApi.searchForAdherenceRecords(
+                STUDY_ID_1, search).execute().body();
+        // There will be duplicates so this has to be a list.
+        List<String> tags = list.getItems().stream()
+                .map(ar -> (String)ar.getClientData() + "@" + ar.getStartedOn())
+                .collect(toList());
+        List<String> expectedTagList = Lists.newArrayList(expectedTags);
+        Collections.sort(expectedTagList);
+        Collections.sort(tags);
+        assertEquals(expectedTagList, tags);   
+    }
+    private List<String> getInstanceGuidsByTag(boolean includeStartedOn, String... tags) throws Exception {
+        ImmutableSet<String> tagSet = ImmutableSet.copyOf(tags);
+        
+        AdherenceRecordsSearch search = new AdherenceRecordsSearch().pageSize(500);
+        ForConsentedUsersApi usersApi = participant.getClient(ForConsentedUsersApi.class);
+        AdherenceRecordList list = usersApi.searchForAdherenceRecords(
+                STUDY_ID_1, search).execute().body();
+        
+        List<String> array = new ArrayList<>();
+        for (AdherenceRecord record : list.getItems()) {
+            if (tagSet.contains(record.getClientData().toString())) {
+                if (includeStartedOn) {
+                    array.add(record.getInstanceGuid() + "@" + record.getStartedOn().toString());
+                } else {
+                    array.add(record.getInstanceGuid());    
+                }
+            }
+        }
+        return array;
+    }
     private List<String> findKeys(String sessInstGuid, String asmtInstGuid) {
         String sessKey = null;
         String asmtKey = null;
