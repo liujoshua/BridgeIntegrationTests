@@ -236,20 +236,20 @@ public class AdherenceRecordsTest {
                 "S2D21W1 T2", "S3D13W1B");
         
         // Date-based search for assessments
-        assertRecords(new AdherenceRecordsSearch().recordType(ASSESSMENT)
+        assertRecords(new AdherenceRecordsSearch().adherenceRecordType(ASSESSMENT)
                 .startTime(DateTime.parse("2020-05-10T00:00:00.000Z"))
                 .endTime(DateTime.parse("2020-05-17T00:00:00.000Z")), 
                 "S3D00W1B", "S1D02W1A", "S1D02W2A", "S3D03W1B", "S1D05W1A", 
                 "S1D05W2A", "S3D10W1B");
         
         // query by time window for assessments
-        assertRecords(new AdherenceRecordsSearch().recordType(ASSESSMENT)
+        assertRecords(new AdherenceRecordsSearch().adherenceRecordType(ASSESSMENT)
                 .addTimeWindowGuidsItem(session1.getTimeWindows().get(1).getGuid()), 
                 "S1D02W2A", "S1D05W2A", "S1D08W2A", "S1D11W2A", "S1D11W2A", 
                 "S1D11W2A", "S1D14W2A", "S1D17W2A", "S1D17W2A", "S1D20W2A");
 
         // query by time window, includeRepeats = false, sort ASC by default
-        assertRecordsAndTimestamps(new AdherenceRecordsSearch().recordType(ASSESSMENT)
+        assertRecordsAndTimestamps(new AdherenceRecordsSearch().adherenceRecordType(ASSESSMENT)
                 .addTimeWindowGuidsItem(session1.getTimeWindows().get(1).getGuid())
                 .includeRepeats(false),
                 "S1D02W2A@2020-05-12T16:00:00.000Z", "S1D05W2A@2020-05-15T16:00:00.000Z", 
@@ -258,7 +258,7 @@ public class AdherenceRecordsTest {
                 "S1D20W2A@2020-05-30T16:00:00.000Z");
         
         // query by time window, includeRepeats = false, sort DESC
-        assertRecordsAndTimestamps(new AdherenceRecordsSearch().recordType(ASSESSMENT)
+        assertRecordsAndTimestamps(new AdherenceRecordsSearch().adherenceRecordType(ASSESSMENT)
                 .addTimeWindowGuidsItem(session1.getTimeWindows().get(1).getGuid())
                 .includeRepeats(false).sortOrder(DESC),
                 "S1D02W2A@2020-05-12T16:00:00.000Z", "S1D05W2A@2020-05-15T16:00:00.000Z", 
@@ -267,7 +267,7 @@ public class AdherenceRecordsTest {
                 "S1D20W2A@2020-05-30T16:00:00.000Z");
         
         // query by time window, get the sessions
-        assertRecords(new AdherenceRecordsSearch().recordType(SESSION)
+        assertRecords(new AdherenceRecordsSearch().adherenceRecordType(SESSION)
                 .addTimeWindowGuidsItem(session1.getTimeWindows().get(1).getGuid()), 
                 "S1D02W2", "S1D05W2", "S1D08W2", "S1D11W2", "S1D14W2", 
                 "S1D17W2", "S1D20W2");
@@ -316,7 +316,7 @@ public class AdherenceRecordsTest {
         // get session #2, sessions only, all time series
         assertRecords(new AdherenceRecordsSearch()
                 .addSessionGuidsItem(session2.getGuid())
-                .recordType(SESSION), 
+                .adherenceRecordType(SESSION), 
                 "S2D00W1 T1", "S2D00W1 T2", "S2D07W1 T1", "S2D07W1 T2", "S2D14W1 T1", 
                 "S2D14W1 T2", "S2D21W1 T1", "S2D21W1 T2");
         
