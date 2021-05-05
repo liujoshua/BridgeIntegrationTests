@@ -88,6 +88,13 @@ public class Schedule2Test {
     public void after() throws Exception {
         TestUser admin = TestUserHelper.getSignedInAdmin();
         SchedulesV2Api adminSchedulesApi = admin.getClient(SchedulesV2Api.class);
+        StudiesApi studiesApi = admin.getClient(StudiesApi.class);
+        
+        Study study = studiesApi.getStudy(STUDY_ID_1).execute().body();
+        if (study.getScheduleGuid() != null) {
+            study.setScheduleGuid(null);
+            studiesApi.updateStudy(STUDY_ID_1, study).execute().body();
+        }
         if (schedule != null && schedule.getGuid() != null) {
             adminSchedulesApi.deleteSchedule(schedule.getGuid(), true).execute();
         }
@@ -420,13 +427,13 @@ public class Schedule2Test {
         Timeline timeline = coordsApi.getStudyParticipantTimeline(STUDY_ID_1, user.getUserId()).execute().body();
         
         // it's there
-        assertEquals(timeline.getSchedule().size(), 7);
+        assertEquals(7, timeline.getSchedule().size());
         
         ForConsentedUsersApi userApi = user.getClient(ForConsentedUsersApi.class);
         timeline = userApi.getTimelineForSelf(STUDY_ID_1, null).execute().body();
 
         // it's there
-        assertEquals(timeline.getSchedule().size(), 7);
+        assertEquals(7, timeline.getSchedule().size());
         
         // Let's add the cache header and see what happens.
         Response<Timeline> res = userApi.getTimelineForSelf(STUDY_ID_1, schedule.getModifiedOn().plusHours(1)).execute();
@@ -452,7 +459,6 @@ public class Schedule2Test {
             assertEquals("Account not found.", e.getMessage());
         }
     }
-    
     
     private void assertSchedule(Schedule2 schedule) {
         assertEquals("Test Schedule [Schedule2Test]", schedule.getName());
