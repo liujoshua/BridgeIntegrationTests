@@ -126,7 +126,6 @@ public class CRCTest {
     }
 
     @Test
-    @Ignore("See BRIDGE-2956") 
     public void requestShipmentAsParticipant() throws IOException {
         user.signInAgain();
 
@@ -150,7 +149,6 @@ public class CRCTest {
     }
 
     @Test
-    @Ignore("See BRIDGE-2956")
     public void requestShipmentForHealthCode() throws IOException {
         setupShippingInfo();
 
@@ -187,15 +185,6 @@ public class CRCTest {
                 .put("gender", "female")
                 .put("state", "WA")
                 .put("zip_code", "10001")
-                .put("occupation", "Self-Employed")
-                .put("emp_name", "Test User")
-                .put("emp_address1", "123 Abc St")
-                .put("emp_address2", "Unit 456")
-                .put("emp_city", "Seattle")
-                .put("emp_state", "Washington")
-                .put("emp_zip_code", "98119")
-                .put("emp_phone", "206.547.2600")
-                //.put("home_phone", "206.547.2600")
                 .build();
 
         Map<String, String> attributes = participant.getAttributes();
@@ -207,27 +196,6 @@ public class CRCTest {
         updateParticipant.setAttributes(attributes);
 
         user.getClient(ParticipantsApi.class).updateUsersParticipantRecord(updateParticipant).execute();
-    }
-    
-    @Ignore("Waiting for integration workflow to be finalized")
-    @Test
-    public void checkShipmentStatus() throws IOException {
-        HttpResponse response = Request.Get(host + "/v1/cuimc/labshipments/fzOJmVi8-h-IGRmnGM2RAZQz2021-01-19/status")
-                .addHeader("Authorization", "Basic " + credentials)
-                .execute().returnResponse();
-    }
-    
-    @Ignore("Waiting for integration workflow to be finalized")
-    @Test
-    public void shippingConfirmations() throws IOException {
-        HttpResponse response = Request.Get(host +
-        "/v1/cuimc/participants/labshipments/confirmations?startDate=2021-01-01&endDate=2021-01-20")
-                .addHeader("Authorization", "Basic " + credentials)
-                .execute().returnResponse();
-
-        RestUtils.GSON.fromJson(EntityUtils.toString(response.getEntity()), Message.class);
-        
-        assertEquals(200, response.getStatusLine().getStatusCode());
     }
 
     @Test
